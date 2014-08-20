@@ -9,62 +9,42 @@
 
 Global WindowMain
 
-Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse
-
 Enumeration FormMenu
-  #MenuItem_Autodetect
-  #MenuItem_Separator
+  #MenuItem_Settings
   #MenuItem_Close
 EndEnumeration
 
-Declare ResizeGadgetsWindowMain()
-
-Declare GadgetButtonAutodetect(Event)
-Declare GadgetButtonAutodetect(EventType)
-Declare GadgetButtonBrowse(EventType)
+Declare exit(Event)
+Declare MenuItemSettings(Event)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  CreateStatusBar(0, WindowID(WindowMain))
+  AddStatusBarField(200)
+  AddStatusBarField(450)
+  StatusBarText(0, 1, "[TF Path]")
   CreateMenu(0, WindowID(WindowMain))
   MenuTitle("File")
-  MenuItem(#MenuItem_Autodetect, "Autodetect Train Fever")
+  MenuItem(#MenuItem_Settings, "Settings")
   MenuBar()
-  MenuItem(#MenuItem_Close, "Close (Alt+F4)")
-  GadgetPath = StringGadget(#PB_Any, 10, 10, 520, 25, "[Train Fever Path]")
-  GadgetButtonAutodetect = ButtonGadget(#PB_Any, 630, 10, 80, 25, "Autodetect")
-  GadgetButtonBrowse = ButtonGadget(#PB_Any, 540, 10, 80, 25, "Browse")
-EndProcedure
-
-Procedure ResizeGadgetsWindowMain()
-  Protected FormWindowWidth, FormWindowHeight
-  FormWindowWidth = WindowWidth(WindowMain)
-  FormWindowHeight = WindowHeight(WindowMain)
-  ResizeGadget(GadgetPath, 10, 10, FormWindowWidth - 200, 25)
-  ResizeGadget(GadgetButtonAutodetect, FormWindowWidth - 90, 10, 80, 25)
-  ResizeGadget(GadgetButtonBrowse, FormWindowWidth - 180, 10, 80, 25)
+  MenuItem(#MenuItem_Close, "Close (Alt + F4)")
 EndProcedure
 
 Procedure WindowMain_Events(event)
   Select event
-    Case #PB_Event_SizeWindow
-      ResizeGadgetsWindowMain()
     Case #PB_Event_CloseWindow
       ProcedureReturn #False
 
     Case #PB_Event_Menu
       Select EventMenu()
-        Case #MenuItem_Autodetect
-          GadgetButtonAutodetect(EventMenu())
-        Case #MenuItem_Separator
+        Case #MenuItem_Settings
+          MenuItemSettings(EventMenu())
         Case #MenuItem_Close
+          exit(EventMenu())
       EndSelect
 
     Case #PB_Event_Gadget
       Select EventGadget()
-        Case GadgetButtonAutodetect
-          GadgetButtonAutodetect(EventType())          
-        Case GadgetButtonBrowse
-          GadgetButtonBrowse(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True
