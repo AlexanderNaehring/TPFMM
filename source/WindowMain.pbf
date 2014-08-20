@@ -9,29 +9,66 @@
 
 Global WindowMain
 
+Global GadgetPanel, ListInstalled, Gadget, Gadget
+
 Enumeration FormMenu
   #MenuItem_Settings
+  #MenuItem_Update
+  #MenuItem_AddMod
   #MenuItem_Close
 EndEnumeration
 
+Declare ResizeGadgetsWindowMain()
+
 Declare exit(Event)
 Declare MenuItemSettings(Event)
+Declare MenuItemNewMod(Event)
+Declare MenuItemUpdate(Event)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
-  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
+
   CreateStatusBar(0, WindowID(WindowMain))
-  AddStatusBarField(200)
+  AddStatusBarField(100)
   AddStatusBarField(450)
   StatusBarText(0, 1, "[TF Path]")
   CreateMenu(0, WindowID(WindowMain))
   MenuTitle("File")
-  MenuItem(#MenuItem_Settings, "Settings")
+  MenuItem(#MenuItem_Settings, "&Settings" + Chr(9) + "Ctrl + S")
+  MenuItem(#MenuItem_Update, "&Homepage")
   MenuBar()
-  MenuItem(#MenuItem_Close, "Close (Alt + F4)")
+  MenuItem(#MenuItem_AddMod, "&Add modification" + Chr(9) + "Ctrl + O")
+  MenuBar()
+  MenuItem(#MenuItem_Close, "&Close" + Chr(9) + "Alt + F4")
+  GadgetPanel = PanelGadget(#PB_Any, 0, 0, 720, 435)
+  AddGadgetItem(GadgetPanel, -1, "All modifications")
+  ListInstalled = ListIconGadget(#PB_Any, 0, 0, 720, 413, "Name", 250)
+  AddGadgetColumn(ListInstalled, 1, "Author", 100)
+  AddGadgetColumn(ListInstalled, 2, "Version", 60)
+  AddGadgetColumn(ListInstalled, 3, "Size", 60)
+  AddGadgetColumn(ListInstalled, 4, "Installed", 60)
+  AddGadgetItem(GadgetPanel, -1, "Installed modifications", 0, 1)
+  Gadget = TextGadget(#PB_Any, 30, 28, 120, 20, "Work in progress...")
+  AddGadgetItem(GadgetPanel, -1, "Deactivated modifications", 0, 2)
+  Gadget = TextGadget(#PB_Any, 30, 28, 120, 20, "Work in progress...")
+  CloseGadgetList()
+EndProcedure
+
+Procedure ResizeGadgetsWindowMain()
+  Protected FormWindowWidth, FormWindowHeight
+  FormWindowWidth = WindowWidth(WindowMain)
+  FormWindowHeight = WindowHeight(WindowMain)
+  ResizeGadget(GadgetPanel, 0, 0, FormWindowWidth - 0, FormWindowHeight - MenuHeight() - StatusBarHeight(0) - 0)
+  ResizeGadget(ListInstalled, 0, 0, GetGadgetAttribute(GadgetPanel,#PB_Panel_ItemWidth) - 0, GetGadgetAttribute(GadgetPanel,#PB_Panel_ItemHeight) - 0)
 EndProcedure
 
 Procedure WindowMain_Events(event)
   Select event
+    Case #PB_Event_SizeWindow
+      ResizeGadgetsWindowMain()
     Case #PB_Event_CloseWindow
       ProcedureReturn #False
 
@@ -39,6 +76,10 @@ Procedure WindowMain_Events(event)
       Select EventMenu()
         Case #MenuItem_Settings
           MenuItemSettings(EventMenu())
+        Case #MenuItem_Update
+          MenuItemUpdate(EventMenu())
+        Case #MenuItem_AddMod
+          MenuItemNewMod(EventMenu())
         Case #MenuItem_Close
           exit(EventMenu())
       EndSelect

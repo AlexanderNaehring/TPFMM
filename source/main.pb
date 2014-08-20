@@ -87,8 +87,10 @@ Procedure TimerSettingsGadgets()
     If ret = #True
       SetGadgetText(GadgetRights, "Path is correct and TFMM is able to write to the game directory. Let's get started modding!")
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
+      DisableGadget(GadgetSaveSettings, #False)
     Else
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, #Red)
+      DisableGadget(GadgetSaveSettings, #True)
       If ret = -1
         SetGadgetText(GadgetRights, "TFMM is not able to write to the game directory. Administrative privileges may be required.")
       Else
@@ -99,7 +101,15 @@ Procedure TimerSettingsGadgets()
 EndProcedure
 
 Procedure TimerMainGadgets()
-
+  Static LastDir$ = ""
+  
+  If LastDir$ <> TF$
+    LastDir$ = TF$
+    If checkTFPath(TF$) <> #True 
+      MenuItemSettings(0)
+    EndIf
+  EndIf
+  
 EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
@@ -114,25 +124,42 @@ Procedure GadgetCloseSettings(event) ; close settings window and apply settings
   HideWindow(WindowSettings, #True)
   DisableWindow(WindowMain, #False)
   SetActiveWindow(WindowMain)
+  
+  If checkTFPath(TF$) <> #True
+    exit(0)
+  EndIf
+  
 EndProcedure
 
 Procedure GadgetSaveSettings(event)
   Protected Dir$
   Dir$ = GetGadgetText(GadgetPath)
   
-  If checkTFPath(Dir$)
-    If (Not Right(Dir$, 1) = "\") And (Not Right(Dir$, 1) = "/")
-      Dir$ = Dir$ + "\"
-    EndIf
-    TF$ = Dir$ ; save in global variable
-    OpenPreferences("TFMM.ini")
-    WritePreferenceString("path", TF$)
-    ClosePreferences()
-    
-    StatusBarText(0, 1, TF$)
-    StatusBarText(0, 0, "saved settings")
+  If (Not Right(Dir$, 1) = "\") And (Not Right(Dir$, 1) = "/")
+    Dir$ = Dir$ + "\"
   EndIf
+  TF$ = Dir$ ; save in global variable
+  OpenPreferences("TFMM.ini")
+  WritePreferenceString("path", TF$)
+  ClosePreferences()
+    
+  StatusBarText(0, 1, TF$)
+  StatusBarText(0, 0, "saved settings")
+    
   GadgetCloseSettings(event)
+EndProcedure
+
+Procedure MenuItemNewMod(event)
+  Protected File$
+  File$ = OpenFileRequester("Select new modification to add", "", "File archives|*.zip|All files|*.*", 0)
+  
+  If File$
+    
+  EndIf
+EndProcedure
+
+Procedure MenuItemUpdate(event)
+  RunProgram(#DQUOTE$+"http://www.train-fever.net/"+#DQUOTE$)
 EndProcedure
 
 
@@ -149,6 +176,7 @@ ClosePreferences()
 StatusBarText(0, 1, TF$)
 SetGadgetText(GadgetPath, TF$)
 If TF$ = ""
+  ; no path specified upon program start -> open settings
   MenuItemSettings(0)
   GadgetButtonAutodetect(0)
 EndIf
@@ -182,8 +210,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 155
-; FirstLine = 75
-; Folding = I-
+; CursorPosition = 161
+; FirstLine = 74
+; Folding = I--
 ; EnableUnicode
 ; EnableXP

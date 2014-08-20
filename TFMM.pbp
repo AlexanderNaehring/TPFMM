@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-08-20 19:07" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-08-21 00:51" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="d7e76d7bd54ca5458981bf0e3a3ed030"/>
+      <fingerprint md5="532c89ee6fd5d3b6cf90b8d5cc6d30f7"/>
     </file>
     <file name="source\registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
@@ -21,7 +21,15 @@
     </file>
     <file name="source\WindowMain.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="138f776b672a0c64ae110f90c5f5947f"/>
+      <fingerprint md5="71d7a8ebbd0b60f3ae000e5d30f55127"/>
+    </file>
+    <file name="source\WindowModProgress.pbf">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="abc599ca2d2e10aaf7b96c695fa1bf22"/>
+    </file>
+    <file name="source\WindowSettings.pbf">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="7a6f5bc9c8f3769c1893eccc4d3284d8"/>
     </file>
   </section>
   <section name="targets">
