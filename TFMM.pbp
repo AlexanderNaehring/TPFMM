@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
+  <section name="config">
+    <options closefiles="1" openmode="0" name="TFMM"/>
+    <comment>Train Fever Mod Manager</comment>
+  </section>
+  <section name="data">
+    <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
+    <log show="1"/>
+    <lastopen date="2014-08-20 19:07" user="Alexander" host="TOWER"/>
+  </section>
+  <section name="files">
+    <file name="source\main.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="d7e76d7bd54ca5458981bf0e3a3ed030"/>
+    </file>
+    <file name="source\registry.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="45cad4fcda971e27dd69feddc1663925"/>
+    </file>
+    <file name="source\WindowMain.pbf">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="138f776b672a0c64ae110f90c5f5947f"/>
+    </file>
+  </section>
+  <section name="targets">
+    <target name="win32" enabled="1" default="1">
+      <inputfile value="source\main.pb"/>
+      <outputfile value="bin\win32\TFMM.exe"/>
+      <compiler version="PureBasic 5.22 LTS (Windows - x86)"/>
+      <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
+    </target>
+  </section>
+</project>
