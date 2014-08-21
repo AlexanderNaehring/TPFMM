@@ -8,27 +8,27 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-08-21 00:51" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-08-21 02:03" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="532c89ee6fd5d3b6cf90b8d5cc6d30f7"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="09d410af10c4525b8ae103d3d0296448"/>
     </file>
     <file name="source\registry.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
       <fingerprint md5="45cad4fcda971e27dd69feddc1663925"/>
     </file>
     <file name="source\WindowMain.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="71d7a8ebbd0b60f3ae000e5d30f55127"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <fingerprint md5="a039ed0680d9a11fae2d81072bcdd6e3"/>
     </file>
     <file name="source\WindowModProgress.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
       <fingerprint md5="abc599ca2d2e10aaf7b96c695fa1bf22"/>
     </file>
     <file name="source\WindowSettings.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
       <fingerprint md5="7a6f5bc9c8f3769c1893eccc4d3284d8"/>
     </file>
   </section>
@@ -37,7 +37,28 @@
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\win32\TFMM.exe"/>
       <compiler version="PureBasic 5.22 LTS (Windows - x86)"/>
+      <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
+      <icon enable="1">source\tf.ico</icon>
+      <compilecount enable="1" value="52"/>
+      <buildcount enable="1" value="5"/>
+      <execonstant enable="1"/>
+      <versioninfo enable="1">
+        <field0 value="0,1,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="0,1,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field3 value="Train Fever Mod Manager"/>
+        <field4 value="%BUILDCOUNT"/>
+        <field5 value="%COMPILECOUNT"/>
+        <field7 value="TFMM"/>
+        <field8 value="%EXECUTABLE"/>
+        <field9 value="Alexander Nähring"/>
+        <field16 value="VFT_APP"/>
+        <field17 value="0409 English (United States)"/>
+        <field18 value="Homepage"/>
+        <field19 value="Support"/>
+        <field21 value="www.alexandernaehring.eu"/>
+        <field22 value="www.train-fever.net"/>
+      </versioninfo>
     </target>
   </section>
 </project>

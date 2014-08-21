@@ -102,12 +102,26 @@ EndProcedure
 
 Procedure TimerMainGadgets()
   Static LastDir$ = ""
+  Protected SelectedMod
   
   If LastDir$ <> TF$
     LastDir$ = TF$
     If checkTFPath(TF$) <> #True 
       MenuItemSettings(0)
     EndIf
+  EndIf
+  
+  
+  SelectedMod =  GetGadgetState(ListInstalled)
+  If SelectedMod = -1
+    DisableGadget(GadgetActivate, #True)
+    DisableGadget(GadgetUninstall, #True)
+  Else
+    DisableGadget(GadgetActivate, #False)
+    DisableGadget(GadgetUninstall, #False)
+    
+    
+    
   EndIf
   
 EndProcedure
@@ -149,12 +163,68 @@ Procedure GadgetSaveSettings(event)
   GadgetCloseSettings(event)
 EndProcedure
 
-Procedure MenuItemNewMod(event)
+Procedure CheckModFile(File$)
+  If OpenPack(0, File$)
+    If ExaminePack(0)
+      While NextPackEntry(0)
+        If FindString(PackEntryName(0), "res/")
+          ProcedureReturn #True
+        EndIf
+      Wend
+    EndIf
+    ClosePack(0)
+  EndIf
+EndProcedure
+
+Procedure OpenMod(Path$)
+  If OpenPack(0, Path$)
+    If ExaminePack(0)
+      While NextPackEntry(0)
+        Debug "Name: " + PackEntryName(0) + ", Size: " + PackEntrySize(0)
+      Wend
+    EndIf
+    ClosePack(0)
+  EndIf
+EndProcedure
+
+Procedure ListMods()
+  Protected Path$ = TF$+"TFMM\Mods\"
+  Protected File$
+  If ExamineDirectory(0, Path$, "*.zip")
+    While NextDirectoryEntry(0)
+      If DirectoryEntryType(0) = #PB_DirectoryEntry_File
+        File$ = Path$ + DirectoryEntryName(0)
+        If CheckModFile(File$)
+          Debug DirectoryEntryName(0)
+        Else
+          DeleteFile(File$)
+        EndIf
+      EndIf
+    Wend
+  EndIf
+EndProcedure
+
+Procedure GadgetNewMod(event)
   Protected File$
   File$ = OpenFileRequester("Select new modification to add", "", "File archives|*.zip|All files|*.*", 0)
   
+  If FileSize(TF$) <> -2
+    StatusBarText(0, 0, "error: TF path")
+    ProcedureReturn #False
+  EndIf
+  
   If File$
-    
+    If CheckModFile(File$)
+      CreateDirectory(TF$ + "TFMM\")
+      CreateDirectory(TF$ + "TFMM\Mods\")
+      If CopyFile(File$, TF$ + "TFMM\Mods\" + GetFilePart(File$))
+        StatusBarText(0, 0, "Added new modification")
+        ListMods()
+      Else
+        StatusBarText(0, 0, "error: copying mod")
+        ProcedureReturn #False 
+      EndIf
+    EndIf
   EndIf
 EndProcedure
 
@@ -164,6 +234,7 @@ EndProcedure
 
 
 
+UseZipPacker()
 OpenWindowMain()
 OpenWindowSettings()
 OpenWindowModProgress()
@@ -210,8 +281,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 161
-; FirstLine = 74
-; Folding = I--
+; CursorPosition = 203
+; FirstLine = 28
+; Folding = IA+
 ; EnableUnicode
 ; EnableXP

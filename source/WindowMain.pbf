@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global GadgetPanel, ListInstalled, Gadget, Gadget
+Global ListInstalled, GadgetActivate, GadgetUninstall, GadgetNewMod
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -22,11 +22,12 @@ Declare ResizeGadgetsWindowMain()
 
 Declare exit(Event)
 Declare MenuItemSettings(Event)
-Declare MenuItemNewMod(Event)
+Declare GadgetNewMod(Event)
 Declare MenuItemUpdate(Event)
+Declare GadgetNewMod(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
-  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager - BETA", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
@@ -43,26 +44,27 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   MenuItem(#MenuItem_AddMod, "&Add modification" + Chr(9) + "Ctrl + O")
   MenuBar()
   MenuItem(#MenuItem_Close, "&Close" + Chr(9) + "Alt + F4")
-  GadgetPanel = PanelGadget(#PB_Any, 0, 0, 720, 435)
-  AddGadgetItem(GadgetPanel, -1, "All modifications")
-  ListInstalled = ListIconGadget(#PB_Any, 0, 0, 720, 413, "Name", 250)
+  ListInstalled = ListIconGadget(#PB_Any, 0, 0, 720, 390, "Name", 250)
   AddGadgetColumn(ListInstalled, 1, "Author", 100)
   AddGadgetColumn(ListInstalled, 2, "Version", 60)
   AddGadgetColumn(ListInstalled, 3, "Size", 60)
-  AddGadgetColumn(ListInstalled, 4, "Installed", 60)
-  AddGadgetItem(GadgetPanel, -1, "Installed modifications", 0, 1)
-  Gadget = TextGadget(#PB_Any, 30, 28, 120, 20, "Work in progress...")
-  AddGadgetItem(GadgetPanel, -1, "Deactivated modifications", 0, 2)
-  Gadget = TextGadget(#PB_Any, 30, 28, 120, 20, "Work in progress...")
-  CloseGadgetList()
+  AddGadgetColumn(ListInstalled, 4, "Activated", 60)
+  GadgetActivate = ButtonGadget(#PB_Any, 500, 400, 100, 25, "Activate mod", #PB_Button_Toggle)
+  GadgetToolTip(GadgetActivate, "Activate selected modification")
+  GadgetUninstall = ButtonGadget(#PB_Any, 610, 400, 100, 25, "Uninstall mod")
+  GadgetToolTip(GadgetUninstall, "Uninstall selected modification")
+  GadgetNewMod = ButtonGadget(#PB_Any, 10, 400, 100, 25, "New mod", #PB_Button_Toggle)
+  GadgetToolTip(GadgetNewMod, "Add new modification")
 EndProcedure
 
 Procedure ResizeGadgetsWindowMain()
   Protected FormWindowWidth, FormWindowHeight
   FormWindowWidth = WindowWidth(WindowMain)
   FormWindowHeight = WindowHeight(WindowMain)
-  ResizeGadget(GadgetPanel, 0, 0, FormWindowWidth - 0, FormWindowHeight - MenuHeight() - StatusBarHeight(0) - 0)
-  ResizeGadget(ListInstalled, 0, 0, GetGadgetAttribute(GadgetPanel,#PB_Panel_ItemWidth) - 0, GetGadgetAttribute(GadgetPanel,#PB_Panel_ItemHeight) - 0)
+  ResizeGadget(ListInstalled, 0, 0, FormWindowWidth - 0, FormWindowHeight - MenuHeight() - StatusBarHeight(0) - 45)
+  ResizeGadget(GadgetActivate, FormWindowWidth - 220, FormWindowHeight - 80, 100, 25)
+  ResizeGadget(GadgetUninstall, FormWindowWidth - 110, FormWindowHeight - 80, 100, 25)
+  ResizeGadget(GadgetNewMod, 10, FormWindowHeight - 80, 100, 25)
 EndProcedure
 
 Procedure WindowMain_Events(event)
@@ -79,13 +81,15 @@ Procedure WindowMain_Events(event)
         Case #MenuItem_Update
           MenuItemUpdate(EventMenu())
         Case #MenuItem_AddMod
-          MenuItemNewMod(EventMenu())
+          GadgetNewMod(EventMenu())
         Case #MenuItem_Close
           exit(EventMenu())
       EndSelect
 
     Case #PB_Event_Gadget
       Select EventGadget()
+        Case GadgetNewMod
+          GadgetNewMod(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True
