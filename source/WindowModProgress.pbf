@@ -9,10 +9,24 @@
 
 Global WindowModProgress
 
+Global GadgetModYes, GadgetModNo, GadgetModText, GadgetModNoAll, GadgetModYesAll, GadgetModProgress, GadgetModOK
 
-Procedure OpenWindowModProgress(x = 0, y = 0, width = 600, height = 400)
-  WindowModProgress = OpenWindow(#PB_Any, x, y, width, height, "", #PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered, WindowID(WindowMain))
+Declare GadgetModNoAll(EventType)
+Declare GadgetModOk(EventType)
+Declare GadgetModYes(EventType)
+Declare GadgetModNo(EventType)
+Declare GadgetModYesAll(EventType)
+
+Procedure OpenWindowModProgress(x = 0, y = 0, width = 410, height = 130)
+  WindowModProgress = OpenWindow(#PB_Any, x, y, width, height, "Install modification", #PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered, WindowID(WindowMain))
   HideWindow(WindowModProgress, 1)
+  GadgetModYes = ButtonGadget(#PB_Any, 100, 70, 100, 30, "Yes", #PB_Button_Default)
+  GadgetModNo = ButtonGadget(#PB_Any, 210, 70, 100, 30, "No")
+  GadgetModText = TextGadget(#PB_Any, 10, 10, 400, 50, "", #PB_Text_Center)
+  GadgetModNoAll = ButtonGadget(#PB_Any, 320, 70, 80, 30, "No to all")
+  GadgetModYesAll = ButtonGadget(#PB_Any, 10, 70, 80, 30, "Yes to all")
+  GadgetModProgress = ProgressBarGadget(#PB_Any, 0, 110, 410, 20, 0, 100, #PB_ProgressBar_Smooth)
+  GadgetModOK = ButtonGadget(#PB_Any, 170, 70, 80, 30, "OK", #PB_Button_Default)
 EndProcedure
 
 Procedure WindowModProgress_Events(event)
@@ -26,6 +40,16 @@ Procedure WindowModProgress_Events(event)
 
     Case #PB_Event_Gadget
       Select EventGadget()
+        Case GadgetModYes
+          GadgetModYes(EventType())          
+        Case GadgetModNo
+          GadgetModNo(EventType())          
+        Case GadgetModNoAll
+          GadgetModNoAll(EventType())          
+        Case GadgetModYesAll
+          GadgetModYesAll(EventType())          
+        Case GadgetModOK
+          GadgetModOk(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True
