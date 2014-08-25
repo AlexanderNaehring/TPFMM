@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-08-21 14:43" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-08-24 20:15" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="e1a30221952561a53d816dafe1be5158"/>
+      <fingerprint md5="54a0a6255af167a3bdbf18792a966c92"/>
     </file>
     <file name="source\registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>

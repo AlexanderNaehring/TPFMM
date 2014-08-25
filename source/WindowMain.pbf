@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global ListInstalled, GadgetActivate, GadgetUninstall, GadgetNewMod
+Global ListInstalled, GadgetToggle, GadgetUninstall, GadgetNewMod
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -24,11 +24,12 @@ Declare exit(Event)
 Declare MenuItemSettings(Event)
 Declare GadgetNewMod(Event)
 Declare MenuItemUpdate(Event)
+Declare GadgetButtonUninstall(EventType)
 Declare GadgetNewMod(EventType)
-Declare GadgetButtonActivate(EventType)
+Declare GadgetButtonToggle(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
-  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager - ALPHA", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager - BETA", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
@@ -49,8 +50,8 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   AddGadgetColumn(ListInstalled, 2, "Version", 60)
   AddGadgetColumn(ListInstalled, 3, "Size", 60)
   AddGadgetColumn(ListInstalled, 4, "Activated", 60)
-  GadgetActivate = ButtonGadget(#PB_Any, 500, 400, 100, 25, "Activate mod", #PB_Button_Toggle)
-  GadgetToolTip(GadgetActivate, "Activate selected modification")
+  GadgetToggle = ButtonGadget(#PB_Any, 500, 400, 100, 25, "Activate mod", #PB_Button_Toggle)
+  GadgetToolTip(GadgetToggle, "Activate selected modification")
   GadgetUninstall = ButtonGadget(#PB_Any, 610, 400, 100, 25, "Uninstall mod")
   GadgetToolTip(GadgetUninstall, "Uninstall selected modification")
   GadgetNewMod = ButtonGadget(#PB_Any, 10, 400, 100, 25, "New mod", #PB_Button_Toggle)
@@ -62,7 +63,7 @@ Procedure ResizeGadgetsWindowMain()
   FormWindowWidth = WindowWidth(WindowMain)
   FormWindowHeight = WindowHeight(WindowMain)
   ResizeGadget(ListInstalled, 0, 0, FormWindowWidth - 0, FormWindowHeight - MenuHeight() - StatusBarHeight(0) - 45)
-  ResizeGadget(GadgetActivate, FormWindowWidth - 220, FormWindowHeight - 80, 100, 25)
+  ResizeGadget(GadgetToggle, FormWindowWidth - 220, FormWindowHeight - 80, 100, 25)
   ResizeGadget(GadgetUninstall, FormWindowWidth - 110, FormWindowHeight - 80, 100, 25)
   ResizeGadget(GadgetNewMod, 10, FormWindowHeight - 80, 100, 25)
 EndProcedure
@@ -88,8 +89,10 @@ Procedure WindowMain_Events(event)
 
     Case #PB_Event_Gadget
       Select EventGadget()
-        Case GadgetActivate
-          GadgetButtonActivate(EventType())          
+        Case GadgetToggle
+          GadgetButtonToggle(EventType())          
+        Case GadgetUninstall
+          GadgetButtonUninstall(EventType())          
         Case GadgetNewMod
           GadgetNewMod(EventType())          
       EndSelect

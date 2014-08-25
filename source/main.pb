@@ -158,19 +158,21 @@ Procedure TimerMainGadgets()
   If LastSelected <> SelectedMod
     LastSelected = SelectedMod
     If SelectedMod = -1
-      SetGadgetText(GadgetActivate, "Activate Mod")
-      DisableGadget(GadgetActivate, #True)
+      SetGadgetText(GadgetToggle, "Activate Mod")
+      SetGadgetState(GadgetToggle, 0)
+      DisableGadget(GadgetToggle, #True)
       DisableGadget(GadgetUninstall, #True)
     Else
-      DisableGadget(GadgetActivate, #False)
-      DisableGadget(GadgetUninstall, #False)
+      DisableGadget(GadgetToggle, #False)
       *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
       If *modinfo\active
-        SetGadgetText(GadgetActivate, "Deactivate Mod")
-        SetGadgetState(GadgetActivate, 1)
+        SetGadgetText(GadgetToggle, "Deactivate Mod")
+        SetGadgetState(GadgetToggle, 1)
+        DisableGadget(GadgetUninstall, #True)
       Else
-        SetGadgetText(GadgetActivate, "Activate Mod")
-        SetGadgetState(GadgetActivate, 0)
+        SetGadgetText(GadgetToggle, "Activate Mod")
+        SetGadgetState(GadgetToggle, 0)
+        DisableGadget(GadgetUninstall, #False)
       EndIf
     EndIf
   EndIf
@@ -257,7 +259,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
     If zip
       If ExaminePack(zip)
         While NextPackEntry(zip)
-          If LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini"
+          If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini" 
             tmpDir$ = GetTemporaryDirectory()
             UncompressPackFile(zip, tmpDir$ + "tfmm.ini")
             OpenPreferences(tmpDir$ + "tfmm.ini")
@@ -303,7 +305,7 @@ Procedure FinishUnIstall()
   InstallInProgress = #False 
 EndProcedure
 
-Procedure WriteModToList(*modinfo.mod)
+Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -326,119 +328,195 @@ Procedure ActivateThread(*modinfo.mod)
     ProcedureReturn #False
   EndIf
   
-  Protected zip, i
-  Protected NewList files$()
+  Protected zip, i, CopyFile, isModded
+  Protected NewList Files$()
   Protected Backup$, File$
+  Protected NewList FileTracker$()
   
   With *modinfo
     ModProgressAnswer = #AnswerNone
     SetGadgetText(GadgetModText, "Do you want to install '"+\name$+"'?")
     HideGadget(GadgetModYes, #False)
     HideGadget(GadgetModNo, #False)
-    
     While ModProgressAnswer = #AnswerNone
       Delay(10)
     Wend
+    HideGadget(GadgetModYes, #True)
+    HideGadget(GadgetModNo, #True)
     
     If ModProgressAnswer = #AnswerNo
+      ; task clean up procedure
       AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
       ProcedureReturn #False
     EndIf
     
     ; start installation
-    HideGadget(GadgetModYes, #True)
-    HideGadget(GadgetModNo, #True)
     SetGadgetText(GadgetModText, "Reading modification...")
     
     zip = OpenPack(#PB_Any, TF$ + "TFMM\mods\" + \file$)
-    If zip
-      ClearList(files$())
-      If ExaminePack(zip)
-        While NextPackEntry(zip)
-          SetGadgetText(GadgetModText, "reading"+#CRLF$+PackEntryName(zip))
-          If PackEntryType(zip) = #PB_Packer_File
-            If FindString(PackEntryName(zip), "res/") ; only add files to list which are located in subfoldres of res/
-              AddElement(files$())
-              files$() = PackEntryName(zip)
-            EndIf
-          EndIf
-        Wend
-        
-        SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ to install")
-        
-        Backup$ = TF$ + "TFMM\Backup\"
-        CreateDirectory(Backup$)
-        
-        SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
-        SetGadgetState(GadgetModProgress, 0)
-        HideGadget(GadgetModProgress, #False)
-        i = 0
-        ForEach files$()
-          ; install each individual file
-          File$ = Mid(files$(), FindString(files$(), "res/")) ; let all paths start with "res/"
-          CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-            File$ = ReplaceString(File$, "/", "\")
-          CompilerEndIf
-          
-          ; first step: backup original file if any
-          If FileSize(TF$ + File$) >= 0
-            ; file already exists -> backup this file
-            ; check if there is already a backup of this file!
-            If FileSize(Backup$ + File$) = -1
-              ; no backup of this file present!
-              ; create new backup
-              CreateDirectoryAll(GetPathPart(Backup$ + File$))
-              CopyFile(TF$ + File$, Backup$ + File$)
-            Else
-              ; there is already a backup
-              ; which means, that this file was replaced by another mod
-              ; TODO display message and ask if overwrite mod file
-            EndIf
-          EndIf
-          
-          ; TODO extract file and write to game folder
-          ; TODO save newly extracted file to list
-          ; TODO save MD5 of newly extracted file to list
-          
-          ; CreateDirectoryAll(GetPathPart(TF$ + File$))
-          ; UncompressPackFile(zip, TF$ + File$, files$())
-          
-          i = i + 1
-        SetGadgetState(GadgetModProgress, i)
-        Next 
-        HideGadget(GadgetModProgress, #True)
-        
-        \active = #True
-        WriteModToList(*modinfo) ; update mod entry
-        
-        SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully activated")
-        HideGadget(GadgetModProgress, #True)
-        HideGadget(GadgetModOk, #False)
-        ModProgressAnswer = #AnswerNone
-        While ModProgressAnswer = #AnswerNone
-          Delay(10)
-        Wend
-        
-        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-        ProcedureReturn #True 
-        
-      EndIf
-      AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-      ProcedureReturn #False
-    Else
-      ; error
+    If Not zip
+      ; error opening zip file (not a zip file?)
       ModProgressAnswer = #AnswerNone
       SetGadgetText(GadgetModText, "Error opening modification file!")
       HideGadget(GadgetModOk, #False)
       While ModProgressAnswer = #AnswerNone
         Delay(10)
       Wend
+      ; task clean up procedure
       AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
       ProcedureReturn #False
     EndIf
     
+    ClearList(files$())
+    If Not ExaminePack(zip)
+      ; task clean up procedure
+      AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+      ProcedureReturn #False
+    EndIf
     
+    While NextPackEntry(zip)
+      SetGadgetText(GadgetModText, "reading"+#CRLF$+PackEntryName(zip))
+      If PackEntryType(zip) = #PB_Packer_File
+        If FindString(PackEntryName(zip), "res/") ; only add files to list which are located in subfoldres of res/
+          AddElement(files$())
+          files$() = PackEntryName(zip)
+        EndIf
+      EndIf
+    Wend
+    
+    SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ to install")
+    
+    Backup$ = TF$ + "TFMM\Backup\"
+    CreateDirectoryAll(Backup$)
+    
+    ; load filetracker list
+    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    ExaminePreferenceGroups()
+    While NextPreferenceGroup()
+      PreferenceGroup(PreferenceGroupName())
+      ExaminePreferenceKeys()
+      While NextPreferenceKey()
+        AddElement(FileTracker$())
+        FileTracker$() = LCase(PreferenceKeyName())
+      Wend
+    Wend
+    ClosePreferences()
+    
+    SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
+    SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
+    SetGadgetState(GadgetModProgress, 0)
+    HideGadget(GadgetModProgress, #False)
+    i = 0
+    ModProgressAnswer = #AnswerNone
+    ForEach files$()
+      Delay(1) ; let the CPU breath
+      ; install each individual file
+      File$ = Mid(files$(), FindString(files$(), "res/")) ; let all (game folder) paths start with "res/"
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        File$ = ReplaceString(File$, "/", "\") ; crappy windows has "\" delimiters
+      CompilerEndIf
+      
+      SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+      
+      ; normal case: copy the modificated file to game directoy
+      CopyFile = #True
+      isModded = #False
+      
+      ; check filetracker for any other mods that may have modified this file before
+      ForEach FileTracker$()
+        If FileTracker$() = LCase(File$)
+          ; file found in list of already installed files
+          CopyFile = #False
+          isModded = #True
+          
+          ; ask user if file should be overwritten
+          If ModProgressAnswer = #AnswerNone
+            ; only ask again if user has not selected "yes/no to all" before
+            SetGadgetText(GadgetModText, "'" + GetFilePart(File$) + "' has already been modified by another mod." +#CRLF$+ "Do you want To overwrite this file?")
+            HideGadget(GadgetModYes, #False)
+            HideGadget(GadgetModNo, #False)
+            HideGadget(GadgetModYesAll, #False)
+            HideGadget(GadgetModNoAll, #False)
+            While ModProgressAnswer = #AnswerNone
+              Delay(10)
+            Wend
+            SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+            HideGadget(GadgetModYes, #True)
+            HideGadget(GadgetModNo, #True)
+            HideGadget(GadgetModYesAll, #True)
+            HideGadget(GadgetModNoAll, #True)
+          EndIf
+          
+          Select ModProgressAnswer
+            Case #AnswerNo
+              CopyFile = #False
+              ModProgressAnswer = #AnswerNone
+            Case #AnswerYes
+              CopyFile = #True
+              ModProgressAnswer = #AnswerNone
+            Case #AnswerYesAll
+              CopyFile = #True
+              ; do not reset answer!
+            Case #AnswerNoAll
+              CopyFile = #False
+              ; do not reset answer
+          EndSelect
+          
+          ; filetracker will list the file as modified by multiple mods!
+          ; TODO may delete filetracker entry (better leave it there for logging purposes)
+          
+          Break ; foreach loop can be broke after one entry is found
+        EndIf
+      Next
+      
+      If CopyFile 
+        ; backup original file if any
+        ; only backup vanilla files, DO NOT BACKUP MODDED FILES!
+        If Not isModded
+          If FileSize(TF$ + File$) >= 0
+            ; file already exists in Game Folder -> backup this file
+            If FileSize(Backup$ + File$) = -1
+              ; no backup of this file present! -> create new backup
+              CreateDirectoryAll(GetPathPart(Backup$ + File$))
+              CopyFile(TF$ + File$, Backup$ + File$)
+            EndIf
+          EndIf
+        EndIf
+        
+        ; make sure that the target directory exists (in case of newly added files / direcotries)
+        CreateDirectoryAll(GetPathPart(TF$ + File$))
+        ; uncompress the file from the mod zip to the game directory
+        UncompressPackFile(zip, TF$ + File$, files$())
+        
+        OpenPreferences(TF$ + "TFMM\filetracker.ini")
+        PreferenceGroup(\name$)
+        ; TODO check if overwriting entries!!!
+        ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
+        WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
+        ClosePreferences()
+      EndIf
+      
+      i = i + 1
+      SetGadgetState(GadgetModProgress, i)
+    Next 
+    
+    HideGadget(GadgetModProgress, #True)
+    
+    ; activate mod in mod list
+    \active = #True
+    WriteModToList(*modinfo) ; update mod entry
+    
+    HideGadget(GadgetModProgress, #True)
+    SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully activated")
+    HideGadget(GadgetModOk, #False)
+    ModProgressAnswer = #AnswerNone
+    While ModProgressAnswer = #AnswerNone
+      Delay(10)
+    Wend
+    
+    ; task clean up procedure
     AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+    ProcedureReturn #True 
   EndWith
 EndProcedure
 
@@ -447,11 +525,103 @@ Procedure DeactivateThread(*modinfo.mod)
     ProcedureReturn #False
   EndIf
   
-  ; TODO only reset files from list of installed files which match md5!
+  Protected File$, md5$, Backup$
+  Protected NewList Files$()
+  Protected count, countAll, i
   
-  *modinfo\active = #False
-  WriteModToList(*modinfo) ; update mod entry
-  
+  ; read list of files from ini file
+  With *modinfo
+    
+    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    PreferenceGroup(\name$)
+    ; read md5 of installed file in order to keep track of all files that have been changed by this mod
+    ExaminePreferenceKeys()
+    While NextPreferenceKey()
+      countAll = countAll + 1
+      File$ = PreferenceKeyName()
+      md5$ = ReadPreferenceString(File$, "")
+      If File$ And md5$
+        If FileSize(TF$ + File$) >= 0
+          If MD5FileFingerprint(TF$ + File$) = md5$
+            count = count + 1
+            AddElement(Files$())
+            Files$() = File$
+          EndIf
+        EndIf
+      EndIf
+    Wend
+    ClosePreferences()
+    
+    If countAll <= 0
+      Debug "no files altered?"
+    EndIf
+    
+    If count = 0 And countAll > 0
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files. However, all of these files have been overwritten or altered by other modifications. This modification currently has no effect to the game and can savely be deactiveted. Do you want to deactivate this modification?")
+    ElseIf count > 0 And count < countAll
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present in their original state and can be restored. All other files may have been altered by additional mods and cannot be restored savely. Do you want to deactivate this modification?")
+    ElseIf count > 0 And count = countAll
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files. All files can savely be restored. Do you want to restore the original files and deactivate this modification?")
+    Else
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present in their original state. Do you want to deactivate this mod?")
+    EndIf
+    
+    HideGadget(GadgetModNo, #False)
+    HideGadget(GadgetModYes, #False)
+    ModProgressAnswer = #AnswerNone
+    While ModProgressAnswer = #AnswerNone
+      Delay(10)
+    Wend
+    HideGadget(GadgetModNo, #True)
+    HideGadget(GadgetModYes, #True)
+    
+    If ModProgressAnswer = #AnswerNo
+      AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+      ProcedureReturn #False
+    EndIf
+    
+    Backup$ = TF$ + "TFMM\Backup\"
+    CreateDirectoryAll(Backup$)
+    i = 0
+    SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
+    SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files$()))
+    HideGadget(GadgetModProgress, #False)
+    ForEach Files$()
+      File$ = Files$()
+      SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+      
+      ; delete file
+      DeleteFile(TF$ + File$,  #PB_FileSystem_Force)
+      
+      ; restore backup if any
+      If FileSize(Backup$ + File$) >= 0
+        CopyFile(Backup$ + File$, TF$ + File$)
+        ; do not delete backup, just leave it be
+      EndIf
+      
+      i = i + 1
+      SetGadgetState(GadgetModProgress, i)
+    Next
+    HideGadget(GadgetModProgress, #True)
+    
+    SetGadgetText(GadgetModText, "Cleanup...")
+    
+    ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
+    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    RemovePreferenceGroup(\name$)
+    ClosePreferences()
+    
+    \active = #False
+    WriteModToList(*modinfo) ; update mod entry
+    
+    SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully deactivated")
+    HideGadget(GadgetModOk, #False)
+    ModProgressAnswer = #AnswerNone
+    While ModProgressAnswer = #AnswerNone
+      Delay(10)
+    Wend
+    
+  EndWith
   
   AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
   ProcedureReturn #False
@@ -556,6 +726,25 @@ Procedure AddModToList(File$)
   EndWith
 EndProcedure
 
+Procedure RemoveModFromList(*modinfo.mod)
+  If Not *modinfo
+    ProcedureReturn #False
+  EndIf
+  
+  With *modinfo
+    OpenPreferences(TF$ + "TFMM\mods.ini")
+    RemovePreferenceGroup(\name$)
+    ClosePreferences()
+    
+    DeleteFile(TF$ + "TFMM\Mods\" + *modinfo\file$, #PB_FileSystem_Force)
+    
+    FreeModList()
+    LoadModList()
+    
+  EndWith
+EndProcedure
+
+
 Procedure UNUSED_ListMods()
   Protected Path$ = TF$+"TFMM\Mods\"
   Protected File$
@@ -573,7 +762,7 @@ Procedure UNUSED_ListMods()
   EndIf
 EndProcedure
 
-Procedure GadgetButtonActivate(event)
+Procedure GadgetButtonToggle(event)
   Protected SelectedMod
   Protected *modinfo.mod
   
@@ -581,6 +770,21 @@ Procedure GadgetButtonActivate(event)
   If SelectedMod <> -1
     *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
     ToggleMod(*modinfo)
+  EndIf
+EndProcedure
+
+Procedure GadgetButtonUninstall(event)
+  Protected SelectedMod
+  Protected *modinfo.mod
+  
+  SelectedMod =  GetGadgetState(ListInstalled)
+  If SelectedMod <> -1
+    *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
+    If *modinfo\active
+      ProcedureReturn #False
+    EndIf
+    ; if selected mod is not active, it is save to delete the zip file and remove the mod from the mod list
+    RemoveModFromList(*modinfo)
   EndIf
 EndProcedure
 
@@ -685,8 +889,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 401
-; FirstLine = 117
-; Folding = QAAPFw
+; CursorPosition = 261
+; FirstLine = 43
+; Folding = QAkCbA-
 ; EnableUnicode
 ; EnableXP
