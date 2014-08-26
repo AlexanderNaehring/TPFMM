@@ -31,6 +31,7 @@ Global ModProgressAnswer = #AnswerNone, InstallInProgress
 
 Declare FreeModList()
 Declare LoadModList()
+Declare RemoveModFromList(*modinfo.mod)
 
 Procedure CreateDirectoryAll(dir.s)
   Protected result, dir_sub.s, dir_total.s, count
@@ -51,6 +52,18 @@ EndProcedure
 
 Procedure exit(dummy)
   HideWindow(WindowMain, #True)
+  
+  FreeModList()
+  
+  OpenPreferences("TFMM.ini")
+  If ReadPreferenceInteger("windowlocation", #False)
+    PreferenceGroup("window")
+    WritePreferenceInteger("x", WindowX(WindowMain))
+    WritePreferenceInteger("y", WindowY(WindowMain))
+    WritePreferenceInteger("width", WindowWidth(WindowMain))
+    WritePreferenceInteger("height", WindowHeight(WindowMain))
+  EndIf
+  ClosePreferences()
   
   End
 EndProcedure
@@ -180,6 +193,12 @@ Procedure TimerMainGadgets()
 EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
+  
+  OpenPreferences("TFMM.ini")
+  SetGadgetText(GadgetPath, ReadPreferenceString("path", TF$))
+  SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
+  ClosePreferences()
+  
   AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
   HideWindow(WindowSettings, #False, #PB_Window_WindowCentered)
   DisableWindow(WindowMain, #True)
@@ -208,6 +227,10 @@ Procedure GadgetSaveSettings(event)
   TF$ = Dir$ ; save in global variable
   OpenPreferences("TFMM.ini")
   WritePreferenceString("path", TF$)
+  WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
+  If Not GetGadgetState(GadgetSettingsWindowLocation)
+    RemovePreferenceGroup("window")
+  EndIf
   ClosePreferences()
   FreeModList()
   LoadModList()
@@ -230,7 +253,7 @@ Procedure CheckModFile(File$)
   EndIf
 EndProcedure
 
-Procedure OpenMod(Path$)
+Procedure UNUSED_OpenMod(Path$)
   If OpenPack(0, Path$)
     If ExaminePack(0)
       While NextPackEntry(0)
@@ -253,8 +276,8 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \size = FileSize(File$)
     \md5$ = MD5FileFingerprint(File$)
     \active = 0
-  
-    ; read name from TFMM.ini in mod if any
+    
+    ; read info from TFMM.ini in mod if any
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
     If zip
       If ExaminePack(zip)
@@ -335,7 +358,7 @@ Procedure ActivateThread(*modinfo.mod)
   
   With *modinfo
     ModProgressAnswer = #AnswerNone
-    SetGadgetText(GadgetModText, "Do you want to install '"+\name$+"'?")
+    SetGadgetText(GadgetModText, "Do you want to activate '"+\name$+"'?")
     HideGadget(GadgetModYes, #False)
     HideGadget(GadgetModNo, #False)
     While ModProgressAnswer = #AnswerNone
@@ -384,7 +407,7 @@ Procedure ActivateThread(*modinfo.mod)
       EndIf
     Wend
     
-    SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ to install")
+    SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ for activation")
     
     Backup$ = TF$ + "TFMM\Backup\"
     CreateDirectoryAll(Backup$)
@@ -409,7 +432,7 @@ Procedure ActivateThread(*modinfo.mod)
     i = 0
     ModProgressAnswer = #AnswerNone
     ForEach files$()
-      Delay(1) ; let the CPU breath
+      Delay(0) ; let the CPU breath
       ; install each individual file
       File$ = Mid(files$(), FindString(files$(), "res/")) ; let all (game folder) paths start with "res/"
       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -463,7 +486,7 @@ Procedure ActivateThread(*modinfo.mod)
           EndSelect
           
           ; filetracker will list the file as modified by multiple mods!
-          ; TODO may delete filetracker entry (better leave it there for logging purposes)
+          ; may delete filetracker entry (better leave it there for logging purposes)
           
           Break ; foreach loop can be broke after one entry is found
         EndIf
@@ -490,7 +513,8 @@ Procedure ActivateThread(*modinfo.mod)
         
         OpenPreferences(TF$ + "TFMM\filetracker.ini")
         PreferenceGroup(\name$)
-        ; TODO check if overwriting entries!!!
+        ; TODO check if overwriting entries ?
+        ; TODO -> check earlier, if mod with same name is already installed
         ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
         WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
         ClosePreferences()
@@ -704,29 +728,105 @@ Procedure LoadModList()
   ClosePreferences()
 EndProcedure
 
-Procedure AddModToList(File$)
-  Protected *modinfo.mod
-  Protected items
+Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, add info, , this procedure calls WriteModToList()
+  Protected *modinfo.mod, *tmp.mod
+  Protected FileTarget$, tmp$
+  Protected count, i
+  
+  If Not CheckModFile(File$)
+    ProcedureReturn #False
+  EndIf
   
   *modinfo = AllocateStructure(mod)
   If Not GetModInfo(File$, *modinfo)
     ProcedureReturn #False
   EndIf
   
-  ; TODO check if already in list!!!
+  ; check for existing mods with same name
+  count = CountGadgetItems(ListInstalled)
+  For i = 0 To count-1
+    *tmp = GetGadgetItemData(ListInstalled, i)
+    If LCase(*tmp\name$) = LCase(*modinfo\name$)
+      ; mod with identical name is already installed
+      
+      ; check if it is acutally the same mod
+      If *tmp\md5$ = *modinfo\md5$
+        If *tmp\active
+          MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
+        Else
+          If MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want to activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+            ToggleMod(*modinfo)
+          EndIf
+        EndIf
+        FreeStructure(*modinfo)
+        ProcedureReturn #True
+      EndIf
+      
+      ; some mod with the same name is intalled, e.g. another version
+      If *tmp\active
+        MessageRequester("Error", "There is already a modification '"+*tmp\name$+"' installed and activated. Please deactivate the old modification before installing a new one.", #PB_MessageRequester_Ok)
+        FreeStructure(*modinfo)
+        ProcedureReturn #False
+      Else
+        ; mod is installed but not active -> replace old mod
+        tmp$ = "A modification named '"+*tmp\name$+"' is already installed but not active."+#CRLF$+
+               "Do you want to replace the modification?"+#CRLF$+
+               "Current modification:"+#CRLF$+
+               #TAB$+"Name: "+*tmp\name$+#CRLF$+
+               #TAB$+"Version: "+*tmp\version$+#CRLF$+
+               #TAB$+"Author: "+*tmp\author$+#CRLF$+
+               #TAB$+"Size: "+Bytes(*tmp\size)+#CRLF$+
+               "New modification:"+#CRLF$+
+               #TAB$+"Name: "+*modinfo\name$+#CRLF$+
+               #TAB$+"Version: "+*modinfo\version$+#CRLF$+
+               #TAB$+"Author: "+*modinfo\author$+#CRLF$+
+               #TAB$+"Size: "+Bytes(*modinfo\size)
+        If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+          ; user does not want to replace
+          FreeStructure(*modinfo)
+          ProcedureReturn #False
+        EndIf
+        ; user wants to replace
+        RemoveModFromList(*tmp)
+      EndIf
+      Break
+    EndIf
+  Next
+  
+  ; when reaching this point, the mod is free to be installed
+  
+  CreateDirectoryAll(TF$ + "TFMM\Mods\")
+  
+  FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "." + GetExtensionPart(File$)
+;   FileTarget$ = *modinfo\name$ + GetExtensionPart(File$)
+  i = 0
+  While FileSize(TF$ + "TFMM\Mods\" + FileTarget$) > 0
+    ; try to find a filename which does not exist
+    i = i + 1
+    FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "(" + Str(i) + ")." + GetExtensionPart(File$)
+  Wend
+  
+  ; import file to mod folder
+  If Not CopyFile(File$, TF$ + "TFMM\Mods\" + FileTarget$)
+    ; Copy error
+    FreeStructure(*modinfo)
+    ProcedureReturn #False 
+  EndIf
+  
+  *modinfo\file$ = FileTarget$
+  
   WriteModToList(*modinfo)
   
   With *modinfo
-    items = CountGadgetItems(ListInstalled)
-    AddGadgetItem(ListInstalled, items, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + "no")
-    SetGadgetItemData(ListInstalled, items, *modinfo)
- 
-    ToggleMod(*modinfo)
-      
+    count = CountGadgetItems(ListInstalled)
+    AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + Str(\active))
+    SetGadgetItemData(ListInstalled, count, *modinfo)
+    ToggleMod(*modinfo)      
   EndWith
+  
 EndProcedure
 
-Procedure RemoveModFromList(*modinfo.mod)
+Procedure RemoveModFromList(*modinfo.mod) ;Deletes entry from ini file And deletes file from mod folder
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -743,7 +843,6 @@ Procedure RemoveModFromList(*modinfo.mod)
     
   EndWith
 EndProcedure
-
 
 Procedure UNUSED_ListMods()
   Protected Path$ = TF$+"TFMM\Mods\"
@@ -797,22 +896,12 @@ Procedure GadgetNewMod(event)
   EndIf
   
   If File$
-    If CheckModFile(File$)
-      CreateDirectory(TF$ + "TFMM\")
-      CreateDirectory(TF$ + "TFMM\Mods\")
-      ; TODO check if file already exists!
-      ; handle appropriately
-      If CopyFile(File$, TF$ + "TFMM\Mods\" + GetFilePart(File$))
-        AddModToList(File$)
-      Else
-        ProcedureReturn #False 
-      EndIf
-    EndIf
+    AddModToList(File$)
   EndIf
 EndProcedure
 
 Procedure MenuItemUpdate(event)
-  RunProgram(#DQUOTE$+"http://www.train-fever.net/"+#DQUOTE$)
+  RunProgram(#DQUOTE$+"http://goo.gl/utB3xn"+#DQUOTE$) ; Download Page (Train-Fever.net)
 EndProcedure
 
 Procedure GadgetModYes(event)
@@ -835,29 +924,51 @@ Procedure GadgetModOk(event)
   ModProgressAnswer = #AnswerOk
 EndProcedure
 
+Procedure GadgetListInstalled(event)
+  If event = #PB_EventType_LeftDoubleClick
+    GadgetButtonToggle(#PB_EventType_LeftClick)
+  EndIf
+EndProcedure
+
+Procedure GadgetButtonStartGame(event)
+  RunProgram(#DQUOTE$ + "steam://run/304730/" + #DQUOTE$)
+EndProcedure
+
 ;----------------------------------------
 
+Procedure init()
+  UseZipPacker()
+  OpenWindowMain()
+  OpenWindowSettings()
+  OpenWindowModProgress()
+  WindowBounds(WindowMain, 640, 300, #PB_Ignore, #PB_Ignore) 
+  AddWindowTimer(WindowMain, TimerMainGadgets, 100)
+  BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
+  
+  OpenPreferences("TFMM.ini")
+  TF$ = ReadPreferenceString("path", "")
+  If ReadPreferenceInteger("windowlocation", #False)
+    PreferenceGroup("window")
+    ResizeWindow(WindowMain,
+                 ReadPreferenceInteger("x", #PB_Ignore),
+                 ReadPreferenceInteger("y", #PB_Ignore),
+                 ReadPreferenceInteger("width", #PB_Ignore),
+                 ReadPreferenceInteger("height", #PB_Ignore))
+  EndIf
+  ClosePreferences()
+  
+  StatusBarText(0, 0, TF$)
+  SetGadgetText(GadgetPath, TF$)
+  If TF$ = ""
+    ; no path specified upon program start -> open settings
+    MenuItemSettings(0)
+    GadgetButtonAutodetect(0)
+  EndIf
+  LoadModList()
+  
+EndProcedure
 
-UseZipPacker()
-OpenWindowMain()
-OpenWindowSettings()
-OpenWindowModProgress()
-WindowBounds(WindowMain, 640, 300, #PB_Ignore, #PB_Ignore) 
-AddWindowTimer(WindowMain, TimerMainGadgets, 100)
-BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
-
-
-OpenPreferences("TFMM.ini")
-TF$ = ReadPreferenceString("path", "")
-ClosePreferences()
-StatusBarText(0, 0, TF$)
-SetGadgetText(GadgetPath, TF$)
-If TF$ = ""
-  ; no path specified upon program start -> open settings
-  MenuItemSettings(0)
-  GadgetButtonAutodetect(0)
-EndIf
-LoadModList()
+init()
 
 Repeat
   Event = WaitWindowEvent(100)
@@ -889,8 +1000,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 261
-; FirstLine = 43
-; Folding = QAkCbA-
+; CursorPosition = 238
+; FirstLine = 58
+; Folding = SoACAA9
 ; EnableUnicode
 ; EnableXP

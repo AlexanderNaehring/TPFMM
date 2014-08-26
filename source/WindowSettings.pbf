@@ -9,7 +9,7 @@
 
 Global WindowSettings
 
-Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings
+Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation
 
 Declare ResizeGadgetsWindowSettings()
 
@@ -36,6 +36,7 @@ Procedure OpenWindowSettings(x = 0, y = 0, width = 520, height = 185)
   GadgetToolTip(GadgetSaveSettings, "Save settings and close this dialog")
   GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 150, 90, 25, "Cancel")
   GadgetToolTip(GadgetCancelSettings, "Drop changes and close this dialog")
+  GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 10, 150, 280, 25, "Restore TFMM window position upon next start")
 EndProcedure
 
 Procedure ResizeGadgetsWindowSettings()

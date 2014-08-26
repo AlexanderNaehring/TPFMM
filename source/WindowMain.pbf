@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global ListInstalled, GadgetToggle, GadgetUninstall, GadgetNewMod
+Global ListInstalled, GadgetToggle, GadgetUninstall, GadgetNewMod, GadgetStartGame, GadgetHomepage
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -25,7 +25,10 @@ Declare MenuItemSettings(Event)
 Declare GadgetNewMod(Event)
 Declare MenuItemUpdate(Event)
 Declare GadgetButtonUninstall(EventType)
+Declare MenuItemUpdate(EventType)
+Declare GadgetListInstalled(EventType)
 Declare GadgetNewMod(EventType)
+Declare GadgetButtonStartGame(EventType)
 Declare GadgetButtonToggle(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
@@ -56,6 +59,8 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   GadgetToolTip(GadgetUninstall, "Uninstall selected modification")
   GadgetNewMod = ButtonGadget(#PB_Any, 10, 400, 100, 25, "New mod", #PB_Button_Toggle)
   GadgetToolTip(GadgetNewMod, "Add new modification")
+  GadgetStartGame = ButtonGadget(#PB_Any, 230, 400, 260, 25, "Start Train Fever", #PB_Button_Default)
+  GadgetHomepage = ButtonGadget(#PB_Any, 120, 400, 100, 25, "Homepage")
 EndProcedure
 
 Procedure ResizeGadgetsWindowMain()
@@ -66,6 +71,8 @@ Procedure ResizeGadgetsWindowMain()
   ResizeGadget(GadgetToggle, FormWindowWidth - 220, FormWindowHeight - 80, 100, 25)
   ResizeGadget(GadgetUninstall, FormWindowWidth - 110, FormWindowHeight - 80, 100, 25)
   ResizeGadget(GadgetNewMod, 10, FormWindowHeight - 80, 100, 25)
+  ResizeGadget(GadgetStartGame, 230, FormWindowHeight - 80, FormWindowWidth - 460, 25)
+  ResizeGadget(GadgetHomepage, 120, FormWindowHeight - 80, 100, 25)
 EndProcedure
 
 Procedure WindowMain_Events(event)
@@ -89,12 +96,18 @@ Procedure WindowMain_Events(event)
 
     Case #PB_Event_Gadget
       Select EventGadget()
+        Case ListInstalled
+          GadgetListInstalled(EventType())          
         Case GadgetToggle
           GadgetButtonToggle(EventType())          
         Case GadgetUninstall
           GadgetButtonUninstall(EventType())          
         Case GadgetNewMod
           GadgetNewMod(EventType())          
+        Case GadgetStartGame
+          GadgetButtonStartGame(EventType())          
+        Case GadgetHomepage
+          MenuItemUpdate(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True
