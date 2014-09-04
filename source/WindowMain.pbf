@@ -32,7 +32,7 @@ Declare GadgetButtonStartGame(EventType)
 Declare GadgetButtonToggle(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
-  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever (Beta) Mod Manager - BETA", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
+  WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager - BETA", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)

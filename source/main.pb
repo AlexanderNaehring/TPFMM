@@ -10,6 +10,7 @@ Structure mod
   file$
   author$
   version$
+  readme$
   size.i
   md5$
   active.i
@@ -147,7 +148,7 @@ Procedure TimerSettingsGadgets()
       If ret = -1
         SetGadgetText(GadgetRights, "TFMM is not able to write to the game directory. Administrative privileges may be required.")
       Else
-        SetGadgetText(GadgetRights, "Train Fever cannot be found at this path. Please specify the install path of Train Fever.")
+        SetGadgetText(GadgetRights, "Train Fever cannot be found at this path. Administrative privileges may be required.")
       EndIf
     EndIf
   EndIf
@@ -253,17 +254,6 @@ Procedure CheckModFile(File$)
   EndIf
 EndProcedure
 
-Procedure UNUSED_OpenMod(Path$)
-  If OpenPack(0, Path$)
-    If ExaminePack(0)
-      While NextPackEntry(0)
-        Debug "Name: " + PackEntryName(0) + ", Size: " + PackEntrySize(0)
-      Wend
-    EndIf
-    ClosePack(0)
-  EndIf
-EndProcedure
-
 Procedure GetModInfo(File$, *modinfo.mod)
   Protected tmpDir$
   Protected zip
@@ -279,11 +269,11 @@ Procedure GetModInfo(File$, *modinfo.mod)
     
     ; read info from TFMM.ini in mod if any
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+    tmpDir$ = GetTemporaryDirectory()
     If zip
       If ExaminePack(zip)
         While NextPackEntry(zip)
-          If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini" 
-            tmpDir$ = GetTemporaryDirectory()
+          If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini"
             UncompressPackFile(zip, tmpDir$ + "tfmm.ini")
             OpenPreferences(tmpDir$ + "tfmm.ini")
             \name$ = ReadPreferenceString("name", \name$)
@@ -291,7 +281,9 @@ Procedure GetModInfo(File$, *modinfo.mod)
             \version$ = ReadPreferenceString("version", \version$)
             ClosePreferences()
             DeleteFile(tmpDir$ + "tfmm.ini")
-            Break
+          EndIf
+          If LCase(PackEntryName(zip)) = "readme.txt" Or LCase(Right(PackEntryName(zip), 9)) = "/readme.txt"
+            \readme$ = PackEntryName(zip)
           EndIf
         Wend
       EndIf
@@ -844,23 +836,6 @@ Procedure RemoveModFromList(*modinfo.mod) ;Deletes entry from ini file And delet
   EndWith
 EndProcedure
 
-Procedure UNUSED_ListMods()
-  Protected Path$ = TF$+"TFMM\Mods\"
-  Protected File$
-  If ExamineDirectory(0, Path$, "*.zip")
-    While NextDirectoryEntry(0)
-      If DirectoryEntryType(0) = #PB_DirectoryEntry_File
-        File$ = Path$ + DirectoryEntryName(0)
-        If CheckModFile(File$)
-          Debug DirectoryEntryName(0)
-        Else
-          DeleteFile(File$)
-        EndIf
-      EndIf
-    Wend
-  EndIf
-EndProcedure
-
 Procedure GadgetButtonToggle(event)
   Protected SelectedMod
   Protected *modinfo.mod
@@ -1000,8 +975,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 238
-; FirstLine = 58
-; Folding = SoACAA9
+; CursorPosition = 296
+; FirstLine = 59
+; Folding = SAABAA-
 ; EnableUnicode
 ; EnableXP
