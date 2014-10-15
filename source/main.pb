@@ -25,6 +25,12 @@ Enumeration
   #AnswerOk
 EndEnumeration
 
+CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+  #DS$ = "\"
+CompilerElse
+  #DS$ = "/"
+CompilerEndIf
+
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102
 Global Event
 Global TF$
@@ -34,19 +40,32 @@ Declare FreeModList()
 Declare LoadModList()
 Declare RemoveModFromList(*modinfo.mod)
 
-Procedure CreateDirectoryAll(dir.s)
-  Protected result, dir_sub.s, dir_total.s, count
+Procedure.s Path(path$) ; OS specific path separator
+  path$ = RTrim(RTrim(path$, "\"), "/")
+  path$ + #DS$
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+    ReplaceString(path$, "/", "\")
+  CompilerElse
+    ReplaceString(path$, "\", "/")
+  CompilerEndIf
+  ProcedureReturn path$  
+EndProcedure
+
+Procedure CreateDirectoryAll(dir$)
+  Protected result, dir_sub$, dir_total$, count
+  
+  dir$ = Path(dir$)
   
   count = 1
-  dir_sub = StringField(dir, count, "\")
-  dir_total = dir_sub + "\"
+  dir_sub$ = StringField(dir$, count, #DS$)
+  dir_total$ = dir_sub$ + #DS$
   
-  While dir_sub <> ""
-    result = CreateDirectory(dir_total)
+  While dir_sub$ <> ""
+    result = CreateDirectory(dir_total$)
     
     count + 1
-    dir_sub = StringField(dir, count, "\")
-    dir_total + dir_sub + "\"
+    dir_sub$ = StringField(dir$, count, #DS$)
+    dir_total$ + dir_sub$ + #DS$
   Wend
   ProcedureReturn result
 EndProcedure
@@ -86,6 +105,8 @@ Procedure GadgetButtonAutodetect(event)
     If Not FileSize(Dir$) = -2 ; -2 = directory
       Dir$ = Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
     EndIf
+  CompilerElseIf #PB_Compiler_OS = #PB_OS_Linux
+    Dir$ = GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/"
   CompilerEndIf
  
   If Dir$
@@ -102,9 +123,7 @@ Procedure checkTFPath(Dir$)
   If Dir$
     If FileSize(Dir$) = -2
       ; is directory
-      If (Not Right(Dir$, 1) = "\") And (Not Right(Dir$, 1) = "/")
-        Dir$ = Dir$ + "\"
-      EndIf
+      Dir$ = Path(Dir$)
       ; path ends with a slash
       If FileSize(Dir$ + "TrainFever.exe") > 1
         ; TrainFever.exe is located in this path!
@@ -222,9 +241,8 @@ Procedure GadgetSaveSettings(event)
   Protected Dir$
   Dir$ = GetGadgetText(GadgetPath)
   
-  If (Not Right(Dir$, 1) = "\") And (Not Right(Dir$, 1) = "/")
-    Dir$ = Dir$ + "\"
-  EndIf
+  Dir$ = Path(Dir$)
+  
   TF$ = Dir$ ; save in global variable
   OpenPreferences("TFMM.ini")
   WritePreferenceString("path", TF$)
@@ -326,7 +344,7 @@ Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
   EndIf
   
   With *modinfo
-    OpenPreferences(TF$ + "TFMM\mods.ini")
+    OpenPreferences(Path(TF$ + "TFMM") + "mods.ini")
     PreferenceGroup(\name$)
     WritePreferenceString("file", \file$)
     WritePreferenceString("author", \author$)
@@ -368,7 +386,7 @@ Procedure ActivateThread(*modinfo.mod)
     ; start installation
     SetGadgetText(GadgetModText, "Reading modification...")
     
-    zip = OpenPack(#PB_Any, TF$ + "TFMM\mods\" + \file$)
+    zip = OpenPack(#PB_Any, Path(TF$ + "TFMM/mods") + \file$)
     If Not zip
       ; error opening zip file (not a zip file?)
       ModProgressAnswer = #AnswerNone
@@ -401,11 +419,11 @@ Procedure ActivateThread(*modinfo.mod)
     
     SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ for activation")
     
-    Backup$ = TF$ + "TFMM\Backup\"
+    Backup$ = path(TF$ + "TFMM/Backup/")
     CreateDirectoryAll(Backup$)
     
     ; load filetracker list
-    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    OpenPreferences(Path(TF$ + "TFMM") + "filetracker.ini")
     ExaminePreferenceGroups()
     While NextPreferenceGroup()
       PreferenceGroup(PreferenceGroupName())
@@ -427,9 +445,11 @@ Procedure ActivateThread(*modinfo.mod)
       Delay(0) ; let the CPU breath
       ; install each individual file
       File$ = Mid(files$(), FindString(files$(), "res/")) ; let all (game folder) paths start with "res/"
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        File$ = ReplaceString(File$, "/", "\") ; crappy windows has "\" delimiters
-      CompilerEndIf
+      ; adjust path delimiters to OS
+      File$ = Path(GetPathPart(File$)) + GetFilePart(File$)
+;       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+;         File$ = ReplaceString(File$, "/", "\") ; crappy windows has "\" delimiters
+;       CompilerEndIf
       
       SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
       
@@ -720,7 +740,7 @@ Procedure LoadModList()
   ClosePreferences()
 EndProcedure
 
-Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, add info, , this procedure calls WriteModToList()
+Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, add info, this procedure calls WriteModToList()
   Protected *modinfo.mod, *tmp.mod
   Protected FileTarget$, tmp$
   Protected count, i
@@ -975,8 +995,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 296
-; FirstLine = 59
-; Folding = SAABAA-
+; CursorPosition = 108
+; FirstLine = 77
+; Folding = fr0GEA9
 ; EnableUnicode
 ; EnableXP

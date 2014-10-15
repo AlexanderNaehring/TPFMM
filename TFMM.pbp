@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-09-04 10:45" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-10-07 21:39" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="af6cba56b7f6d15f33752c482fc341fb"/>
+      <fingerprint md5="ebf8571975e0d33c87c033725b37458c"/>
     </file>
     <file name="source\registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -21,7 +21,7 @@
     </file>
     <file name="source\WindowMain.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="15612d8a2845932b7ec125efae5406d4"/>
+      <fingerprint md5="cb6f482a8ec35ed64d14a4521f0476f8"/>
     </file>
     <file name="source\WindowModProgress.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
@@ -40,7 +40,7 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="227"/>
+      <compilecount enable="1" value="250"/>
       <buildcount enable="1" value="12"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
