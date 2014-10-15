@@ -41,14 +41,22 @@ Declare FreeModList()
 Declare LoadModList()
 Declare RemoveModFromList(*modinfo.mod)
 
-Procedure.s Path(path$) ; OS specific path separator
-  path$ = RTrim(RTrim(path$, "\"), "/")
-  path$ + #DS$
-  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-    ReplaceString(path$, "/", "\")
-  CompilerElse
-    ReplaceString(path$, "\", "/")
-  CompilerEndIf
+Procedure.s Path(path$, delimiter$ = "")
+  path$ + "/"                             ; add a / delimiter to the end
+  path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
+  While FindString(path$, "//")           ; strip multiple /
+    path$ = ReplaceString(path$, "//", "/")
+  Wend
+  If delimiter$ = ""
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      delimiter$ = "\"
+    CompilerElse
+      delimiter$ = "/"
+    CompilerEndIf
+  EndIf
+  If delimiter$ <> "/"
+    path$ = ReplaceString(path$, "/", delimiter$)
+  EndIf
   ProcedureReturn path$  
 EndProcedure
 
@@ -298,7 +306,6 @@ Procedure CheckModFileRar(File$)
       CompilerElse
         Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
       CompilerEndIf
-      Debug Entry$
       If FindString(Entry$, "res\")
         unrar::RARCloseArchive(hRAR)
         ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
@@ -361,12 +368,8 @@ Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
       CompilerElse
         Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
       CompilerEndIf
-      If FindString(Entry$, "res/")
-        unrar::RARCloseArchive(hRAR)
-        ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
-      EndIf
 
-      If LCase(Entry$) = "tfmm.ini" Or LCase(Right(Entry$, 9)) = "/tfmm.ini"
+      If LCase(Entry$) = "tfmm.ini" Or LCase(Right(Entry$, 9)) = "\tfmm.ini"
         unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + "tfmm.ini")
         Break
       Else
@@ -383,6 +386,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
   Protected extension$
   Protected tmpDir$
   extension$ = LCase(GetExtensionPart(File$))
+  tmpDir$ = GetTemporaryDirectory()
   
   With *modinfo
     \file$ = GetFilePart(File$)
@@ -458,17 +462,126 @@ Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
   EndWith
 EndProcedure
 
+Procedure ExtractModZip(File$, Path$)
+  Protected zip, error
+  
+  zip = OpenPack(#PB_Any, File$)
+  If Not zip
+    ProcedureReturn #False 
+  EndIf
+  
+  If Not ExaminePack(zip)
+    ProcedureReturn #False
+  EndIf
+  
+  Path$ = Path(Path$)
+  
+  While NextPackEntry(zip)
+    If PackEntryType(zip) = #PB_Packer_File
+      If FindString(PackEntryName(zip), "res/") ; only extract files to list which are located in subfoldres of res/
+        File$ = PackEntryName(zip)
+        File$ = Mid(File$, FindString(File$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
+        ; adjust path delimiters to OS
+        File$ = Path(GetPathPart(File$)) + GetFilePart(File$)
+        CreateDirectoryAll(GetPathPart(Path$ + File$))
+        If UncompressPackFile(zip, Path$ + File$, PackEntryName(zip)) = 0
+          Debug "ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!"
+        EndIf
+      EndIf
+    EndIf
+  Wend
+  
+  ClosePack(zip)
+  
+  ProcedureReturn #True
+EndProcedure
+
+Procedure ExtractModRar(File$, Path$)
+  Protected raropen.unrar::RAROpenArchiveDataEx
+  Protected rarheader.unrar::RARHeaderDataEx
+  Protected hRAR
+  Protected Entry$
+  
+  CompilerIf #PB_Compiler_Unicode
+    raropen\ArcNameW = @File$
+  CompilerElse
+    raropen\ArcName = @File$
+  CompilerEndIf
+  raropen\OpenMode = unrar::#RAR_OM_EXTRACT
+  
+  hRAR = unrar::RAROpenArchive(raropen)
+  If Not hRAR
+    ProcedureReturn #False
+  EndIf
+  
+  While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
+    CompilerIf #PB_Compiler_Unicode
+      Entry$ = PeekS(@rarheader\FileNameW)
+    CompilerElse
+      Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+    CompilerEndIf
+    
+    If FindString(Entry$, "res\") ; only extract files to list which are located in subfoldres of res
+      Entry$ = Entry$
+      Entry$ = Mid(Entry$, FindString(Entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
+      Entry$ = Path(GetPathPart(Entry$)) + GetFilePart(Entry$)
+
+      unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + Entry$) ; uncompress current file to modified tmp path 
+    Else
+      unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
+    EndIf
+    
+  Wend
+  unrar::RARCloseArchive(hRAR)
+
+  ProcedureReturn #True
+EndProcedure
+
+Procedure ActivateThread_ReadFiles(dir$, List files$())
+  Protected dir, Entry$
+  
+  dir$ = Path(dir$)
+  
+  dir = ExamineDirectory(#PB_Any, dir$, "")
+  If Not dir
+    ProcedureReturn #False
+  EndIf
+  
+  While NextDirectoryEntry(dir)
+    Entry$ = DirectoryEntryName(dir)
+    If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
+      If Entry$ <> "." And Entry$ <> ".."
+        ActivateThread_ReadFiles(dir$ + Entry$, files$())
+      EndIf
+    ElseIf DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+      AddElement(files$())
+      files$() = dir$ + Entry$
+    EndIf
+  Wend
+  FinishDirectory(dir)
+  
+  If ListSize(files$()) <= 0
+    ProcedureReturn #False
+  EndIf
+  
+  ProcedureReturn #True
+EndProcedure
+
 Procedure ActivateThread(*modinfo.mod)
   If Not *modinfo
     ProcedureReturn #False
   EndIf
   
-  Protected zip, i, CopyFile, isModded
+  Protected dir, i, CopyFile, isModded, error
   Protected NewList Files$()
-  Protected Backup$, File$
+  Protected Backup$, File$, Mod$, tmpDir$
   Protected NewList FileTracker$()
+  Protected extension$
   
   With *modinfo
+    Mod$ = Path(TF$ + "TFMM/mods") + \file$
+    tmpDir$ = Path(TF$ + "TFMM/mod_tmp")
+    
     ModProgressAnswer = #AnswerNone
     SetGadgetText(GadgetModText, "Do you want to activate '"+\name$+"'?")
     HideGadget(GadgetModYes, #False)
@@ -485,12 +598,32 @@ Procedure ActivateThread(*modinfo.mod)
       ProcedureReturn #False
     EndIf
     
-    ; start installation
-    SetGadgetText(GadgetModText, "Reading modification...")
+    ;--------------------------------------------------------------------------------------------------
     
-    zip = OpenPack(#PB_Any, Path(TF$ + "TFMM/mods") + \file$)
-    If Not zip
-      ; error opening zip file (not a zip file?)
+    ;- start installation
+    SetGadgetText(GadgetModText, "Loading modification...")
+    
+    ; first step: uncompress complete mod into temporary folder!
+    extension$ = LCase(GetExtensionPart(Mod$))
+    ; clean temporary directory
+    DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+    CreateDirectoryAll(tmpDir$)                                                  ; create temp dir
+    error = #False 
+    If extension$ = "zip"
+      If Not ExtractModZip(Mod$, tmpDir$)
+        error = #True
+      EndIf
+    ElseIf extension$ = "rar"
+      If Not ExtractModRar(Mod$, tmpDir$)
+        error = #True
+      EndIf
+    Else ; unknown extension
+      error = #True
+    EndIf
+    
+    If error
+      ; error opening archive
+      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
       ModProgressAnswer = #AnswerNone
       SetGadgetText(GadgetModText, "Error opening modification file!")
       HideGadget(GadgetModOk, #False)
@@ -502,26 +635,29 @@ Procedure ActivateThread(*modinfo.mod)
       ProcedureReturn #False
     EndIf
     
+    
+    ; mod should now be extracted to temporary directory tmpDir$
+    
+    SetGadgetText(GadgetModText, "Reading modification...")
     ClearList(files$())
-    If Not ExaminePack(zip)
+    If Not ActivateThread_ReadFiles(tmpDir$, files$()) ; add all files from tmpDir to files$()
+      ; error opening tmpDir$
+      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+      ModProgressAnswer = #AnswerNone
+      SetGadgetText(GadgetModText, "Error reading extracted files!")
+      HideGadget(GadgetModOk, #False)
+      While ModProgressAnswer = #AnswerNone
+        Delay(10)
+      Wend
       ; task clean up procedure
       AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
       ProcedureReturn #False
     EndIf
     
-    While NextPackEntry(zip)
-      SetGadgetText(GadgetModText, "reading"+#CRLF$+PackEntryName(zip))
-      If PackEntryType(zip) = #PB_Packer_File
-        If FindString(PackEntryName(zip), "res/") ; only add files to list which are located in subfoldres of res/
-          AddElement(files$())
-          files$() = PackEntryName(zip)
-        EndIf
-      EndIf
-    Wend
+    Debug "found "+Str(ListSize(files$()))+" files for activation"
+    SetGadgetText(GadgetModText, Str(ListSize(files$()))+" files found")
     
-    SetGadgetText(GadgetModText, "Found "+Str(ListSize(files$()))+" files in res/ for activation")
-    
-    Backup$ = path(TF$ + "TFMM/Backup/")
+    Backup$ = Path(TF$ + "TFMM/Backup/")
     CreateDirectoryAll(Backup$)
     
     ; load filetracker list
@@ -543,17 +679,18 @@ Procedure ActivateThread(*modinfo.mod)
     HideGadget(GadgetModProgress, #False)
     i = 0
     ModProgressAnswer = #AnswerNone
+    
+    
+    ;--------------------------------------------------------------------------------------------------
+    ;- process all files
+    
     ForEach files$()
       Delay(0) ; let the CPU breath
-      ; install each individual file
-      File$ = Mid(files$(), FindString(files$(), "res/")) ; let all (game folder) paths start with "res/"
-      ; adjust path delimiters to OS
+      File$ = files$()
       File$ = Path(GetPathPart(File$)) + GetFilePart(File$)
-;       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-;         File$ = ReplaceString(File$, "/", "\") ; crappy windows has "\" delimiters
-;       CompilerEndIf
+      File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path ofthe mod
       
-      SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+      SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(Files$()) + "'...")
       
       ; normal case: copy the modificated file to game directoy
       CopyFile = #True
@@ -561,7 +698,8 @@ Procedure ActivateThread(*modinfo.mod)
       
       ; check filetracker for any other mods that may have modified this file before
       ForEach FileTracker$()
-        If FileTracker$() = LCase(File$)
+        ; compare files from filetracker with files from new mod
+        If FileTracker$() = Path(LCase(Files$()), "/") ; all filetracker entries are stored with "/" as delimiter
           ; file found in list of already installed files
           CopyFile = #False
           isModded = #True
@@ -599,14 +737,17 @@ Procedure ActivateThread(*modinfo.mod)
               ; do not reset answer
           EndSelect
           
-          ; filetracker will list the file as modified by multiple mods!
-          ; may delete filetracker entry (better leave it there for logging purposes)
+          ; filetracker will list the file as modified by multiple mods! (multiple entries for single file)
+          ; leave multiple entries for logging purpose and information during deactivation
           
-          Break ; foreach loop can be broke after one entry is found
+          Break ; foreach loop can be broke after one entry is found in filetracker
         EndIf
       Next
       
-      If CopyFile 
+      ;--------------------------------------------------------------------------------------------------
+      ;- copy file
+    
+      If CopyFile ; install (copy) new modification file
         ; backup original file if any
         ; only backup vanilla files, DO NOT BACKUP MODDED FILES!
         If Not isModded
@@ -615,20 +756,26 @@ Procedure ActivateThread(*modinfo.mod)
             If FileSize(Backup$ + File$) = -1
               ; no backup of this file present! -> create new backup
               CreateDirectoryAll(GetPathPart(Backup$ + File$))
-              CopyFile(TF$ + File$, Backup$ + File$)
+;               CopyFile(TF$ + File$, Backup$ + File$)
+              RenameFile(TF$ + File$, Backup$ + File$)
             EndIf
           EndIf
         EndIf
         
         ; make sure that the target directory exists (in case of newly added files / direcotries)
         CreateDirectoryAll(GetPathPart(TF$ + File$))
-        ; uncompress the file from the mod zip to the game directory
-        UncompressPackFile(zip, TF$ + File$, files$())
+        ; move the file from the temporary directory to the game directory
+        ;UncompressPackFile(zip, TF$ + File$, files$())
+        
+        DeleteFile(TF$ + File$)
+        If Not RenameFile(Files$(), TF$ + File$)
+          Debug "ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")"
+        EndIf
+        
         
         OpenPreferences(TF$ + "TFMM\filetracker.ini")
         PreferenceGroup(\name$)
         ; TODO check if overwriting entries ?
-        ; TODO -> check earlier, if mod with same name is already installed
         ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
         WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
         ClosePreferences()
@@ -638,7 +785,13 @@ Procedure ActivateThread(*modinfo.mod)
       SetGadgetState(GadgetModProgress, i)
     Next 
     
+    ;--------------------------------------------------------------------------------------------------
+    ;- install finished
+    
     HideGadget(GadgetModProgress, #True)
+    If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+      Debug "ERROR: failed to remove tmpDir$ ("+tmpDir$+")"
+    EndIf
     
     ; activate mod in mod list
     \active = #True
@@ -672,7 +825,7 @@ Procedure DeactivateThread(*modinfo.mod)
     
     OpenPreferences(TF$ + "TFMM\filetracker.ini")
     PreferenceGroup(\name$)
-    ; read md5 of installed file in order to keep track of all files that have been changed by this mod
+    ; read md5 of installed files in order to keep track of all files that have been changed by this mod
     ExaminePreferenceKeys()
     While NextPreferenceKey()
       countAll = countAll + 1
@@ -697,11 +850,11 @@ Procedure DeactivateThread(*modinfo.mod)
     If count = 0 And countAll > 0
       SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files. However, all of these files have been overwritten or altered by other modifications. This modification currently has no effect to the game and can savely be deactiveted. Do you want to deactivate this modification?")
     ElseIf count > 0 And count < countAll
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present in their original state and can be restored. All other files may have been altered by additional mods and cannot be restored savely. Do you want to deactivate this modification?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present. All other files may have been altered by other mods and cannot be restored savely. Do you want to deactivate this modification?")
     ElseIf count > 0 And count = countAll
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files. All files can savely be restored. Do you want to restore the original files and deactivate this modification?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files. Do you want to deactivate this modification?")
     Else
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present in their original state. Do you want to deactivate this mod?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present. Do you want to deactivate this mod?")
     EndIf
     
     HideGadget(GadgetModNo, #False)
@@ -1114,8 +1267,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1017
-; FirstLine = 125
-; Folding = EigxAAIA-
+; CursorPosition = 595
+; FirstLine = 92
+; Folding = UCgxALAAg
 ; EnableUnicode
 ; EnableXP
