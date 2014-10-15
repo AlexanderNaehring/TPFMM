@@ -15,6 +15,7 @@ Structure mod
   size.i
   md5$
   active.i
+  Map dependencies$()
 EndStructure
 
 Enumeration
@@ -410,7 +411,21 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \name$ = ReadPreferenceString("name", \name$)
     \author$ = ReadPreferenceString("author", \author$)
     \version$ = ReadPreferenceString("version", \version$)
+    ; read dependencies from tfmm.ini
+    If PreferenceGroup("dependencies")
+      Debug "dependencies found:"
+      If ExaminePreferenceKeys()
+        While NextPreferenceKey()
+          Debug PreferenceKeyName() + " = " + PreferenceKeyValue()
+          \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
+        Wend
+      EndIf 
+    Else
+      Debug "No dependencies"
+      ClearMap(\dependencies$())
+    EndIf
     ClosePreferences()
+    
     DeleteFile(tmpDir$ + "tfmm.ini")
     
   EndWith
@@ -459,6 +474,20 @@ Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
     WritePreferenceString("md5", \md5$)
     WritePreferenceInteger("active", \active)
     ClosePreferences()
+    
+    ; write dependencies
+    If MapSize(\dependencies$()) > 0
+      OpenPreferences(Path(TF$ + "TFMM") + "mod-dependencies.ini")
+      RemovePreferenceGroup(\name$)
+      PreferenceGroup(\name$)
+      ForEach \dependencies$()
+        WritePreferenceString(MapKey(\dependencies$()), \dependencies$())
+      Next
+      ClosePreferences()
+    EndIf
+    
+    
+    
   EndWith
 EndProcedure
 
@@ -572,11 +601,10 @@ Procedure ActivateThread(*modinfo.mod)
     ProcedureReturn #False
   EndIf
   
-  Protected dir, i, CopyFile, isModded, error
-  Protected NewList Files$()
-  Protected Backup$, File$, Mod$, tmpDir$
-  Protected NewList FileTracker$()
-  Protected extension$
+  Protected dir, i, CopyFile, isModded, error, count, ok
+  Protected NewList Files$(), NewList FileTracker$()
+  Protected Backup$, File$, Mod$, tmpDir$, extension$, ReqMod$, ReqVer$
+  Protected *tmpinfo.mod
   
   With *modinfo
     Mod$ = Path(TF$ + "TFMM/mods") + \file$
@@ -599,8 +627,50 @@ Procedure ActivateThread(*modinfo.mod)
     EndIf
     
     ;--------------------------------------------------------------------------------------------------
+    ;- check dependencies
     
+    SetGadgetText(GadgetModText, "Checking dependencies...")
+    
+    ForEach \dependencies$()
+      ReqMod$ = MapKey(\dependencies$())
+      ReqVer$ = \dependencies$()
+      If ReqVer$ = "0" Or ReqVer$ = "any"
+        ReqVer$ = ""
+      EndIf
+      ok = #False
+      
+      ; search for required mod in list of installed mods
+      count = CountGadgetItems(ListInstalled)
+      For i = 0 To count-1
+        *tmpinfo.mod = GetGadgetItemData(ListInstalled, i)
+        If *tmpinfo\active
+          If *tmpinfo\name$ = ReqMod$
+            If *tmpinfo\version$ = ReqVer$ Or ReqVer$ = ""
+              ok = #True
+              Break
+            EndIf
+          EndIf
+        EndIf
+      Next
+      If Not ok
+        ModProgressAnswer = #AnswerNone
+        If ReqVer$
+          ReqVer$ = " version '" + ReqVer$ + "'"
+        EndIf
+        SetGadgetText(GadgetModText, "This modification requires '" + ReqMod$ + "'" + ReqVer$ + "." + #CRLF$ + "Please make sure all required mods are activated.")
+        HideGadget(GadgetModOk, #False)
+        While ModProgressAnswer = #AnswerNone
+          Delay(10)
+        Wend
+        ; task clean up procedure
+        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+        ProcedureReturn #False
+      EndIf
+    Next
+    
+    ;--------------------------------------------------------------------------------------------------
     ;- start installation
+    
     SetGadgetText(GadgetModText, "Loading modification...")
     
     ; first step: uncompress complete mod into temporary folder!
@@ -819,6 +889,32 @@ Procedure DeactivateThread(*modinfo.mod)
   Protected File$, md5$, Backup$
   Protected NewList Files$()
   Protected count, countAll, i
+  Protected *tmpinfo.mod
+  
+  ; check dependencies
+  count = CountGadgetItems(ListInstalled)
+  For i = 0 To count-1
+    With *tmpinfo
+      *tmpinfo = GetGadgetItemData(ListInstalled, i)
+      If \active
+        ForEach \dependencies$()
+          If MapKey(\dependencies$()) = *modinfo\name$
+            ; this mod is required by another active mod!
+            ModProgressAnswer = #AnswerNone
+            SetGadgetText(GadgetModText, "This modification is required by '" + \name$ + "'." + #CRLF$ + "Please deactivate all mods that depend on this mod before deactivating this mod.")
+            HideGadget(GadgetModOk, #False)
+            While ModProgressAnswer = #AnswerNone
+              Delay(10)
+            Wend
+            ; task clean up procedure
+            AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+            ProcedureReturn #False
+          EndIf
+        Next
+      EndIf 
+    EndWith
+  Next
+  
   
   ; read list of files from ini file
   With *modinfo
@@ -827,6 +923,8 @@ Procedure DeactivateThread(*modinfo.mod)
     PreferenceGroup(\name$)
     ; read md5 of installed files in order to keep track of all files that have been changed by this mod
     ExaminePreferenceKeys()
+    count = 0
+    countAll = 0
     While NextPreferenceKey()
       countAll = countAll + 1
       File$ = PreferenceKeyName()
@@ -965,6 +1063,10 @@ Procedure FreeModList()
 EndProcedure
 
 Procedure LoadModList()
+  Debug "LoadModList()"
+  Protected active$
+  Protected i.i
+  
   If TF$ = ""
     ProcedureReturn #False
   EndIf
@@ -972,13 +1074,20 @@ Procedure LoadModList()
   Protected *modinfo.mod 
   Protected count
   
-  OpenPreferences(TF$ + "TFMM\mods.ini")
+  OpenPreferences(Path(TF$ + "TFMM") + "mods.ini")
   If ExaminePreferenceGroups()
     While NextPreferenceGroup()
       *modinfo = AllocateStructure(mod)
       With *modinfo
         \name$ = PreferenceGroupName()
+        Debug " - found mod: "+\name$
         \file$ = ReadPreferenceString("file", "")
+        If \file$ = ""
+          ; no valid mod
+          ; free memory and continue with next entry
+          FreeStructure(*modinfo)
+          Continue
+        EndIf
         \author$ = ReadPreferenceString("author", "")
         \version$ = ReadPreferenceString("version", "")
         \size = ReadPreferenceInteger("size", 0)
@@ -986,19 +1095,45 @@ Procedure LoadModList()
         \active = ReadPreferenceInteger("active", 0)
         
         count = CountGadgetItems(ListInstalled)
-        AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + Str(\active))
+        If \active
+          active$ = "Yes"
+        Else
+          active$ = "No"
+        EndIf
+        
+        AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
         SetGadgetItemData(ListInstalled, count, *modinfo)
       EndWith
     Wend
   EndIf
+  ClosePreferences()
   
+  
+  ; load dependencies
+  Debug "Load Dependencies"
+  OpenPreferences(Path(TF$ + "TFMM") + "mod-dependencies.ini")
+  count = CountGadgetItems(ListInstalled)
+  For i = 0 To count-1
+    With *modinfo
+      *modinfo = GetGadgetItemData(ListInstalled, i)
+      If PreferenceGroup(\name$)
+        Debug " - Dependencies for "+\name$+":"
+        If ExaminePreferenceKeys()
+          While NextPreferenceKey()
+            Debug " - - " + PreferenceKeyName() + " = " + PreferenceKeyValue()
+            \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
+          Wend
+        EndIf
+      EndIf
+    EndWith
+  Next
   ClosePreferences()
 EndProcedure
 
 Procedure AddModToList(File$) ; Read File$ from any location, extract mod into mod-directory, add info, this procedure calls WriteModToList()
   Debug "AddModToList("+File$+")"
   Protected *modinfo.mod, *tmp.mod
-  Protected FileTarget$, tmp$
+  Protected FileTarget$, tmp$, active$
   Protected count, i
   Protected sameName.b, sameHash.b
   
@@ -1094,7 +1229,12 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   
   With *modinfo
     count = CountGadgetItems(ListInstalled)
-    AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + Str(\active))
+    If \active
+      active$ = "Yes"
+    Else
+      active$ = "No"
+    EndIf
+    AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
     SetGadgetItemData(ListInstalled, count, *modinfo)
     ToggleMod(*modinfo)      
   EndWith
@@ -1107,7 +1247,10 @@ Procedure RemoveModFromList(*modinfo.mod) ;Deletes entry from ini file And delet
   EndIf
   
   With *modinfo
-    OpenPreferences(TF$ + "TFMM\mods.ini")
+    OpenPreferences(Path(TF$ + "TFMM") + "mods.ini")
+    RemovePreferenceGroup(\name$)
+    ClosePreferences()
+    OpenPreferences(Path(TF$ + "TFMM") + "mod-dependencies.ini")
     RemovePreferenceGroup(\name$)
     ClosePreferences()
     
@@ -1267,8 +1410,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 595
-; FirstLine = 92
-; Folding = UCgxALAAg
+; CursorPosition = 903
+; FirstLine = 83
+; Folding = ECgxATAAg
 ; EnableUnicode
 ; EnableXP
