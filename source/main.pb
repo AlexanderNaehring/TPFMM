@@ -4,6 +4,7 @@ XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
 XIncludeFile "registry.pbi"
+XIncludeFile "unrar_module.pbi"
 
 Structure mod
   name$
@@ -259,22 +260,129 @@ Procedure GadgetSaveSettings(event)
   GadgetCloseSettings(event)
 EndProcedure
 
-Procedure CheckModFile(File$)
+Procedure CheckModFileZip(File$)
+  Debug "CheckModFileZip("+File$+")"
   If OpenPack(0, File$)
     If ExaminePack(0)
       While NextPackEntry(0)
         If FindString(PackEntryName(0), "res/")
-          ProcedureReturn #True
+          ClosePack(0)
+          ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
         EndIf
       Wend
     EndIf
     ClosePack(0)
   EndIf
+  ProcedureReturn #False
+EndProcedure
+
+Procedure CheckModFileRar(File$)
+  Debug "CheckModFileRar("+File$+")"
+  Protected raropen.unrar::RAROpenArchiveDataEx
+  Protected rarheader.unrar::RARHeaderDataEx
+  Protected hRAR
+  Protected Entry$
+  
+  CompilerIf #PB_Compiler_Unicode
+    raropen\ArcNameW = @File$
+  CompilerElse
+    raropen\ArcName = @File$
+  CompilerEndIf
+  raropen\OpenMode = unrar::#RAR_OM_LIST ; only list rar files (do not extract)
+  
+  hRAR = unrar::RAROpenArchive(raropen)
+  If hRAR
+    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS ; read header of file in rar
+      CompilerIf #PB_Compiler_Unicode
+        Entry$ = PeekS(@rarheader\FileNameW)
+      CompilerElse
+        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+      CompilerEndIf
+      Debug Entry$
+      If FindString(Entry$, "res\")
+        unrar::RARCloseArchive(hRAR)
+        ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
+      EndIf
+      unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
+    Wend
+    unrar::RARCloseArchive(hRAR)
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+
+Procedure CheckModFile(File$) ; Check mod for a "res" folder!
+  Debug "CheckModFile("+File$+")"
+  Protected extension$
+  extension$ = LCase(GetExtensionPart(File$))
+  If extension$ = "zip"
+    ProcedureReturn CheckModFileZip(File$)
+  ElseIf extension$ = "rar"
+    ProcedureReturn CheckModFileRar(File$)
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+
+Procedure ExtractTFMMiniZip(File$, dir$) ; extracts tfmm.ini to given directory
+  Protected zip
+  
+  zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+  If zip
+    If ExaminePack(zip)
+      While NextPackEntry(zip)
+        If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini"
+          UncompressPackFile(zip, dir$ + "tfmm.ini")
+          Break 
+        EndIf
+      Wend
+    EndIf
+    ClosePack(zip)
+  EndIf
+EndProcedure
+
+Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
+  Protected raropen.unrar::RAROpenArchiveDataEx
+  Protected rarheader.unrar::RARHeaderDataEx
+  Protected hRAR
+  Protected Entry$
+  
+  CompilerIf #PB_Compiler_Unicode
+    raropen\ArcNameW = @File$
+  CompilerElse
+    raropen\ArcName = @File$
+    CharToOem_(dir$, dir$)
+  CompilerEndIf
+  raropen\OpenMode = unrar::#RAR_OM_EXTRACT
+  
+  hRAR = unrar::RAROpenArchive(raropen)
+  If hRAR
+    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
+      CompilerIf #PB_Compiler_Unicode
+        Entry$ = PeekS(@rarheader\FileNameW)
+      CompilerElse
+        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+      CompilerEndIf
+      If FindString(Entry$, "res/")
+        unrar::RARCloseArchive(hRAR)
+        ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
+      EndIf
+
+      If LCase(Entry$) = "tfmm.ini" Or LCase(Right(Entry$, 9)) = "/tfmm.ini"
+        unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + "tfmm.ini")
+        Break
+      Else
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
+      EndIf
+      
+    Wend
+    unrar::RARCloseArchive(hRAR)
+  EndIf
+  ProcedureReturn #False
 EndProcedure
 
 Procedure GetModInfo(File$, *modinfo.mod)
+  Protected extension$
   Protected tmpDir$
-  Protected zip
+  extension$ = LCase(GetExtensionPart(File$))
   
   With *modinfo
     \file$ = GetFilePart(File$)
@@ -286,27 +394,21 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \active = 0
     
     ; read info from TFMM.ini in mod if any
-    zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
-    tmpDir$ = GetTemporaryDirectory()
-    If zip
-      If ExaminePack(zip)
-        While NextPackEntry(zip)
-          If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini"
-            UncompressPackFile(zip, tmpDir$ + "tfmm.ini")
-            OpenPreferences(tmpDir$ + "tfmm.ini")
-            \name$ = ReadPreferenceString("name", \name$)
-            \author$ = ReadPreferenceString("author", \author$)
-            \version$ = ReadPreferenceString("version", \version$)
-            ClosePreferences()
-            DeleteFile(tmpDir$ + "tfmm.ini")
-          EndIf
-          If LCase(PackEntryName(zip)) = "readme.txt" Or LCase(Right(PackEntryName(zip), 9)) = "/readme.txt"
-            \readme$ = PackEntryName(zip)
-          EndIf
-        Wend
-      EndIf
-      ClosePack(zip)
+    DeleteFile(tmpDir$ + "tfmm.ini") ; clean old tfmm.ini if exists
+    ;- Todo : Check if tfmm.ini is deleted?
+    If extension$ = "zip"
+      ExtractTFMMiniZip(File$, tmpDir$)
+    ElseIf extension$ = "rar"
+      ExtractTFMMiniRar(File$, tmpDir$)
     EndIf
+    
+    OpenPreferences(tmpDir$ + "tfmm.ini")
+    \name$ = ReadPreferenceString("name", \name$)
+    \author$ = ReadPreferenceString("author", \author$)
+    \version$ = ReadPreferenceString("version", \version$)
+    ClosePreferences()
+    DeleteFile(tmpDir$ + "tfmm.ini")
+    
   EndWith
   
   ProcedureReturn #True
@@ -740,12 +842,15 @@ Procedure LoadModList()
   ClosePreferences()
 EndProcedure
 
-Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, add info, this procedure calls WriteModToList()
+Procedure AddModToList(File$) ; Read File$ from any location, extract mod into mod-directory, add info, this procedure calls WriteModToList()
+  Debug "AddModToList("+File$+")"
   Protected *modinfo.mod, *tmp.mod
   Protected FileTarget$, tmp$
   Protected count, i
+  Protected sameName.b, sameHash.b
   
   If Not CheckModFile(File$)
+    MessageRequester("Error", "Selected file is not a valid Train Fever modification or not compatible with TFMM")
     ProcedureReturn #False
   EndIf
   
@@ -757,24 +862,30 @@ Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, a
   ; check for existing mods with same name
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
+    sameName = #False
+    sameHash = #False
+    
     *tmp = GetGadgetItemData(ListInstalled, i)
     If LCase(*tmp\name$) = LCase(*modinfo\name$)
-      ; mod with identical name is already installed
-      
-      ; check if it is acutally the same mod
-      If *tmp\md5$ = *modinfo\md5$
-        If *tmp\active
-          MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
-        Else
-          If MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want to activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-            ToggleMod(*modinfo)
-          EndIf
+      sameName = #True
+    EndIf
+    If *tmp\md5$ = *modinfo\md5$
+      sameHash = #True
+    EndIf
+    
+    If sameHash ; same hash indicates a duplicate - do not care about name!
+      If *tmp\active
+        MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
+      Else
+        If MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want to activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+          ToggleMod(*modinfo)
         EndIf
-        FreeStructure(*modinfo)
-        ProcedureReturn #True
       EndIf
-      
-      ; some mod with the same name is intalled, e.g. another version
+      FreeStructure(*modinfo)
+      ProcedureReturn #True
+    EndIf
+    
+    If sameName And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
       If *tmp\active
         MessageRequester("Error", "There is already a modification '"+*tmp\name$+"' installed and activated. Please deactivate the old modification before installing a new one.", #PB_MessageRequester_Ok)
         FreeStructure(*modinfo)
@@ -800,18 +911,17 @@ Procedure AddModToList(File$) ; Read File$ from any location, copy to Mod Dir, a
         EndIf
         ; user wants to replace
         RemoveModFromList(*tmp)
+        Break ; leave loop in order to continue installation
       EndIf
-      Break
     EndIf
   Next
   
-  ; when reaching this point, the mod is free to be installed
-  
+  ; when reaching this point, the mod can be installed
   CreateDirectoryAll(TF$ + "TFMM\Mods\")
   
-  FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "." + GetExtensionPart(File$)
-;   FileTarget$ = *modinfo\name$ + GetExtensionPart(File$)
+  ; user wants to install this mod! Therefore, find a possible file name!
   i = 0
+  FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "." + GetExtensionPart(File$)
   While FileSize(TF$ + "TFMM\Mods\" + FileTarget$) > 0
     ; try to find a filename which does not exist
     i = i + 1
@@ -884,7 +994,7 @@ EndProcedure
 
 Procedure GadgetNewMod(event)
   Protected File$
-  File$ = OpenFileRequester("Select new modification to add", "", "File archives|*.zip|All files|*.*", 0)
+  File$ = OpenFileRequester("Select new modification to add", "", "File archives|*.zip;*.rar|All files|*.*", 0)
   
   If FileSize(TF$) <> -2
     ProcedureReturn #False
@@ -897,6 +1007,15 @@ EndProcedure
 
 Procedure MenuItemUpdate(event)
   RunProgram(#DQUOTE$+"http://goo.gl/utB3xn"+#DQUOTE$) ; Download Page (Train-Fever.net)
+EndProcedure
+
+Procedure MenuItemLicense(event) ; open settings window
+  MessageRequester("License",
+                   "Train Fever Mod Manager"+#CRLF$+
+                   "© 2014 Alexander Nähring / Xanos"+#CRLF$+
+                   "Distribution: www.train-fever.net"+#CRLF$+
+                   #CRLF$+
+                   "unrar © Alexander L. Roshal")
 EndProcedure
 
 Procedure GadgetModYes(event)
@@ -995,8 +1114,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 108
-; FirstLine = 77
-; Folding = fr0GEA9
+; CursorPosition = 1017
+; FirstLine = 125
+; Folding = EigxAAIA-
 ; EnableUnicode
 ; EnableXP
