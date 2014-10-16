@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-10-16 21:06" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-10-16 21:59" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="f34288fd10ee480a1da403ba8322a120"/>
+      <fingerprint md5="66786320a718cac155b6c1de48c42093"/>
     </file>
     <file name="source\registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -21,7 +21,7 @@
     </file>
     <file name="source\unrar_module.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="671e2361524a0be26724ba4b9b197bb4"/>
+      <fingerprint md5="a96c8a58ea4af1bcf1b9fc9ce1633718"/>
     </file>
     <file name="source\WindowMain.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
@@ -44,8 +44,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="350"/>
-      <buildcount enable="1" value="16"/>
+      <compilecount enable="1" value="362"/>
+      <buildcount enable="1" value="17"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,2,%BUILDCOUNT,%COMPILECOUNT"/>

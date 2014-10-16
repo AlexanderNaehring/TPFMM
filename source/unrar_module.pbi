@@ -145,6 +145,7 @@ Module unrar
   EndIf
   
   Procedure OpenRar(File$, mode.i)
+    Debug "OpenRar("+File$+", "+Str(mode)+")"
     Protected raropen.RAROpenArchiveDataEx
     Protected hRAR
     
@@ -155,14 +156,15 @@ Module unrar
     CompilerEndIf
     raropen\OpenMode = mode
     hRAR = RAROpenArchive(raropen)
+    ProcedureReturn hRAR
   EndProcedure
   
   
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 127
-; FirstLine = 100
+; CursorPosition = 158
+; FirstLine = 112
 ; Folding = --
 ; EnableUnicode
 ; EnableXP

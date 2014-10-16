@@ -363,8 +363,7 @@ Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
 EndProcedure
 
 Procedure GetModInfo(File$, *modinfo.mod)
-  Protected extension$
-  Protected tmpDir$
+  Protected tmpDir$, extension$
   extension$ = LCase(GetExtensionPart(File$))
   tmpDir$ = GetTemporaryDirectory()
   
@@ -387,6 +386,10 @@ Procedure GetModInfo(File$, *modinfo.mod)
     EndIf
     
     OpenPreferences(tmpDir$ + "tfmm.ini")
+    ; Read required TFMM version
+    If ReadPreferenceInteger("tfmm", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
+      MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!"+#CRLF$+"Select 'File' -> 'Homepage and Update' to quickly access the project page.")
+    EndIf
     \name$ = ReadPreferenceString("name", \name$)
     \author$ = ReadPreferenceString("author", \author$)
     \version$ = ReadPreferenceString("version", \version$)
@@ -1137,7 +1140,7 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
         MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
       Else
         If MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want to activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-          ToggleMod(*modinfo)
+          ToggleMod(*tmp)
         EndIf
       EndIf
       FreeStructure(*modinfo)
@@ -1152,7 +1155,6 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
       Else
         ; mod is installed but not active -> replace old mod
         tmp$ = "A modification named '"+*tmp\name$+"' is already installed but not active."+#CRLF$+
-               "Do you want to replace the modification?"+#CRLF$+
                "Current modification:"+#CRLF$+
                #TAB$+"Name: "+*tmp\name$+#CRLF$+
                #TAB$+"Version: "+*tmp\version$+#CRLF$+
@@ -1162,7 +1164,8 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
                #TAB$+"Name: "+*modinfo\name$+#CRLF$+
                #TAB$+"Version: "+*modinfo\version$+#CRLF$+
                #TAB$+"Author: "+*modinfo\author$+#CRLF$+
-               #TAB$+"Size: "+Bytes(*modinfo\size)
+               #TAB$+"Size: "+Bytes(*modinfo\size)+#CRLF$+
+               "Do you want to replace the modification?"
         If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
           ; user does not want to replace
           FreeStructure(*modinfo)
@@ -1381,8 +1384,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 224
-; FirstLine = 54
-; Folding = EChIQAAA9
+; CursorPosition = 390
+; FirstLine = 86
+; Folding = ECgYQAAA9
 ; EnableUnicode
 ; EnableXP
