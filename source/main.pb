@@ -1410,7 +1410,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 903
+; CursorPosition = 897
 ; FirstLine = 83
 ; Folding = ECgxATAAg
 ; EnableUnicode
