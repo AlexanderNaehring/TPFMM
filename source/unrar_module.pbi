@@ -1,4 +1,4 @@
-﻿; http://www.purebasic.fr/english/viewtopic.php?f=40&t=56876
+﻿; modified from http://www.purebasic.fr/english/viewtopic.php?f=40&t=56876
 
 DeclareModule unrar
   #ERAR_SUCCESS             = 0
@@ -111,7 +111,7 @@ DeclareModule unrar
   Global RARSetPassword.RARSetPassword
   Global RARGetDllVersion.RARGetDllVersion
   
-  Declare RARUnpackArchiv(FileName.s, DestPath.s = "", Password.s = "", *Callback = 0)
+  Declare OpenRar(File$, mode.i)
 EndDeclareModule
 
 Module unrar
@@ -120,7 +120,7 @@ Module unrar
   Define DLL
   
   CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-    DLL = OpenLibrary(#PB_Any, "unrar64.dll")
+    DLL = OpenLibrary(#PB_Any, "unrar64.dll") ; windows will automatically search the system folders, current path and program path
   CompilerElse
     DLL = OpenLibrary(#PB_Any, "unrar.dll")
   CompilerEndIf
@@ -139,82 +139,30 @@ Module unrar
     RARSetProcessDataProc = GetFunction(DLL, "RARSetProcessDataProc")
     RARSetPassword        = GetFunction(DLL, "RARSetPassword")
     RARGetDllVersion      = GetFunction(DLL, "RARGetDllVersion")
+  Else
+    MessageRequester("Error", "unrar.dll not found!")
+    End 
   EndIf
   
-  Procedure Callback(msg, UserData, P1, P2)
-    Protected PWD.s
-    
-    If UserData
-      PWD = PeekS(UserData)
-    EndIf
-    Select msg
-      Case #UCM_NEEDPASSWORD
-        If PWD = ""
-          PWD = InputRequester("Password", "Password required:", "", #PB_InputRequester_Password)
-        EndIf
-        If PWD
-          PokeS(P1, PWD, P2, #PB_Ascii)
-          ProcedureReturn #True
-        EndIf
-      Case #UCM_NEEDPASSWORDW
-        If PWD = ""
-          PWD = InputRequester("Password", "Password required:", "", #PB_InputRequester_Password)
-        EndIf
-        If PWD
-          PokeS(P1, PWD, P2, #PB_Unicode)
-          ProcedureReturn #True
-        EndIf
-    EndSelect
-  EndProcedure
-  
-  Procedure RARUnpackArchiv(FileName.s, DestPath.s = "", Password.s = "", *Callback = 0)
+  Procedure OpenRar(File$, mode.i)
     Protected raropen.RAROpenArchiveDataEx
-    Protected rarheader.RARHeaderDataEx
-    Protected hRAR, NoError = #True
+    Protected hRAR
     
     CompilerIf #PB_Compiler_Unicode
-      raropen\ArcNameW = @Filename
+      raropen\ArcNameW = @File$
     CompilerElse
-      raropen\ArcName = @Filename
-      If DestPath
-        CharToOem_(DestPath, DestPath)
-      EndIf
+      raropen\ArcName = @File$
     CompilerEndIf
-    raropen\OpenMode = #RAR_OM_EXTRACT
-    If Password
-      raropen\UserData = @Password
-    EndIf
-    If *Callback
-      raropen\Callback = *Callback
-    Else
-      raropen\Callback = @Callback()
-    EndIf
-    
-    
+    raropen\OpenMode = mode
     hRAR = RAROpenArchive(raropen)
-    
-    If hRAR
-      While RARReadHeader(hRAR, rarheader) = #ERAR_SUCCESS
-        Debug "---- rarheader ----"
-        Debug PeekS(@rarheader\ArcName,1024,#PB_Ascii)
-        Debug PeekS(@rarheader\ArcNameW,1024,#PB_Unicode)
-        Debug PeekS(@rarheader\FileName,#PB_Ascii)
-        Debug PeekS(@rarheader\FileNameW)
-        Debug "Destination: "+DestPath
-        If RARProcessFile(hRAR, #RAR_EXTRACT, DestPath, #NULL$) <> #ERAR_SUCCESS
-          NoError = #False
-        EndIf
-      Wend
-      RARCloseArchive(hRAR)
-    EndIf
-    ProcedureReturn NoError
   EndProcedure
+  
   
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 203
-; FirstLine = 163
+; CursorPosition = 127
+; FirstLine = 100
 ; Folding = --
 ; EnableUnicode
 ; EnableXP

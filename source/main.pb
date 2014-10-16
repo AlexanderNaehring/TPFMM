@@ -16,6 +16,7 @@ Structure mod
   md5$
   active.i
   Map dependencies$()
+;   List conflicts$()
 EndStructure
 
 Enumeration
@@ -61,10 +62,10 @@ Procedure.s Path(path$, delimiter$ = "")
   ProcedureReturn path$  
 EndProcedure
 
-Procedure CreateDirectoryAll(dir$)
+Procedure CreateDirectoryAll(dir$, delimiter$ = "")
   Protected result, dir_sub$, dir_total$, count
   
-  dir$ = Path(dir$)
+  dir$ = Path(dir$, delimiter$)
   
   count = 1
   dir_sub$ = StringField(dir$, count, #DS$)
@@ -132,14 +133,12 @@ EndProcedure
 Procedure checkTFPath(Dir$)
   If Dir$
     If FileSize(Dir$) = -2
-      ; is directory
       Dir$ = Path(Dir$)
-      ; path ends with a slash
       If FileSize(Dir$ + "TrainFever.exe") > 1
         ; TrainFever.exe is located in this path!
         ; seems to be valid
         
-        ; check ifable to write to path
+        ; check if able to write to path
         If CreateFile(0, Dir$ + "TFMM.tmp")
           CloseFile(0)
           DeleteFile(Dir$ + "TFMM.tmp")
@@ -168,7 +167,7 @@ Procedure TimerSettingsGadgets()
     
     ret = checkTFPath(LastDir$)
     If ret = #True
-      SetGadgetText(GadgetRights, "Path is correct and TFMM is able to write to the game directory. Let's get started modding!")
+      SetGadgetText(GadgetRights, "Path is correct and TFMM is able to write to the game directory. Let's mod!")
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
       DisableGadget(GadgetSaveSettings, #False)
     Else
@@ -196,7 +195,6 @@ Procedure TimerMainGadgets()
     EndIf
   EndIf
   
-  
   SelectedMod =  GetGadgetState(ListInstalled)
   If LastSelected <> SelectedMod
     LastSelected = SelectedMod
@@ -219,11 +217,9 @@ Procedure TimerMainGadgets()
       EndIf
     EndIf
   EndIf
-  
 EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
-  
   OpenPreferences("TFMM.ini")
   SetGadgetText(GadgetPath, ReadPreferenceString("path", TF$))
   SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
@@ -287,19 +283,11 @@ EndProcedure
 
 Procedure CheckModFileRar(File$)
   Debug "CheckModFileRar("+File$+")"
-  Protected raropen.unrar::RAROpenArchiveDataEx
   Protected rarheader.unrar::RARHeaderDataEx
   Protected hRAR
   Protected Entry$
   
-  CompilerIf #PB_Compiler_Unicode
-    raropen\ArcNameW = @File$
-  CompilerElse
-    raropen\ArcName = @File$
-  CompilerEndIf
-  raropen\OpenMode = unrar::#RAR_OM_LIST ; only list rar files (do not extract)
-  
-  hRAR = unrar::RAROpenArchive(raropen)
+  hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
   If hRAR
     While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS ; read header of file in rar
       CompilerIf #PB_Compiler_Unicode
@@ -348,20 +336,11 @@ Procedure ExtractTFMMiniZip(File$, dir$) ; extracts tfmm.ini to given directory
 EndProcedure
 
 Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
-  Protected raropen.unrar::RAROpenArchiveDataEx
   Protected rarheader.unrar::RARHeaderDataEx
   Protected hRAR
   Protected Entry$
   
-  CompilerIf #PB_Compiler_Unicode
-    raropen\ArcNameW = @File$
-  CompilerElse
-    raropen\ArcName = @File$
-    CharToOem_(dir$, dir$)
-  CompilerEndIf
-  raropen\OpenMode = unrar::#RAR_OM_EXTRACT
-  
-  hRAR = unrar::RAROpenArchive(raropen)
+  hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_EXTRACT)
   If hRAR
     While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
       CompilerIf #PB_Compiler_Unicode
@@ -526,19 +505,11 @@ Procedure ExtractModZip(File$, Path$)
 EndProcedure
 
 Procedure ExtractModRar(File$, Path$)
-  Protected raropen.unrar::RAROpenArchiveDataEx
   Protected rarheader.unrar::RARHeaderDataEx
   Protected hRAR
   Protected Entry$
   
-  CompilerIf #PB_Compiler_Unicode
-    raropen\ArcNameW = @File$
-  CompilerElse
-    raropen\ArcName = @File$
-  CompilerEndIf
-  raropen\OpenMode = unrar::#RAR_OM_EXTRACT
-  
-  hRAR = unrar::RAROpenArchive(raropen)
+  hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_EXTRACT)
   If Not hRAR
     ProcedureReturn #False
   EndIf
@@ -1241,7 +1212,7 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   
 EndProcedure
 
-Procedure RemoveModFromList(*modinfo.mod) ;Deletes entry from ini file And deletes file from mod folder
+Procedure RemoveModFromList(*modinfo.mod) ; Deletes entry from ini file and deletes file from mod folder
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -1410,8 +1381,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 897
-; FirstLine = 83
-; Folding = ECgxATAAg
+; CursorPosition = 224
+; FirstLine = 54
+; Folding = EChIQAAA9
 ; EnableUnicode
 ; EnableXP
