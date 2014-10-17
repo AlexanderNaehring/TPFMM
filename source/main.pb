@@ -42,6 +42,7 @@ Global ModProgressAnswer = #AnswerNone, InstallInProgress
 Declare FreeModList()
 Declare LoadModList()
 Declare RemoveModFromList(*modinfo.mod)
+Declare checkUpdate(auto.i)
 
 Procedure.s Path(path$, delimiter$ = "")
   path$ + "/"                             ; add a / delimiter to the end
@@ -223,6 +224,7 @@ Procedure MenuItemSettings(event) ; open settings window
   OpenPreferences("TFMM.ini")
   SetGadgetText(GadgetPath, ReadPreferenceString("path", TF$))
   SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
+  SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
   ClosePreferences()
   
   AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
@@ -246,22 +248,22 @@ EndProcedure
 Procedure GadgetSaveSettings(event)
   Protected Dir$
   Dir$ = GetGadgetText(GadgetPath)
-  
   Dir$ = Path(Dir$)
   
-  TF$ = Dir$ ; save in global variable
+  TF$ = Dir$ ; store in global variable
   OpenPreferences("TFMM.ini")
   WritePreferenceString("path", TF$)
   WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
   If Not GetGadgetState(GadgetSettingsWindowLocation)
     RemovePreferenceGroup("window")
   EndIf
+  WritePreferenceInteger("update", GetGadgetState(GadgetSettingsAutomaticUpdate))
   ClosePreferences()
   FreeModList()
   LoadModList()
-    
+  
   StatusBarText(0, 0, TF$)
-    
+  
   GadgetCloseSettings(event)
 EndProcedure
 
@@ -388,7 +390,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
     OpenPreferences(tmpDir$ + "tfmm.ini")
     ; Read required TFMM version
     If ReadPreferenceInteger("tfmm", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-      MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!"+#CRLF$+"Select 'File' -> 'Homepage and Update' to quickly access the project page.")
+      MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
     EndIf
     \name$ = ReadPreferenceString("name", \name$)
     \author$ = ReadPreferenceString("author", \author$)
@@ -1275,11 +1277,15 @@ Procedure GadgetNewMod(event)
   EndIf
 EndProcedure
 
-Procedure MenuItemUpdate(event)
+Procedure MenuItemHomepage(event)
   RunProgram(#DQUOTE$+"http://goo.gl/utB3xn"+#DQUOTE$) ; Download Page (Train-Fever.net)
 EndProcedure
 
-Procedure MenuItemLicense(event) ; open settings window
+Procedure MenuItemUpdate(event)
+  CreateThread(@checkUpdate(), 0)
+EndProcedure
+
+Procedure MenuItemLicense(event)
   MessageRequester("License",
                    "Train Fever Mod Manager"+#CRLF$+
                    "© 2014 Alexander Nähring / Xanos"+#CRLF$+
@@ -1318,10 +1324,44 @@ Procedure GadgetButtonStartGame(event)
   RunProgram(#DQUOTE$ + "steam://run/304730/" + #DQUOTE$)
 EndProcedure
 
+Procedure checkUpdate(auto.i)
+  Debug "checkUpdate"
+  Protected URL$
+  
+  DeleteFile("tfmm-update.ini")
+  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto))
+  Debug URL$
+  If ReceiveHTTPFile("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto), "tfmm-update.ini")
+    OpenPreferences("tfmm-update.ini")
+    If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
+      Debug "Update: new version available"
+      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go to 'File' -> 'Homepage' to access the project page.")
+    Else
+      Debug "Update: no new version"
+      If Not auto
+        MessageRequester("Update", "You already have the newest version of TFMM.")
+      EndIf
+    EndIf
+    ClosePreferences()
+    DeleteFile("tfmm-update.ini")
+  Else
+    Debug "ERROR: failed to download ini"
+    If Not auto
+      MessageRequester("Update", "Failed to retrieve version info from server.")
+    EndIf
+  EndIf
+EndProcedure
+
 ;----------------------------------------
 
 Procedure init()
-  UseZipPacker()
+  If Not UseZipPacker()
+    MessageRequester("Error", "Could not initialize ZIP decompression.")
+    End
+  EndIf
+  If Not InitNetwork()
+    Debug "ERROR: InitNetwork()"
+  EndIf
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
@@ -1338,6 +1378,9 @@ Procedure init()
                  ReadPreferenceInteger("y", #PB_Ignore),
                  ReadPreferenceInteger("width", #PB_Ignore),
                  ReadPreferenceInteger("height", #PB_Ignore))
+  EndIf
+  If ReadPreferenceInteger("update", 0)
+    CreateThread(@checkUpdate(), 1)
   EndIf
   ClosePreferences()
   
@@ -1384,8 +1427,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 390
-; FirstLine = 86
-; Folding = ECgYQAAA9
+; CursorPosition = 1346
+; FirstLine = 459
+; Folding = ECgYQBwA9
 ; EnableUnicode
 ; EnableXP

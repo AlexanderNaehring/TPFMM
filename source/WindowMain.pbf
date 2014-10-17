@@ -13,6 +13,7 @@ Global GadgetPanel, GadgetStartGame, GadgetHomepage, GadgetNewMod, GadgetUninsta
 
 Enumeration FormMenu
   #MenuItem_Settings
+  #MenuItem_Homepage
   #MenuItem_Update
   #MenuItem_AddMod
   #MenuItem_License
@@ -22,6 +23,7 @@ EndEnumeration
 Declare ResizeGadgetsWindowMain()
 
 Declare exit(Event)
+Declare MenuItemHomepage(Event)
 Declare MenuItemSettings(Event)
 Declare MenuItemLicense(Event)
 Declare GadgetNewMod(Event)
@@ -36,7 +38,10 @@ Declare GadgetButtonToggle(EventType)
 Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_H, #MenuItem_Homepage)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_L, #MenuItem_License)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
 
   CreateStatusBar(0, WindowID(WindowMain))
@@ -45,11 +50,12 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   CreateMenu(0, WindowID(WindowMain))
   MenuTitle("File")
   MenuItem(#MenuItem_Settings, "&Settings" + Chr(9) + "Ctrl + S")
-  MenuItem(#MenuItem_Update, "&Homepage and Update")
+  MenuItem(#MenuItem_Homepage, "&Homepage" + Chr(9) + "Ctrl + H")
+  MenuItem(#MenuItem_Update, "&Update" + Chr(9) + "Ctrl + U")
   MenuBar()
   MenuItem(#MenuItem_AddMod, "&Add Modification" + Chr(9) + "Ctrl + O")
   MenuBar()
-  MenuItem(#MenuItem_License, "&License")
+  MenuItem(#MenuItem_License, "&License" + Chr(9) + "Ctrl + L")
   MenuItem(#MenuItem_Close, "&Close" + Chr(9) + "Alt + F4")
   GadgetPanel = PanelGadget(#PB_Any, 0, 0, 720, 435)
   AddGadgetItem(GadgetPanel, -1, "Modifications")
@@ -102,6 +108,8 @@ Procedure WindowMain_Events(event)
       Select EventMenu()
         Case #MenuItem_Settings
           MenuItemSettings(EventMenu())
+        Case #MenuItem_Homepage
+          MenuItemHomepage(EventMenu())
         Case #MenuItem_Update
           MenuItemUpdate(EventMenu())
         Case #MenuItem_AddMod

@@ -9,7 +9,7 @@
 
 Global WindowSettings
 
-Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation
+Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate
 
 Declare ResizeGadgetsWindowSettings()
 
@@ -19,7 +19,7 @@ Declare GadgetButtonOpenPath(EventType)
 Declare GadgetButtonAutodetect(EventType)
 Declare GadgetButtonBrowse(EventType)
 
-Procedure OpenWindowSettings(x = 0, y = 0, width = 520, height = 185)
+Procedure OpenWindowSettings(x = 0, y = 0, width = 520, height = 210)
   WindowSettings = OpenWindow(#PB_Any, x, y, width, height, "TFMM Settings", #PB_Window_SystemMenu | #PB_Window_ScreenCentered, WindowID(WindowMain))
   HideWindow(WindowSettings, 1)
   GadgetPath = StringGadget(#PB_Any, 20, 70, 300, 25, "[Train Fever Path]")
@@ -32,11 +32,14 @@ Procedure OpenWindowSettings(x = 0, y = 0, width = 520, height = 185)
   GadgetSettingsInfo = TextGadget(#PB_Any, 20, 30, 480, 35, "All installed mods will be handled for each installation separately."+#CRLF$+"Please make sure that TFMM has the required rights to write to the game directory.")
   GadgetOpenPath = ButtonGadget(#PB_Any, 460, 100, 40, 25, "Open")
   GadgetToolTip(GadgetOpenPath, "Open specified folder")
-  GadgetSaveSettings = ButtonGadget(#PB_Any, 420, 150, 90, 25, "Save")
+  GadgetSaveSettings = ButtonGadget(#PB_Any, 420, 180, 90, 25, "Save")
   GadgetToolTip(GadgetSaveSettings, "Save settings and close this dialog")
-  GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 150, 90, 25, "Cancel")
+  GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 180, 90, 25, "Cancel")
   GadgetToolTip(GadgetCancelSettings, "Drop changes and close this dialog")
   GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 10, 150, 280, 25, "Restore TFMM window position upon next start")
+  GadgetToolTip(GadgetSettingsWindowLocation, "Remember the window location and restore upon next start.")
+  GadgetSettingsAutomaticUpdate = CheckBoxGadget(#PB_Any, 10, 180, 280, 25, "Automatically check for TFMM updates")
+  GadgetToolTip(GadgetSettingsAutomaticUpdate, "TFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting train-fever.net.")
 EndProcedure
 
 Procedure ResizeGadgetsWindowSettings()
