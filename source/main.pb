@@ -411,6 +411,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
       MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
     EndIf
     \name$ = ReadPreferenceString("name", \name$)
+    \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
     \author$ = ReadPreferenceString("author", \author$)
     \version$ = ReadPreferenceString("version", \version$)
     ; read dependencies from tfmm.ini
@@ -1472,8 +1473,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 808
-; FirstLine = 260
-; Folding = IEARgCAAw
+; CursorPosition = 415
+; FirstLine = 103
+; Folding = oEQxgCAAw
 ; EnableUnicode
 ; EnableXP

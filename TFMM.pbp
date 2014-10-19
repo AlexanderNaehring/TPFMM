@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-10-19 15:45" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-10-19 22:12" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="7de8ae6a7414a2c0ad6b2ac6370da232"/>
+      <fingerprint md5="8e991f8e407ed08d69b68bdf6fae513b"/>
     </file>
     <file name="source\registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -44,7 +44,7 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="389"/>
+      <compilecount enable="1" value="393"/>
       <buildcount enable="1" value="18"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
