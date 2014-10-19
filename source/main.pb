@@ -44,6 +44,24 @@ Declare LoadModList()
 Declare RemoveModFromList(*modinfo.mod)
 Declare checkUpdate(auto.i)
 
+Procedure PDebug(str$, delete=#False)
+  Protected file
+  If delete
+    Debug "delete tfmm-output.txt"
+    DeleteFile("tfmm-output.txt", #PB_FileSystem_Force)
+  EndIf
+  If str$ <> ""
+    Debug str$
+    If #True
+      file = OpenFile(#PB_Any, "tfmm-output.txt", #PB_File_Append|#PB_File_NoBuffering)
+      If file
+        WriteStringN(file, str$)
+        CloseFile(file)
+      EndIf
+    EndIf
+  EndIf
+EndProcedure
+
 Procedure.s Path(path$, delimiter$ = "")
   path$ + "/"                             ; add a / delimiter to the end
   path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
@@ -268,7 +286,7 @@ Procedure GadgetSaveSettings(event)
 EndProcedure
 
 Procedure CheckModFileZip(File$)
-  Debug "CheckModFileZip("+File$+")"
+  PDebug("CheckModFileZip("+File$+")")
   If OpenPack(0, File$)
     If ExaminePack(0)
       While NextPackEntry(0)
@@ -284,7 +302,7 @@ Procedure CheckModFileZip(File$)
 EndProcedure
 
 Procedure CheckModFileRar(File$)
-  Debug "CheckModFileRar("+File$+")"
+  PDebug("CheckModFileRar("+File$+")")
   Protected rarheader.unrar::RARHeaderDataEx
   Protected hRAR
   Protected Entry$
@@ -309,7 +327,7 @@ Procedure CheckModFileRar(File$)
 EndProcedure
 
 Procedure CheckModFile(File$) ; Check mod for a "res" folder!
-  Debug "CheckModFile("+File$+")"
+  PDebug("CheckModFile("+File$+")")
   Protected extension$
   extension$ = LCase(GetExtensionPart(File$))
   If extension$ = "zip"
@@ -397,15 +415,15 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \version$ = ReadPreferenceString("version", \version$)
     ; read dependencies from tfmm.ini
     If PreferenceGroup("dependencies")
-      Debug "dependencies found:"
+      PDebug("dependencies found:")
       If ExaminePreferenceKeys()
         While NextPreferenceKey()
-          Debug PreferenceKeyName() + " = " + PreferenceKeyValue()
+          PDebug(PreferenceKeyName() + " = " + PreferenceKeyValue())
           \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
         Wend
       EndIf 
     Else
-      Debug "No dependencies"
+      PDebug("No dependencies")
       ClearMap(\dependencies$())
     EndIf
     ClosePreferences()
@@ -498,7 +516,7 @@ Procedure ExtractModZip(File$, Path$)
         File$ = Path(GetPathPart(File$)) + GetFilePart(File$)
         CreateDirectoryAll(GetPathPart(Path$ + File$))
         If UncompressPackFile(zip, Path$ + File$, PackEntryName(zip)) = 0
-          Debug "ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!"
+          PDebug("ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!")
         EndIf
       EndIf
     EndIf
@@ -531,7 +549,9 @@ Procedure ExtractModRar(File$, Path$)
       Entry$ = Mid(Entry$, FindString(Entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
       Entry$ = Path(GetPathPart(Entry$)) + GetFilePart(Entry$)
 
-      unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + Entry$) ; uncompress current file to modified tmp path 
+      If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + Entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+        PDebug("ERROR: uncrompressing rar: '"+File$+"' failed!")
+      EndIf
     Else
       unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
     EndIf
@@ -543,6 +563,7 @@ Procedure ExtractModRar(File$, Path$)
 EndProcedure
 
 Procedure ActivateThread_ReadFiles(dir$, List files$())
+  PDebug("ActivateThread_ReadFiles() - "+dir$)
   Protected dir, Entry$
   
   dir$ = Path(dir$)
@@ -573,6 +594,7 @@ Procedure ActivateThread_ReadFiles(dir$, List files$())
 EndProcedure
 
 Procedure ActivateThread(*modinfo.mod)
+  PDebug("ActivateThread()")
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -700,16 +722,20 @@ Procedure ActivateThread(*modinfo.mod)
       ProcedureReturn #False
     EndIf
     
-    Debug "found "+Str(ListSize(files$()))+" files for activation"
+    PDebug("found "+Str(ListSize(files$()))+" files for activation")
     SetGadgetText(GadgetModText, Str(ListSize(files$()))+" files found")
     
     Backup$ = Path(TF$ + "TFMM/Backup/")
+    PDebug("Backup folder: "+Backup$)
     CreateDirectoryAll(Backup$)
     
     ; load filetracker list
+    PDebug("load filetracker")
+    ClearList(FileTracker$())
     OpenPreferences(Path(TF$ + "TFMM") + "filetracker.ini")
     ExaminePreferenceGroups()
     While NextPreferenceGroup()
+      PDebug("filetracker: " + PreferenceGroupName())
       PreferenceGroup(PreferenceGroupName())
       ExaminePreferenceKeys()
       While NextPreferenceKey()
@@ -718,6 +744,7 @@ Procedure ActivateThread(*modinfo.mod)
       Wend
     Wend
     ClosePreferences()
+    PDebug("filetracker: " + Str(ListSize(FileTracker$())) + " files")
     
     SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
     SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
@@ -726,15 +753,14 @@ Procedure ActivateThread(*modinfo.mod)
     i = 0
     ModProgressAnswer = #AnswerNone
     
-    
     ;--------------------------------------------------------------------------------------------------
     ;- process all files
-    
+    PDebug("process files")
     ForEach files$()
       Delay(0) ; let the CPU breath
       File$ = files$()
       File$ = Path(GetPathPart(File$)) + GetFilePart(File$)
-      File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path ofthe mod
+      File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path of mod
       
       SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(Files$()) + "'...")
       
@@ -780,12 +806,11 @@ Procedure ActivateThread(*modinfo.mod)
               ; do not reset answer!
             Case #AnswerNoAll
               CopyFile = #False
-              ; do not reset answer
+              ; do not reset answer!
           EndSelect
           
-          ; filetracker will list the file as modified by multiple mods! (multiple entries for single file)
+          ; filetracker will list the file as modified by multiple mods! (may result in multiple entries for single file)
           ; leave multiple entries for logging purpose and information during deactivation
-          
           Break ; foreach loop can be broke after one entry is found in filetracker
         EndIf
       Next
@@ -814,8 +839,10 @@ Procedure ActivateThread(*modinfo.mod)
         ;UncompressPackFile(zip, TF$ + File$, files$())
         
         DeleteFile(TF$ + File$)
-        If Not RenameFile(Files$(), TF$ + File$)
-          Debug "ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")"
+        If RenameFile(Files$(), TF$ + File$)
+          PDebug("installed file "+File$)
+        Else
+          PDebug("ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")")
         EndIf
         
         
@@ -833,10 +860,10 @@ Procedure ActivateThread(*modinfo.mod)
     
     ;--------------------------------------------------------------------------------------------------
     ;- install finished
-    
+    PDebug("finish install...")
     HideGadget(GadgetModProgress, #True)
     If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
-      Debug "ERROR: failed to remove tmpDir$ ("+tmpDir$+")"
+      PDebug("ERROR: failed to remove tmpDir$ ("+tmpDir$+")")
     EndIf
     
     ; activate mod in mod list
@@ -852,12 +879,14 @@ Procedure ActivateThread(*modinfo.mod)
     Wend
     
     ; task clean up procedure
+    PDebug("install finished!")
     AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
     ProcedureReturn #True 
   EndWith
 EndProcedure
 
 Procedure DeactivateThread(*modinfo.mod)
+  PDebug("DeactivateThread()")
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -867,6 +896,9 @@ Procedure DeactivateThread(*modinfo.mod)
   Protected count, countAll, i
   Protected *tmpinfo.mod
   
+  PDebug("deactivate "+*modinfo\name$)
+  
+  PDebug("check dependencies")
   ; check dependencies
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
@@ -876,6 +908,7 @@ Procedure DeactivateThread(*modinfo.mod)
         ForEach \dependencies$()
           If MapKey(\dependencies$()) = *modinfo\name$
             ; this mod is required by another active mod!
+            PDebug("this mod is required required by " + \name$)
             ModProgressAnswer = #AnswerNone
             SetGadgetText(GadgetModText, "This modification is required by '" + \name$ + "'." + #CRLF$ + "Please deactivate all mods that depend on this mod before deactivating this mod.")
             HideGadget(GadgetModOk, #False)
@@ -894,13 +927,14 @@ Procedure DeactivateThread(*modinfo.mod)
   
   ; read list of files from ini file
   With *modinfo
-    
+    PDebug("read filetracker and check MD5")
     OpenPreferences(TF$ + "TFMM\filetracker.ini")
     PreferenceGroup(\name$)
     ; read md5 of installed files in order to keep track of all files that have been changed by this mod
     ExaminePreferenceKeys()
     count = 0
     countAll = 0
+    ClearList(Files$())
     While NextPreferenceKey()
       countAll = countAll + 1
       File$ = PreferenceKeyName()
@@ -916,6 +950,7 @@ Procedure DeactivateThread(*modinfo.mod)
       EndIf
     Wend
     ClosePreferences()
+    PDebug("count = "+Str(count)+", countAll = "+Str(countAll)+", Files$() = "+ListSize(Files$()))
     
     If countAll <= 0
       Debug "no files altered?"
@@ -945,7 +980,7 @@ Procedure DeactivateThread(*modinfo.mod)
       ProcedureReturn #False
     EndIf
     
-    Backup$ = TF$ + "TFMM\Backup\"
+    Backup$ = Path(TF$ + "TFMM/Backup/")
     CreateDirectoryAll(Backup$)
     i = 0
     SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
@@ -956,12 +991,14 @@ Procedure DeactivateThread(*modinfo.mod)
       SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
       
       ; delete file
+      PDebug("delete file: "+File$)
       DeleteFile(TF$ + File$,  #PB_FileSystem_Force)
       
       ; restore backup if any
       If FileSize(Backup$ + File$) >= 0
+        PDebug("restore backup: "+File$)
         CopyFile(Backup$ + File$, TF$ + File$)
-        ; do not delete backup, just leave it be
+        DeleteFile(Backup$ + File$)
       EndIf
       
       i = i + 1
@@ -969,6 +1006,7 @@ Procedure DeactivateThread(*modinfo.mod)
     Next
     HideGadget(GadgetModProgress, #True)
     
+    PDebug("finish uninstall...")
     SetGadgetText(GadgetModText, "Cleanup...")
     
     ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
@@ -988,11 +1026,13 @@ Procedure DeactivateThread(*modinfo.mod)
     
   EndWith
   
+  PDebug("uninstall finished!")
   AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
   ProcedureReturn #False
 EndProcedure
 
 Procedure ToggleMod(*modinfo.mod)
+  PDebug("ToogleMod()")
   If Not *modinfo
     ProcedureReturn #False
   EndIf
@@ -1039,7 +1079,7 @@ Procedure FreeModList()
 EndProcedure
 
 Procedure LoadModList()
-  Debug "LoadModList()"
+  PDebug("LoadModList()")
   Protected active$
   Protected i.i
   
@@ -1056,7 +1096,7 @@ Procedure LoadModList()
       *modinfo = AllocateStructure(mod)
       With *modinfo
         \name$ = PreferenceGroupName()
-        Debug " - found mod: "+\name$
+        PDebug(" - found mod: "+\name$)
         \file$ = ReadPreferenceString("file", "")
         If \file$ = ""
           ; no valid mod
@@ -1086,17 +1126,17 @@ Procedure LoadModList()
   
   
   ; load dependencies
-  Debug "Load Dependencies"
+  PDebug("Load Dependencies")
   OpenPreferences(Path(TF$ + "TFMM") + "mod-dependencies.ini")
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
     With *modinfo
       *modinfo = GetGadgetItemData(ListInstalled, i)
       If PreferenceGroup(\name$)
-        Debug " - Dependencies for "+\name$+":"
+        PDebug(" - Dependencies for "+\name$+":")
         If ExaminePreferenceKeys()
           While NextPreferenceKey()
-            Debug " - - " + PreferenceKeyName() + " = " + PreferenceKeyValue()
+            PDebug(" - - " + PreferenceKeyName() + " = " + PreferenceKeyValue())
             \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
           Wend
         EndIf
@@ -1107,7 +1147,7 @@ Procedure LoadModList()
 EndProcedure
 
 Procedure AddModToList(File$) ; Read File$ from any location, extract mod into mod-directory, add info, this procedure calls WriteModToList()
-  Debug "AddModToList("+File$+")"
+  PDebug("AddModToList("+File$+")")
   Protected *modinfo.mod, *tmp.mod
   Protected FileTarget$, tmp$, active$
   Protected count, i
@@ -1325,7 +1365,7 @@ Procedure GadgetButtonStartGame(event)
 EndProcedure
 
 Procedure checkUpdate(auto.i)
-  Debug "checkUpdate"
+  PDebug("checkUpdate")
   Protected URL$
   
   DeleteFile("tfmm-update.ini")
@@ -1334,10 +1374,10 @@ Procedure checkUpdate(auto.i)
   If ReceiveHTTPFile("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto), "tfmm-update.ini")
     OpenPreferences("tfmm-update.ini")
     If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-      Debug "Update: new version available"
+      PDebug("Update: new version available")
       MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go to 'File' -> 'Homepage' to access the project page.")
     Else
-      Debug "Update: no new version"
+      PDebug("Update: no new version")
       If Not auto
         MessageRequester("Update", "You already have the newest version of TFMM.")
       EndIf
@@ -1345,7 +1385,7 @@ Procedure checkUpdate(auto.i)
     ClosePreferences()
     DeleteFile("tfmm-update.ini")
   Else
-    Debug "ERROR: failed to download ini"
+    PDebug("ERROR: failed to download ini")
     If Not auto
       MessageRequester("Update", "Failed to retrieve version info from server.")
     EndIf
@@ -1355,13 +1395,16 @@ EndProcedure
 ;----------------------------------------
 
 Procedure init()
+  PDebug("init()", #True)
   If Not UseZipPacker()
+    PDebug("ERROR: UseZipPacker()")
     MessageRequester("Error", "Could not initialize ZIP decompression.")
     End
   EndIf
   If Not InitNetwork()
-    Debug "ERROR: InitNetwork()"
+    PDebug("ERROR: InitNetwork()")
   EndIf
+  PDebug("init windows")
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
@@ -1369,6 +1412,7 @@ Procedure init()
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
   
+  PDebug("load settings")
   OpenPreferences("TFMM.ini")
   TF$ = ReadPreferenceString("path", "")
   If ReadPreferenceInteger("windowlocation", #False)
@@ -1393,6 +1437,7 @@ Procedure init()
   EndIf
   LoadModList()
   
+  PDebug("init complete")
 EndProcedure
 
 init()
@@ -1427,8 +1472,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1346
-; FirstLine = 459
-; Folding = ECgYQBwA9
+; CursorPosition = 808
+; FirstLine = 260
+; Folding = IEARgCAAw
 ; EnableUnicode
 ; EnableXP

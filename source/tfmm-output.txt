@@ -1,0 +1,1372 @@
+init()
+init windows
+load settings
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+init complete
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config\multiple_unit
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\vt137stettin
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\multiple_units
+found 25 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: 129 files
+process files
+installed file res\config\multiple_unit\vt137stettin.lua
+installed file res\models\group\vehicle\train\vt137_lod_0_bogie1.grp
+installed file res\models\group\vehicle\train\vt137_lod_0_bogie2.grp
+installed file res\models\material\vehicle\train\vt137stettin.mtl
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_achse.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_achse.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_body.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_body.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_body2.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_body2.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_dreh1.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_dreh1.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_dreh2.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_dreh2.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_tuer1.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_tuer1.msh.blob
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_tuer2.msh
+installed file res\models\mesh\vehicle\train\vt137stettin\vt137_lod_0_tuer2.msh.blob
+installed file res\models\model\vehicle\train\vt137stettin1.mdl
+installed file res\models\model\vehicle\train\vt137stettin2.mdl
+installed file res\textures\models\vehicle\train\VT137stettin.tga
+installed file res\textures\models\vehicle\train\vt137stettin_nrml.tga
+installed file res\textures\ui\models_small\vehicle\train\vt137stettin1.tga
+installed file res\textures\ui\models_small\vehicle\train\vt137stettin2.tga
+installed file res\textures\ui\multiple_units\vt137stettin.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\br193_vectron
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+found 16 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: 154 files
+process files
+installed file res\models\group\vehicle\train\br_193_lod_0_bogie.grp
+installed file res\models\material\vehicle\train\br193_vectron.mtl
+installed file res\models\material\vehicle\train\br193_vectron_glas.mtl
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron.msh
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron.msh.blob
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_dreh.msh
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_dreh.msh.blob
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_rad.msh
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_rad.msh.blob
+installed file res\models\model\vehicle\train\vectron.mdl
+installed file res\textures\models\vehicle\train\br193_vectron.tga
+installed file res\textures\models\vehicle\train\br193_vectron_glas.tga
+installed file res\textures\models\vehicle\train\br193_vectron_nrml.tga
+installed file res\textures\ui\models\vehicle\train\vectron.tga
+installed file res\textures\ui\models_small\vehicle\train\vectron.tga
+installed file res\tfmm.ini
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\br193_vectron
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+found 7 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: 170 files
+process files
+installed file res\models\material\vehicle\train\br193_vectron_db.mtl
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_db.msh
+installed file res\models\mesh\vehicle\train\br193_vectron\vectron_db.msh.blob
+installed file res\models\model\vehicle\train\vectron_db.mdl
+installed file res\textures\models\vehicle\train\br193_vectron_db.tga
+installed file res\textures\ui\models\vehicle\train\vectron_db.tga
+installed file res\textures\ui\models_small\vehicle\train\vectron_db.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config\multiple_unit
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\nsb_flirt
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\multiple_units
+found 50 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: 177 files
+process files
+installed file res\config\multiple_unit\nsb_flirt.lua
+installed file res\models\group\vehicle\train\nsb_flirt_bogi_front.grp
+installed file res\models\group\vehicle\train\nsb_flirt_bogi_mid.grp
+installed file res\models\material\vehicle\train\nsb_flirt_bogi_front.mtl
+installed file res\models\material\vehicle\train\nsb_flirt_bogi_mid.mtl
+installed file res\models\material\vehicle\train\nsb_flirt_front.mtl
+installed file res\models\material\vehicle\train\nsb_flirt_w1.mtl
+installed file res\models\material\vehicle\train\nsb_flirt_w2.mtl
+installed file res\models\material\vehicle\train\nsb_flirt_w3.mtl
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_bogi_front.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_bogi_front.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_bogi_mid.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_bogi_mid.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_1.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_1.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_2.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_2.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_3.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_3.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_4.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_doors_4.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_front.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_front.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w1.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w1.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w2.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w2.msh.blob
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w3.msh
+installed file res\models\mesh\vehicle\train\nsb_flirt\nsb_flirt_w3.msh.blob
+installed file res\models\model\vehicle\train\nsb_flirt_front.mdl
+installed file res\models\model\vehicle\train\nsb_flirt_w1.mdl
+installed file res\models\model\vehicle\train\nsb_flirt_w2.mdl
+installed file res\models\model\vehicle\train\nsb_flirt_w3.mdl
+installed file res\textures\models\vehicle\train\nsb_flirt_bogi_front.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_bogi_front_nrml.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_bogi_mid.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_bogi_mid_nrml.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_carriage.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_carriage_nrml.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_front.tga
+installed file res\textures\models\vehicle\train\nsb_flirt_front_nrml.tga
+installed file res\textures\ui\models\vehicle\train\nsb_flirt_front.tga
+installed file res\textures\ui\models\vehicle\train\nsb_flirt_w1.tga
+installed file res\textures\ui\models\vehicle\train\nsb_flirt_w2.tga
+installed file res\textures\ui\models\vehicle\train\nsb_flirt_w3.tga
+installed file res\textures\ui\models_small\vehicle\train\nsb_flirt_front.tga
+installed file res\textures\ui\models_small\vehicle\train\nsb_flirt_w1.tga
+installed file res\textures\ui\models_small\vehicle\train\nsb_flirt_w2.tga
+installed file res\textures\ui\models_small\vehicle\train\nsb_flirt_w3.tga
+installed file res\textures\ui\multiple_units\nsb_flirt_front.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config\multiple_unit
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\shinkansen_type0
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+found 39 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: 227 files
+process files
+installed file res\config\multiple_unit\shinkansen_t0.lua
+installed file res\models\group\vehicle\train\shinkansen_t0_boggie.grp
+installed file res\models\material\vehicle\train\shinkansen_t0_boggie.mtl
+installed file res\models\material\vehicle\train\shinkansen_t0_c1.mtl
+installed file res\models\material\vehicle\train\shinkansen_t0_c2.mtl
+installed file res\models\material\vehicle\train\shinkansen_t0_c3.mtl
+installed file res\models\material\vehicle\train\shinkansen_t0_c4.mtl
+installed file res\models\material\vehicle\train\shinkansen_t0_door.mtl
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_boggie.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_boggie.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_door.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_door.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_door2.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_door2.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c1.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c1.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c2.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c2.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c3.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c3.msh.blob
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c4.msh
+installed file res\models\mesh\vehicle\train\shinkansen_type0\shinkansen_t0_c4.msh.blob
+installed file res\models\model\vehicle\train\shinkansen_t0_c1.mdl
+installed file res\models\model\vehicle\train\shinkansen_t0_c2.mdl
+installed file res\models\model\vehicle\train\shinkansen_t0_c3.mdl
+installed file res\models\model\vehicle\train\shinkansen_t0_c4.mdl
+installed file res\textures\models\vehicle\train\shinkansen_t0_boggie.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_boggie_nrml.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_c1.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_c2.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_c3.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_c4.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_door.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_door_nrml.tga
+installed file res\textures\models\vehicle\train\shinkansen_t0_nrml.tga
+installed file res\textures\ui\models_small\vehicle\train\shinkansen_t0_c1.tga
+installed file res\textures\ui\models_small\vehicle\train\shinkansen_t0_c2.tga
+installed file res\textures\ui\models_small\vehicle\train\shinkansen_t0_c3.tga
+installed file res\textures\ui\models_small\vehicle\train\shinkansen_t0_c4.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config\bridge
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\bridge
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\bridge\rail
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\bridge\rail\iron2
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\bridge
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\bridge\rail
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\bridge\rail\iron2
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\bridge
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\bridge\rail
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\bridge\rail\iron2
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\bridge
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\bridge\rail
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\bridge\rail\iron2
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\bridges
+found 36 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: 266 files
+process files
+installed file res\config\bridge\rail_iron2_new.lua
+installed file res\config\bridge\rail_iron2_new2.lua
+installed file res\models\material\bridge\rail\iron2\rail_iron2_new.mtl
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_btm_lod_0_rail-iron2-new_pillar_btm.msh
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_btm_lod_0_rail-iron2-new_pillar_btm.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_mid_lod_0_rail-iron2-new_pillar_mid.msh
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_mid_lod_0_rail-iron2-new_pillar_mid.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_top_lod_0_rail-iron2-new_pillar_top.msh
+installed file res\models\mesh\bridge\rail\iron2\new_pillar_top_lod_0_rail-iron2-new_pillar_top.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_end_rep_lod_0_rail-iron2-new_railling_end_rep.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_end_rep_lod_0_rail-iron2-new_railling_end_rep.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_end_side_lod_0_rail-iron2-new_railling_end_side.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_end_side_lod_0_rail-iron2-new_railling_end_side.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_rep_rep_lod_0_rail-iron2-new_railling_rep_rep.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_rep_rep_lod_0_rail-iron2-new_railling_rep_rep.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_rep_side_lod_0_rail-iron2-new_railling_rep_side.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_rep_side_lod_0_rail-iron2-new_railling_rep_side.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_start_rep_lod_0_rail-iron2-new_railling_start_rep.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_start_rep_lod_0_rail-iron2-new_railling_start_rep.msh.blob
+installed file res\models\mesh\bridge\rail\iron2\new_railling_start_side_lod_0_rail-iron2-new_railling_start_side.msh
+installed file res\models\mesh\bridge\rail\iron2\new_railling_start_side_lod_0_rail-iron2-new_railling_start_side.msh.blob
+installed file res\models\model\bridge\rail\iron2\new2_pillar_btm.mdl
+installed file res\models\model\bridge\rail\iron2\new2_pillar_mid.mdl
+installed file res\models\model\bridge\rail\iron2\new2_pillar_top.mdl
+installed file res\models\model\bridge\rail\iron2\new_pillar_btm.mdl
+installed file res\models\model\bridge\rail\iron2\new_pillar_mid.mdl
+installed file res\models\model\bridge\rail\iron2\new_pillar_top.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_end_rep.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_end_side.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_rep_rep.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_rep_side.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_start_rep.mdl
+installed file res\models\model\bridge\rail\iron2\new_railling_start_side.mdl
+installed file res\textures\models\bridge\rail\iron2\rail_iron2_new.tga
+installed file res\textures\ui\bridges\rail_iron2_new.tga
+installed file res\textures\ui\bridges\rail_iron2_new2.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\br143
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+found 27 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: 302 files
+process files
+installed file res\models\group\vehicle\train\br143_bogie.grp
+installed file res\models\material\vehicle\train\br143_db.mtl
+installed file res\models\material\vehicle\train\br243_db.mtl
+installed file res\models\mesh\vehicle\train\br143\bogey.msh
+installed file res\models\mesh\vehicle\train\br143\bogey.msh.blob
+installed file res\models\mesh\vehicle\train\br143\br143_db.msh
+installed file res\models\mesh\vehicle\train\br143\br143_db.msh.blob
+installed file res\models\mesh\vehicle\train\br143\br143_db_2.msh
+installed file res\models\mesh\vehicle\train\br143\br143_db_2.msh.blob
+installed file res\models\mesh\vehicle\train\br143\br243.msh
+installed file res\models\mesh\vehicle\train\br143\br243.msh.blob
+installed file res\models\mesh\vehicle\train\br143\br243_2.msh
+installed file res\models\mesh\vehicle\train\br143\br243_2.msh.blob
+installed file res\models\mesh\vehicle\train\br143\wheel.msh
+installed file res\models\mesh\vehicle\train\br143\wheel.msh.blob
+installed file res\models\model\vehicle\train\br143_db.mdl
+installed file res\models\model\vehicle\train\br143_db_2.mdl
+installed file res\models\model\vehicle\train\br243.mdl
+installed file res\models\model\vehicle\train\br243_2.mdl
+installed file res\textures\models\vehicle\train\br143_db.tga
+installed file res\textures\models\vehicle\train\br143_db_nrml.tga
+installed file res\textures\models\vehicle\train\br243.tga
+installed file res\textures\models\vehicle\train\br243_db.tga
+installed file res\textures\ui\models_small\vehicle\train\br143_db.tga
+installed file res\textures\ui\models_small\vehicle\train\br143_db_2.tga
+installed file res\textures\ui\models_small\vehicle\train\br243.tga
+installed file res\textures\ui\models_small\vehicle\train\br243_2.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\tram
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\tram
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\tram
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\tram\kt4d
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\tram
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\tram
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\tram
+found 81 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: 329 files
+process files
+installed file res\models\group\vehicle\tram\kt4dm_hinten.grp
+installed file res\models\group\vehicle\tram\kt4dm_hinten_ok.grp
+installed file res\models\group\vehicle\tram\kt4dm_vorne.grp
+installed file res\models\group\vehicle\tram\kt4dm_vorne_ok.grp
+installed file res\models\group\vehicle\tram\kt4d_drehgestell.grp
+installed file res\models\group\vehicle\tram\kt4d_falte.grp
+installed file res\models\group\vehicle\tram\kt4d_falte_m.grp
+installed file res\models\group\vehicle\tram\kt4d_gelenk.grp
+installed file res\models\group\vehicle\tram\kt4d_hinten.grp
+installed file res\models\group\vehicle\tram\kt4d_hinten_ok.grp
+installed file res\models\group\vehicle\tram\kt4d_kupplung.grp
+installed file res\models\group\vehicle\tram\kt4d_vorne.grp
+installed file res\models\group\vehicle\tram\kt4d_vorne_ok.grp
+installed file res\models\material\vehicle\tram\tatra_kt4d.mtl
+installed file res\models\material\vehicle\tram\tatra_kt4dm.mtl
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_beleuchtung_eckig.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_beleuchtung_eckig.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_hinten.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_hinten.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_hinten_innen.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_hinten_innen.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t1.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t1.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t1s.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t1s.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t2.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t2.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t2s.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_t2s.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_vorne.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_vorne.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_vorne_innen.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4dm_vorne_innen.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_achse.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_achse.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_beleuchtung_rund.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_beleuchtung_rund.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_drehgestell.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_drehgestell.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_fakeaxles.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_fakeaxles.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_gelenk.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_gelenk.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_gelenk_falte.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_gelenk_falte.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_hinten.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_hinten.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_hinten_innen.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_hinten_innen.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_kupplung.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_kupplung.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_kupplung2.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_kupplung2.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_strom.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_strom.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_strom_ab.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_strom_ab.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t1.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t1.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t2.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t2.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t3.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t3.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t4.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_t4.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_vorne.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_vorne.msh.blob
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_vorne_innen.msh
+installed file res\models\mesh\vehicle\tram\kt4d\kt4d_vorne_innen.msh.blob
+installed file res\models\model\vehicle\tram\tatra_kt4d.mdl
+installed file res\models\model\vehicle\tram\tatra_kt4dm.mdl
+installed file res\models\model\vehicle\tram\tatra_kt4dm_2x.mdl
+installed file res\models\model\vehicle\tram\tatra_kt4d_2x.mdl
+installed file res\textures\models\vehicle\tram\tram_kt4d.tga
+installed file res\textures\models\vehicle\tram\tram_kt4dm.tga
+installed file res\textures\models\vehicle\tram\tram_kt4dm_nrml.tga
+installed file res\textures\models\vehicle\tram\tram_kt4d_nrml.tga
+installed file res\textures\ui\models_small\vehicle\tram\tatra_kt4d.tga
+installed file res\textures\ui\models_small\vehicle\tram\tatra_kt4dm.tga
+installed file res\textures\ui\models_small\vehicle\tram\tatra_kt4dm_2x.tga
+installed file res\textures\ui\models_small\vehicle\tram\tatra_kt4d_2x.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icweiss_1_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icweiss_2_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icweiss_sw_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\waggon
+found 47 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: Tatra KT4D
+filetracker: 410 files
+process files
+installed file res\models\group\vehicle\waggon\icweiss_1_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\icweiss_2_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\icweiss_sw_lod_0_bogie_bb.grp
+installed file res\models\material\vehicle\waggon\icweiss_1_bb.mtl
+installed file res\models\material\vehicle\waggon\icweiss_2_bb.mtl
+installed file res\models\material\vehicle\waggon\icweiss_sw_bb.mtl
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_1_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_2_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icweiss_sw_bb\lod_0_w1.msh.blob
+installed file res\models\model\vehicle\waggon\icweiss_1_bb.mdl
+installed file res\models\model\vehicle\waggon\icweiss_2_bb.mdl
+installed file res\models\model\vehicle\waggon\icweiss_sw_bb.mdl
+installed file res\textures\models\vehicle\waggon\waggon_icweiss_1_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icweiss_2_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icweiss_nrml_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icweiss_sw_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icweiss_sw_nrml_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icweiss_1_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icweiss_2_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icweiss_sw_bb.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_ir_1_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_ir_2_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_ir_kl_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_ir_sw_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\waggon
+found 61 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: Tatra KT4D
+filetracker: DB Intercity Wagenset Weiß/Rot (1995)
+filetracker: 457 files
+process files
+installed file res\models\group\vehicle\waggon\ew_ir_1_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\ew_ir_2_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\ew_ir_kl_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\ew_ir_sw_lod_0_bogie_bb.grp
+installed file res\models\material\vehicle\waggon\ew_ir_1_bb.mtl
+installed file res\models\material\vehicle\waggon\ew_ir_2_bb.mtl
+installed file res\models\material\vehicle\waggon\ew_ir_kl_bb.mtl
+installed file res\models\material\vehicle\waggon\ew_ir_sw_bb.mtl
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_1_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_2_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_kl_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_ir_sw_bb\lod_0_w1.msh.blob
+installed file res\models\model\vehicle\waggon\ew_ir_1_bb.mdl
+installed file res\models\model\vehicle\waggon\ew_ir_2_bb.mdl
+installed file res\models\model\vehicle\waggon\ew_ir_kl_bb.mdl
+installed file res\models\model\vehicle\waggon\ew_ir_sw_bb.mdl
+installed file res\textures\models\vehicle\waggon\waggon_ir_1_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_ir_2_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_ir_kl_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_ir_nrml_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_ir_sw_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_ir_1_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_ir_2_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_ir_kl_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_ir_sw_bb.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_iv_blb1
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\ew_iv_blb2
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\waggon
+found 31 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: Tatra KT4D
+filetracker: DB Intercity Wagenset Weiß/Rot (1995)
+filetracker: DB Interregio Wagenset Blau (1990)
+filetracker: 518 files
+process files
+installed file res\models\group\vehicle\waggon\ew_iv_blb1_lod_0_bogie.grp
+installed file res\models\group\vehicle\waggon\ew_iv_blb2_lod_0_bogie.grp
+installed file res\models\material\vehicle\waggon\ew_iv_blb1.mtl
+installed file res\models\material\vehicle\waggon\ew_iv_blb2.mtl
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb1\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\ew_iv_blb2\lod_0_w1.msh.blob
+installed file res\models\model\vehicle\waggon\ew_iv_blb1.mdl
+installed file res\models\model\vehicle\waggon\ew_iv_blb2.mdl
+installed file res\textures\models\vehicle\waggon\waggon_ew_iv_blb1.tga
+installed file res\textures\models\vehicle\waggon\waggon_ew_iv_blb2.tga
+installed file res\textures\models\vehicle\waggon\waggon_ew_iv_blbnrml.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_iv_blb1.tga
+installed file res\textures\ui\models_small\vehicle\waggon\ew_iv_blb2.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icrot_1_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icrot_2_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\waggon\icrot_sw_bb
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\waggon
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\waggon
+found 47 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: Tatra KT4D
+filetracker: DB Intercity Wagenset Weiß/Rot (1995)
+filetracker: DB Interregio Wagenset Blau (1990)
+filetracker: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+filetracker: 549 files
+process files
+installed file res\models\group\vehicle\waggon\icrot_1_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\icrot_2_lod_0_bogie_bb.grp
+installed file res\models\group\vehicle\waggon\icrot_sw_lod_0_bogie_bb.grp
+installed file res\models\material\vehicle\waggon\icrot_1_bb.mtl
+installed file res\models\material\vehicle\waggon\icrot_2_bb.mtl
+installed file res\models\material\vehicle\waggon\icrot_sw_bb.mtl
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_1_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_2_bb\lod_0_w1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_b1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_b1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_door1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_door1.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_door2.msh
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_door2.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_ewiv.msh
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_ewiv.msh.blob
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_w1.msh
+installed file res\models\mesh\vehicle\waggon\icrot_sw_bb\lod_0_w1.msh.blob
+installed file res\models\model\vehicle\waggon\icrot_1_bb.mdl
+installed file res\models\model\vehicle\waggon\icrot_2_bb.mdl
+installed file res\models\model\vehicle\waggon\icrot_sw_bb.mdl
+installed file res\textures\models\vehicle\waggon\waggon_icrot_1_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icrot_2_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icrot_nrml_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icrot_sw_bb.tga
+installed file res\textures\models\vehicle\waggon\waggon_icrot_sw_nrml_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icrot_1_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icrot_2_bb.tga
+installed file res\textures\ui\models_small\vehicle\waggon\icrot_sw_bb.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
+ToogleMod()
+ActivateThread()
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\config\multiple_unit
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\group\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\material\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\mesh\vehicle\train\br_424
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\models\model\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models\vehicle\train
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle
+ActivateThread_ReadFiles() - D:\Steam\steamapps\common\Train Fever\TFMM\mod_tmp\res\textures\ui\models_small\vehicle\train
+found 30 files for activation
+Backup folder: D:\Steam\steamapps\common\Train Fever\TFMM\Backup\
+load filetracker
+filetracker: DB BR 420
+filetracker: VT137 Typ Stettin
+filetracker: Siemens Vectron (BR 193)
+filetracker: Siemens Vectron Deutsche Bahn (BR 193)
+filetracker: NSB Stadler Flirt
+filetracker: Shinkansen 0 Series
+filetracker: Steel bridge 2
+filetracker: Baureihe 143
+filetracker: Tatra KT4D
+filetracker: DB Intercity Wagenset Weiß/Rot (1995)
+filetracker: DB Interregio Wagenset Blau (1990)
+filetracker: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+filetracker: DB Intercity Wagenset Rot/Violett (1985)
+filetracker: 596 files
+process files
+installed file res\config\multiple_unit\br424.lua
+installed file res\models\group\vehicle\train\br_424_bogie1.grp
+installed file res\models\group\vehicle\train\br_424_bogie2.grp
+installed file res\models\material\vehicle\train\br_424_engine.mtl
+installed file res\models\material\vehicle\train\br_424_middle.mtl
+installed file res\models\mesh\vehicle\train\br_424\axle_1.msh
+installed file res\models\mesh\vehicle\train\br_424\axle_1.msh.blob
+installed file res\models\mesh\vehicle\train\br_424\bogie1_1.msh
+installed file res\models\mesh\vehicle\train\br_424\bogie1_1.msh.blob
+installed file res\models\mesh\vehicle\train\br_424\bogie2_1.msh
+installed file res\models\mesh\vehicle\train\br_424\bogie2_1.msh.blob
+installed file res\models\mesh\vehicle\train\br_424\engine_1.msh
+installed file res\models\mesh\vehicle\train\br_424\engine_1.msh.blob
+installed file res\models\mesh\vehicle\train\br_424\middle2_1.msh
+installed file res\models\mesh\vehicle\train\br_424\middle2_1.msh.blob
+installed file res\models\mesh\vehicle\train\br_424\middle_1.msh
+installed file res\models\mesh\vehicle\train\br_424\middle_1.msh.blob
+installed file res\models\model\vehicle\train\br_424_engine.mdl
+installed file res\models\model\vehicle\train\br_424_middle.mdl
+installed file res\models\model\vehicle\train\br_424_middle2.mdl
+installed file res\textures\models\vehicle\train\br_424_diffuse.tga
+installed file res\textures\models\vehicle\train\br_424_middle_diffuse.tga
+installed file res\textures\models\vehicle\train\br_424_middle_normal.tga
+installed file res\textures\models\vehicle\train\br_424_normal.tga
+installed file res\textures\ui\models\vehicle\train\br_424_engine.tga
+installed file res\textures\ui\models\vehicle\train\br_424_middle.tga
+installed file res\textures\ui\models\vehicle\train\br_424_middle2.tga
+installed file res\textures\ui\models_small\vehicle\train\br_424_engine.tga
+installed file res\textures\ui\models_small\vehicle\train\br_424_middle.tga
+installed file res\textures\ui\models_small\vehicle\train\br_424_middle2.tga
+finish install...
+install finished!
+LoadModList()
+ - found mod: DB BR 420
+ - found mod: Cargo mod
+ - found mod: VT137 Typ Stettin
+ - found mod: Siemens Vectron (BR 193)
+ - found mod: Siemens Vectron Deutsche Bahn (BR 193)
+ - found mod: NSB Stadler Flirt
+ - found mod: BR 424
+ - found mod: Shinkansen 0 Series
+ - found mod: Steel bridge 2
+ - found mod: Baureihe 143
+ - found mod: Tatra KT4D
+ - found mod: DB Intercity Wagenset Weiß/Rot (1995)
+ - found mod: DB Interregio Wagenset Blau (1990)
+ - found mod: DB-Schnellzugwagen Ozeanblau/Beige (1974)
+ - found mod: DB Intercity Wagenset Rot/Violett (1985)
+ - found mod: BR 424 (modifiziert by Xanos)
+Load Dependencies
+ - Dependencies for Siemens Vectron Deutsche Bahn (BR 193):
+ - - Siemens Vectron (BR 193) = 0.4.4
