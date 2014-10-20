@@ -1,5 +1,7 @@
 ﻿EnableExplicit
 
+#DEBUG = #False
+
 XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
@@ -52,7 +54,7 @@ Procedure PDebug(str$, delete=#False)
   EndIf
   If str$ <> ""
     Debug str$
-    If #True
+    If #DEBUG
       file = OpenFile(#PB_Any, "tfmm-output.txt", #PB_File_Append|#PB_File_NoBuffering)
       If file
         WriteStringN(file, str$)
@@ -1473,8 +1475,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 415
-; FirstLine = 103
-; Folding = oEQxgCAAw
+; CursorPosition = 20
+; Folding = IEARgAAAg
 ; EnableUnicode
 ; EnableXP
