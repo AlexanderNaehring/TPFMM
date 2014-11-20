@@ -31,10 +31,16 @@ Enumeration
   #AnswerOk
 EndEnumeration
 
-Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102
+Enumeration
+  #UpdateNew
+  #UpdateCurrent
+  #UpdateFailed
+EndEnumeration
+
+Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
 Global Event
 Global TF$
-Global ModProgressAnswer = #AnswerNone, InstallInProgress
+Global ModProgressAnswer = #AnswerNone, InstallInProgress, UpdateResult
 
 Declare FreeModList()
 Declare LoadModList()
@@ -91,8 +97,8 @@ Procedure CreateDirectoryAll(dir$, delimiter$ = "")
   dir$ = Path(dir$, delimiter$)
   
   count = 1
-  dir_sub$ = StringField(dir$, count, delimiter$)
-  dir_total$ = dir_sub$ + delimiter$
+  dir_sub$ = StringField(dir$, count, delimiter$) + delimiter$
+  dir_total$ = dir_sub$
   
   While dir_sub$ <> ""
     result = CreateDirectory(dir_total$)
@@ -157,18 +163,29 @@ Procedure checkTFPath(Dir$)
   If Dir$
     If FileSize(Dir$) = -2
       Dir$ = Path(Dir$)
-      If FileSize(Dir$ + "TrainFever.exe") > 1
-        ; TrainFever.exe is located in this path!
-        ; seems to be valid
-        
-        ; check if able to write to path
-        If CreateFile(0, Dir$ + "TFMM.tmp")
-          CloseFile(0)
-          DeleteFile(Dir$ + "TFMM.tmp")
-          ProcedureReturn #True
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        If FileSize(Dir$ + "TrainFever.exe") > 1
+          ; TrainFever.exe is located in this path!
+          ; seems to be valid
+          
+          ; check if able to write to path
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
         EndIf
-        ProcedureReturn -1
-      EndIf
+      CompilerElse
+        If FileSize(Dir$ + "TrainFever") > 1
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
+        EndIf
+      CompilerEndIf
     EndIf
   EndIf
   ProcedureReturn #False
@@ -194,7 +211,7 @@ Procedure TimerSettingsGadgets()
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
       DisableGadget(GadgetSaveSettings, #False)
     Else
-      SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, #Red)
+      SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(255,0,0))
       DisableGadget(GadgetSaveSettings, #True)
       If ret = -1
         SetGadgetText(GadgetRights, "TFMM is not able to write to the game directory. Administrative privileges may be required.")
@@ -501,12 +518,14 @@ EndProcedure
 Procedure ExtractModZip(File$, Path$)
   Protected zip, error
   
-  zip = OpenPack(#PB_Any, File$)
+  zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
   If Not zip
+    Debug "error opening pack "+File$
     ProcedureReturn #False 
   EndIf
   
   If Not ExaminePack(zip)
+    Debug "error examining pack "+File$
     ProcedureReturn #False
   EndIf
   
@@ -610,8 +629,10 @@ Procedure ActivateThread(*modinfo.mod)
   Protected *tmpinfo.mod
   
   With *modinfo
-    Mod$ = Path(TF$ + "TFMM/mods") + \file$
+    Mod$ = Path(TF$ + "TFMM/Mods") + \file$
     tmpDir$ = Path(TF$ + "TFMM/mod_tmp")
+    
+    Debug "Activate "+\file$+"'"
     
     ModProgressAnswer = #AnswerNone
     SetGadgetText(GadgetModText, "Do you want to activate '"+\name$+"'?")
@@ -681,12 +702,29 @@ Procedure ActivateThread(*modinfo.mod)
     ; clean temporary directory
     DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
     CreateDirectoryAll(tmpDir$)                                                  ; create temp dir
+    If FileSize(tmpDir$) <> -2
+      ; error opening archive
+      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+      ModProgressAnswer = #AnswerNone
+      SetGadgetText(GadgetModText, "Failed to create temporary directory for extraction!")
+      HideGadget(GadgetModOk, #False)
+      While ModProgressAnswer = #AnswerNone
+        Delay(10)
+      Wend
+      ; task clean up procedure
+      AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+      ProcedureReturn #False
+    EndIf
+    
+
     error = #False 
     If extension$ = "zip"
+      Debug "use zip"
       If Not ExtractModZip(Mod$, tmpDir$)
         error = #True
       EndIf
     ElseIf extension$ = "rar"
+      Debug "use rar"
       If Not ExtractModRar(Mod$, tmpDir$)
         error = #True
       EndIf
@@ -851,7 +889,7 @@ Procedure ActivateThread(*modinfo.mod)
         EndIf
         
         
-        OpenPreferences(TF$ + "TFMM\filetracker.ini")
+        OpenPreferences(Path(TF$ + "TFMM") + "filetracker.ini")
         PreferenceGroup(\name$)
         ; TODO check if overwriting entries ?
         ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
@@ -933,7 +971,7 @@ Procedure DeactivateThread(*modinfo.mod)
   ; read list of files from ini file
   With *modinfo
     PDebug("read filetracker and check MD5")
-    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    OpenPreferences(Path(TF$ + "TFMM") + "filetracker.ini")
     PreferenceGroup(\name$)
     ; read md5 of installed files in order to keep track of all files that have been changed by this mod
     ExaminePreferenceKeys()
@@ -961,14 +999,14 @@ Procedure DeactivateThread(*modinfo.mod)
       Debug "no files altered?"
     EndIf
     
-    If count = 0 And countAll > 0
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files. However, all of these files have been overwritten or altered by other modifications. This modification currently has no effect to the game and can savely be deactiveted. Do you want to deactivate this modification?")
+    If count = 0 ;And countAll > 0
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten Or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
     ElseIf count > 0 And count < countAll
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present. All other files may have been altered by other mods and cannot be restored savely. Do you want to deactivate this modification?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"All other files may have been altered by other mods and cannot be restored savely."+#CRLF$+"Do you want to deactivate this modification?")
     ElseIf count > 0 And count = countAll
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files. Do you want to deactivate this modification?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
     Else
-      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present. Do you want to deactivate this mod?")
+      SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"Do you want to deactivate this mod?")
     EndIf
     
     HideGadget(GadgetModNo, #False)
@@ -1015,7 +1053,7 @@ Procedure DeactivateThread(*modinfo.mod)
     SetGadgetText(GadgetModText, "Cleanup...")
     
     ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
-    OpenPreferences(TF$ + "TFMM\filetracker.ini")
+    OpenPreferences(Path(TF$ + "TFMM") + "filetracker.ini")
     RemovePreferenceGroup(\name$)
     ClosePreferences()
     
@@ -1226,19 +1264,19 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   Next
   
   ; when reaching this point, the mod can be installed
-  CreateDirectoryAll(TF$ + "TFMM\Mods\")
+  CreateDirectoryAll(TF$ + "TFMM/Mods/")
   
   ; user wants to install this mod! Therefore, find a possible file name!
   i = 0
   FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "." + GetExtensionPart(File$)
-  While FileSize(TF$ + "TFMM\Mods\" + FileTarget$) > 0
+  While FileSize(Path(TF$ + "TFMM/Mods/") + FileTarget$) > 0
     ; try to find a filename which does not exist
     i = i + 1
     FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "(" + Str(i) + ")." + GetExtensionPart(File$)
   Wend
   
   ; import file to mod folder
-  If Not CopyFile(File$, TF$ + "TFMM\Mods\" + FileTarget$)
+  If Not CopyFile(File$, Path(TF$ + "TFMM/Mods/") + FileTarget$)
     ; Copy error
     FreeStructure(*modinfo)
     ProcedureReturn #False 
@@ -1369,6 +1407,19 @@ Procedure GadgetButtonStartGame(event)
   RunProgram(#DQUOTE$ + "steam://run/304730/" + #DQUOTE$)
 EndProcedure
 
+Procedure TimerUpdate()
+  ; Linux Workaround: Can only open MessageRequester from Main Loop (not from update thread)
+  RemoveWindowTimer(WindowMain, TimerUpdate)
+  Select UpdateResult
+    Case #UpdateNew
+      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go To 'File' -> 'Homepage' To access the project page And access the new version.")
+    Case #UpdateCurrent
+      MessageRequester("Update", "You already have the newest version of TFMM.")
+    Case #UpdateFailed
+      MessageRequester("Update", "Failed to retrieve version info from server.")
+  EndSelect
+EndProcedure
+
 Procedure checkUpdate(auto.i)
   PDebug("checkUpdate")
   Protected URL$
@@ -1380,11 +1431,13 @@ Procedure checkUpdate(auto.i)
     OpenPreferences("tfmm-update.ini")
     If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
       PDebug("Update: new version available")
-      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go to 'File' -> 'Homepage' to access the project page and access the new version.")
+      UpdateResult = #UpdateNew
+      AddWindowTimer(WindowMain, TimerUpdate, 100)
     Else
       PDebug("Update: no new version")
       If Not auto
-        MessageRequester("Update", "You already have the newest version of TFMM.")
+        UpdateResult = #UpdateCurrent
+        AddWindowTimer(WindowMain, TimerUpdate, 100)
       EndIf
     EndIf
     ClosePreferences()
@@ -1392,7 +1445,8 @@ Procedure checkUpdate(auto.i)
   Else
     PDebug("ERROR: failed to download ini")
     If Not auto
-      MessageRequester("Update", "Failed to retrieve version info from server.")
+      UpdateResult = #UpdateFailed
+      AddWindowTimer(WindowMain, TimerUpdate, 100)
     EndIf
   EndIf
 EndProcedure
@@ -1416,16 +1470,13 @@ Procedure init()
   WindowBounds(WindowMain, 640, 360, #PB_Ignore, #PB_Ignore) 
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
-;   UseModule ListIcon
-;   AddListColumn(ListInstalled, 1, "Author", 100)
-;   AddListColumn(ListInstalled, 2, "Version", 60)
-;   AddListColumn(ListInstalled, 3, "Size", 60)
-;   AddListColumn(ListInstalled, 4, "Activated", 60)
-;   UnuseModule ListIcon
-  CompilerIf #PB_OS_Windows
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
     UseModule ListIcon
     DefineListCallback(ListInstalled, #Edit)
     UnuseModule ListIcon
+  CompilerEndIf
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " BETA for Linux64")
   CompilerEndIf
   
   PDebug("load settings")
@@ -1468,6 +1519,8 @@ Repeat
         TimerMainGadgets()
       Case TimerFinishUnInstall
         FinishUnIstall()
+      Case TimerUpdate
+        TimerUpdate()
     EndSelect
   EndIf
   
@@ -1487,9 +1540,9 @@ Repeat
   EndSelect
 ForEver
 End
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1421
-; FirstLine = 819
-; Folding = UEBRg3NAw-
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 1479
+; FirstLine = 151
+; Folding = UkAiABAAA-
 ; EnableUnicode
 ; EnableXP

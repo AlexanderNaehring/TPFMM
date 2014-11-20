@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Linux - x64)">
+  <section name="config">
+    <options closefiles="1" openmode="0" name="TFMM"/>
+    <comment>Train Fever Mod Manager</comment>
+  </section>
+  <section name="data">
+    <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
+    <log show="1"/>
+    <lastopen date="2014-11-20 02:21" user="alexander" host="alexander-mint"/>
+  </section>
+  <section name="files">
+    <file name="source/ListIconModule.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="7901b4f0e7b5bfe7c30a24b36ec479b0"/>
+    </file>
+    <file name="source/main.pb">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="6bf1488693368a63fafda14fdc87a674"/>
+    </file>
+    <file name="source/registry.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="558a349b305b520ec5fb5b4b31db03f5"/>
+    </file>
+    <file name="source/unrar_module.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="6bfa24b20d200e6515760a71fdd3ba3f"/>
+    </file>
+    <file name="source/WindowMain.pbf">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="66dd76275fb88b5bc762533e8a77d903"/>
+    </file>
+    <file name="source/WindowModProgress.pbf">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="f75ec4faf91e4ac811f1e51f546732db"/>
+    </file>
+    <file name="source/WindowSettings.pbf">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="9cf6331247212d1c9b6006b7be9a70e3"/>
+    </file>
+  </section>
+  <section name="targets">
+    <target name="lin" enabled="1" default="1">
+      <inputfile value="source/main.pb"/>
+      <outputfile value="bin/lin64/TFMM"/>
+      <executable value="bin/lin64/TFMM"/>
+      <options unicode="1" thread="1" debug="1"/>
+      <compilecount enable="1" value="441"/>
+      <buildcount enable="1" value="21"/>
+      <execonstant enable="1"/>
+    </target>
+  </section>
+</project>

@@ -35,7 +35,6 @@ Icon
 .Spotlight-V100
 .Trashes
 
-bin/win32/TFMM.ini
-source/TFMM.ini
-bin/win32/tfmm-output.txt
-source/tfmm-output.txt
+
+*.ini
+*tfmm-output.txt

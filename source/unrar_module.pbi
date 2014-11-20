@@ -116,55 +116,61 @@ EndDeclareModule
 
 Module unrar
   EnableExplicit
-
-  Define DLL
   
-  CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-    DLL = OpenLibrary(#PB_Any, "unrar64.dll") ; windows will automatically search the system folders, current path and program path
-  CompilerElse
-    DLL = OpenLibrary(#PB_Any, "unrar.dll")
-  CompilerEndIf
-  
-  If DLL
-    RAROpenArchive        = GetFunction(DLL, "RAROpenArchiveEx")
-    CompilerIf #PB_Compiler_Unicode
-    RARProcessFile        = GetFunction(DLL, "RARProcessFileW")
-    CompilerElse
-    RARProcessFile        = GetFunction(DLL, "RARProcessFile")
-    CompilerEndIf
-    RARReadHeader         = GetFunction(DLL, "RARReadHeaderEx")
-    RARCloseArchive       = GetFunction(DLL, "RARCloseArchive")
-    RARSetCallback        = GetFunction(DLL, "RARSetCallback")
-    RARSetChangeVolProc   = GetFunction(DLL, "RARSetChangeVolProc")
-    RARSetProcessDataProc = GetFunction(DLL, "RARSetProcessDataProc")
-    RARSetPassword        = GetFunction(DLL, "RARSetPassword")
-    RARGetDllVersion      = GetFunction(DLL, "RARGetDllVersion")
-  Else
-    MessageRequester("Error", "unrar.dll not found!")
-    End 
-  EndIf
-  
-  Procedure OpenRar(File$, mode.i)
-    Debug "OpenRar("+File$+", "+Str(mode)+")"
-    Protected raropen.RAROpenArchiveDataEx
-    Protected hRAR
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
     
-    CompilerIf #PB_Compiler_Unicode
-      raropen\ArcNameW = @File$
+    Define DLL
+    
+    CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
+      DLL = OpenLibrary(#PB_Any, "unrar64.dll") ; windows will automatically search the system folders, current path and program path
     CompilerElse
-      raropen\ArcName = @File$
+      DLL = OpenLibrary(#PB_Any, "unrar.dll")
     CompilerEndIf
-    raropen\OpenMode = mode
-    hRAR = RAROpenArchive(raropen)
-    ProcedureReturn hRAR
-  EndProcedure
-  
-  
+    
+    If DLL
+      RAROpenArchive        = GetFunction(DLL, "RAROpenArchiveEx")
+      CompilerIf #PB_Compiler_Unicode
+      RARProcessFile        = GetFunction(DLL, "RARProcessFileW")
+      CompilerElse
+      RARProcessFile        = GetFunction(DLL, "RARProcessFile")
+      CompilerEndIf
+      RARReadHeader         = GetFunction(DLL, "RARReadHeaderEx")
+      RARCloseArchive       = GetFunction(DLL, "RARCloseArchive")
+      RARSetCallback        = GetFunction(DLL, "RARSetCallback")
+      RARSetChangeVolProc   = GetFunction(DLL, "RARSetChangeVolProc")
+      RARSetProcessDataProc = GetFunction(DLL, "RARSetProcessDataProc")
+      RARSetPassword        = GetFunction(DLL, "RARSetPassword")
+      RARGetDllVersion      = GetFunction(DLL, "RARGetDllVersion")
+    Else
+      MessageRequester("Error", "unrar.dll not found! RAR Files cannot be opened.")
+    EndIf
+    
+    Procedure OpenRar(File$, mode.i)
+      Debug "OpenRar("+File$+", "+Str(mode)+")"
+      Protected raropen.RAROpenArchiveDataEx
+      Protected hRAR
+      
+      CompilerIf #PB_Compiler_Unicode
+        raropen\ArcNameW = @File$
+      CompilerElse
+        raropen\ArcName = @File$
+      CompilerEndIf
+      raropen\OpenMode = mode
+      hRAR = RAROpenArchive(raropen)
+      ProcedureReturn hRAR
+    EndProcedure
+    
+  CompilerElse ; Linux / Mac
+    
+    Procedure OpenRar(File$, mode.i)
+      ProcedureReturn #False
+    EndProcedure
+    
+  CompilerEndIf
 EndModule
-
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 158
-; FirstLine = 112
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 159
+; FirstLine = 143
 ; Folding = --
 ; EnableUnicode
 ; EnableXP
