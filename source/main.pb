@@ -7,6 +7,7 @@ XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
 XIncludeFile "registry.pbi"
 XIncludeFile "unrar_module.pbi"
+XIncludeFile "ListIconModule.pbi"
 
 Structure mod
   name$
@@ -18,7 +19,7 @@ Structure mod
   md5$
   active.i
   Map dependencies$()
-;   List conflicts$()
+;   Map conflicts$()
 EndStructure
 
 Enumeration
@@ -29,12 +30,6 @@ Enumeration
   #AnswerNoAll
   #AnswerOk
 EndEnumeration
-
-CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-  #DS$ = "\"
-CompilerElse
-  #DS$ = "/"
-CompilerEndIf
 
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102
 Global Event
@@ -85,19 +80,26 @@ EndProcedure
 
 Procedure CreateDirectoryAll(dir$, delimiter$ = "")
   Protected result, dir_sub$, dir_total$, count
+  If delimiter$ = ""
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      delimiter$ = "\"
+    CompilerElse
+      delimiter$ = "/"
+    CompilerEndIf
+  EndIf
   
   dir$ = Path(dir$, delimiter$)
   
   count = 1
-  dir_sub$ = StringField(dir$, count, #DS$)
-  dir_total$ = dir_sub$ + #DS$
+  dir_sub$ = StringField(dir$, count, delimiter$)
+  dir_total$ = dir_sub$ + delimiter$
   
   While dir_sub$ <> ""
     result = CreateDirectory(dir_total$)
     
     count + 1
-    dir_sub$ = StringField(dir$, count, #DS$)
-    dir_total$ + dir_sub$ + #DS$
+    dir_sub$ = StringField(dir$, count, delimiter$)
+    dir_total$ + dir_sub$ + delimiter$
   Wend
   ProcedureReturn result
 EndProcedure
@@ -226,7 +228,7 @@ Procedure TimerMainGadgets()
       DisableGadget(GadgetUninstall, #True)
     Else
       DisableGadget(GadgetToggle, #False)
-      *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
+      *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
       If *modinfo\active
         SetGadgetText(GadgetToggle, "Deactivate Mod")
         SetGadgetState(GadgetToggle, 1)
@@ -643,7 +645,7 @@ Procedure ActivateThread(*modinfo.mod)
       ; search for required mod in list of installed mods
       count = CountGadgetItems(ListInstalled)
       For i = 0 To count-1
-        *tmpinfo.mod = GetGadgetItemData(ListInstalled, i)
+        *tmpinfo.mod = ListIcon::GetListItemData(ListInstalled, i)
         If *tmpinfo\active
           If *tmpinfo\name$ = ReqMod$
             If *tmpinfo\version$ = ReqVer$ Or ReqVer$ = ""
@@ -774,7 +776,7 @@ Procedure ActivateThread(*modinfo.mod)
       ; check filetracker for any other mods that may have modified this file before
       ForEach FileTracker$()
         ; compare files from filetracker with files from new mod
-        If FileTracker$() = Path(LCase(Files$()), "/") ; all filetracker entries are stored with "/" as delimiter
+        If FileTracker$() = File$
           ; file found in list of already installed files
           CopyFile = #False
           isModded = #True
@@ -906,7 +908,7 @@ Procedure DeactivateThread(*modinfo.mod)
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
     With *tmpinfo
-      *tmpinfo = GetGadgetItemData(ListInstalled, i)
+      *tmpinfo = ListIcon::GetListItemData(ListInstalled, i)
       If \active
         ForEach \dependencies$()
           If MapKey(\dependencies$()) = *modinfo\name$
@@ -1075,10 +1077,10 @@ Procedure FreeModList()
   
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
-    *modinfo = GetGadgetItemData(ListInstalled, i)
+    *modinfo = ListIcon::GetListItemData(ListInstalled, i)
     FreeStructure(*modinfo) ; this automatically also frees all strings in the strucute element
   Next
-  ClearGadgetItems(ListInstalled)  
+  ListIcon::ClearListItems(ListInstalled)  
 EndProcedure
 
 Procedure LoadModList()
@@ -1120,8 +1122,8 @@ Procedure LoadModList()
           active$ = "No"
         EndIf
         
-        AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
-        SetGadgetItemData(ListInstalled, count, *modinfo)
+        ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
+        ListIcon::SetListItemData(ListInstalled, count, *modinfo)
       EndWith
     Wend
   EndIf
@@ -1134,7 +1136,7 @@ Procedure LoadModList()
   count = CountGadgetItems(ListInstalled)
   For i = 0 To count-1
     With *modinfo
-      *modinfo = GetGadgetItemData(ListInstalled, i)
+      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       If PreferenceGroup(\name$)
         PDebug(" - Dependencies for "+\name$+":")
         If ExaminePreferenceKeys()
@@ -1172,7 +1174,7 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     sameName = #False
     sameHash = #False
     
-    *tmp = GetGadgetItemData(ListInstalled, i)
+    *tmp = ListIcon::GetListItemData(ListInstalled, i)
     If LCase(*tmp\name$) = LCase(*modinfo\name$)
       sameName = #True
     EndIf
@@ -1253,8 +1255,8 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     Else
       active$ = "No"
     EndIf
-    AddGadgetItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
-    SetGadgetItemData(ListInstalled, count, *modinfo)
+    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + Bytes(\size) + Chr(10) + active$)
+    ListIcon::SetListItemData(ListInstalled, count, *modinfo)
     ToggleMod(*modinfo)      
   EndWith
   
@@ -1287,7 +1289,7 @@ Procedure GadgetButtonToggle(event)
   
   SelectedMod =  GetGadgetState(ListInstalled)
   If SelectedMod <> -1
-    *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
+    *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
     ToggleMod(*modinfo)
   EndIf
 EndProcedure
@@ -1298,7 +1300,7 @@ Procedure GadgetButtonUninstall(event)
   
   SelectedMod =  GetGadgetState(ListInstalled)
   If SelectedMod <> -1
-    *modinfo = GetGadgetItemData(ListInstalled, SelectedMod)
+    *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
     If *modinfo\active
       ProcedureReturn #False
     EndIf
@@ -1378,7 +1380,7 @@ Procedure checkUpdate(auto.i)
     OpenPreferences("tfmm-update.ini")
     If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
       PDebug("Update: new version available")
-      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go to 'File' -> 'Homepage' to access the project page.")
+      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go to 'File' -> 'Homepage' to access the project page and access the new version.")
     Else
       PDebug("Update: no new version")
       If Not auto
@@ -1411,9 +1413,20 @@ Procedure init()
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
-  WindowBounds(WindowMain, 640, 300, #PB_Ignore, #PB_Ignore) 
+  WindowBounds(WindowMain, 640, 360, #PB_Ignore, #PB_Ignore) 
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
+;   UseModule ListIcon
+;   AddListColumn(ListInstalled, 1, "Author", 100)
+;   AddListColumn(ListInstalled, 2, "Version", 60)
+;   AddListColumn(ListInstalled, 3, "Size", 60)
+;   AddListColumn(ListInstalled, 4, "Activated", 60)
+;   UnuseModule ListIcon
+  CompilerIf #PB_OS_Windows
+    UseModule ListIcon
+    DefineListCallback(ListInstalled, #Edit)
+    UnuseModule ListIcon
+  CompilerEndIf
   
   PDebug("load settings")
   OpenPreferences("TFMM.ini")
@@ -1475,7 +1488,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 20
-; Folding = IEARgAAAg
+; CursorPosition = 1421
+; FirstLine = 819
+; Folding = UEBRg3NAw-
 ; EnableUnicode
 ; EnableXP
