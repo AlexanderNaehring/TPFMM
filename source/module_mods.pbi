@@ -153,9 +153,9 @@ Global ActivationInProgress, UpdateResult
           ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size)); + Chr(10) + active$)
           ListIcon::SetListItemData(ListInstalled, count, *modinfo)
           If \active
-            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::ImageYes))
+            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
           Else
-            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::ImageNo))
+            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
           EndIf
         EndWith
       Wend
@@ -194,9 +194,9 @@ Global ActivationInProgress, UpdateResult
     For i = 0 To CountGadgetItems(ListInstalled) - 1
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       If *modinfo\active
-        SetGadgetItemImage(ListInstalled, i, ImageID(images::ImageYes))
+        SetGadgetItemImage(ListInstalled, i, ImageID(images::Images("yes")))
       Else
-        SetGadgetItemImage(ListInstalled, i, ImageID(images::ImageNo))
+        SetGadgetItemImage(ListInstalled, i, ImageID(images::Images("no")))
       EndIf
     Next i
     
@@ -1113,9 +1113,9 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size))
     ListIcon::SetListItemData(ListInstalled, count, *modinfo)
     If \active
-      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::ImageYes))
+      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
     Else
-      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::ImageNo))
+      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
     EndIf
     ToggleMod(*modinfo)
   EndWith
@@ -1223,8 +1223,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 790
-; FirstLine = 507
-; Folding = A1jo5
+; CursorPosition = 1117
+; FirstLine = 750
+; Folding = Y1jo5
 ; EnableUnicode
 ; EnableXP

@@ -42,8 +42,8 @@ Procedure InitWindows()
   CompilerEndIf
   
   ; load images
-  SetGadgetState(ImageGadgetHeader, ImageID(images::ImageHeader))
-  SetGadgetState(ImageGadgetLogo, ImageID(images::ImageLogo))
+  SetGadgetState(ImageGadgetHeader, ImageID(images::Images("header")))
+  SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
   
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
@@ -242,7 +242,7 @@ EndProcedure
 
 Procedure MenuItemLicense(event)
   MessageRequester("License",
-                   "Train Fever Mod Manager (Build " + #PB_Editor_CompileCount + ")" + #CRLF$ +
+                   "Train Fever Mod Manager (Version 0.3." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount + ")" + #CRLF$ +
                    
                    "© 2014 Alexander Nähring / Xanos" + #CRLF$ +
                    "Distribution: www.train-fever.net" + #CRLF$ +
@@ -302,8 +302,6 @@ Procedure GadgetSaveSettings(event)
   ClosePreferences()
   FreeModList()
   LoadModList()
-  
-  StatusBarText(0, 0, TF$)
   
   GadgetCloseSettings(event)
 EndProcedure
@@ -475,7 +473,7 @@ Procedure GadgetButtonAutodetect(event)
       Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
     EndIf
   CompilerElseIf #PB_Compiler_OS = #PB_OS_Linux
-    Dir$ = Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
+    Dir$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
   CompilerEndIf
   
   If Dir$
@@ -487,10 +485,9 @@ EndProcedure
 Procedure GadgetButtonOpenPath(event)
   RunProgram(#DQUOTE$+GetGadgetText(GadgetPath)+#DQUOTE$)
 EndProcedure
-
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 172
-; FirstLine = 124
-; Folding = eAIAg+
+; CursorPosition = 244
+; FirstLine = 160
+; Folding = eJAAw+
 ; EnableUnicode
 ; EnableXP

@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-11-21 17:43" user="Alexander" host="TOWER"/>
+    <lastopen date="2014-11-21 18:22" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -21,7 +21,7 @@
     </file>
     <file name="source\module_images.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
-      <fingerprint md5="c051a4a0965904b635dbe48e6338457b"/>
+      <fingerprint md5="774a7db02ae98245c12f4b1f8edba29e"/>
     </file>
     <file name="source\module_ListIcon.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -33,7 +33,7 @@
     </file>
     <file name="source\module_mods.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
-      <fingerprint md5="6ad08a36f07105eb1c60674cfd7fed6d"/>
+      <fingerprint md5="88de2299d527c38a6b83e694933b5b7d"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -53,7 +53,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="2dc1820a5eafd4a2b0c32cfaaad76928"/>
+      <fingerprint md5="f577314d1c5d06fd6cde9cc82a6cd676"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
@@ -68,12 +68,12 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="606"/>
-      <buildcount enable="1" value="26"/>
+      <compilecount enable="1" value="621"/>
+      <buildcount enable="1" value="36"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
-        <field0 value="0,2,%BUILDCOUNT,%COMPILECOUNT"/>
-        <field1 value="0,2,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field0 value="0,3,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="0,3,%BUILDCOUNT,%COMPILECOUNT"/>
         <field3 value="Train Fever Mod Manager"/>
         <field4 value="%BUILDCOUNT"/>
         <field5 value="%COMPILECOUNT"/>
