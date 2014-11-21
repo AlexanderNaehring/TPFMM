@@ -69,6 +69,8 @@ DeclareModule ListIcon
   Declare SortListItems(GadgetID.i, SortCol.i, Flags.l=#False)
   Declare MultiSortListItems(GadgetID.i, SortCol1.i, SortCol2.i, SortCol3.i=#PB_Ignore, Flags.l=#False)
   Declare RemoveSortData(GadgetID.i)
+  
+  Declare SetListItemImage(GadgetID.i, Position.i, ImageID.i)
 EndDeclareModule
 
 
@@ -79,6 +81,7 @@ EnableExplicit
   Structure ListItemStructure
     Position.i
     ItemData.i
+    ImageID.i
     Text.s
     Sort.s
     SortInteger.i
@@ -119,7 +122,7 @@ EnableExplicit
         Protected *ListEdit.ListEditStructure = GetWindowLongPtr_(GadgetID(GadgetID), #GWL_USERDATA)
         Protected i.i, HDItem.HD_ITEM, ColsCount.i = SendMessage_(*ListEdit\HeaderHnd, #HDM_GETITEMCOUNT, 0, 0)
         HDItem\mask = #HDI_FORMAT
-        For i = 0 To ColsCount - 1 
+        For i = 0 To ColsCount - 1
           SendMessage_(*ListEdit\HeaderHnd, #HDM_GETITEM, i, HDItem)
           HDItem\fmt & ~ (#HDF_SORTDOWN | #HDF_SORTUP)
           SendMessage_(*ListEdit\HeaderHnd, #HDM_SETITEM, i, HDItem)
@@ -593,10 +596,11 @@ EnableExplicit
           SortStructuredList(ListIcon(GID)\Item(), #PB_Sort_Ascending, OffsetOf(ListItemStructure\Sort), TypeOf(ListItemStructure\Sort))
         EndIf ;}
       EndIf
-      ClearGadgetItems(GadgetID) 
+      ClearGadgetItems(GadgetID)
       ForEach ListIcon(GID)\Item()
         AddGadgetItem(GadgetID, Row, ListIcon(GID)\Item()\Text)
         SetGadgetItemData(GadgetID, Row, ListIcon(GID)\Item()\ItemData)
+        SetGadgetItemImage(GadgetID, Row, ListIcon(GID)\Item()\ImageID)
         Row + 1
       Next
     EndIf
@@ -630,6 +634,15 @@ EnableExplicit
     DeleteMapElement(ListIcon(), Str(GadgetID))
   EndProcedure
   
+  
+  Procedure SetListItemImage(GadgetID.i, Position.i, ImageID.i)
+    Protected GID.s = Str(GadgetID)
+    If ImageID
+      SetGadgetItemImage(GadgetID, Position, ImageID)
+      SelectElement(ListIcon(GID)\Item(), Position)
+      ListIcon(GID)\Item()\ImageID = ImageID
+    EndIf
+  EndProcedure
 EndModule
   
 CompilerIf #PB_Compiler_IsMainFile
@@ -672,7 +685,8 @@ CompilerIf #PB_Compiler_IsMainFile
   
 CompilerEndIf
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 5
+; CursorPosition = 636
+; FirstLine = 626
 ; Folding = ---------
 ; EnableUnicode
 ; EnableXP
