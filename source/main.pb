@@ -1,5 +1,6 @@
 ﻿EnableExplicit
 
+#VERSION$ = "Version 0.3." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #False
 
 Enumeration
@@ -70,20 +71,6 @@ Procedure checkTFPath(Dir$)
     EndIf
   EndIf
   ProcedureReturn #False
-EndProcedure
-
-Procedure HandleDroppedFiles(Files$)
-  Protected count, i
-  Protected File$
-  
-  debugger::Add("dropped files:")
-  count  = CountString(Files$, Chr(10)) + 1
-  For i = 1 To count
-    File$ = StringField(Files$, i, Chr(10))
-    debugger::Add(File$)
-  Next i
-  
-
 EndProcedure
 
 Procedure checkUpdate(auto.i)
@@ -209,8 +196,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 182
-; FirstLine = 24
-; Folding = E-
+; CursorPosition = 74
+; FirstLine = 7
+; Folding = k
 ; EnableUnicode
 ; EnableXP

@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-11-21 18:19" user="alexander" host="alexander-mint"/>
+    <lastopen date="2014-11-23 12:22" user="alexander" host="alexander-mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="3e376459ccab8c32112c59cfa8ce9381"/>
+      <fingerprint md5="1d9cde87737455879c2b7f8df16b6648"/>
     </file>
     <file name="source/module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -33,7 +33,7 @@
     </file>
     <file name="source/module_mods.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="88de2299d527c38a6b83e694933b5b7d"/>
+      <fingerprint md5="818a61d5522d4d68262ef824b3d8a70d"/>
     </file>
     <file name="source/module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -45,7 +45,7 @@
     </file>
     <file name="source/WindowMain.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="5fda7ef1adfcc6e1178c3886ff6a192b"/>
+      <fingerprint md5="418cd82b20083f477b825cb310fc4347"/>
     </file>
     <file name="source/WindowModProgress.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -53,7 +53,7 @@
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="8d4563e2be94a64bfd636554c43c08f4"/>
+      <fingerprint md5="0d0bfc0ba03b9782a4fc97bca51e9e97"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -66,8 +66,8 @@
       <outputfile value="bin/lin64/TFMM"/>
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1" debug="1"/>
-      <compilecount enable="1" value="621"/>
-      <buildcount enable="1" value="36"/>
+      <compilecount enable="1" value="659"/>
+      <buildcount enable="1" value="38"/>
       <execonstant enable="1"/>
     </target>
   </section>

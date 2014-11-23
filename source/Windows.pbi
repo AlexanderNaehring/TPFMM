@@ -54,7 +54,7 @@ EndProcedure
 Procedure TimerMain()
   Static LastDir$ = ""
   Protected SelectedMod, i, selectedActive, selectedInactive, countActive, countInactive
-  Protected *modinfo.mod
+  Protected *modinfo.mod, element.queue
   Protected text$
   
   If LastDir$ <> TF$
@@ -115,7 +115,7 @@ Procedure TimerMain()
     SetGadgetText(GadgetTextMain, Text$)
   EndIf
   
-  If ActivationInProgress
+  If InstallInProgress
     DisableGadget(GadgetActivate, #True)
     DisableGadget(GadgetDeactivate, #True)
     DisableGadget(GadgetUninstall, #True)
@@ -126,12 +126,11 @@ Procedure TimerMain()
       DisableGadget(GadgetDeactivate, #True)
       DisableGadget(GadgetUninstall, #True)
     Else
+      DisableGadget(GadgetUninstall, #False) ; uninstall is always possible!
       If selectedActive > 0 ; if at least one of the mods is active
         DisableGadget(GadgetDeactivate, #False)
-        DisableGadget(GadgetUninstall, #True)
       Else  ; if no mod is active 
         DisableGadget(GadgetDeactivate, #True)
-        DisableGadget(GadgetUninstall, #False)
       EndIf
       If selectedInactive > 0 ; if at least one of the mods is not active
         DisableGadget(GadgetActivate, #False)
@@ -139,12 +138,15 @@ Procedure TimerMain()
         DisableGadget(GadgetActivate, #True)  ; disable activate button
       EndIf
       
-      If selectedActive > 1
-        SetGadgetText(GadgetDeactivate, "Deactivate Mods")
+      If selectedActive + selectedInactive > 1
         SetGadgetText(GadgetUninstall, "Uninstall Mods")
       Else
-        SetGadgetText(GadgetDeactivate, "Deactivate Mod")
         SetGadgetText(GadgetUninstall, "Uninstall Mod")
+      EndIf
+      If selectedActive > 1
+        SetGadgetText(GadgetDeactivate, "Deactivate Mods")
+      Else
+        SetGadgetText(GadgetDeactivate, "Deactivate Mod")
       EndIf
       If selectedInactive > 1
         SetGadgetText(GadgetActivate, "Activate Mods")
@@ -155,32 +157,47 @@ Procedure TimerMain()
   EndIf
   
   ; queue handler
-  If Not ActivationInProgress And TF$
+  If Not InstallInProgress And TF$
     If Not MutexQueue
+      debugger::Add("MutexQueue = CreateMutex()")
       MutexQueue = CreateMutex()
     EndIf
     LockMutex(MutexQueue)
     If ListSize(queue()) > 0
       debugger::Add("Handle next element in queue")
       FirstElement(queue())
-      Select queue()\action
+      element = queue()
+      DeleteElement(queue(),1)
+      
+      Select element\action
         Case #QueueActionActivate
           debugger::Add("#QueueActionActivate")
-          If queue()\modinfo
+          If element\modinfo
             ShowProgressWindow()
-            CreateThread(@ActivateThread(),queue()\modinfo)
+            CreateThread(@ActivateThread(), element\modinfo)
           EndIf
-          DeleteElement(queue(), 1)
+          
         Case #QueueActionDeactivate
           debugger::Add("#QueueActionDeactivate")
-          If queue()\modinfo
+          If element\modinfo
             ShowProgressWindow()
-            CreateThread(@DeactivateThread(),queue()\modinfo)
+            CreateThread(@DeactivateThread(), element\modinfo)
           EndIf
-          DeleteElement(queue(), 1)
+          
+        Case #QueueActionUninstall
+          debugger::Add("#QueueActionUninstall")
+          If element\modinfo
+            RemoveModFromList(element\modinfo)
+          EndIf
           
           
+        Case #QueueActionNew
+          debugger::Add("#QueueActionNew")
+          If element\File$
+            AddModToList(element\File$)
+          EndIf
       EndSelect
+      
     EndIf
     UnlockMutex(MutexQueue)
   EndIf
@@ -233,7 +250,12 @@ EndProcedure
 ; MENU
 
 Procedure MenuItemHomepage(event)
-  RunProgram(#DQUOTE$+"http://goo.gl/utB3xn"+#DQUOTE$) ; Download Page (Train-Fever.net)
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", "http://goo.gl/utB3xn", "")
+  CompilerEndSelect
 EndProcedure
 
 Procedure MenuItemUpdate(event)
@@ -242,7 +264,7 @@ EndProcedure
 
 Procedure MenuItemLicense(event)
   MessageRequester("License",
-                   "Train Fever Mod Manager (Version 0.3." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount + ")" + #CRLF$ +
+                   "Train Fever Mod Manager (" + #VERSION$ + ")" + #CRLF$ +
                    
                    "© 2014 Alexander Nähring / Xanos" + #CRLF$ +
                    "Distribution: www.train-fever.net" + #CRLF$ +
@@ -311,7 +333,7 @@ Procedure GadgetButtonActivate(event)
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
   
-  For i = 0 To CountGadgetItems(ListInstalled)
+  For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       If Not *modinfo\active
@@ -328,14 +350,11 @@ Procedure GadgetButtonActivate(event)
     EndIf
     
     If result = #PB_MessageRequester_Yes
-      For i = 0 To CountGadgetItems(ListInstalled)
+      For i = 0 To CountGadgetItems(ListInstalled) - 1
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
           *modinfo = ListIcon::GetListItemData(ListInstalled, i)
           If Not *modinfo\active
-            debugger::Add("selected item "+*modinfo\name$+" is active")
             AddToQueue(#QueueActionActivate, *modinfo)
-          Else
-            debugger::Add("selected item "+*modinfo\name$+" is not active")
           EndIf
         EndIf
       Next i
@@ -347,7 +366,7 @@ Procedure GadgetButtonDeactivate(event)
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
   
-  For i = 0 To CountGadgetItems(ListInstalled)
+  For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       With *modinfo
@@ -366,7 +385,7 @@ Procedure GadgetButtonDeactivate(event)
     EndIf
     
     If result = #PB_MessageRequester_Yes
-      For i = 0 To CountGadgetItems(ListInstalled)
+      For i = 0 To CountGadgetItems(ListInstalled) - 1
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
           *modinfo = ListIcon::GetListItemData(ListInstalled, i)
           With *modinfo
@@ -381,17 +400,35 @@ Procedure GadgetButtonDeactivate(event)
 EndProcedure
 
 Procedure GadgetButtonUninstall(event)
-  Protected SelectedMod
-  Protected *modinfo.mod
+  debugger::Add("GadgetButtonUninstall")
+  Protected *modinfo.mod, *last.mod
+  Protected i, count, result
   
-  SelectedMod =  GetGadgetState(ListInstalled)
-  If SelectedMod <> -1
-    *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
-    If *modinfo\active
-      ProcedureReturn #False
+  For i = 0 To CountGadgetItems(ListInstalled) - 1
+    If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
+      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+      *last = *modinfo
+      count + 1
     EndIf
-    ; if selected mod is not active, it is save to delete the zip file and remove the mod from the mod list
-    RemoveModFromList(*modinfo)
+  Next i
+  If count > 0
+    If count = 1
+      result = MessageRequester("Uninstall Modification", "Do you want to uninstall '" + *last\name$ + "'?", #PB_MessageRequester_YesNo)
+    Else
+      result = MessageRequester("Uninstall Modifications", "Do you want to uninstall " + Str(count) + " modifications?", #PB_MessageRequester_YesNo)
+    EndIf
+    
+    If result = #PB_MessageRequester_Yes
+      For i = 0 To CountGadgetItems(ListInstalled) - 1
+        If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
+          *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+          If *modinfo\active
+            AddToQueue(#QueueActionDeactivate, *modinfo)
+          EndIf
+          AddToQueue(#QueueActionUninstall, *modinfo)
+        EndIf
+      Next i
+    EndIf
   EndIf
 EndProcedure
 
@@ -404,7 +441,7 @@ Procedure GadgetNewMod(event)
   EndIf
   
   If File$
-    AddModToList(File$)
+    AddToQueue(#QueueActionNew, 0, File$)
   EndIf
 EndProcedure
 
@@ -446,12 +483,26 @@ Procedure GadgetListInstalled(event)
 EndProcedure
 
 Procedure GadgetButtonStartGame(event)
-  RunProgram(#DQUOTE$ + "steam://run/304730/" + #DQUOTE$)
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram("steam://run/304730/")
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", "steam://run/304730/", "")
+  CompilerEndSelect
+EndProcedure
+
+Procedure GadgetButtonTrainFeverNet(event)
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", "http://goo.gl/8Dsb40", "")
+  CompilerEndSelect
 EndProcedure
 
 Procedure GadgetImageMain(event)
   If event = #PB_EventType_LeftClick
-    RunProgram("http://goo.gl/8Dsb40")
+    GadgetButtonTrainFeverNet(event)
   EndIf
 EndProcedure
 
@@ -485,9 +536,21 @@ EndProcedure
 Procedure GadgetButtonOpenPath(event)
   RunProgram(#DQUOTE$+GetGadgetText(GadgetPath)+#DQUOTE$)
 EndProcedure
+
+Procedure HandleDroppedFiles(Files$)
+  Protected count, i
+  Protected File$
+  
+  debugger::Add("dropped files:")
+  count  = CountString(Files$, Chr(10)) + 1
+  For i = 1 To count
+    File$ = StringField(Files$, i, Chr(10))
+    AddToQueue(#QueueActionNew, 0, File$)
+  Next i
+EndProcedure
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 244
-; FirstLine = 160
-; Folding = eJAAw+
+; CursorPosition = 425
+; FirstLine = 193
+; Folding = eAgAA6
 ; EnableUnicode
 ; EnableXP

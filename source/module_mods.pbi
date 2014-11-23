@@ -9,7 +9,7 @@ Global WindowMain, WindowModProgress
 Global TimerFinishUnInstall, TimerUpdate
 Global ListInstalled
 
-Global ActivationInProgress, UpdateResult
+Global InstallInProgress, UpdateResult
 
 ; DeclareModule mods
 ;   EnableExplicit
@@ -46,6 +46,7 @@ Global ActivationInProgress, UpdateResult
   Structure queue
     action.i
     *modinfo.mod
+    File$
   EndStructure
   
   
@@ -59,27 +60,40 @@ Global ActivationInProgress, UpdateResult
 ; Module mods
   Global NewList queue.queue()
   Global ModProgressAnswer = #AnswerNone
-  Global ActivationInProgress
   Global MutexQueue
   
   
-  
-  
-  Procedure AddToQueue(action, *modinfo.mod)
-    debugger::Add("AddToQueue("+Str(action)+", "+Str(*modinfo.mod)+")")
+ 
+  Procedure AddToQueue(action, *modinfo.mod, File$="")
+    debugger::Add("AddToQueue("+Str(action)+", "+Str(*modinfo.mod)+", "+File$+")")
     If Not MutexQueue
+      debugger::Add("MutexQueue = CreateMutex()")
       MutexQueue = CreateMutex()
     EndIf
     
+    
     Select action
       Case #QueueActionNew
+        If File$ = ""
+          ProcedureReturn #False
+        EndIf
+          
+        debugger::Add("QueueActionNew: " + File$)
+        LockMutex(MutexQueue)
+        LastElement(queue())
+        AddElement(queue())
+        queue()\action = action
+        queue()\File$ = File$
+        UnlockMutex(MutexQueue)
         
       Case #QueueActionActivate
         If Not *modinfo
           ProcedureReturn #False
         EndIf
-        debugger::Add("QueueActionActivate: "+*modinfo\name$)
+        
+        debugger::Add("QueueActionActivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
+        LastElement(queue())
         AddElement(queue())
         queue()\action = action
         queue()\modinfo = *modinfo
@@ -89,15 +103,32 @@ Global ActivationInProgress, UpdateResult
         If Not *modinfo
           ProcedureReturn #False
         EndIf
+        
+        debugger::Add("QueueActionDeactivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
+        LastElement(queue())
         AddElement(queue())
         queue()\action = action
         queue()\modinfo = *modinfo
         UnlockMutex(MutexQueue)
         
       Case #QueueActionUninstall
+        If Not *modinfo
+          ProcedureReturn #False
+        EndIf
+        
+        debugger::Add("QueueActionUninstall: " + *modinfo\name$)
+        LockMutex(MutexQueue)
+        LastElement(queue())
+        AddElement(queue())
+        queue()\action = action
+        queue()\modinfo = *modinfo
+        UnlockMutex(MutexQueue)
+        
         
     EndSelect
+    
+    
   EndProcedure
   
   Procedure UserAnswer(answer)
@@ -188,22 +219,19 @@ Global ActivationInProgress, UpdateResult
     Protected i, *modinfo.mod
     RemoveWindowTimer(WindowModProgress, TimerFinishUnInstall)
     
-;     FreeModList() ; not working in batch processing as *modinfo become invalid
-;     LoadModList()
-    
     For i = 0 To CountGadgetItems(ListInstalled) - 1
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       If *modinfo\active
-        SetGadgetItemImage(ListInstalled, i, ImageID(images::Images("yes")))
+        ListIcon::SetListItemImage(ListInstalled, i, ImageID(images::Images("yes")))
       Else
-        SetGadgetItemImage(ListInstalled, i, ImageID(images::Images("no")))
+        ListIcon::SetListItemImage(ListInstalled, i, ImageID(images::Images("no")))
       EndIf
     Next i
     
     DisableWindow(WindowMain, #False)
     HideWindow(WindowModProgress, #True)
     SetActiveWindow(WindowMain)
-    ActivationInProgress = #False 
+    InstallInProgress = #False 
   EndProcedure
   
   Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
@@ -232,9 +260,6 @@ Global ActivationInProgress, UpdateResult
         Next
         ClosePreferences()
       EndIf
-      
-      
-      
     EndWith
   EndProcedure
   
@@ -345,7 +370,7 @@ Global ActivationInProgress, UpdateResult
     If Not *modinfo
       ProcedureReturn #False
     EndIf
-    ActivationInProgress = #True
+    InstallInProgress = #True
     
     Protected dir, i, CopyFile, isModded, error, count, ok
     Protected NewList Files$(), NewList FileTracker$()
@@ -655,7 +680,7 @@ Global ActivationInProgress, UpdateResult
     If Not *modinfo
       ProcedureReturn #False
     EndIf
-    ActivationInProgress = #True
+    InstallInProgress = #True
     
     Protected File$, md5$, Backup$
     Protected NewList Files$()
@@ -722,19 +747,21 @@ Global ActivationInProgress, UpdateResult
         Debug "no files altered?"
       EndIf
       
+      ModProgressAnswer = #AnswerNone
       If count = 0 ;And countAll > 0
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten Or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
-      ElseIf count > 0 And count < countAll
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"All other files may have been altered by other mods and cannot be restored savely."+#CRLF$+"Do you want to deactivate this modification?")
+        ModProgressAnswer = #AnswerYes
       ElseIf count > 0 And count = countAll
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
+        ModProgressAnswer = #AnswerYes
+      ElseIf count > 0 And count < countAll
+        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"All other files may have been altered by other mods and cannot be restored savely."+#CRLF$+"Do you want to deactivate this modification?")
       Else
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"Do you want to deactivate this mod?")
       EndIf
       
       HideGadget(GadgetModNo, #False)
       HideGadget(GadgetModYes, #False)
-      ModProgressAnswer = #AnswerNone
       While ModProgressAnswer = #AnswerNone
         Delay(10)
       Wend
@@ -810,17 +837,16 @@ Global ActivationInProgress, UpdateResult
     DisableWindow(WindowMain, #True)
     SetActiveWindow(WindowModProgress)
   EndProcedure
-  
-  
+    
   Procedure ToggleMod(*modinfo.mod)
     debugger::Add("ToogleMod()")
     If Not *modinfo
       ProcedureReturn #False
     EndIf
-    If ActivationInProgress
+    If InstallInProgress
       ProcedureReturn #False
     EndIf
-    ActivationInProgress = #True
+    InstallInProgress = #True
     
     ShowProgressWindow()
     
@@ -841,6 +867,8 @@ Global ActivationInProgress, UpdateResult
     If Not *modinfo
       ProcedureReturn #False
     EndIf
+    Protected i
+    InstallInProgress = #True
     
     With *modinfo
       OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
@@ -852,10 +880,16 @@ Global ActivationInProgress, UpdateResult
       
       DeleteFile(TF$ + "TFMM\Mods\" + *modinfo\file$, #PB_FileSystem_Force)
       
-      FreeModList()
-      LoadModList()
-      
+      For i = 0 To CountGadgetItems(ListInstalled) - 1
+        If *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+          ListIcon::RemoveListItem(ListInstalled, i)
+          InstallInProgress = #False
+          ProcedureReturn #True
+        EndIf
+      Next i
     EndWith
+    InstallInProgress = #False
+    ProcedureReturn #False 
   EndProcedure
   
   ; EndModule
@@ -1019,18 +1053,20 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   Protected sameName.b, sameHash.b
   
   If Not CheckModFile(File$)
+    debugger::Add("CheckModFile("+File$+") failed")
     MessageRequester("Error", "Selected file is not a valid Train Fever modification or may not be compatible with TFMM")
     ProcedureReturn #False
   EndIf
   
   *modinfo = AllocateStructure(mod)
+  debugger::Add("new *modinfo created @"+Str(*modinfo))
   If Not GetModInfo(File$, *modinfo)
+    debugger::Add("GetModInfo("+File$+", *modinfo) failed")
     ProcedureReturn #False
   EndIf
   
   ; check for existing mods with same name
-  count = CountGadgetItems(ListInstalled)
-  For i = 0 To count-1
+  For i = 0 To CountGadgetItems(ListInstalled) - 1
     sameName = #False
     sameHash = #False
     
@@ -1039,14 +1075,15 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
       sameName = #True
     EndIf
     If *tmp\md5$ = *modinfo\md5$
+      debugger::Add("MD5 check found match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
       sameHash = #True
     EndIf
     
     If sameHash ; same hash indicates a duplicate - do not care about name!
       If *tmp\active
-        MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
+        MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
       Else
-        If MessageRequester("Error", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want to activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        If MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want To activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           ToggleMod(*tmp)
         EndIf
       EndIf
@@ -1117,8 +1154,9 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     Else
       ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
     EndIf
-    ToggleMod(*modinfo)
   EndWith
+  
+  AddToQueue(#QueueActionActivate, *modinfo)
   
 EndProcedure
 
@@ -1223,8 +1261,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1117
-; FirstLine = 750
-; Folding = Y1jo5
+; CursorPosition = 219
+; FirstLine = 61
+; Folding = QEgI5
 ; EnableUnicode
 ; EnableXP

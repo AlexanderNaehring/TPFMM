@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, GadgetTextMain
+Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, GadgetTextMain, tmp
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -34,10 +34,10 @@ Declare MenuItemUpdate(Event)
 Declare MenuItemExportActivated(Event)
 Declare GadgetButtonUninstall(EventType)
 Declare GadgetListInstalled(EventType)
+Declare GadgetButtonTrainFeverNet(EventType)
 Declare GadgetImageMain(EventType)
 Declare GadgetNewMod(EventType)
 Declare GadgetButtonStartGame(EventType)
-Declare MenuItemHomepage(EventType)
 Declare GadgetButtonActivate(EventType)
 Declare GadgetButtonDeactivate(EventType)
 
@@ -82,6 +82,7 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   GadgetDeactivate = ButtonGadget(#PB_Any, 550, 150, 160, 30, "Activate Mod")
   ImageGadgetHeader = ImageGadget(#PB_Any, 0, 0, 720, 8, 0)
   GadgetTextMain = EditorGadget(#PB_Any, 550, 230, 160, 180, #PB_Editor_ReadOnly | #PB_Editor_WordWrap)
+  tmp = TextGadget(#PB_Any, 550, 430, 160, 20, ""+#VERSION$+"", #PB_Text_Right)
 EndProcedure
 
 Procedure ResizeGadgetsWindowMain()
@@ -98,6 +99,7 @@ Procedure ResizeGadgetsWindowMain()
   ResizeGadget(GadgetDeactivate, FormWindowWidth - 170, 150, 160, 30)
   ResizeGadget(ImageGadgetHeader, 0, 0, FormWindowWidth - 0, 8)
   ResizeGadget(GadgetTextMain, FormWindowWidth - 170, 230, 160, FormWindowHeight - MenuHeight() - 278)
+  ResizeGadget(tmp, FormWindowWidth - 170, FormWindowHeight - 50, 160, 20)
 EndProcedure
 
 Procedure WindowMain_Events(event)
@@ -132,7 +134,7 @@ Procedure WindowMain_Events(event)
         Case GadgetNewMod
           GadgetNewMod(EventType())          
         Case GadgetHomepage
-          MenuItemHomepage(EventType())          
+          GadgetButtonTrainFeverNet(EventType())          
         Case GadgetStartGame
           GadgetButtonStartGame(EventType())          
         Case ImageGadgetLogo
