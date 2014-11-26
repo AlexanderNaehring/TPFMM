@@ -8,9 +8,58 @@ XIncludeFile "module_mods.pbi"
 XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
+XIncludeFile "WindowModInformation.pbf"
 
 
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
+
+Global MenuListInstalled
+Enumeration 100
+  #MenuItem_Activate
+  #MenuItem_Deactivate
+  #MenuItem_Uninstall
+  #MenuItem_Information
+EndEnumeration
+
+; ScrollArea
+Global NewList ScrollAreaList.i()
+Global ScrollAreaHeight.i
+Procedure ScrollAreaClear()
+  OpenGadgetList(ScrollAreaGadget)
+  ResetList(ScrollAreaList())
+  ForEach ScrollAreaList()
+    FreeGadget(ScrollAreaList())
+  Next
+  ClearList(ScrollAreaList())
+  ScrollAreaHeight = 2
+  OpenGadgetList(ScrollAreaGadget)
+EndProcedure
+Procedure ScrollAreaAddTextGadget(Text$, height = 18, Flags = 0)
+  OpenGadgetList(ScrollAreaGadget)
+  AddElement(ScrollAreaList())
+  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
+  ScrollAreaList() = TextGadget(#PB_Any, 2, ScrollAreaHeight + 3, 186, height, Text$, Flags) ; +3 for margin-top
+  ScrollAreaHeight + height + 2 + 3
+  ProcedureReturn ScrollAreaList()
+EndProcedure
+Procedure ScrollAreaAddStringGadget(Text$, height = 20, Flags = 0)
+  OpenGadgetList(ScrollAreaGadget)
+  AddElement(ScrollAreaList())
+  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
+  ScrollAreaList() = StringGadget(#PB_Any, 2, ScrollAreaHeight, 186, height, Text$, Flags)
+  ScrollAreaHeight + height + 2
+  ProcedureReturn ScrollAreaList()
+EndProcedure
+Procedure ScrollAreaAddButtonGadget(Text$, height = 20, Flags = 0)
+  OpenGadgetList(ScrollAreaGadget)
+  AddElement(ScrollAreaList())
+  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
+  ScrollAreaList() = ButtonGadget(#PB_Any, 2, ScrollAreaHeight, 186, height, Text$, Flags)
+  ScrollAreaHeight + height + 2
+  ProcedureReturn ScrollAreaList()
+EndProcedure
+
+Declare updateGUI()
 
 ; INIT
 
@@ -21,9 +70,10 @@ Procedure InitWindows()
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
+;   OpenWindowModInformation()
   
   ; Set window boundaries, timers, events
-  WindowBounds(WindowMain, 640, 360, #PB_Ignore, #PB_Ignore) 
+  WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
   
@@ -44,26 +94,33 @@ Procedure InitWindows()
   ; load images
   SetGadgetState(ImageGadgetHeader, ImageID(images::Images("header")))
   SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+;   SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("header")))
+  
+  ; right click menu
+  MenuListInstalled = CreatePopupImageMenu(#PB_Any)
+  MenuItem(#MenuItem_Information, "Information")
+  MenuBar()
+  MenuItem(#MenuItem_Activate, "Activate", ImageID(images::Images("yes")))
+  MenuItem(#MenuItem_Deactivate, "Deactivate", ImageID(images::Images("no")))
+  MenuItem(#MenuItem_Uninstall, "Uninstall")
+  
+  ; Scroll Area
+  ScrollAreaClear()
+  ScrollAreaAddTextGadget("Welcome to TFMM")
   
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
+  
+  updateGUI()
 EndProcedure
 
 ; TIMER
 
-Procedure TimerMain()
-  Static LastDir$ = ""
+Procedure updateGUI()
   Protected SelectedMod, i, selectedActive, selectedInactive, countActive, countInactive
-  Protected *modinfo.mod, element.queue
-  Protected text$
-  
-  If LastDir$ <> TF$
-    LastDir$ = TF$
-    If checkTFPath(TF$) <> #True
-      Ready = #False  ; flag for mod management
-      MenuItemSettings(0)
-    EndIf
-  EndIf
+  Protected *modinfo.mod
+  Protected text$, author$
+  Static LastSelect
   
   selectedActive = 0
   selectedInactive = 0
@@ -75,6 +132,7 @@ Procedure TimerMain()
       countInactive + 1
     EndIf
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
+      SelectedMod = i
       If *modinfo\active
         selectedActive + 1
       Else
@@ -83,59 +141,99 @@ Procedure TimerMain()
     EndIf
   Next
   
-  Select (selectedActive + selectedInactive)
-    Case 0 ; nothing selected
-      Text$ = Str(countActive + countInactive) + " mods installed." + #CRLF$
-      If (countActive + countInactive) = 0
-        Text$ + "You can add mods to enrich your experience with Train Fever." + #CRLF$ +
-                "Check out our website by clicking on the image above if you want to download new mods." + #CRLF$
-      Else
-        Text$ + Str(countActive) + " Mods active" + #CRLF$ +
-                Str(countInactive) + " Mods not active" + #CRLF$ +
-                "Select any mod to get more information" + #CRLF$
-      EndIf
-    Case 1 ; one mod selected
-      *modinfo = ListIcon::GetListItemData(ListInstalled, GetGadgetState(ListInstalled))
-      With *modinfo
-        Text$ = \name$ + " v" + \version$ + " by " + \author$ + #CRLF$ +
-                #CRLF$
-        If \active
-          Text$ + "mod is activated"
-        Else
-          Text$ + "mod is not activated"
-        EndIf
-      EndWith
-    Default ; multiple mods selected
-       Text$ = Str(selectedActive + selectedInactive) + " Mods selected" + #CRLF$ +
-              #CRLF$ +
-              Str(selectedActive) + " Mods active" + #CRLF$ +
-              Str(selectedInactive) + " Mods not active"
-  EndSelect
-  If Text$ <> GetGadgetText(GadgetTextMain)
-    SetGadgetText(GadgetTextMain, Text$)
-  EndIf
+  ; TODO ScrollArea WIP!
+  ; TODO right click only working when no ScrollareaUpdate is performed!
+  HideGadget(ScrollAreaGadget, #True)
+  
+;   Select (selectedActive + selectedInactive)
+;     Case 0 ; nothing selected
+;       If LastSelect <> -1
+;         LastSelect = -1
+;         ; do stuff!
+;         ScrollAreaClear()
+;         ScrollAreaAddTextGadget("No Modifications selected")
+;                 
+;       EndIf
+;     Case 1 ; one mod selected
+;       If LastSelect <> SelectedMod
+;         LastSelect = SelectedMod
+;         ; do stuff!
+;         *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
+;         
+;         ScrollAreaClear()
+;         ScrollAreaAddTextGadget("Name:")
+;         ScrollAreaAddStringGadget(*modinfo\name$, 20, #PB_String_ReadOnly)
+;         
+;         ScrollAreaAddTextGadget("Version:")
+;         ScrollAreaAddStringGadget(*modinfo\version$, 20, #PB_String_ReadOnly)
+;         ScrollAreaAddStringGadget(*modinfo\version$, 20, #PB_String_ReadOnly)
+;         
+;         If ListSize(*modinfo\author()) > 1
+;           ScrollAreaAddTextGadget("Authors:")
+;         ElseIf ListSize(*modinfo\author()) = 1
+;           ScrollAreaAddTextGadget("Author:")
+;         EndIf
+;         ForEach *modinfo\author()
+;           ScrollAreaAddStringGadget(*modinfo\author()\name$, 20, #PB_String_ReadOnly)
+;         Next
+;         
+;         If *modinfo\active
+;           ScrollAreaAddTextGadget("Mod is activated")
+;         Else
+;           ScrollAreaAddTextGadget("Mod is deactivated")
+;         EndIf
+;       EndIf
+;     Default ; multiple mods selected
+;       If #True ; check if other mods are selected as the last time ...
+;         ; do stuff
+;         ScrollAreaClear()
+;       EndIf
+;   EndSelect
+  
   
   If InstallInProgress
     DisableGadget(GadgetActivate, #True)
     DisableGadget(GadgetDeactivate, #True)
     DisableGadget(GadgetUninstall, #True)
+    DisableGadget(GadgetButtonInformation, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
   Else
     SelectedMod =  GetGadgetState(ListInstalled)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
       DisableGadget(GadgetActivate, #True)
       DisableGadget(GadgetDeactivate, #True)
       DisableGadget(GadgetUninstall, #True)
+      DisableGadget(GadgetButtonInformation, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Information, #True)
     Else
       DisableGadget(GadgetUninstall, #False) ; uninstall is always possible!
+      DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #False)
       If selectedActive > 0 ; if at least one of the mods is active
         DisableGadget(GadgetDeactivate, #False)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #False)
       Else  ; if no mod is active 
         DisableGadget(GadgetDeactivate, #True)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
       EndIf
       If selectedInactive > 0 ; if at least one of the mods is not active
         DisableGadget(GadgetActivate, #False)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #False)
       Else ; if none of the selected mods is inactive
         DisableGadget(GadgetActivate, #True)  ; disable activate button
+        DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
+      EndIf
+      
+      If selectedActive + selectedInactive > 1
+        DisableGadget(GadgetButtonInformation, #True)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Information, #True)
+      Else
+        DisableGadget(GadgetButtonInformation, #False)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Information, #False)
       EndIf
       
       If selectedActive + selectedInactive > 1
@@ -155,8 +253,12 @@ Procedure TimerMain()
       EndIf
     EndIf
   EndIf
+EndProcedure
+
+Procedure updateQueue()
+  Protected *modinfo.mod, element.queue
+  Protected text$, author$
   
-  ; queue handler
   If Not InstallInProgress And TF$
     If Not MutexQueue
       debugger::Add("MutexQueue = CreateMutex()")
@@ -190,7 +292,6 @@ Procedure TimerMain()
             RemoveModFromList(element\modinfo)
           EndIf
           
-          
         Case #QueueActionNew
           debugger::Add("#QueueActionNew")
           If element\File$
@@ -201,6 +302,22 @@ Procedure TimerMain()
     EndIf
     UnlockMutex(MutexQueue)
   EndIf
+EndProcedure
+
+Procedure TimerMain()
+  Static LastDir$ = ""
+  
+  If LastDir$ <> TF$
+    LastDir$ = TF$
+    If checkTFPath(TF$) <> #True
+      Ready = #False  ; flag for mod management
+      MenuItemSettings(0)
+    EndIf
+  EndIf
+  
+;   updateGUI()
+  updateQueue()
+  
 EndProcedure
 
 Procedure TimerSettingsGadgets()
@@ -468,6 +585,7 @@ EndProcedure
 Procedure GadgetListInstalled(event)
   Protected *modinfo.mod
   Protected position
+  updateGUI()
   If event = #PB_EventType_LeftDoubleClick
     position = GetGadgetState(ListInstalled)
     If position >= 0 And position < CountGadgetItems(ListInstalled)
@@ -478,7 +596,8 @@ Procedure GadgetListInstalled(event)
         GadgetButtonActivate(#PB_EventType_LeftClick)
       EndIf
     EndIf
-    
+  ElseIf event = #PB_EventType_RightClick
+    DisplayPopupMenu(MenuListInstalled, WindowID(WindowMain))
   EndIf
 EndProcedure
 
@@ -548,9 +667,128 @@ Procedure HandleDroppedFiles(Files$)
     AddToQueue(#QueueActionNew, 0, File$)
   Next i
 EndProcedure
+
+
+Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change gadgets, #false = show display gadgets
+  debugger::Add("Show Change Gadgets = "+Str(show))
+  HideGadget(ModInformationButtonSave, 1 - show)
+  HideGadget(ModInformationChangeName, 1 - show)
+  HideGadget(ModInformationChangeVersion, 1 - show)
+  HideGadget(ModInformationChangeAuthor, 1 - show)
+  HideGadget(ModInformationChangeCategory, 1 - show)
+  HideGadget(ModInformationChangeDownload, 1 - show)
+  
+  HideGadget(ModInformationButtonChange, show)
+  HideGadget(ModInformationDisplayName, show)
+  HideGadget(ModInformationDisplayVersion, show)
+  HideGadget(ModInformationDisplayAuthor, show)
+  HideGadget(ModInformationDisplayCategory, show)
+  HideGadget(ModInformationDisplayDownload, show)
+EndProcedure
+
+Procedure GadgetButtonInformation(event)
+  Protected *modinfo.mod
+  Protected SelectedMod, i, Gadget
+  Protected tfnet_mod_url$
+  
+  ; init
+  SelectedMod = GetGadgetState(ListInstalled)
+  If SelectedMod = -1
+    ProcedureReturn #False
+  EndIf
+  *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
+  If Not *modinfo
+    ProcedureReturn #False
+  EndIf
+  
+  OpenWindowModInformation()
+  BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowModInformation(), WindowModInformation)
+  SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("header")))
+  
+  ; fill in values for mod
+  With *modinfo
+    If \tfnet_mod_id
+      tfnet_mod_url$ = "train-fever.net/filebase/index.php/Entry/"+Str(\tfnet_mod_id)
+    EndIf
+    
+    SetWindowTitle(WindowModInformation, \name$)
+    
+    SetGadgetText(ModInformationChangeName, \name$)
+    SetGadgetText(ModInformationChangeVersion, \version$)
+    SetGadgetText(ModInformationChangeAuthor, "")
+    SetGadgetText(ModInformationChangeCategory, \category$)
+    SetGadgetText(ModInformationChangeDownload, tfnet_mod_url$)
+    
+    SetGadgetText(ModInformationDisplayName, \name$)
+    SetGadgetText(ModInformationDisplayVersion, \version$)
+    SetGadgetText(ModInformationDisplayAuthor, "")
+    SetGadgetText(ModInformationDisplayCategory, \category$)
+    SetGadgetText(ModInformationDisplayDownload, tfnet_mod_url$)
+    
+    ResetList(\author())
+    If ListSize(\author()) > 0
+      FirstElement(\author())
+      SetGadgetText(ModInformationDisplayAuthor, \author()\name$)
+      SetGadgetData(ModInformationDisplayAuthor, \author()\tfnet_id)
+    EndIf
+    
+    i = 0
+    While NextElement(\author())
+      i + 1
+      UseGadgetList(WindowID(WindowModInformation))
+      Gadget = HyperLinkGadget(#PB_Any, 90, 80 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
+      SetGadgetColor(Gadget, #PB_Gadget_FrontColor, RGB(131,21,85))
+      ResizeWindow(WindowModInformation, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowHeight(WindowModInformation) + 30)
+    Wend
+  EndWith
+  
+  ; show correct gadgets
+  ModInformationShowChangeGadgets(#False)
+    
+  DisableWindow(WindowMain, #True)
+  HideWindow(WindowModInformation, #False, #PB_Window_WindowCentered)
+EndProcedure
+
+Procedure GadgetButtonInformationClose(event)
+  HideWindow(WindowModInformation, #True)
+  DisableWindow(WindowMain, #False)
+  CloseWindow(WindowModInformation)
+EndProcedure
+
+Procedure GadgetButtonInformationChange(event)
+  ModInformationShowChangeGadgets()
+EndProcedure
+
+Procedure GadgetButtonInformationSave(event)
+  ModInformationShowChangeGadgets(#False)
+EndProcedure
+
+Procedure GadgetInformationLinkTFNET(event)
+  Protected link$
+  link$ = GetGadgetText(ModInformationDisplayDownload)
+  
+  If link$ = ""
+    ProcedureReturn #False
+  EndIf
+  
+  If Left(LCase(link$), 6) <> "http://" And Left(LCase(link$), 7) <> "https://"
+    link$ = URLEncoder("http://"+link$)
+  EndIf
+  
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram(link$) ; Download Page TFMM (Train-Fever.net)
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", link$, "")
+  CompilerEndSelect
+EndProcedure
+
+  
+
+
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 425
-; FirstLine = 193
-; Folding = eAgAA6
+; CursorPosition = 690
+; FirstLine = 123
+; Folding = gDQAAA6-
 ; EnableUnicode
 ; EnableXP

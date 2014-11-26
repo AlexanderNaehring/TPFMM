@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, GadgetTextMain, tmp
+Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, TextGadgetVersion, ScrollAreaGadget, GadgetButtonInformation, FrameGadget, FrameGadget2
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -36,12 +36,13 @@ Declare GadgetButtonUninstall(EventType)
 Declare GadgetListInstalled(EventType)
 Declare GadgetButtonTrainFeverNet(EventType)
 Declare GadgetImageMain(EventType)
+Declare GadgetButtonInformation(EventType)
 Declare GadgetNewMod(EventType)
 Declare GadgetButtonStartGame(EventType)
 Declare GadgetButtonActivate(EventType)
 Declare GadgetButtonDeactivate(EventType)
 
-Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
+Procedure OpenWindowMain(x = 0, y = 0, width = 750, height = 480)
   WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
@@ -66,40 +67,47 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 720, height = 480)
   MenuItem(#MenuItem_Homepage, "Homepage" + Chr(9) + "Ctrl + H")
   MenuItem(#MenuItem_Update, "Update" + Chr(9) + "Ctrl + U")
   MenuItem(#MenuItem_License, "License" + Chr(9) + "Ctrl + L")
-  GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 140, 25, "Add New Mod", #PB_Button_Toggle)
+  GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, "Add New Mod", #PB_Button_Toggle)
   GadgetToolTip(GadgetNewMod, "Add new modification")
-  GadgetHomepage = ButtonGadget(#PB_Any, 160, 425, 140, 25, "Download More Mods")
-  GadgetStartGame = ButtonGadget(#PB_Any, 310, 425, 230, 25, "Start Train Fever", #PB_Button_Default)
-  ImageGadgetLogo = ImageGadget(#PB_Any, 550, 10, 160, 90, 0)
-  GadgetUninstall = ButtonGadget(#PB_Any, 550, 190, 160, 30, "Uninstall Mod")
+  GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, "Download Mods")
+  GadgetStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, "Start Train Fever", #PB_Button_Default)
+  ImageGadgetLogo = ImageGadget(#PB_Any, 530, 15, 210, 118, 0)
+  GadgetUninstall = ButtonGadget(#PB_Any, 540, 240, 190, 30, "Uninstall Mod")
   GadgetToolTip(GadgetUninstall, "Uninstall selected modification")
-  GadgetActivate = ButtonGadget(#PB_Any, 550, 110, 160, 30, "Activate Mod")
+  GadgetActivate = ButtonGadget(#PB_Any, 540, 160, 190, 30, "Activate Mod")
   GadgetToolTip(GadgetActivate, "Activate selected modification")
-  ListInstalled = ListIconGadget(#PB_Any, 0, 8, 540, 405, "Name", 250, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+  ListInstalled = ListIconGadget(#PB_Any, 10, 8, 510, 405, "Name", 260, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
   AddGadgetColumn(ListInstalled, 1, "Author", 100)
   AddGadgetColumn(ListInstalled, 2, "Version", 60)
   AddGadgetColumn(ListInstalled, 3, "Size", 60)
-  GadgetDeactivate = ButtonGadget(#PB_Any, 550, 150, 160, 30, "Activate Mod")
-  ImageGadgetHeader = ImageGadget(#PB_Any, 0, 0, 720, 8, 0)
-  GadgetTextMain = EditorGadget(#PB_Any, 550, 230, 160, 180, #PB_Editor_ReadOnly | #PB_Editor_WordWrap)
-  tmp = TextGadget(#PB_Any, 550, 430, 160, 20, ""+#VERSION$+"", #PB_Text_Right)
+  GadgetDeactivate = ButtonGadget(#PB_Any, 540, 200, 190, 30, "Deactivate Mod")
+  ImageGadgetHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
+  TextGadgetVersion = TextGadget(#PB_Any, 530, 430, 210, 20, ""+#VERSION$+"", #PB_Text_Right)
+  ScrollAreaGadget = ScrollAreaGadget(#PB_Any, 530, 360, 210, 50, 188, 250, 1, #PB_ScrollArea_Flat)
+  CloseGadgetList()
+  GadgetButtonInformation = ButtonGadget(#PB_Any, 540, 310, 190, 30, "Mod Information")
+  FrameGadget = FrameGadget(#PB_Any, 530, 140, 210, 140, "Mod Management")
+  FrameGadget2 = FrameGadget(#PB_Any, 530, 290, 210, 60, "Mod Information")
 EndProcedure
 
 Procedure ResizeGadgetsWindowMain()
   Protected FormWindowWidth, FormWindowHeight
   FormWindowWidth = WindowWidth(WindowMain)
   FormWindowHeight = WindowHeight(WindowMain)
-  ResizeGadget(GadgetNewMod, 10, FormWindowHeight - 55, 140, 25)
-  ResizeGadget(GadgetHomepage, 160, FormWindowHeight - 55, 140, 25)
-  ResizeGadget(GadgetStartGame, 310, FormWindowHeight - 55, FormWindowWidth - 490, 25)
-  ResizeGadget(ImageGadgetLogo, FormWindowWidth - 170, 10, 160, 90)
-  ResizeGadget(GadgetUninstall, FormWindowWidth - 170, 190, 160, 30)
-  ResizeGadget(GadgetActivate, FormWindowWidth - 170, 110, 160, 30)
-  ResizeGadget(ListInstalled, 0, 8, FormWindowWidth - 180, FormWindowHeight - MenuHeight() - 53)
-  ResizeGadget(GadgetDeactivate, FormWindowWidth - 170, 150, 160, 30)
+  ResizeGadget(GadgetNewMod, 10, FormWindowHeight - 55, 120, 25)
+  ResizeGadget(GadgetHomepage, 140, FormWindowHeight - 55, 120, 25)
+  ResizeGadget(GadgetStartGame, 270, FormWindowHeight - 55, FormWindowWidth - 500, 25)
+  ResizeGadget(ImageGadgetLogo, FormWindowWidth - 220, 15, 210, 118)
+  ResizeGadget(GadgetUninstall, FormWindowWidth - 210, 240, 190, 30)
+  ResizeGadget(GadgetActivate, FormWindowWidth - 210, 160, 190, 30)
+  ResizeGadget(ListInstalled, 10, 8, FormWindowWidth - 240, FormWindowHeight - MenuHeight() - 53)
+  ResizeGadget(GadgetDeactivate, FormWindowWidth - 210, 200, 190, 30)
   ResizeGadget(ImageGadgetHeader, 0, 0, FormWindowWidth - 0, 8)
-  ResizeGadget(GadgetTextMain, FormWindowWidth - 170, 230, 160, FormWindowHeight - MenuHeight() - 278)
-  ResizeGadget(tmp, FormWindowWidth - 170, FormWindowHeight - 50, 160, 20)
+  ResizeGadget(TextGadgetVersion, FormWindowWidth - 220, FormWindowHeight - 50, 210, 20)
+  ResizeGadget(ScrollAreaGadget, FormWindowWidth - 220, 360, 210, FormWindowHeight - MenuHeight() - 408)
+  ResizeGadget(GadgetButtonInformation, FormWindowWidth - 210, 310, 190, 30)
+  ResizeGadget(FrameGadget, FormWindowWidth - 220, 140, 210, 140)
+  ResizeGadget(FrameGadget2, FormWindowWidth - 220, 290, 210, 60)
 EndProcedure
 
 Procedure WindowMain_Events(event)
@@ -147,6 +155,8 @@ Procedure WindowMain_Events(event)
           GadgetListInstalled(EventType())          
         Case GadgetDeactivate
           GadgetButtonDeactivate(EventType())          
+        Case GadgetButtonInformation
+          GadgetButtonInformation(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True

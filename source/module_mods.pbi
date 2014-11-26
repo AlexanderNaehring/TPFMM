@@ -30,12 +30,19 @@ Global InstallInProgress, UpdateResult
     #QueueActionUninstall
   EndEnumeration
   
+  Structure author
+    name$
+    tfnet_id.i
+  EndStructure
+    
   Structure mod
+    id$
     name$
     file$
-    author$
+    List author.author()
     version$
-    readme$
+    category$
+    tfnet_mod_id.i
     size.i
     md5$
     active.i
@@ -149,15 +156,14 @@ Global InstallInProgress, UpdateResult
   
   Procedure LoadModList()
     debugger::Add("LoadModList()")
-    Protected active$
-    Protected i.i
+    Protected active$, author$, tfnet_author_id$
+    Protected i.i, count.i
+    Protected *modinfo.mod
     
     If TF$ = ""
       ProcedureReturn #False
     EndIf
     
-    Protected *modinfo.mod 
-    Protected count
     
     OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
     If ExaminePreferenceGroups()
@@ -173,15 +179,33 @@ Global InstallInProgress, UpdateResult
             FreeStructure(*modinfo)
             Continue
           EndIf
-          \author$ = ReadPreferenceString("author", "")
+          
+          ClearList(\author())
+          author$ = ReadPreferenceString("author", "")
+          tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id", "")
+          count  = CountString(author$, ",") + 1
+          For i = 1 To count
+            AddElement(\author())
+            \author()\name$ = Trim(StringField(author$, i, ","))
+            \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
+          Next i
+          
           \version$ = ReadPreferenceString("version", "")
           \size = ReadPreferenceInteger("size", 0)
-          \md5$ = ReadPreferenceString("md5", "")
           \active = ReadPreferenceInteger("active", 0)
+          \md5$ = ReadPreferenceString("md5", "")
+          \category$ = ReadPreferenceString("category", "")
           
+          \tfnet_mod_id = ReadPreferenceInteger("online_tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
+          
+          If ListSize(\author()) > 0
+            FirstElement(\author())
+            author$ = \author()\name$
+          Else
+            author$ = ""
+          EndIf
           count = CountGadgetItems(ListInstalled)
-          
-          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size)); + Chr(10) + active$)
+          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size)); + Chr(10) + active$)
           ListIcon::SetListItemData(ListInstalled, count, *modinfo)
           If \active
             ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -235,6 +259,7 @@ Global InstallInProgress, UpdateResult
   EndProcedure
   
   Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
+    Protected author$, tfnet_author_id$
     If Not *modinfo
       ProcedureReturn #False
     EndIf
@@ -243,8 +268,20 @@ Global InstallInProgress, UpdateResult
       OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
       PreferenceGroup(\name$)
       WritePreferenceString("file", \file$)
-      WritePreferenceString("author", \author$)
+      ForEach \author()
+        If author$ <> ""
+          author$ + ", "
+          tfnet_author_id$ + ", "
+        EndIf
+        author$ + \author()\name$
+        tfnet_author_id$ + Str(\author()\tfnet_id)
+      Next
+      WritePreferenceString("name", \name$)
       WritePreferenceString("version", \version$)
+      WritePreferenceString("author", author$)
+      WritePreferenceString("category", \category$)
+      WritePreferenceString("online_tfnet_author_id", tfnet_author_id$)
+      WritePreferenceInteger("online_tfnet_mod_id", \tfnet_mod_id)
       WritePreferenceInteger("size", \size)
       WritePreferenceString("md5", \md5$)
       WritePreferenceInteger("active", \active)
@@ -894,6 +931,10 @@ Global InstallInProgress, UpdateResult
   
   ; EndModule
   
+Procedure ExtractModInformation(*modinfo.mod)
+  ; TODO extract tfmm.ini, preview.png, readme.txt, etc...
+EndProcedure
+
 Procedure CheckModFileZip(File$)
   debugger::Add("CheckModFileZip("+File$+")")
   If OpenPack(0, File$)
@@ -947,41 +988,58 @@ Procedure CheckModFile(File$) ; Check mod for a "res" folder!
   ProcedureReturn #False
 EndProcedure
 
-Procedure ExtractTFMMiniZip(File$, dir$) ; extracts tfmm.ini to given directory
-  Protected zip
+
+Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (all subdirs!) to given directory
+  debugger::Add("ExtractFilesZip("+ZIP$+", Files$(), "+dir$+")")
+  Protected zip, Entry$
+  dir$ = misc::Path(dir$)
   
-  zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+  zip = OpenPack(#PB_Any, ZIP$, #PB_PackerPlugin_Zip)
   If zip
     If ExaminePack(zip)
       While NextPackEntry(zip)
-        If LCase(PackEntryName(zip)) = "tfmm.ini" Or LCase(Right(PackEntryName(zip), 9)) = "/tfmm.ini"
-          UncompressPackFile(zip, dir$ + "tfmm.ini")
-          Break 
-        EndIf
+        Entry$ = PackEntryName(zip)
+        ForEach Files$()
+          If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
+            Debug "found"
+            UncompressPackFile(zip, dir$ + Files$())
+            DeleteElement(Files$()) ; if file is extracted, delete from list
+            Break ; ForEach
+          EndIf
+        Next
       Wend
     EndIf
     ClosePack(zip)
   EndIf
 EndProcedure
 
-Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
+Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (all subdirs!) to given directory
+  debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
   Protected rarheader.unrar::RARHeaderDataEx
-  Protected hRAR
+  Protected hRAR, hit
   Protected Entry$
+  dir$ = misc::Path(dir$)
   
-  hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_EXTRACT)
+  hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
   If hRAR
     While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
       CompilerIf #PB_Compiler_Unicode
         Entry$ = PeekS(@rarheader\FileNameW)
       CompilerElse
-        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+        Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
       CompilerEndIf
-
-      If LCase(Entry$) = "tfmm.ini" Or LCase(Right(Entry$, 9)) = "\tfmm.ini"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + "tfmm.ini")
-        Break
-      Else
+      
+      hit = #False
+      ForEach Files$()
+        If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
+          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
+          DeleteElement(Files$()) ; if file is extracted, delete from list
+          hit = #True
+          Break ; ForEach
+        EndIf
+      Next
+      
+      If Not hit
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
       EndIf
       
@@ -991,15 +1049,18 @@ Procedure ExtractTFMMiniRar(File$, dir$) ; extracts tfmm.ini to given directory
   ProcedureReturn #False
 EndProcedure
 
+
+
 Procedure GetModInfo(File$, *modinfo.mod)
-  Protected tmpDir$, extension$
+  Protected tmpDir$, extension$, author$, tfnet_author_id$
+  Protected count.i, i.i
   extension$ = LCase(GetExtensionPart(File$))
   tmpDir$ = GetTemporaryDirectory()
   
   With *modinfo
     \file$ = GetFilePart(File$)
     \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
-    \author$ = ""
+    ClearList(\author())
     \version$ = ""
     \size = FileSize(File$)
     \md5$ = MD5FileFingerprint(File$)
@@ -1007,22 +1068,44 @@ Procedure GetModInfo(File$, *modinfo.mod)
     
     ; read info from TFMM.ini in mod if any
     DeleteFile(tmpDir$ + "tfmm.ini") ; clean old tfmm.ini if exists
-    ;- Todo : Check if tfmm.ini is deleted?
+                                     ; TODO Check if tfmm.ini is deleted?
+    Protected NewList Files$()
+    AddElement(Files$())
+    Files$() = "tfmm.ini"
     If extension$ = "zip"
-      ExtractTFMMiniZip(File$, tmpDir$)
+;       ExtractTFMMiniZip(File$, tmpDir$)
+      ExtractFilesZip(File$, Files$(), tmpDir$)
     ElseIf extension$ = "rar"
-      ExtractTFMMiniRar(File$, tmpDir$)
+;       ExtractTFMMiniRar(File$, tmpDir$)
+      ExtractFilesRar(File$, Files$(), tmpDir$)
     EndIf
+    ClearList(Files$())
     
     OpenPreferences(tmpDir$ + "tfmm.ini")
     ; Read required TFMM version
     If ReadPreferenceInteger("tfmm", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
       MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
     EndIf
+    
     \name$ = ReadPreferenceString("name", \name$)
     \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
-    \author$ = ReadPreferenceString("author", \author$)
     \version$ = ReadPreferenceString("version", \version$)
+    author$ = ReadPreferenceString("author", "")
+    \category$ = ReadPreferenceString("category", "")
+    
+    ; read online category
+    PreferenceGroup("online")
+    tfnet_author_id$ = ReadPreferenceString("tfnet_author_id", "")
+    \tfnet_mod_id = ReadPreferenceInteger("tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
+    
+    ; create author list
+    count  = CountString(author$, ",") + 1
+    For i = 1 To count
+      AddElement(\author())
+      \author()\name$ = Trim(StringField(author$, i, ","))
+      \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
+    Next i
+    
     ; read dependencies from tfmm.ini
     If PreferenceGroup("dependencies")
       debugger::Add("dependencies found:")
@@ -1049,6 +1132,7 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   debugger::Add("AddModToList("+File$+")")
   Protected *modinfo.mod, *tmp.mod
   Protected FileTarget$, tmp$, active$
+  Protected tmp_author$, author$
   Protected count, i
   Protected sameName.b, sameHash.b
   
@@ -1061,8 +1145,15 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   *modinfo = AllocateStructure(mod)
   debugger::Add("new *modinfo created @"+Str(*modinfo))
   If Not GetModInfo(File$, *modinfo)
-    debugger::Add("GetModInfo("+File$+", *modinfo) failed")
+    debugger::Add("failed to retrieve *modinfo")
     ProcedureReturn #False
+  EndIf
+  
+  If ListSize(*modinfo\author()) > 0
+    FirstElement(*modinfo\author())
+    author$ = *modinfo\author()\name$
+  Else
+    author$ = ""
   EndIf
   
   ; check for existing mods with same name
@@ -1098,16 +1189,21 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
         ProcedureReturn #False
       Else
         ; mod is installed but not active -> replace old mod
+        tmp_author$ = ""
+        If ListSize(*tmp\author()) > 0
+          FirstElement(*tmp\author())
+          tmp_author$ = *tmp\author()\name$
+        EndIf
         tmp$ = "A modification named '"+*tmp\name$+"' is already installed but not active."+#CRLF$+
                "Current modification:"+#CRLF$+
                #TAB$+"Name: "+*tmp\name$+#CRLF$+
                #TAB$+"Version: "+*tmp\version$+#CRLF$+
-               #TAB$+"Author: "+*tmp\author$+#CRLF$+
+               #TAB$+"Author: "+tmp_author$+#CRLF$+
                #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
                "New modification:"+#CRLF$+
                #TAB$+"Name: "+*modinfo\name$+#CRLF$+
                #TAB$+"Version: "+*modinfo\version$+#CRLF$+
-               #TAB$+"Author: "+*modinfo\author$+#CRLF$+
+               #TAB$+"Author: "+author$+#CRLF$+
                #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
                "Do you want to replace the modification?"
         If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
@@ -1147,7 +1243,13 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   
   With *modinfo
     count = CountGadgetItems(ListInstalled)
-    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size))
+    If ListSize(\author()) > 0
+      FirstElement(\author())
+      author$ = \author()\name$
+    Else
+      author$ = ""
+    EndIf
+    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size))
     ListIcon::SetListItemData(ListInstalled, count, *modinfo)
     If \active
       ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -1163,6 +1265,7 @@ EndProcedure
 Procedure ExportModListHTML(all, File$)
   Protected file, i
   Protected *modinfo.mod
+  Protected author$
   
   file = CreateFile(#PB_Any, File$)
   If file
@@ -1197,7 +1300,16 @@ Procedure ExportModListHTML(all, File$)
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       With *modinfo
         If all Or \active
-          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \version$ + "</td><td>" + \author$ + "</td></tr>", #PB_UTF8)
+          author$ = ""
+          ForEach \author()
+            If author$ <> ""
+              author$ + ", "
+;               tfnet_author_id$ + ", "
+            EndIf
+            author$ + \author()\name$
+;             tfnet_author_id$ + Str(\author()\tfnet_id)
+          Next
+          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \version$ + "</td><td>" + author$ + "</td></tr>", #PB_UTF8)
         EndIf
       EndWith
       
@@ -1214,6 +1326,7 @@ EndProcedure
 Procedure ExportModListTXT(all, File$)
   Protected file, i
   Protected *modinfo.mod
+  Protected author$
   
   WriteStringN(file, "Mod" + Chr(9) + "Version" + Chr(9) + "Author", #PB_UTF8)
                
@@ -1223,7 +1336,16 @@ Procedure ExportModListTXT(all, File$)
       *modinfo = ListIcon::GetListItemData(ListInstalled, i)
       With *modinfo
         If all Or \active
-          WriteStringN(file, \name$ + Chr(9) + \version$ + Chr(9) + \author$, #PB_UTF8)
+          author$ = ""
+          ForEach \author()
+            If author$ <> ""
+              author$ + ", "
+;               tfnet_author_id$ + ", "
+            EndIf
+            author$ + \author()\name$
+;             tfnet_author_id$ + Str(\author()\tfnet_id)
+          Next
+          WriteStringN(file, \name$ + Chr(9) + \version$ + Chr(9) + author$, #PB_UTF8)
         EndIf
       EndWith
       
@@ -1261,8 +1383,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 219
-; FirstLine = 61
-; Folding = QEgI5
+; CursorPosition = 288
+; FirstLine = 164
+; Folding = oUIxx
+; Markers = 1312
 ; EnableUnicode
 ; EnableXP

@@ -184,6 +184,18 @@ Repeat
       If Not WindowMain_Events(Event)
         exit(0)
       EndIf
+      If Event = #PB_Event_Menu
+        Select EventMenu()
+          Case #MenuItem_Activate
+            GadgetButtonActivate(#PB_EventType_LeftClick)
+          Case #MenuItem_Deactivate
+            GadgetButtonDeactivate(#PB_EventType_LeftClick)
+          Case #MenuItem_Uninstall
+            GadgetButtonUninstall(#PB_EventType_LeftClick)
+          Case #MenuItem_Information
+            GadgetButtonInformation(#PB_EventType_LeftClick)
+        EndSelect
+      EndIf
     Case WindowSettings
       If Not WindowSettings_Events(Event)
         GadgetCloseSettings(0)
@@ -192,12 +204,18 @@ Repeat
       If Not WindowModProgress_Events(Event)
         ; user wants to close progress window -> no action, just wait for progress to finish
       EndIf
+    Case WindowModInformation
+      If IsWindow(WindowModInformation)
+        If Not WindowModInformation_Events(Event)
+          GadgetButtonInformationClose(#PB_EventType_LeftClick)
+        EndIf
+      EndIf
   EndSelect
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 74
-; FirstLine = 7
+; CursorPosition = 211
+; FirstLine = 39
 ; Folding = k
 ; EnableUnicode
 ; EnableXP
