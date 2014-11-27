@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.3." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.4." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #False
 
 Enumeration
@@ -125,9 +125,16 @@ Procedure init()
     MessageRequester("Error", "Could not initialize PNG Decoder.")
     End
   EndIf
+  If Not UseJPEGImageDecoder()
+    debugger::Add("ERROR: UseJPEGImageDecoder()")
+    MessageRequester("Error", "Could not initialize JPEG Decoder.")
+    End
+  EndIf
   images::LoadImages()
   
-  InitWindows()
+  CreateRegularExpression(0, "[^A-Za-z0-9]") ; non-alphanumeric characters
+  
+  InitWindows() ; open and initialize windows
   
   debugger::Add("load settings")
   OpenPreferences("TFMM.ini")
@@ -214,8 +221,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 211
-; FirstLine = 39
+; CursorPosition = 15
 ; Folding = k
 ; EnableUnicode
 ; EnableXP

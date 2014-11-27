@@ -1,4 +1,13 @@
-﻿DeclareModule misc
+﻿Macro Min(a,b)
+   (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
+ EndMacro
+ 
+ Macro Max(a,b)
+   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+EndMacro
+
+
+DeclareModule misc
   EnableExplicit
   
   Declare.s Path(path$, delimiter$ = "")
@@ -29,6 +38,7 @@ Module misc
   EndProcedure
 
   Procedure CreateDirectoryAll(dir$, delimiter$ = "")
+    debugger::Add("CreateDirectoryAll("+dir$+")")
     Protected result, dir_sub$, dir_total$, count
     If delimiter$ = ""
       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -71,7 +81,7 @@ Module misc
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 2
+; CursorPosition = 6
 ; Folding = --
 ; EnableUnicode
 ; EnableXP

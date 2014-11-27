@@ -13,6 +13,8 @@ XIncludeFile "WindowModInformation.pbf"
 
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
 
+Global NewMap PreviewImages.i()
+
 Global MenuListInstalled
 Enumeration 100
   #MenuItem_Activate
@@ -20,44 +22,6 @@ Enumeration 100
   #MenuItem_Uninstall
   #MenuItem_Information
 EndEnumeration
-
-; ScrollArea
-Global NewList ScrollAreaList.i()
-Global ScrollAreaHeight.i
-Procedure ScrollAreaClear()
-  OpenGadgetList(ScrollAreaGadget)
-  ResetList(ScrollAreaList())
-  ForEach ScrollAreaList()
-    FreeGadget(ScrollAreaList())
-  Next
-  ClearList(ScrollAreaList())
-  ScrollAreaHeight = 2
-  OpenGadgetList(ScrollAreaGadget)
-EndProcedure
-Procedure ScrollAreaAddTextGadget(Text$, height = 18, Flags = 0)
-  OpenGadgetList(ScrollAreaGadget)
-  AddElement(ScrollAreaList())
-  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
-  ScrollAreaList() = TextGadget(#PB_Any, 2, ScrollAreaHeight + 3, 186, height, Text$, Flags) ; +3 for margin-top
-  ScrollAreaHeight + height + 2 + 3
-  ProcedureReturn ScrollAreaList()
-EndProcedure
-Procedure ScrollAreaAddStringGadget(Text$, height = 20, Flags = 0)
-  OpenGadgetList(ScrollAreaGadget)
-  AddElement(ScrollAreaList())
-  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
-  ScrollAreaList() = StringGadget(#PB_Any, 2, ScrollAreaHeight, 186, height, Text$, Flags)
-  ScrollAreaHeight + height + 2
-  ProcedureReturn ScrollAreaList()
-EndProcedure
-Procedure ScrollAreaAddButtonGadget(Text$, height = 20, Flags = 0)
-  OpenGadgetList(ScrollAreaGadget)
-  AddElement(ScrollAreaList())
-  SetGadgetAttribute(ScrollAreaGadget, #PB_ScrollArea_InnerHeight, ScrollAreaHeight + height + 2)
-  ScrollAreaList() = ButtonGadget(#PB_Any, 2, ScrollAreaHeight, 186, height, Text$, Flags)
-  ScrollAreaHeight + height + 2
-  ProcedureReturn ScrollAreaList()
-EndProcedure
 
 Declare updateGUI()
 
@@ -104,10 +68,6 @@ Procedure InitWindows()
   MenuItem(#MenuItem_Deactivate, "Deactivate", ImageID(images::Images("no")))
   MenuItem(#MenuItem_Uninstall, "Uninstall")
   
-  ; Scroll Area
-  ScrollAreaClear()
-  ScrollAreaAddTextGadget("Welcome to TFMM")
-  
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
   
@@ -141,56 +101,6 @@ Procedure updateGUI()
     EndIf
   Next
   
-  ; TODO ScrollArea WIP!
-  ; TODO right click only working when no ScrollareaUpdate is performed!
-  HideGadget(ScrollAreaGadget, #True)
-  
-;   Select (selectedActive + selectedInactive)
-;     Case 0 ; nothing selected
-;       If LastSelect <> -1
-;         LastSelect = -1
-;         ; do stuff!
-;         ScrollAreaClear()
-;         ScrollAreaAddTextGadget("No Modifications selected")
-;                 
-;       EndIf
-;     Case 1 ; one mod selected
-;       If LastSelect <> SelectedMod
-;         LastSelect = SelectedMod
-;         ; do stuff!
-;         *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
-;         
-;         ScrollAreaClear()
-;         ScrollAreaAddTextGadget("Name:")
-;         ScrollAreaAddStringGadget(*modinfo\name$, 20, #PB_String_ReadOnly)
-;         
-;         ScrollAreaAddTextGadget("Version:")
-;         ScrollAreaAddStringGadget(*modinfo\version$, 20, #PB_String_ReadOnly)
-;         ScrollAreaAddStringGadget(*modinfo\version$, 20, #PB_String_ReadOnly)
-;         
-;         If ListSize(*modinfo\author()) > 1
-;           ScrollAreaAddTextGadget("Authors:")
-;         ElseIf ListSize(*modinfo\author()) = 1
-;           ScrollAreaAddTextGadget("Author:")
-;         EndIf
-;         ForEach *modinfo\author()
-;           ScrollAreaAddStringGadget(*modinfo\author()\name$, 20, #PB_String_ReadOnly)
-;         Next
-;         
-;         If *modinfo\active
-;           ScrollAreaAddTextGadget("Mod is activated")
-;         Else
-;           ScrollAreaAddTextGadget("Mod is deactivated")
-;         EndIf
-;       EndIf
-;     Default ; multiple mods selected
-;       If #True ; check if other mods are selected as the last time ...
-;         ; do stuff
-;         ScrollAreaClear()
-;       EndIf
-;   EndSelect
-  
-  
   If InstallInProgress
     DisableGadget(GadgetActivate, #True)
     DisableGadget(GadgetDeactivate, #True)
@@ -200,6 +110,7 @@ Procedure updateGUI()
     DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
     DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
   Else
+    ; no install in progress
     SelectedMod =  GetGadgetState(ListInstalled)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
       DisableGadget(GadgetActivate, #True)
@@ -251,6 +162,51 @@ Procedure updateGUI()
       Else
         SetGadgetText(GadgetActivate, "Activate Mod")
       EndIf
+    EndIf
+    
+    If selectedActive + selectedInactive = 1
+      ; one mod selected
+      ; display image
+      *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
+      If Not IsImage(PreviewImages(*modinfo\id$))
+        Protected im.i
+        If FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png") > 0
+          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png")
+        ElseIf FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg") > 0
+          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
+        EndIf
+        If IsImage(im)
+          Protected max_w.i, max_h.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
+          im_w = ImageWidth(im)
+          im_h = ImageHeight(im)
+          max_w = GadgetWidth(ImageGadgetLogo)
+          max_h = GadgetHeight(ImageGadgetLogo)
+          factor_w = max_w / im_w
+          factor_h = max_h / im_h
+          factor = Min(factor_w, factor_h)
+          im_w * factor
+          im_h * factor
+          
+          ResizeImage(im, im_w, im_h)
+          
+          PreviewImages(*modinfo\id$) = CreateImage(#PB_Any, max_w, max_h, 32, #PB_Image_Transparent)
+          If StartDrawing(ImageOutput(PreviewImages(*modinfo\id$)))
+            DrawingMode(#PB_2DDrawing_AlphaBlend)
+            DrawAlphaImage(ImageID(im), (max_w - im_w)/2, (max_h - im_h)/2) ; center the image onto a new image
+            StopDrawing()
+          Else
+            debugger::Add("Drawing Error")
+            DeleteMapElement(PreviewImages())
+          EndIf
+        EndIf
+      EndIf
+      If IsImage(PreviewImages(*modinfo\id$))
+        SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*modinfo\id$)))
+      Else
+        SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+      EndIf
+    Else
+      SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
     EndIf
   EndIf
 EndProcedure
@@ -315,7 +271,7 @@ Procedure TimerMain()
     EndIf
   EndIf
   
-;   updateGUI()
+  updateGUI()
   updateQueue()
   
 EndProcedure
@@ -653,7 +609,12 @@ Procedure GadgetButtonAutodetect(event)
 EndProcedure
 
 Procedure GadgetButtonOpenPath(event)
-  RunProgram(#DQUOTE$+GetGadgetText(GadgetPath)+#DQUOTE$)
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram(GetGadgetText(GadgetPath))
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", GetGadgetText(GadgetPath), "")
+  CompilerEndSelect
 EndProcedure
 
 Procedure HandleDroppedFiles(Files$)
@@ -667,6 +628,7 @@ Procedure HandleDroppedFiles(Files$)
     AddToQueue(#QueueActionNew, 0, File$)
   Next i
 EndProcedure
+
 
 
 Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change gadgets, #false = show display gadgets
@@ -777,18 +739,17 @@ Procedure GadgetInformationLinkTFNET(event)
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
-      RunProgram(link$) ; Download Page TFMM (Train-Fever.net)
+      RunProgram(link$)
     CompilerCase #PB_OS_Linux
       RunProgram("xdg-open", link$, "")
   CompilerEndSelect
 EndProcedure
 
-  
+
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 690
-; FirstLine = 123
-; Folding = gDQAAA6-
+; CursorPosition = 23
+; Folding = OAAAAEg
 ; EnableUnicode
 ; EnableXP

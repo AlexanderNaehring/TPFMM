@@ -9,7 +9,7 @@
 
 Global WindowMain
 
-Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, TextGadgetVersion, ScrollAreaGadget, GadgetButtonInformation, FrameGadget, FrameGadget2
+Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2
 
 Enumeration FormMenu
   #MenuItem_Settings
@@ -83,8 +83,6 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 750, height = 480)
   GadgetDeactivate = ButtonGadget(#PB_Any, 540, 200, 190, 30, "Deactivate Mod")
   ImageGadgetHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
   TextGadgetVersion = TextGadget(#PB_Any, 530, 430, 210, 20, ""+#VERSION$+"", #PB_Text_Right)
-  ScrollAreaGadget = ScrollAreaGadget(#PB_Any, 530, 360, 210, 50, 188, 250, 1, #PB_ScrollArea_Flat)
-  CloseGadgetList()
   GadgetButtonInformation = ButtonGadget(#PB_Any, 540, 310, 190, 30, "Mod Information")
   FrameGadget = FrameGadget(#PB_Any, 530, 140, 210, 140, "Mod Management")
   FrameGadget2 = FrameGadget(#PB_Any, 530, 290, 210, 60, "Mod Information")
@@ -104,7 +102,6 @@ Procedure ResizeGadgetsWindowMain()
   ResizeGadget(GadgetDeactivate, FormWindowWidth - 210, 200, 190, 30)
   ResizeGadget(ImageGadgetHeader, 0, 0, FormWindowWidth - 0, 8)
   ResizeGadget(TextGadgetVersion, FormWindowWidth - 220, FormWindowHeight - 50, 210, 20)
-  ResizeGadget(ScrollAreaGadget, FormWindowWidth - 220, 360, 210, FormWindowHeight - MenuHeight() - 408)
   ResizeGadget(GadgetButtonInformation, FormWindowWidth - 210, 310, 190, 30)
   ResizeGadget(FrameGadget, FormWindowWidth - 220, 140, 210, 140)
   ResizeGadget(FrameGadget2, FormWindowWidth - 220, 290, 210, 60)
