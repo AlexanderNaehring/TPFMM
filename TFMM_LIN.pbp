@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-11-30 20:43" user="alexander" host="alexander-mint"/>
+    <lastopen date="2014-11-30 22:02" user="alexander" host="alexander-mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
@@ -20,8 +20,8 @@
       <fingerprint md5="cc7348e6a768e2364a50beaa50520c7c"/>
     </file>
     <file name="source/module_images.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="774a7db02ae98245c12f4b1f8edba29e"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="cf8dac76b63c59adeb9960b9b0ad960b"/>
     </file>
     <file name="source/module_ListIcon.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -45,7 +45,7 @@
     </file>
     <file name="source/WindowMain.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="ae8a5c1673707dda8ad5ad2b49a475ed"/>
+      <fingerprint md5="e17a67a7b75923a098c7ff11a3de72fd"/>
     </file>
     <file name="source/WindowModInformation.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -57,7 +57,7 @@
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="046db970f5fb2097cd1966bc70f974ca"/>
+      <fingerprint md5="7465461ab2142e9137622c7211e2f068"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -70,8 +70,8 @@
       <outputfile value="bin/lin64/TFMM"/>
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1" debug="1"/>
-      <compilecount enable="1" value="1051"/>
-      <buildcount enable="1" value="51"/>
+      <compilecount enable="1" value="1061"/>
+      <buildcount enable="1" value="52"/>
       <execonstant enable="1"/>
     </target>
   </section>

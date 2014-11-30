@@ -25,6 +25,7 @@ Enumeration 100
 EndEnumeration
 
 Declare updateGUI()
+Declare ResizeUpdate()
 
 ; INIT
 
@@ -40,7 +41,7 @@ Procedure InitWindows()
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
-  BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowMain(), WindowMain)
+  BindEvent(#PB_Event_SizeWindow, @ResizeUpdate(), WindowMain)
   
   ; Init OS specific tools (list icon gadget)
   CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -57,7 +58,8 @@ Procedure InitWindows()
   CompilerEndIf
   
   ; load images
-  SetGadgetState(ImageGadgetHeader, ImageID(images::Images("header")))
+  ResizeImage(images::Images("headermain"), GadgetWidth(ImageGadgetHeader), GadgetHeight(ImageGadgetHeader), #PB_Image_Raw)
+  SetGadgetState(ImageGadgetHeader, ImageID(images::Images("headermain")))
   SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
 ;   SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("header")))
   
@@ -74,6 +76,13 @@ Procedure InitWindows()
   
   updateGUI()
 EndProcedure
+
+Procedure ResizeUpdate()
+  ResizeGadgetsWindowMain()
+  ResizeImage(images::Images("headermain"), GadgetWidth(ImageGadgetHeader), GadgetHeight(ImageGadgetHeader), #PB_Image_Raw)
+  SetGadgetState(ImageGadgetHeader, ImageID(images::Images("headermain")))
+EndProcedure
+
 
 ; TIMER
 
@@ -168,12 +177,6 @@ Procedure updateGUI()
       EndIf
     EndIf
     
-    
-;     SelectedMod = GetGadgetState(ListInstalled)
-;     SelectedCount = selectedActive + selectedInactive
-;     If SelectedMod <> LastSelect Or SelectedCount <> LastSelectCount
-;       LastSelectCount = SelectedCount
-;       LastSelect = SelectedMod
     
     If selectedActive + selectedInactive = 1
       ; one mod selected
@@ -702,7 +705,7 @@ Procedure GadgetButtonInformation(event)
   
   OpenWindowModInformation()
   BindEvent(#PB_Event_SizeWindow, @ResizeGadgetsWindowModInformation(), WindowModInformation)
-  SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("header")))
+  SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("headerinfo")))
   
   ; fill in values for mod
   With *modinfo
@@ -792,8 +795,7 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 201
-; FirstLine = 139
-; Folding = eAAAAIA-
+; CursorPosition = 13
+; Folding = -AAAAQE+
 ; EnableUnicode
 ; EnableXP

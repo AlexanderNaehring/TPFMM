@@ -7,10 +7,14 @@ Module images
   EnableExplicit
   
   Procedure LoadImages()
-    Images("header")  = CatchImage(#PB_Any, ?ImageHeaderD)
-    Images("yes")     = CatchImage(#PB_Any, ?ImageYesD)
-    Images("no")      = CatchImage(#PB_Any, ?ImageNoD)
-    Images("logo")    = CatchImage(#PB_Any, ?ImageLogoD)
+    Images("headermain")  = CatchImage(#PB_Any, ?DataImageHeader, ?DataImageHeaderEnd - ?DataImageHeader)
+    Images("headerinfo")  = CatchImage(#PB_Any, ?DataImageHeader, ?DataImageHeaderEnd - ?DataImageHeader)
+    Images("yes")         = CatchImage(#PB_Any, ?DataImageYes,    ?DataImageYesEnd - ?DataImageYes)
+    Images("no")          = CatchImage(#PB_Any, ?DataImageNo,     ?DataImageNoEnd - ?DataImageNo)
+    Images("logo")        = CatchImage(#PB_Any, ?DataImageLogo,   ?DataImageLogoEnd - ?DataImageLogo)
+    
+    ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
+    
     
     CompilerIf #PB_Compiler_OS = #PB_OS_Linux Or #True ; TODO ----------------
       ResizeImage(Images("yes"), 16, 16, #PB_Image_Raw)
@@ -20,21 +24,25 @@ Module images
   
   
   DataSection
-    ImageHeaderD:
+    DataImageHeader:
     IncludeBinary "images/header.png"
+    DataImageHeaderEnd:
     
-    ImageYesD:
+    DataImageYes:
     IncludeBinary "images/yes.png"
+    DataImageYesEnd:
     
-    ImageNoD:
+    DataImageNo:
     IncludeBinary "images/no.png"
+    DataImageNoEnd:
     
-    ImageLogoD:
+    DataImageLogo:
     IncludeBinary "images/logo.png"
+    DataImageLogoEnd:
   EndDataSection
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 19
+; CursorPosition = 15
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
