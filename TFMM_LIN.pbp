@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-11-27 01:57" user="alexander" host="alexander-mint"/>
+    <lastopen date="2014-11-30 18:01" user="alexander" host="alexander-mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="820c4c7627f3bed36530ccaee9949af2"/>
+      <fingerprint md5="e21f0aa9f55cf9a8a3f8e5e6d164762b"/>
     </file>
     <file name="source/module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -33,7 +33,7 @@
     </file>
     <file name="source/module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="1df3e50bd6b679341744b171ad104078"/>
+      <fingerprint md5="8880785d177b8f5a54facbc9f3d2a5c2"/>
     </file>
     <file name="source/module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -45,11 +45,11 @@
     </file>
     <file name="source/WindowMain.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="c22f0c63c2ed797e5f8ede877d52faa1"/>
+      <fingerprint md5="ae8a5c1673707dda8ad5ad2b49a475ed"/>
     </file>
     <file name="source/WindowModInformation.pbf">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="08fa516d83dff8e266f6d3809d365df9"/>
+      <fingerprint md5="5c0286a4aeaf2f9e9e8148f6fe332384"/>
     </file>
     <file name="source/WindowModProgress.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -57,7 +57,7 @@
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="ad8f1c28d53ce2a63f8a80454501ad8a"/>
+      <fingerprint md5="2663bc1bd9fa3ea63052e97f025e4939"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -70,8 +70,8 @@
       <outputfile value="bin/lin64/TFMM"/>
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1" debug="1"/>
-      <compilecount enable="1" value="961"/>
-      <buildcount enable="1" value="44"/>
+      <compilecount enable="1" value="1041"/>
+      <buildcount enable="1" value="50"/>
       <execonstant enable="1"/>
     </target>
   </section>

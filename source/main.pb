@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.4." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.5." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #False
 
 Enumeration
@@ -212,6 +212,20 @@ Repeat
         ; user wants to close progress window -> no action, just wait for progress to finish
       EndIf
     Case WindowModInformation
+      If EventType() = #PB_EventType_LeftClick
+        ForEach InformationGadgetAuthor()
+          If EventGadget() = InformationGadgetAuthor()
+            If GetGadgetData(InformationGadgetAuthor())
+              CompilerSelect #PB_Compiler_OS
+                CompilerCase #PB_OS_Windows
+                  RunProgram("http://www.train-fever.net/index.php/User/" + Str(GetGadgetData(InformationGadgetAuthor())))
+                CompilerCase #PB_OS_Linux
+                  RunProgram("xdg-open", "http://www.train-fever.net/index.php/User/"+Str(GetGadgetData(InformationGadgetAuthor())), "")
+              CompilerEndSelect
+            EndIf
+          EndIf
+        Next
+      EndIf
       If IsWindow(WindowModInformation)
         If Not WindowModInformation_Events(Event)
           GadgetButtonInformationClose(#PB_EventType_LeftClick)
@@ -221,7 +235,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 15
+; CursorPosition = 164
+; FirstLine = 16
 ; Folding = k
 ; EnableUnicode
 ; EnableXP

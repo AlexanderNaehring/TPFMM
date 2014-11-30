@@ -14,6 +14,7 @@ XIncludeFile "WindowModInformation.pbf"
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
 
 Global NewMap PreviewImages.i()
+Global NewList InformationGadgetAuthor() ; list of Gadget IDs for Author links
 
 Global MenuListInstalled
 Enumeration 100
@@ -86,6 +87,9 @@ Procedure updateGUI()
   selectedInactive = 0
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+    If Not *modinfo
+      Continue
+    EndIf
     If *modinfo\active
       countActive + 1
     Else
@@ -187,6 +191,7 @@ Procedure updateGUI()
           im_w * factor
           im_h * factor
           
+          debugger::Add("Image: ("+Str(im_w)+", "+Str(im_h)+")")
           ResizeImage(im, im_w, im_h)
           
           PreviewImages(*modinfo\id$) = CreateImage(#PB_Any, max_w, max_h, 32, #PB_Image_Transparent)
@@ -222,7 +227,7 @@ Procedure updateQueue()
     EndIf
     LockMutex(MutexQueue)
     If ListSize(queue()) > 0
-      debugger::Add("Handle next element in queue")
+      debugger::Add("QUEUE: Handle next element")
       FirstElement(queue())
       element = queue()
       DeleteElement(queue(),1)
@@ -543,15 +548,16 @@ Procedure GadgetListInstalled(event)
   Protected position
   updateGUI()
   If event = #PB_EventType_LeftDoubleClick
-    position = GetGadgetState(ListInstalled)
-    If position >= 0 And position < CountGadgetItems(ListInstalled)
-      *modinfo = ListIcon::GetListItemData(ListInstalled, position)
-      If *modinfo\active
-        GadgetButtonDeactivate(#PB_EventType_LeftClick)
-      Else
-        GadgetButtonActivate(#PB_EventType_LeftClick)
-      EndIf
-    EndIf
+    GadgetButtonInformation(#PB_EventType_LeftClick)
+;     position = GetGadgetState(ListInstalled)
+;     If position >= 0 And position < CountGadgetItems(ListInstalled)
+;       *modinfo = ListIcon::GetListItemData(ListInstalled, position)
+;       If *modinfo\active
+;         GadgetButtonDeactivate(#PB_EventType_LeftClick)
+;       Else
+;         GadgetButtonActivate(#PB_EventType_LeftClick)
+;       EndIf
+;     EndIf
   ElseIf event = #PB_EventType_RightClick
     DisplayPopupMenu(MenuListInstalled, WindowID(WindowMain))
   EndIf
@@ -575,9 +581,20 @@ Procedure GadgetButtonTrainFeverNet(event)
   CompilerEndSelect
 EndProcedure
 
+Procedure GadgetButtonTrainFeverNetDownloads(event)
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      RunProgram("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
+    CompilerCase #PB_OS_Linux
+      RunProgram("xdg-open", "http://goo.gl/Q75VIM", "")
+  CompilerEndSelect
+EndProcedure
+
 Procedure GadgetImageMain(event)
   If event = #PB_EventType_LeftClick
-    GadgetButtonTrainFeverNet(event)
+    If GetGadgetState(ImageGadgetLogo) = ImageID(images::Images("logo"))
+      GadgetButtonTrainFeverNet(event)
+    EndIf
   EndIf
 EndProcedure
 
@@ -636,14 +653,12 @@ Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change ga
   HideGadget(ModInformationButtonSave, 1 - show)
   HideGadget(ModInformationChangeName, 1 - show)
   HideGadget(ModInformationChangeVersion, 1 - show)
-  HideGadget(ModInformationChangeAuthor, 1 - show)
   HideGadget(ModInformationChangeCategory, 1 - show)
   HideGadget(ModInformationChangeDownload, 1 - show)
   
   HideGadget(ModInformationButtonChange, show)
   HideGadget(ModInformationDisplayName, show)
   HideGadget(ModInformationDisplayVersion, show)
-  HideGadget(ModInformationDisplayAuthor, show)
   HideGadget(ModInformationDisplayCategory, show)
   HideGadget(ModInformationDisplayDownload, show)
 EndProcedure
@@ -677,32 +692,37 @@ Procedure GadgetButtonInformation(event)
     
     SetGadgetText(ModInformationChangeName, \name$)
     SetGadgetText(ModInformationChangeVersion, \version$)
-    SetGadgetText(ModInformationChangeAuthor, "")
     SetGadgetText(ModInformationChangeCategory, \category$)
     SetGadgetText(ModInformationChangeDownload, tfnet_mod_url$)
     
     SetGadgetText(ModInformationDisplayName, \name$)
     SetGadgetText(ModInformationDisplayVersion, \version$)
-    SetGadgetText(ModInformationDisplayAuthor, "")
     SetGadgetText(ModInformationDisplayCategory, \category$)
     SetGadgetText(ModInformationDisplayDownload, tfnet_mod_url$)
     
-    ResetList(\author())
-    If ListSize(\author()) > 0
-      FirstElement(\author())
-      SetGadgetText(ModInformationDisplayAuthor, \author()\name$)
-      SetGadgetData(ModInformationDisplayAuthor, \author()\tfnet_id)
-    EndIf
-    
     i = 0
-    While NextElement(\author())
+    ResetList(\author())
+    ForEach \author()
       i + 1
       UseGadgetList(WindowID(WindowModInformation))
-      Gadget = HyperLinkGadget(#PB_Any, 90, 80 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
-      SetGadgetColor(Gadget, #PB_Gadget_FrontColor, RGB(131,21,85))
-      ResizeWindow(WindowModInformation, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowHeight(WindowModInformation) + 30)
-    Wend
+      If \author()\tfnet_id
+        Gadget = HyperLinkGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
+        SetGadgetData(Gadget, \author()\tfnet_id)
+        SetGadgetColor(Gadget, #PB_Gadget_FrontColor, RGB(131,21,85))
+        AddElement(InformationGadgetAuthor())
+        InformationGadgetAuthor() = Gadget
+      Else
+        TextGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$)
+      EndIf
+      If i > 1
+        ResizeWindow(WindowModInformation, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowHeight(WindowModInformation) + 30)
+      EndIf
+    Next
+    
+    StatusBarText(0, 0, \file$ + " " + "(" + misc::Bytes(\size) + ")")
+    
   EndWith
+  
   
   ; show correct gadgets
   ModInformationShowChangeGadgets(#False)
@@ -712,6 +732,7 @@ Procedure GadgetButtonInformation(event)
 EndProcedure
 
 Procedure GadgetButtonInformationClose(event)
+  ClearList(InformationGadgetAuthor())
   HideWindow(WindowModInformation, #True)
   DisableWindow(WindowMain, #False)
   CloseWindow(WindowModInformation)
@@ -749,7 +770,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 23
-; Folding = OAAAAEg
+; CursorPosition = 11
+; FirstLine = 10
+; Folding = +AAAAIA-
 ; EnableUnicode
 ; EnableXP

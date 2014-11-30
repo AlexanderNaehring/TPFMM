@@ -39,6 +39,7 @@ Global InstallInProgress, UpdateResult
     id$
     name$
     file$
+    authors$ ; full list
     List author.author()
     version$
     category$
@@ -111,14 +112,13 @@ Global InstallInProgress, UpdateResult
       MutexQueue = CreateMutex()
     EndIf
     
-    
     Select action
       Case #QueueActionNew
         If File$ = ""
           ProcedureReturn #False
         EndIf
           
-        debugger::Add("QueueActionNew: " + File$)
+        debugger::Add("Append to queue: QueueActionNew: " + File$)
         LockMutex(MutexQueue)
         LastElement(queue())
         AddElement(queue())
@@ -131,7 +131,7 @@ Global InstallInProgress, UpdateResult
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("QueueActionActivate: " + *modinfo\name$)
+        debugger::Add("Append to queue: QueueActionActivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
         LastElement(queue())
         AddElement(queue())
@@ -144,7 +144,7 @@ Global InstallInProgress, UpdateResult
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("QueueActionDeactivate: " + *modinfo\name$)
+        debugger::Add("Append to queue: QueueActionDeactivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
         LastElement(queue())
         AddElement(queue())
@@ -157,7 +157,7 @@ Global InstallInProgress, UpdateResult
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("QueueActionUninstall: " + *modinfo\name$)
+        debugger::Add("Append to queue: QueueActionUninstall: " + *modinfo\name$)
         LockMutex(MutexQueue)
         LastElement(queue())
         AddElement(queue())
@@ -167,8 +167,6 @@ Global InstallInProgress, UpdateResult
         
         
     EndSelect
-    
-    
   EndProcedure
   
   Procedure UserAnswer(answer)
@@ -176,6 +174,7 @@ Global InstallInProgress, UpdateResult
   EndProcedure
   
   Procedure FreeModList()
+    debugger::Add("FreeModList()")
     Protected i, count
     Protected *modinfo.mod
     
@@ -216,6 +215,7 @@ Global InstallInProgress, UpdateResult
           ClearList(\author())
           \name$ = ReadPreferenceString("name", \name$)
           author$ = ReadPreferenceString("author", "")
+          author$ = ReplaceString(author$, "/", ",")
           \version$ = ReadPreferenceString("version", "")
           \category$ = ReadPreferenceString("category", "")
           tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id", "")
@@ -230,17 +230,22 @@ Global InstallInProgress, UpdateResult
             \author()\name$ = Trim(StringField(author$, i, ","))
             \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
           Next i
+          
+          \authors$ = ""
           If ListSize(\author()) > 0
-            FirstElement(\author())
-            author$ = \author()\name$
-          Else
-            author$ = ""
+            ResetList(\author())
+            ForEach \author()
+              If \authors$ <> ""
+                \authors$ + ", "
+              EndIf
+              \authors$ + \author()\name$
+            Next
           EndIf
           
           \id$ = ReadPreferenceString("id", CreateNewID(*modinfo))
           
           count = CountGadgetItems(ListInstalled)
-          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size)); + Chr(10) + active$)
+          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \category$ + Chr(10) + \version$); + Chr(10) + active$)
           ListIcon::SetListItemData(ListInstalled, count, *modinfo)
           If \active
             ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -248,7 +253,6 @@ Global InstallInProgress, UpdateResult
             ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
           EndIf
           
-        
           ; check additional data (preview.png, tfmm.ini, readme.txt, etc...)
           ; new versions extract these information directy
           ; for backwards compatibility: extract also when loading list
@@ -286,6 +290,7 @@ Global InstallInProgress, UpdateResult
   EndProcedure
 
   Procedure FinishDeActivate()
+    debugger::Add("FinishDeActivate()")
     Protected i, *modinfo.mod
     RemoveWindowTimer(WindowModProgress, TimerFinishUnInstall)
     
@@ -304,7 +309,7 @@ Global InstallInProgress, UpdateResult
     InstallInProgress = #False 
   EndProcedure
   
-  Procedure WriteModToList(*modinfo.mod) ; write *modinfo to mod list ini file
+  Procedure WriteModToIni(*modinfo.mod) ; write *modinfo to mod list ini file
     Protected author$, tfnet_author_id$
     If Not *modinfo
       ProcedureReturn #False
@@ -322,6 +327,7 @@ Global InstallInProgress, UpdateResult
         author$ + \author()\name$
         tfnet_author_id$ + Str(\author()\tfnet_id)
       Next
+      WritePreferenceString("id", \id$)
       WritePreferenceString("name", \name$)
       WritePreferenceString("version", \version$)
       WritePreferenceString("author", author$)
@@ -741,7 +747,7 @@ Global InstallInProgress, UpdateResult
       
       ; activate mod in mod list
       \active = #True
-      WriteModToList(*modinfo) ; update mod entry
+      WriteModToIni(*modinfo) ; update mod entry
       
 ;       HideGadget(GadgetModProgress, #True)
 ;       SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully activated")
@@ -891,7 +897,7 @@ Global InstallInProgress, UpdateResult
       ClosePreferences()
       
       \active = #False
-      WriteModToList(*modinfo) ; update mod entry
+      WriteModToIni(*modinfo) ; update mod entry
       
 ;       SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully deactivated")
 ;       HideGadget(GadgetModOk, #False)
@@ -920,32 +926,7 @@ Global InstallInProgress, UpdateResult
     DisableWindow(WindowMain, #True)
     SetActiveWindow(WindowModProgress)
   EndProcedure
-    
-  Procedure ToggleMod(*modinfo.mod)
-    debugger::Add("ToogleMod()")
-    If Not *modinfo
-      ProcedureReturn #False
-    EndIf
-    If InstallInProgress
-      ProcedureReturn #False
-    EndIf
-    InstallInProgress = #True
-    
-    ShowProgressWindow()
-    
-    If *modinfo\active
-      ;- Uninstall
-      SetWindowTitle(WindowModProgress, "Deactivate modification")
-      CreateThread(@DeactivateThread(), *modinfo)
-      ProcedureReturn #True 
-    Else
-      ;- Install
-      SetWindowTitle(WindowModProgress, "Activate modification")
-      CreateThread(@ActivateThread(), *modinfo)
-      ProcedureReturn #True 
-    EndIf
-  EndProcedure
-
+  
   Procedure RemoveModFromList(*modinfo.mod) ; Deletes entry from ini file and deletes file from mod folder
     If Not *modinfo
       ProcedureReturn #False
@@ -1176,6 +1157,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
     \version$ = ReadPreferenceString("version", \version$)
     author$ = ReadPreferenceString("author", "")
+    author$ = ReplaceString(author$, "/", ",")
     \category$ = ReadPreferenceString("category", "")
     
     ; read online category
@@ -1190,7 +1172,18 @@ Procedure GetModInfo(File$, *modinfo.mod)
       \author()\name$ = Trim(StringField(author$, i, ","))
       \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
     Next i
+    \authors$ = ""
+    If ListSize(\author()) > 0
+      ResetList(\author())
+      ForEach \author()
+        If \authors$ <> ""
+          \authors$ + ", "
+        EndIf
+        \authors$ + \author()\name$
+      Next
+    EndIf
     
+    PreferenceGroup("")
     \id$ = ReadPreferenceString("id", CreateNewID(*modinfo))
     
     ; read dependencies from tfmm.ini
@@ -1219,9 +1212,8 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   debugger::Add("AddModToList("+File$+")")
   Protected *modinfo.mod, *tmp.mod
   Protected FileTarget$, tmp$, active$
-  Protected tmp_author$, author$
   Protected count, i
-  Protected sameName.b, sameHash.b
+  Protected sameName.b, sameHash.b, sameID.b
   
   If Not CheckModFile(File$)
     debugger::Add("CheckModFile("+File$+") failed")
@@ -1235,21 +1227,20 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     debugger::Add("failed to retrieve *modinfo")
     ProcedureReturn #False
   EndIf
-  
-  If ListSize(*modinfo\author()) > 0
-    FirstElement(*modinfo\author())
-    author$ = *modinfo\author()\name$
-  Else
-    author$ = ""
-  EndIf
-  
-  ; check for existing mods with same name
+    
+  ; check for existing mods with same name / ID!
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     sameName = #False
     sameHash = #False
+    sameID  = #False
     
     *tmp = ListIcon::GetListItemData(ListInstalled, i)
+    If *tmp\id$ = *modinfo\id$
+      debugger::Add("ID check found match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
+      sameName = #True
+    EndIf
     If LCase(*tmp\name$) = LCase(*modinfo\name$)
+      debugger::Add("Name check foudn match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
       sameName = #True
     EndIf
     If *tmp\md5$ = *modinfo\md5$
@@ -1257,64 +1248,65 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
       sameHash = #True
     EndIf
     
-    If sameHash ; same hash indicates a duplicate - do not care about name!
+    If sameHash ; same hash indicates a duplicate - do not care about name or ID!
+      debugger::Add("same hash indicates a duplicate - do not care about name or ID! - abort installation")
       If *tmp\active
         MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
       Else
         If MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want To activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-          ToggleMod(*tmp)
+          AddToQueue(#QueueActionActivate, *tmp)
         EndIf
       EndIf
       FreeStructure(*modinfo)
       ProcedureReturn #True
     EndIf
     
-    If sameName And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
-      If *tmp\active
-        MessageRequester("Error", "There is already a modification '"+*tmp\name$+"' installed and activated. Please deactivate the old modification before installing a new one.", #PB_MessageRequester_Ok)
+    If (sameName Or sameID) And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
+      tmp$ = "Match with already installed modification found:"+#CRLF$+
+             "Current modification:"+#CRLF$+
+             #TAB$+"ID: "+*tmp\id$+#CRLF$+
+             #TAB$+"Name: "+*tmp\name$+#CRLF$+
+             #TAB$+"Version: "+*tmp\version$+#CRLF$+
+             #TAB$+"Author: "+*tmp\authors$+#CRLF$+
+             #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
+             "New modification:"+#CRLF$+
+             #TAB$+"ID: "+*modinfo\id$+#CRLF$+
+             #TAB$+"Name: "+*modinfo\name$+#CRLF$+
+             #TAB$+"Version: "+*modinfo\version$+#CRLF$+
+             #TAB$+"Author: "+*modinfo\authors$+#CRLF$+
+             #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
+             "Do you want to replace the old modification with the new one?"
+      If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+        ; user does not want to replace
+        debugger::Add("User does not want to replace old mod with new mod. Free new mod: "+Str(*modinfo))
         FreeStructure(*modinfo)
         ProcedureReturn #False
-      Else
-        ; mod is installed but not active -> replace old mod
-        tmp_author$ = ""
-        If ListSize(*tmp\author()) > 0
-          FirstElement(*tmp\author())
-          tmp_author$ = *tmp\author()\name$
-        EndIf
-        tmp$ = "A modification named '"+*tmp\name$+"' is already installed but not active."+#CRLF$+
-               "Current modification:"+#CRLF$+
-               #TAB$+"Name: "+*tmp\name$+#CRLF$+
-               #TAB$+"Version: "+*tmp\version$+#CRLF$+
-               #TAB$+"Author: "+tmp_author$+#CRLF$+
-               #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
-               "New modification:"+#CRLF$+
-               #TAB$+"Name: "+*modinfo\name$+#CRLF$+
-               #TAB$+"Version: "+*modinfo\version$+#CRLF$+
-               #TAB$+"Author: "+author$+#CRLF$+
-               #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
-               "Do you want to replace the modification?"
-        If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-          ; user does not want to replace
-          FreeStructure(*modinfo)
-          ProcedureReturn #False
-        EndIf
-        ; user wants to replace
-        RemoveModFromList(*tmp)
-        Break ; leave loop in order to continue installation
       EndIf
+      ; user wants to replace mod -> deactivate and uninstall old mod
+      
+      If *tmp\active
+        AddToQueue(#QueueActionDeactivate, *tmp)
+      EndIf
+      AddToQueue(#QueueActionUninstall, *tmp)
+      
+      ; after old mod is uninstalled: shedule installation of new mod again!
+      ; TODO make a more efficient way of this process!
+      AddToQueue(#QueueActionNew, 0, File$)
+      FreeStructure(*modinfo)
+      ProcedureReturn #False
     EndIf
-  Next
+  Next ; loop though installed mods
   
-  ; when reaching this point, the mod can be installed
+  ; when reaching this point, the mod can be installed!
   misc::CreateDirectoryAll(TF$ + "TFMM/Mods/")
   
   ; user wants to install this mod! Therefore, find a possible file name!
   i = 0
-  FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "." + GetExtensionPart(File$)
+  FileTarget$ = *modinfo\id$ + "." + GetExtensionPart(File$)
   While FileSize(misc::Path(TF$ + "TFMM/Mods/") + FileTarget$) > 0
     ; try to find a filename which does not exist
     i = i + 1
-    FileTarget$ = GetFilePart(File$,  #PB_FileSystem_NoExtension) + "(" + Str(i) + ")." + GetExtensionPart(File$)
+    FileTarget$ = *modinfo\id$ + "_" + Str(i) + "." + GetExtensionPart(File$)
   Wend
   
   ; import file to mod folder
@@ -1329,17 +1321,11 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   
   *modinfo\file$ = FileTarget$
   
-  WriteModToList(*modinfo)
+  WriteModToIni(*modinfo)
   
+  count = CountGadgetItems(ListInstalled)
   With *modinfo
-    count = CountGadgetItems(ListInstalled)
-    If ListSize(\author()) > 0
-      FirstElement(\author())
-      author$ = \author()\name$
-    Else
-      author$ = ""
-    EndIf
-    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + author$ + Chr(10) + \version$ + Chr(10) + misc::Bytes(\size))
+    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \category$ + Chr(10) + \version$)
     ListIcon::SetListItemData(ListInstalled, count, *modinfo)
     If \active
       ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -1349,7 +1335,6 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   EndWith
   
   AddToQueue(#QueueActionActivate, *modinfo)
-  
 EndProcedure
 
 Procedure ExportModListHTML(all, File$)
@@ -1394,10 +1379,8 @@ Procedure ExportModListHTML(all, File$)
           ForEach \author()
             If author$ <> ""
               author$ + ", "
-;               tfnet_author_id$ + ", "
             EndIf
             author$ + \author()\name$
-;             tfnet_author_id$ + Str(\author()\tfnet_id)
           Next
           WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \version$ + "</td><td>" + author$ + "</td></tr>", #PB_UTF8)
         EndIf
@@ -1436,10 +1419,8 @@ Procedure ExportModListTXT(all, File$)
           ForEach \author()
             If author$ <> ""
               author$ + ", "
-;               tfnet_author_id$ + ", "
             EndIf
             author$ + \author()\name$
-;             tfnet_author_id$ + Str(\author()\tfnet_id)
           Next
           WriteStringN(file, \name$ + Chr(9) + \version$ + Chr(9) + author$, #PB_UTF8)
         EndIf
@@ -1484,9 +1465,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 347
-; FirstLine = 83
-; Folding = AIAig
-; Markers = 258,1328
+; CursorPosition = 287
+; FirstLine = 165
+; Folding = 5oBRz
+; Markers = 1320
 ; EnableUnicode
 ; EnableXP
