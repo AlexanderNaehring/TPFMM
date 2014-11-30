@@ -168,17 +168,26 @@ Procedure updateGUI()
       EndIf
     EndIf
     
+    
+;     SelectedMod = GetGadgetState(ListInstalled)
+;     SelectedCount = selectedActive + selectedInactive
+;     If SelectedMod <> LastSelect Or SelectedCount <> LastSelectCount
+;       LastSelectCount = SelectedCount
+;       LastSelect = SelectedMod
+    
     If selectedActive + selectedInactive = 1
       ; one mod selected
       ; display image
       *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
-      If Not IsImage(PreviewImages(*modinfo\id$))
+      If Not IsImage(PreviewImages(*modinfo\id$)) ; if image is not yet loaded
         Protected im.i
+        ; search for image
         If FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png") > 0
           im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png")
         ElseIf FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg") > 0
           im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
         EndIf
+        ; if load was successfull
         If IsImage(im)
           Protected max_w.i, max_h.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
           im_w = ImageWidth(im)
@@ -205,15 +214,28 @@ Procedure updateGUI()
           EndIf
         EndIf
       EndIf
+      ; if image is leaded now
       If IsImage(PreviewImages(*modinfo\id$))
-        SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*modinfo\id$)))
+        ; display image
+        If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*modinfo\id$))
+          debugger::Add("ImageLogo: Display custom image")
+          SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*modinfo\id$)))
+        EndIf
       Else
-        SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+        ; else: display normal logo
+        If GetGadgetState(ImageGadgetLogo) <> ImageID(images::Images("logo"))
+          debugger::Add("ImageLogo: Display tf|net logo instead of custom image")
+          SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+        EndIf
       EndIf
     Else
-      SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+      If GetGadgetState(ImageGadgetLogo) <> ImageID(images::Images("logo"))
+        debugger::Add("ImageLogo: Display tf|net logo")
+        SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+      EndIf
     EndIf
   EndIf
+;   EndIf
 EndProcedure
 
 Procedure updateQueue()
@@ -770,8 +792,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 11
-; FirstLine = 10
-; Folding = +AAAAIA-
+; CursorPosition = 201
+; FirstLine = 139
+; Folding = eAAAAIA-
 ; EnableUnicode
 ; EnableXP
