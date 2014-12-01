@@ -74,37 +74,6 @@ Procedure checkTFPath(Dir$)
   ProcedureReturn #False
 EndProcedure
 
-Procedure checkUpdate(auto.i)
-  debugger::Add("checkUpdate")
-  Protected URL$
-  
-  DeleteFile("tfmm-update.ini")
-  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto))
-  Debug URL$
-  If ReceiveHTTPFile("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto), "tfmm-update.ini")
-    OpenPreferences("tfmm-update.ini")
-    If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-      debugger::Add("Update: new version available")
-      UpdateResult = #UpdateNew
-      AddWindowTimer(WindowMain, TimerUpdate, 100)
-    Else
-      debugger::Add("Update: no new version")
-      If Not auto
-        UpdateResult = #UpdateCurrent
-        AddWindowTimer(WindowMain, TimerUpdate, 100)
-      EndIf
-    EndIf
-    ClosePreferences()
-    DeleteFile("tfmm-update.ini")
-  Else
-    debugger::Add("ERROR: failed to download ini")
-    If Not auto
-      UpdateResult = #UpdateFailed
-      AddWindowTimer(WindowMain, TimerUpdate, 100)
-    EndIf
-  EndIf
-EndProcedure
-
 ;----------------------------------------
 
 Procedure init()
@@ -240,8 +209,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 140
-; FirstLine = 36
+; CursorPosition = 75
+; FirstLine = 18
 ; Folding = 1
 ; EnableUnicode
 ; EnableXP

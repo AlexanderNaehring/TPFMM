@@ -3,6 +3,7 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_misc.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_unrar.pbi"
+XIncludeFile "module_locale.pbi"
 
 Global GadgetModNo, GadgetModNoAll, GadgetModOK, GadgetModProgress, GadgetModText, GadgetModYes, GadgetModYesAll
 Global WindowMain, WindowModProgress
@@ -43,6 +44,7 @@ Global InstallInProgress, UpdateResult
     List author.author()
     version$
     category$
+    categoryDisplay$
     tfnet_mod_id.i
     size.i
     md5$
@@ -218,6 +220,8 @@ Global InstallInProgress, UpdateResult
           author$ = ReplaceString(author$, "/", ",")
           \version$ = ReadPreferenceString("version", "")
           \category$ = ReadPreferenceString("category", "")
+          \categoryDisplay$ = l("category", \category$)
+          
           tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id", "")
           \tfnet_mod_id = ReadPreferenceInteger("online_tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
           \md5$ = ReadPreferenceString("md5", "")
@@ -245,7 +249,7 @@ Global InstallInProgress, UpdateResult
           \id$ = ReadPreferenceString("id", CreateNewID(*modinfo))
           
           count = CountGadgetItems(ListInstalled)
-          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \category$ + Chr(10) + \version$); + Chr(10) + active$)
+          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \categoryDisplay$ + Chr(10) + \version$); + Chr(10) + active$)
           ListIcon::SetListItemData(ListInstalled, count, *modinfo)
           If \active
             ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -1159,6 +1163,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
     author$ = ReadPreferenceString("author", "")
     author$ = ReplaceString(author$, "/", ",")
     \category$ = ReadPreferenceString("category", "")
+    \categoryDisplay$ = l("category",\category$)
     
     ; read online category
     PreferenceGroup("online")
@@ -1325,7 +1330,7 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
   
   count = CountGadgetItems(ListInstalled)
   With *modinfo
-    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \category$ + Chr(10) + \version$)
+    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \categoryDisplay$ + Chr(10) + \version$)
     ListIcon::SetListItemData(ListInstalled, count, *modinfo)
     If \active
       ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
@@ -1465,9 +1470,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 70
-; FirstLine = 46
-; Folding = AIARz
-; Markers = 1320
+; CursorPosition = 222
+; FirstLine = 95
+; Folding = QIARw
+; Markers = 1325
 ; EnableUnicode
 ; EnableXP

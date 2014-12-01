@@ -24,16 +24,16 @@ new_mod     = Neue Mod
 download    = Download Mods
 start_tf    = Starte Train Fever
 management  = Mod Verwaltung
-activate    = Activiere Mod
+activate    = Aktiviere Mod
 deactivate  = Deaktiviere Mod
 uninstall   = Lösche Mod
 information = Informationen
 
 [settings]
 title           = TFMM Einstellungen
-path            = Train Fever Pfad
+path            = Train Fever Verzeichnis
 text            = Wähle den Train Fever Installationspfad.\nBeachte, dass TFMM Schreibrechte für den Ordner benötigt.
-browse          = Suche
+browse          = Durchsuchen
 browse_tip      = Suche manuell nach dem Installationspfad von Train Fever
 autodetect      = Auto Pfad
 autodetect_tip  = TFMM versucht den Pfad zur Train Fever Installtion automatisch zu erkennen.
@@ -46,9 +46,36 @@ other           = Weitere Einstellungen
 restore         = Merke Fensterposition
 restore_tip     = TFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TFMM
-update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte manuell nach neuen Verseionen ausschau gehalten werden unter train-fever.net.
+update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte manuell nach neuen Versionen ausschau gehalten werden unter train-fever.net.
 locale          = Lokalisierung
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
 save            = Speichern
 save_tip        = Speichere Änderungen und schließe Einstellungen
+
+[update]
+title   = Aktualisiere TFMM
+update  = Eine neue Version von TFMM ist verfügbar.\nSoll die Homepage geöffnet werden?
+current = Keine Aktualisierung notwendig.
+failed  = Fehler bei der Abfrage.
+
+[category]
+tool                      = Tool
+pack                      = Mod-Pack
+vehicle	                  = Fahrzeug
+vehicle/bus               = Bus
+vehicle/tram              = Straßenbahn
+vehicle/train             = Zug
+vehicle/train/steam       = Dampflokomotive
+vehicle/train/diesel      = Diesellokomotive
+vehicle/train/electric    = Elektrolokomotive
+vehicle/wagon             = Waggon
+vehicle/wagon/passenger   =	Passagierwaggon
+vehicle/wagon/goods       = Güterwaggon
+building                  = Gebäude
+building/station          = Bahnhof
+building/deco             = Dekoration
+building/town             = Stadtgebäude
+building/depot            = Depot
+building/signal           = Signal / Wegpunkt
+other                     = anderes

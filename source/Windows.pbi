@@ -338,12 +338,50 @@ Procedure TimerUpdate()
   RemoveWindowTimer(WindowMain, TimerUpdate)
   Select UpdateResult
     Case #UpdateNew
-      MessageRequester("Update", "A new version of TFMM is available." + #CRLF$ + "Go To 'File' -> 'Homepage' To access the project page And access the new version.")
+      If MessageRequester(l("update","title"), l("update","update"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        CompilerSelect #PB_Compiler_OS
+          CompilerCase #PB_OS_Windows
+            RunProgram("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
+          CompilerCase #PB_OS_Linux
+            RunProgram("xdg-open", "http://goo.gl/utB3xn", "")
+        CompilerEndSelect
+      EndIf
     Case #UpdateCurrent
-      MessageRequester("Update", "You already have the newest version of TFMM.")
+      MessageRequester(l("update","title"), l("update","current"))
     Case #UpdateFailed
-      MessageRequester("Update", "Failed to retrieve version info from server.")
+      MessageRequester(l("update","title"), l("update","failed"))
   EndSelect
+EndProcedure
+
+Procedure checkUpdate(auto.i)
+  debugger::Add("checkUpdate")
+  Protected URL$
+  
+  DeleteFile("tfmm-update.ini")
+  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto))
+  debugger::Add(URL$)
+  If ReceiveHTTPFile(URL$, "tfmm-update.ini")
+    OpenPreferences("tfmm-update.ini")
+    If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
+      debugger::Add("Update: new version available")
+      UpdateResult = #UpdateNew
+      AddWindowTimer(WindowMain, TimerUpdate, 100)
+    Else
+      debugger::Add("Update: no new version")
+      If Not auto
+        UpdateResult = #UpdateCurrent
+        AddWindowTimer(WindowMain, TimerUpdate, 100)
+      EndIf
+    EndIf
+    ClosePreferences()
+    DeleteFile("tfmm-update.ini")
+  Else
+    debugger::Add("ERROR: failed to download ini")
+    If Not auto
+      UpdateResult = #UpdateFailed
+      AddWindowTimer(WindowMain, TimerUpdate, 100)
+    EndIf
+  EndIf
 EndProcedure
 
 ; MENU
@@ -744,12 +782,12 @@ Procedure GadgetButtonInformation(event)
     
     SetGadgetText(ModInformationChangeName, \name$)
     SetGadgetText(ModInformationChangeVersion, \version$)
-    SetGadgetText(ModInformationChangeCategory, \category$)
+    SetGadgetText(ModInformationChangeCategory, \categoryDisplay$)
     SetGadgetText(ModInformationChangeDownload, tfnet_mod_url$)
     
     SetGadgetText(ModInformationDisplayName, \name$)
     SetGadgetText(ModInformationDisplayVersion, \version$)
-    SetGadgetText(ModInformationDisplayCategory, \category$)
+    SetGadgetText(ModInformationDisplayCategory, \categoryDisplay$)
     SetGadgetText(ModInformationDisplayDownload, tfnet_mod_url$)
     
     i = 0
@@ -822,8 +860,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 454
-; FirstLine = 118
-; Folding = HARAAIC-
+; CursorPosition = 397
+; FirstLine = 27
+; Folding = GAAAAQA+
 ; EnableUnicode
 ; EnableXP

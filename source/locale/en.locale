@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TFMM starts
+﻿; standard file, will be overwritten each time TFMM starts
 locale = Englisch
 
 [menu]
@@ -53,3 +53,29 @@ cancel_tip      = Drop changes and close this dialog
 save            = Save
 save_tip        = Save settings and close this dialog
 
+[update]
+title   = Update TFMM
+update  = A new version of TFMM is available.\nDo you want to access the download page?
+current = You already have the newest version of TFMM.
+failed  = Failed to retrieve version info from server.
+
+[category]
+tool                      = Tool
+pack                      = Mod-Pack
+vehicle	                  = Vehicle
+vehicle/bus               = Bus
+vehicle/tram              = Trams
+vehicle/train             = Train
+vehicle/train/steam       = Steamer
+vehicle/train/diesel      = Diesel Engine
+vehicle/train/electric    = Electric Locomotive
+vehicle/wagon             = Wagon
+vehicle/wagon/passenger   =	Passenger Wagon
+vehicle/wagon/goods       = Goods Wagon
+building                  = Building
+building/station          = Train Station
+building/deco             = Decoration
+building/town             = Town Building
+building/depot            = Depot
+building/signal           = Signals & Waypoints
+other                     = Other Modifications
