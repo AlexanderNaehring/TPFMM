@@ -1465,9 +1465,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 287
-; FirstLine = 165
-; Folding = 5oBRz
+; CursorPosition = 70
+; FirstLine = 46
+; Folding = AIARz
 ; Markers = 1320
 ; EnableUnicode
 ; EnableXP

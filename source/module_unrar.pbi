@@ -124,6 +124,13 @@ Module unrar
     CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
       DLL = OpenLibrary(#PB_Any, "unrar64.dll") ; windows will automatically search the system folders, current path and program path
     CompilerElse
+      DataSection
+        DataUnrar:
+        IncludeBinary "unrar.dll"
+        DataUnrarEnd:
+      EndDataSection
+      misc::extractBinary("unrar.dll", ?DataUnrar, ?DataUnrarEnd - ?DataUnrar, #False)
+      
       DLL = OpenLibrary(#PB_Any, "unrar.dll")
     CompilerEndIf
     
@@ -168,9 +175,9 @@ Module unrar
     
   CompilerEndIf
 EndModule
-; IDE Options = PureBasic 5.31 (Linux - x64)
-; CursorPosition = 159
-; FirstLine = 143
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 129
+; FirstLine = 99
 ; Folding = --
 ; EnableUnicode
 ; EnableXP

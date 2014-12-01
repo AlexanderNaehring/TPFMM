@@ -9,7 +9,7 @@
 
 Global WindowSettings
 
-Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate
+Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate, GadgetFrame, GadgetFrame, GadgetSettingsLocale
 
 Declare ResizeGadgetsWindowSettings()
 
@@ -19,35 +19,38 @@ Declare GadgetButtonOpenPath(EventType)
 Declare GadgetButtonAutodetect(EventType)
 Declare GadgetButtonBrowse(EventType)
 
-Procedure OpenWindowSettings(x = 0, y = 0, width = 520, height = 210)
-  WindowSettings = OpenWindow(#PB_Any, x, y, width, height, "TFMM Settings", #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_ScreenCentered, WindowID(WindowMain))
-  GadgetPath = StringGadget(#PB_Any, 20, 70, 300, 25, "[Train Fever Path]")
-  GadgetButtonAutodetect = ButtonGadget(#PB_Any, 420, 70, 80, 25, "Autodetect")
-  GadgetToolTip(GadgetButtonAutodetect, "Try to read the install location of Train Fever.")
-  GadgetButtonBrowse = ButtonGadget(#PB_Any, 330, 70, 80, 25, "Browse")
-  GadgetToolTip(GadgetButtonBrowse, "Browse manually for the install location of Train Fever")
-  GadgetFrame = FrameGadget(#PB_Any, 10, 10, 500, 130, "Train Fever Path")
-  GadgetRights = TextGadget(#PB_Any, 20, 105, 430, 20, "")
-  GadgetSettingsInfo = TextGadget(#PB_Any, 20, 30, 480, 35, "All installed mods will be handled for each installation separately."+#CRLF$+"Please make sure that TFMM has the required rights to write to the game directory.")
-  GadgetOpenPath = ButtonGadget(#PB_Any, 460, 100, 40, 25, "Open")
-  GadgetToolTip(GadgetOpenPath, "Open specified folder")
-  GadgetSaveSettings = ButtonGadget(#PB_Any, 420, 180, 90, 25, "Save")
-  GadgetToolTip(GadgetSaveSettings, "Save settings and close this dialog")
-  GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 180, 90, 25, "Cancel")
-  GadgetToolTip(GadgetCancelSettings, "Drop changes and close this dialog")
-  GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 10, 150, 280, 25, "Restore TFMM window position upon next start")
-  GadgetToolTip(GadgetSettingsWindowLocation, "Remember the window location and restore upon next start.")
-  GadgetSettingsAutomaticUpdate = CheckBoxGadget(#PB_Any, 10, 180, 280, 25, "Automatically check for TFMM updates")
-  GadgetToolTip(GadgetSettingsAutomaticUpdate, "TFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting train-fever.net.")
+Procedure OpenWindowSettings(x = 0, y = 0, width = 580, height = 240)
+  WindowSettings = OpenWindow(#PB_Any, x, y, width, height, l("settings","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_ScreenCentered, WindowID(WindowMain))
+  GadgetPath = StringGadget(#PB_Any, 20, 70, 430, 25, "[Train Fever Path]")
+  GadgetButtonAutodetect = ButtonGadget(#PB_Any, 460, 30, 100, 30, l("settings","autodetect"))
+  GadgetToolTip(GadgetButtonAutodetect, l("settings","autodetect_tip"))
+  GadgetButtonBrowse = ButtonGadget(#PB_Any, 460, 70, 100, 25, l("settings","browse"))
+  GadgetToolTip(GadgetButtonBrowse, l("settings","browse_tip"))
+  GadgetFrame = FrameGadget(#PB_Any, 10, 10, 560, 135, l("settings","path"))
+  GadgetRights = TextGadget(#PB_Any, 20, 105, 430, 30, "")
+  GadgetSettingsInfo = TextGadget(#PB_Any, 20, 30, 430, 35, l("settings","text"))
+  GadgetOpenPath = ButtonGadget(#PB_Any, 460, 105, 100, 30, l("settings","open"))
+  GadgetToolTip(GadgetOpenPath, l("settings","open_tip"))
+  GadgetSaveSettings = ButtonGadget(#PB_Any, 450, 210, 120, 25, l("settings","save"))
+  GadgetToolTip(GadgetSaveSettings, l("settings","save_tip"))
+  GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 210, 120, 25, l("settings","cancel"))
+  GadgetToolTip(GadgetCancelSettings, l("settings","cancel_tip"))
+  GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 20, 170, 280, 25, l("settings","restore"))
+  GadgetToolTip(GadgetSettingsWindowLocation, l("settings","restore_tip"))
+  GadgetSettingsAutomaticUpdate = CheckBoxGadget(#PB_Any, 20, 200, 280, 25, l("settings","update"))
+  GadgetToolTip(GadgetSettingsAutomaticUpdate, l("settings","update_tip"))
+  GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, l("settings","other"))
+  GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, l("settings","locale"))
+  GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25)
 EndProcedure
 
 Procedure ResizeGadgetsWindowSettings()
   Protected FormWindowWidth, FormWindowHeight
   FormWindowWidth = WindowWidth(WindowSettings)
   FormWindowHeight = WindowHeight(WindowSettings)
-  ResizeGadget(GadgetPath, 20, 70, FormWindowWidth - 220, 25)
-  ResizeGadget(GadgetButtonAutodetect, FormWindowWidth - 100, 70, 80, 25)
-  ResizeGadget(GadgetButtonBrowse, FormWindowWidth - 190, 70, 80, 25)
+  ResizeGadget(GadgetPath, 20, 70, FormWindowWidth - 150, 25)
+  ResizeGadget(GadgetButtonAutodetect, FormWindowWidth - 120, 30, 100, 30)
+  ResizeGadget(GadgetButtonBrowse, FormWindowWidth - 120, 70, 100, 25)
 EndProcedure
 
 Procedure WindowSettings_Events(event)

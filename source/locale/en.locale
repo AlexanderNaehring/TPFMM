@@ -1,0 +1,55 @@
+; standard file, will be overwritten each time TFMM starts
+locale = Englisch
+
+[menu]
+file              = File
+settings          = Settings
+close             = Close
+mods              = Modifications
+mod_add           = Add New Modification
+mod_export        = Export Modification List
+mod_export_all    = Export List of All Modifications
+mod_export_active = Export List of Active Modifications
+about             = About
+homepage          = Homepage
+update            = Update TFMM
+license           = License
+
+[main]
+name        = Name
+author      = Author
+category    = Category
+version     = Version
+new_mod     = Add New Mod
+download    = Download Mods
+start_tf    = Start Train Fever
+management  = Mod Management
+activate    = Activate Mod
+deactivate  = Deactivate Mod
+uninstall   = Uninstall Mod
+information = Mod Information
+
+[settings]
+title           = TFMM Settings
+path            = Train Fever Path
+text            = Select the path to your Train Fever installation.\nPlease make sure TFMM has the required rights to write to this directory.
+browse          = Browse
+browse_tip      = Browse manually for the install location of Train Fever
+autodetect      = Autodetect
+autodetect_tip  = Try to automatically find the install location of Train Fever
+open            = Open
+open_tip        = Open the specified path
+success         = Path is correct and TFMM has all required priviledges.
+failed          = TFMM is not able to write to the game directory. Administrative privileges may be required.
+not_found       = Train Fever cannot be found at this path. Administrative privileges may be required.
+other           = Other Settings
+restore         = Restore TFMM window position upon next start
+restore_tip     = Remember the window location and restore upon next start
+update          = Automatically check for new TFMM updates
+update_tip      = TFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting train-fever.net.
+locale          = Localization
+cancel          = Cancel
+cancel_tip      = Drop changes and close this dialog
+save            = Save
+save_tip        = Save settings and close this dialog
+

@@ -5,6 +5,7 @@ XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
+XIncludeFile "module_locale.pbi"
 XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
@@ -36,7 +37,6 @@ Procedure InitWindows()
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
-;   OpenWindowModInformation()
   
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -50,11 +50,7 @@ Procedure InitWindows()
     UnuseModule ListIcon
   CompilerEndIf
   CompilerIf #PB_Compiler_OS = #PB_OS_Linux
-    CompilerIf #PB_Compiler_Processor = #PB_Processor_x64
-      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " BETA for Linux64")
-    CompilerElse
-      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " BETA for Linux")
-    CompilerEndIf
+    SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " BETA for Linux")
   CompilerEndIf
   
   ; load images
@@ -322,16 +318,16 @@ Procedure TimerSettingsGadgets()
     
     ret = checkTFPath(LastDir$)
     If ret = #True
-      SetGadgetText(GadgetRights, "Path is correct and TFMM is able to write to the game directory. Let's mod!")
+      SetGadgetText(GadgetRights, l("settings","success"))
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
       DisableGadget(GadgetSaveSettings, #False)
     Else
       SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(255,0,0))
       DisableGadget(GadgetSaveSettings, #True)
       If ret = -1
-        SetGadgetText(GadgetRights, "TFMM is not able to write to the game directory. Administrative privileges may be required.")
+        SetGadgetText(GadgetRights, l("settings","failed"))
       Else
-        SetGadgetText(GadgetRights, "Train Fever cannot be found at this path. Administrative privileges may be required.")
+        SetGadgetText(GadgetRights, l("settings","not_found"))
       EndIf
     EndIf
   EndIf
@@ -376,11 +372,24 @@ Procedure MenuItemLicense(event)
 EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
+  Protected locale$
   OpenPreferences("TFMM.ini")
   SetGadgetText(GadgetPath, ReadPreferenceString("path", TF$))
   SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
   SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
+  locale$ = ReadPreferenceString("locale", "en")
   ClosePreferences()
+  
+  Protected NewMap locale$(), count.i = 0
+  locale::listAvailable(locale$())
+  ClearGadgetItems(GadgetSettingsLocale)
+  ForEach locale$()
+    AddGadgetItem(GadgetSettingsLocale, -1, "<" + MapKey(locale$()) + ">" + " " + locale$())
+    If locale$ = MapKey(locale$())
+      SetGadgetState(GadgetSettingsLocale, count)
+    EndIf
+    count + 1
+  Next
   
   AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
   HideWindow(WindowSettings, #False, #PB_Window_WindowCentered)
@@ -412,11 +421,19 @@ Procedure GadgetCloseSettings(event) ; close settings window and apply settings
 EndProcedure
 
 Procedure GadgetSaveSettings(event)
-  Protected Dir$
+  Protected Dir$, locale$, restart.i = #False
   Dir$ = GetGadgetText(GadgetPath)
   Dir$ = misc::Path(Dir$)
   
   TF$ = Dir$ ; store in global variable
+  
+  locale$ = GetGadgetText(GadgetSettingsLocale)
+  locale$ = StringField(StringField(locale$, 1, ">"), 2, "<") ; extract string between < and >
+  If locale$ = ""
+    locale$ = "en"
+  EndIf
+  
+  
   OpenPreferences("TFMM.ini")
   WritePreferenceString("path", TF$)
   WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
@@ -424,10 +441,20 @@ Procedure GadgetSaveSettings(event)
     RemovePreferenceGroup("window")
   EndIf
   WritePreferenceInteger("update", GetGadgetState(GadgetSettingsAutomaticUpdate))
+  If locale$ <> ReadPreferenceString("locale", "en")
+    restart = #True
+  EndIf
+  WritePreferenceString("locale", locale$)
   ClosePreferences()
+  
+  If restart
+    MessageRequester("Restart TFMM", "TFMM will now restart to display the selected locale")
+    RunProgram(ProgramFilename())
+    End
+  EndIf
+  
   FreeModList()
   LoadModList()
-  
   GadgetCloseSettings(event)
 EndProcedure
 
@@ -795,7 +822,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 13
-; Folding = -AAAAQE+
+; CursorPosition = 454
+; FirstLine = 118
+; Folding = HARAAIC-
 ; EnableUnicode
 ; EnableXP

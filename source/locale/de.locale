@@ -1,0 +1,54 @@
+﻿; standard file, will be overwritten each time TFMM starts
+locale = Deutsch
+
+[menu]
+file              = Datei
+settings          = Einstellungen
+close             = Schließen
+mods              = Modifikationen
+mod_add           = Modifikation hinzufügen
+mod_export        = Liste von Modifikationen exportieren
+mod_export_all    = Liste mit allen Modifikationen exportieren
+mod_export_active = Liste mit aktiven Modifikationen exportieren
+about             = Über
+homepage          = Homepage
+update            = Aktualisiere TFMM
+license           = Lizenz
+
+[main]
+name        = Name
+author      = Autor
+category    = Kategorie
+version     = Version
+new_mod     = Neue Mod
+download    = Download Mods
+start_tf    = Starte Train Fever
+management  = Mod Verwaltung
+activate    = Activiere Mod
+deactivate  = Deaktiviere Mod
+uninstall   = Lösche Mod
+information = Informationen
+
+[settings]
+title           = TFMM Einstellungen
+path            = Train Fever Pfad
+text            = Wähle den Train Fever Installationspfad.\nBeachte, dass TFMM Schreibrechte für den Ordner benötigt.
+browse          = Suche
+browse_tip      = Suche manuell nach dem Installationspfad von Train Fever
+autodetect      = Auto Pfad
+autodetect_tip  = TFMM versucht den Pfad zur Train Fever Installtion automatisch zu erkennen.
+open            = Öffne
+open_tip        = Öffne den ausgewählten Pfad
+success         = Pfad ist korrekt und TFMM hat alle benötigten Rechte.
+failed          = TFMM hat keine Schreibrechte für den Spielordner. Eventuell werden Administratorrechte benötigt.
+not_found       = Train Fever konnte nicht gefunden werden. Eventuell werden Administratorrechte benötigt.
+other           = Weitere Einstellungen
+restore         = Merke Fensterposition
+restore_tip     = TFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
+update          = Prüfe automatisch auf neue Versionen des TFMM
+update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte manuell nach neuen Verseionen ausschau gehalten werden unter train-fever.net.
+locale          = Lokalisierung
+cancel          = Abbrechen
+cancel_tip      = Änderungen werden nicht übernommen
+save            = Speichern
+save_tip        = Speichere Änderungen und schließe Einstellungen

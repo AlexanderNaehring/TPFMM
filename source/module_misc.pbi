@@ -13,6 +13,7 @@ DeclareModule misc
   Declare.s Path(path$, delimiter$ = "")
   Declare.s Bytes(bytes.d)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
+  Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
 EndDeclareModule
 
 
@@ -50,18 +51,23 @@ Module misc
     
     dir$ = Path(dir$, delimiter$)
     
+    If FileSize(dir$) = -2
+      ProcedureReturn #True
+    EndIf
+    
     count = 1
     dir_sub$ = StringField(dir$, count, delimiter$) + delimiter$
     dir_total$ = dir_sub$
     
     While dir_sub$ <> ""
-      result = CreateDirectory(dir_total$)
-      
+      If Not FileSize(dir_total$) = -2
+        CreateDirectory(dir_total$)
+      EndIf
       count + 1
       dir_sub$ = StringField(dir$, count, delimiter$)
       dir_total$ + dir_sub$ + delimiter$
     Wend
-    ProcedureReturn result
+    ProcedureReturn #True
   EndProcedure
 
   Procedure.s Bytes(bytes.d)
@@ -77,11 +83,31 @@ Module misc
       ProcedureReturn ""
     EndIf
   EndProcedure
-
+  
+  Procedure extractBinary(filename$, *adress, len.i, overwrite = #True)
+    Protected file.i, written.i
+    If len <= 0
+      ProcedureReturn #False
+    EndIf
+    If Not overwrite And FileSize(filename$) >= 0
+      ProcedureReturn #False
+    EndIf
+    file = CreateFile(#PB_Any, filename$)
+    If Not file
+      ProcedureReturn #False
+    EndIf
+    written = WriteData(file, *adress, len)
+    CloseFile(file)
+    If written = len
+      ProcedureReturn #True
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 6
-; Folding = --
+; CursorPosition = 107
+; Folding = sy
 ; EnableUnicode
 ; EnableXP

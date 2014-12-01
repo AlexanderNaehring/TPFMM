@@ -22,6 +22,7 @@ XIncludeFile "module_unrar.pbi"
 XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
+XIncludeFile "module_locale.pbi"
 
 Procedure exit(dummy)
   HideWindow(WindowMain, #True)
@@ -134,6 +135,10 @@ Procedure init()
   
   CreateRegularExpression(0, "[^A-Za-z0-9]") ; non-alphanumeric characters
   
+  OpenPreferences("TFMM.ini")
+  locale::use(ReadPreferenceString("locale","en"))
+  ClosePreferences()
+  
   InitWindows() ; open and initialize windows
   
   debugger::Add("load settings")
@@ -235,8 +240,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 164
-; FirstLine = 16
-; Folding = k
+; CursorPosition = 140
+; FirstLine = 36
+; Folding = 1
 ; EnableUnicode
 ; EnableXP
