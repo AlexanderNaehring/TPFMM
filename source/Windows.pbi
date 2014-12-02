@@ -61,11 +61,11 @@ Procedure InitWindows()
   
   ; right click menu
   MenuListInstalled = CreatePopupImageMenu(#PB_Any)
-  MenuItem(#MenuItem_Information, "Information")
+  MenuItem(#MenuItem_Information, l("main","information"))
   MenuBar()
-  MenuItem(#MenuItem_Activate, "Activate", ImageID(images::Images("yes")))
-  MenuItem(#MenuItem_Deactivate, "Deactivate", ImageID(images::Images("no")))
-  MenuItem(#MenuItem_Uninstall, "Uninstall")
+  MenuItem(#MenuItem_Activate, l("main","activate"), ImageID(images::Images("yes")))
+  MenuItem(#MenuItem_Deactivate, l("main","deactivate"), ImageID(images::Images("no")))
+  MenuItem(#MenuItem_Uninstall, l("main","uninstall"))
   
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
@@ -157,19 +157,25 @@ Procedure updateGUI()
       EndIf
       
       If selectedActive + selectedInactive > 1
-        SetGadgetText(GadgetUninstall, "Uninstall Mods")
+        SetGadgetText(GadgetUninstall, l("main","uninstall_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Uninstall, l("main","uninstall_pl"))
       Else
-        SetGadgetText(GadgetUninstall, "Uninstall Mod")
+        SetGadgetText(GadgetUninstall, l("main","uninstall"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Uninstall, l("main","uninstall"))
       EndIf
       If selectedActive > 1
-        SetGadgetText(GadgetDeactivate, "Deactivate Mods")
+        SetGadgetText(GadgetDeactivate, l("main","deactivate_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Deactivate, l("main","deactivate_pl"))
       Else
-        SetGadgetText(GadgetDeactivate, "Deactivate Mod")
+        SetGadgetText(GadgetDeactivate, l("main","deactivate"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Deactivate, l("main","deactivate"))
       EndIf
       If selectedInactive > 1
-        SetGadgetText(GadgetActivate, "Activate Mods")
+        SetGadgetText(GadgetActivate, l("main","activate_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Activate, l("main","activate_pl"))
       Else
-        SetGadgetText(GadgetActivate, "Activate Mod")
+        SetGadgetText(GadgetActivate, l("main","activate"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Activate, l("main","activate"))
       EndIf
     EndIf
     
@@ -240,6 +246,7 @@ EndProcedure
 Procedure updateQueue()
   Protected *modinfo.mod, element.queue
   Protected text$, author$
+    
   
   If Not InstallInProgress And TF$
     If Not MutexQueue
@@ -253,18 +260,19 @@ Procedure updateQueue()
       element = queue()
       DeleteElement(queue(),1)
       
+      
       Select element\action
         Case #QueueActionActivate
           debugger::Add("#QueueActionActivate")
           If element\modinfo
-            ShowProgressWindow()
+            ShowProgressWindow(element\modinfo)
             CreateThread(@ActivateThread(), element\modinfo)
           EndIf
           
         Case #QueueActionDeactivate
           debugger::Add("#QueueActionDeactivate")
           If element\modinfo
-            ShowProgressWindow()
+            ShowProgressWindow(element\modinfo)
             CreateThread(@DeactivateThread(), element\modinfo)
           EndIf
           
@@ -339,12 +347,7 @@ Procedure TimerUpdate()
   Select UpdateResult
     Case #UpdateNew
       If MessageRequester(l("update","title"), l("update","update"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        CompilerSelect #PB_Compiler_OS
-          CompilerCase #PB_OS_Windows
-            RunProgram("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
-          CompilerCase #PB_OS_Linux
-            RunProgram("xdg-open", "http://goo.gl/utB3xn", "")
-        CompilerEndSelect
+        misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
       EndIf
     Case #UpdateCurrent
       MessageRequester(l("update","title"), l("update","current"))
@@ -387,12 +390,7 @@ EndProcedure
 ; MENU
 
 Procedure MenuItemHomepage(event)
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", "http://goo.gl/utB3xn", "")
-  CompilerEndSelect
+  misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
 EndProcedure
 
 Procedure MenuItemUpdate(event)
@@ -500,6 +498,7 @@ Procedure GadgetButtonActivate(event)
   debugger::Add("GadgetButtonActivate")
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
+  Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
@@ -512,9 +511,13 @@ Procedure GadgetButtonActivate(event)
   Next i
   If count > 0
     If count = 1
-      result = MessageRequester("Activate Modification", "Do you want to activate '" + *last\name$ + "'?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("name") = *last\name$
+      result = MessageRequester(l("main","activate"), locale::getEx("management", "activate1", strings$()), #PB_MessageRequester_YesNo)
     Else
-      result = MessageRequester("Activate Modifications", "Do you want to activate " + Str(count) + " modifications?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("count") = Str(count)
+      result = MessageRequester(l("main","activate_pl"), locale::getEx("management", "activate2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -533,6 +536,7 @@ EndProcedure
 Procedure GadgetButtonDeactivate(event)
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
+  Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
@@ -547,9 +551,13 @@ Procedure GadgetButtonDeactivate(event)
   Next i
   If count > 0
     If count = 1
-      result = MessageRequester("Deactivate Modification", "Do you want to deactivate '" + *last\name$ + "'?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("name") = *last\name$
+      result = MessageRequester(l("main","deactivate"), locale::getEx("management", "deactivate1", strings$()), #PB_MessageRequester_YesNo)
     Else
-      result = MessageRequester("Deactivate Modifications", "Do you want to deactivate " + Str(count) + " modifications?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("count") = Str(count)
+      result = MessageRequester(l("main","deactivate_pl"), locale::getEx("management", "deactivate2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -571,6 +579,7 @@ Procedure GadgetButtonUninstall(event)
   debugger::Add("GadgetButtonUninstall")
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
+  Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
@@ -581,9 +590,13 @@ Procedure GadgetButtonUninstall(event)
   Next i
   If count > 0
     If count = 1
-      result = MessageRequester("Uninstall Modification", "Do you want to uninstall '" + *last\name$ + "'?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("name") = *last\name$
+      result = MessageRequester(l("main","uninstall"), locale::getEx("management", "uninstall1", strings$()), #PB_MessageRequester_YesNo)
     Else
-      result = MessageRequester("Uninstall Modifications", "Do you want to uninstall " + Str(count) + " modifications?", #PB_MessageRequester_YesNo)
+      ClearMap(strings$())
+      strings$("count") = Str(count)
+      result = MessageRequester(l("main","uninstall_pl"), locale::getEx("management", "uninstall2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -602,7 +615,7 @@ EndProcedure
 
 Procedure GadgetNewMod(event)
   Protected File$
-  File$ = OpenFileRequester("Select new modification to add", "", "File archives|*.zip;*.rar|All files|*.*", 0)
+  File$ = OpenFileRequester(l("management","select_mod"), "", l("management","files_archive")+"|*.zip;*.rar|"+l("management","files_all")+"|*.*", 0)
   
   If FileSize(TF$) <> -2
     ProcedureReturn #False
@@ -639,45 +652,21 @@ Procedure GadgetListInstalled(event)
   updateGUI()
   If event = #PB_EventType_LeftDoubleClick
     GadgetButtonInformation(#PB_EventType_LeftClick)
-;     position = GetGadgetState(ListInstalled)
-;     If position >= 0 And position < CountGadgetItems(ListInstalled)
-;       *modinfo = ListIcon::GetListItemData(ListInstalled, position)
-;       If *modinfo\active
-;         GadgetButtonDeactivate(#PB_EventType_LeftClick)
-;       Else
-;         GadgetButtonActivate(#PB_EventType_LeftClick)
-;       EndIf
-;     EndIf
   ElseIf event = #PB_EventType_RightClick
     DisplayPopupMenu(MenuListInstalled, WindowID(WindowMain))
   EndIf
 EndProcedure
 
 Procedure GadgetButtonStartGame(event)
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram("steam://run/304730/")
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", "steam://run/304730/", "")
-  CompilerEndSelect
+  misc::openLink("steam://run/304730/")
 EndProcedure
 
 Procedure GadgetButtonTrainFeverNet(event)
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", "http://goo.gl/8Dsb40", "")
-  CompilerEndSelect
+  misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
 EndProcedure
 
 Procedure GadgetButtonTrainFeverNetDownloads(event)
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", "http://goo.gl/Q75VIM", "")
-  CompilerEndSelect
+  misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
 EndProcedure
 
 Procedure GadgetImageMain(event)
@@ -716,12 +705,7 @@ Procedure GadgetButtonAutodetect(event)
 EndProcedure
 
 Procedure GadgetButtonOpenPath(event)
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram(GetGadgetText(GadgetPath))
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", GetGadgetText(GadgetPath), "")
-  CompilerEndSelect
+  misc::openLink(GetGadgetText(GadgetPath))
 EndProcedure
 
 Procedure HandleDroppedFiles(Files$)
@@ -848,20 +832,15 @@ Procedure GadgetInformationLinkTFNET(event)
     link$ = URLEncoder("http://"+link$)
   EndIf
   
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      RunProgram(link$)
-    CompilerCase #PB_OS_Linux
-      RunProgram("xdg-open", link$, "")
-  CompilerEndSelect
+  misc::openLink(link$)
 EndProcedure
 
 
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 397
-; FirstLine = 27
-; Folding = GAAAAQA+
+; CursorPosition = 273
+; FirstLine = 46
+; Folding = mAAAAQA+
 ; EnableUnicode
 ; EnableXP

@@ -1,0 +1,83 @@
+﻿;Traduction par mediziner
+;Übersetzung durch mediziner
+;Build 1139
+locale = Français
+
+[menu]
+file              = Fichier
+settings          = Paramètres
+close             = Fermer
+mods              = Modification
+mod_add           = Ajouter modification
+mod_export        = Exporter liste de modifications
+mod_export_all    = Exporter liste avec toutes les modifications
+mod_export_active = Exporter liste avec des modifications actif
+about             = Sur TFMM
+homepage          = Page d'accueil
+update            = Mise à jour TFMM
+license           = Licence
+
+[main]
+name        = Nom
+author      = Auteur
+category    = Catégorie
+version     = Version
+new_mod     = Nouveau mod
+download    = Télécharge mods
+start_tf    = Démarrer Train Fever
+management  = Mod Management
+activate    = Activer mod
+deactivate  = Désactiver Mod
+uninstall   = Désinstaller Mod
+information = Informationes
+
+[settings]
+title           = Paramètres TFMM
+path            = Chemin de Train Fever
+text            = Choisissez le chemin d'installation de Train Fever\nNotez que TFMM écrire des autorisations requises pour le dossier.
+browse          = Rechercher
+browse_tip      = Rechercher manuellement le chemin d'installation de Train Fever
+autodetect      = Auto détecter
+autodetect_tip  = TFMM tente de détecter le chemin d'accès à l'installation de Train Fever.
+open            = Ouvert
+open_tip        = Ouvrir le chemin d'accès sélectionné
+success         = Chemin d'accès est correct et TFMM a tous les droits.
+failed          = TFMM n'a aucune autorisation d'écriture pour le dossier du jeu. Finalement, les droits d'administrateur sont requis.
+not_found       = Train Fever konnte est introuvable. Finalement, les droits d'administrateur sont requis.
+other           = Autres paramètres
+restore         = N'oubliez pas de la position de la fenêtre
+restore_tip     = TFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
+update          = Mise à jour vérifier automatiquement les nouvelles versions de TFMM
+update_tip      = TFMM va chercher de nouvelles versions automatiquement. Si cette option n'est pas sélectionnée, les main après nouvelle vers ion montre doit être conservée sous train-fever.net.
+locale          = Langue (Localisation)
+cancel          = Annuler
+cancel_tip      = Les changements ne sont pas appliquées
+save            = Sauvegarder
+save_tip        = Enregistrer les modifications et fermer les paramètres
+
+[update]
+title   = Mise à jour TFMM
+update  = Une nouvelle version de TFMM est disponible. \nPour ouvrir la page d'accueil ? 
+current = Ne besoin d'aucune mise à jour.
+failed  = Requête ayant échoué.
+
+[category]
+tool                      = Outil
+pack                      = Mod-Pack
+vehicle	                  = Véhicle
+vehicle/bus               = Bus
+vehicle/tram              = Tram
+vehicle/train             = Train
+vehicle/train/steam       = Locomotive à vapeur
+vehicle/train/diesel      = Locomotive diesel
+vehicle/train/electric    = Locomotive électrique
+vehicle/wagon             = Wagon
+vehicle/wagon/passenger   = Wagon de passagers
+vehicle/wagon/goods       = Wagon couvert
+building                  = Bâtiment
+building/station          = Gare
+building/deco             = Décoration
+building/town             = Construction de la ville
+building/depot            = Depot
+building/signal           = Signal / waypoint
+other                     = autres

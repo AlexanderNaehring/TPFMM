@@ -458,6 +458,8 @@ Global InstallInProgress, UpdateResult
     ProcedureReturn #True
   EndProcedure
   
+  
+  
   Procedure ActivateThread(*modinfo.mod)
     debugger::Add("ActivateThread("+Str(*modinfo)+")")
     If Not *modinfo
@@ -474,23 +476,7 @@ Global InstallInProgress, UpdateResult
       Mod$ = misc::Path(TF$ + "TFMM/Mods") + \file$
       tmpDir$ = misc::Path(TF$ + "TFMM/mod_tmp")
       
-      Debug "Activate "+\file$+"'"
-      
-      ModProgressAnswer = #AnswerNone
-      SetGadgetText(GadgetModText, "Do you want to activate '"+\name$+"'?")
-      HideGadget(GadgetModYes, #False)
-      HideGadget(GadgetModNo, #False)
-;       While ModProgressAnswer = #AnswerNone ; batch processing: do not ask but continue
-;         Delay(10)
-;       Wend
-      HideGadget(GadgetModYes, #True)
-      HideGadget(GadgetModNo, #True)
-      
-;       If ModProgressAnswer = #AnswerNo
-;         ; task clean up procedure
-;         AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-;         ProcedureReturn #False
-;       EndIf
+      debugger::Add("Activate "+\file$+"'")
       
       ;--------------------------------------------------------------------------------------------------
       ;- check dependencies
@@ -539,6 +525,7 @@ Global InstallInProgress, UpdateResult
       
       SetGadgetText(GadgetModText, "Loading modification...")
       
+      debugger::Add("uncompress mod into temporary folder")
       ; first step: uncompress complete mod into temporary folder!
       extension$ = LCase(GetExtensionPart(Mod$))
       ; clean temporary directory
@@ -561,12 +548,10 @@ Global InstallInProgress, UpdateResult
   
       error = #False 
       If extension$ = "zip"
-        Debug "use zip"
         If Not ExtractModZip(Mod$, tmpDir$)
           error = #True
         EndIf
       ElseIf extension$ = "rar"
-        Debug "use rar"
         If Not ExtractModRar(Mod$, tmpDir$)
           error = #True
         EndIf
@@ -590,7 +575,6 @@ Global InstallInProgress, UpdateResult
       
       
       ; mod should now be extracted to temporary directory tmpDir$
-      
       SetGadgetText(GadgetModText, "Reading modification...")
       ClearList(files$())
       If Not ActivateThread_ReadFiles(tmpDir$, files$()) ; add all files from tmpDir to files$()
@@ -917,7 +901,18 @@ Global InstallInProgress, UpdateResult
     ProcedureReturn #False
   EndProcedure
   
-  Procedure ShowProgressWindow()
+  
+  
+  Procedure ShowProgressWindow(*modinfo.mod)
+    Protected NewMap var$()
+    
+    var$("name") = *modinfo\name$
+    var$("id") = *modinfo\id$
+    If *modinfo\active
+      SetWindowTitle(WindowModProgress, locale::getEx("management", "deactivate", var$()))
+    Else
+      SetWindowTitle(WindowModProgress, locale::getEx("management", "activate", var$()))
+    EndIf
     ; reset all gadgets
     SetGadgetText(GadgetModText, "loading...")
     HideGadget(GadgetModYes, #True)
@@ -1398,12 +1393,7 @@ Procedure ExportModListHTML(all, File$)
     WriteString(file, "</body></html>", #PB_UTF8)
     CloseFile(file)
     
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        RunProgram(File$)
-      CompilerCase #PB_OS_Linux
-        RunProgram("xdg-open", File$, "")
-    CompilerEndSelect
+    misc::openLink(File$)
   EndIf
 EndProcedure
 
@@ -1433,12 +1423,8 @@ Procedure ExportModListTXT(all, File$)
       
     Next i    
     CloseFile(file)
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        RunProgram(File$)
-      CompilerCase #PB_OS_Linux
-        RunProgram("xdg-open", File$, "")
-    CompilerEndSelect
+    
+    misc::openLink(File$)
   EndIf
 EndProcedure
 
@@ -1470,9 +1456,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 222
-; FirstLine = 95
-; Folding = QIARw
-; Markers = 1325
+; CursorPosition = 923
+; FirstLine = 534
+; Folding = AoHRw
+; Markers = 1320
 ; EnableUnicode
 ; EnableXP

@@ -14,6 +14,7 @@ DeclareModule misc
   Declare.s Bytes(bytes.d)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
+  Declare openLink(link$)
 EndDeclareModule
 
 
@@ -104,10 +105,18 @@ Module misc
     ProcedureReturn #False
   EndProcedure
   
+  Procedure openLink(link$)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        RunProgram(link$)
+      CompilerCase #PB_OS_Linux
+        RunProgram("xdg-open", link$, "")
+    CompilerEndSelect
+  EndProcedure
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 107
-; Folding = sy
+; CursorPosition = 22
+; Folding = si
 ; EnableUnicode
 ; EnableXP

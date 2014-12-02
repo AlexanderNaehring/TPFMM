@@ -131,6 +131,10 @@ Module locale
   Procedure.s getEx(group$, string$, Map var$())
     Protected out$, key$
     
+    If group$ = "" Or string$ = ""
+      ProcedureReturn ""
+    EndIf
+    
     key$ = group$+"/"+string$
     out$ = locale$(key$)
     If out$ = ""
@@ -139,13 +143,16 @@ Module locale
       If out$ = ""
         debugger::Add("locale:: failed to load fallback for '"+key$+"'")
         out$ = "<"+key$+">"
+        If group$ = "category"
+          out$ = string$
+        EndIf
       EndIf
     EndIf
     
     out$ = ReplaceString(out$, "\n", #CRLF$)
     
     ForEach var$()
-      out$ = ReplaceString(out$, MapKey(var$()), var$())
+      out$ = ReplaceString(out$, "{"+MapKey(var$())+"}", var$())
     Next
     
     ProcedureReturn out$
@@ -171,7 +178,8 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 99
-; Folding = H5
+; CursorPosition = 154
+; FirstLine = 15
+; Folding = H7
 ; EnableUnicode
 ; EnableXP

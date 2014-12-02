@@ -190,12 +190,7 @@ Repeat
         ForEach InformationGadgetAuthor()
           If EventGadget() = InformationGadgetAuthor()
             If GetGadgetData(InformationGadgetAuthor())
-              CompilerSelect #PB_Compiler_OS
-                CompilerCase #PB_OS_Windows
-                  RunProgram("http://www.train-fever.net/index.php/User/" + Str(GetGadgetData(InformationGadgetAuthor())))
-                CompilerCase #PB_OS_Linux
-                  RunProgram("xdg-open", "http://www.train-fever.net/index.php/User/"+Str(GetGadgetData(InformationGadgetAuthor())), "")
-              CompilerEndSelect
+              misc::openLink("http://www.train-fever.net/index.php/User/" + Str(GetGadgetData(InformationGadgetAuthor())))
             EndIf
           EndIf
         Next
@@ -209,8 +204,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 75
-; FirstLine = 18
+; CursorPosition = 192
+; FirstLine = 48
 ; Folding = 1
 ; EnableUnicode
 ; EnableXP

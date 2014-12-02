@@ -1,5 +1,6 @@
 ﻿; standard file, will be overwritten each time TFMM starts
-locale = Englisch
+locale      = Englisch
+translator  = Xanos
 
 [menu]
 file              = File
@@ -16,18 +17,21 @@ update            = Update TFMM
 license           = License
 
 [main]
-name        = Name
-author      = Author
-category    = Category
-version     = Version
-new_mod     = Add New Mod
-download    = Download Mods
-start_tf    = Start Train Fever
-management  = Mod Management
-activate    = Activate Mod
-deactivate  = Deactivate Mod
-uninstall   = Uninstall Mod
-information = Mod Information
+name          = Name
+author        = Author
+category      = Category
+version       = Version
+new_mod       = Add New Mod
+download      = Download Mods
+start_tf      = Start Train Fever
+management    = Mod Management
+activate      = Activate Mod
+activate_pl   = Activate Mods
+deactivate    = Deactivate Mod
+deactivate_pl = Deactivate Mods
+uninstall     = Uninstall Mod
+uninstall_pl  = Uninstall Mods
+information   = Mod Information
 
 [settings]
 title           = TFMM Settings
@@ -58,6 +62,29 @@ title   = Update TFMM
 update  = A new version of TFMM is available.\nDo you want to access the download page?
 current = You already have the newest version of TFMM.
 failed  = Failed to retrieve version info from server.
+
+[management]
+activate      = Activate '{name}'
+activate1     = Do you want to activate '{name}'?
+activate2     = Do you want to activate {count} modifications?
+deactivate    = Deactivate '{name}'
+deactivate1   = Do you want to deactivate '{name}'?
+deactivate2   = Do you want to deactivate {count} modifications?
+uninstall1    = Do you want to uninstall '{name}'?
+uninstall2    = Do you want to uninstall {count} modifications?
+select_mod    = Select new modification to add
+files_archive = Archive files
+files_all     = All files
+
+[information]
+name      = Name:
+version   = Version:
+author    = Author(s):
+category  = Category:
+download  = website:
+close     = Close
+change    = Change
+save      = Save
 
 [category]
 tool                      = Tool

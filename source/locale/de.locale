@@ -1,5 +1,6 @@
 ﻿; standard file, will be overwritten each time TFMM starts
-locale = Deutsch
+locale      = Deutsch
+translator  = Xanos
 
 [menu]
 file              = Datei
@@ -16,18 +17,21 @@ update            = Aktualisiere TFMM
 license           = Lizenz
 
 [main]
-name        = Name
-author      = Autor
-category    = Kategorie
-version     = Version
-new_mod     = Neue Mod
-download    = Download Mods
-start_tf    = Starte Train Fever
-management  = Mod Verwaltung
-activate    = Aktiviere Mod
-deactivate  = Deaktiviere Mod
-uninstall   = Lösche Mod
-information = Informationen
+name            = Name
+author          = Ersteller
+category        = Kategorie
+version         = Version
+new_mod         = Neue Mod
+download        = Download Mods
+start_tf        = Starte Train Fever
+management      = Mod Verwaltung
+activate        = Aktiviere Modifikation
+activate_pl     = Aktiviere Modifikationen
+deactivate      = Deaktiviere Modifikation
+deactivate_pl   = Deaktiviere Modifikationen
+uninstall       = Lösche Modifikation
+uninstall_pl    = Lösche Modifikationen
+information     = Informationen
 
 [settings]
 title           = TFMM Einstellungen
@@ -46,7 +50,7 @@ other           = Weitere Einstellungen
 restore         = Merke Fensterposition
 restore_tip     = TFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TFMM
-update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte manuell nach neuen Versionen ausschau gehalten werden unter train-fever.net.
+update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.train-fever.net eigenständig auf neue Versionen überprüft werden.
 locale          = Lokalisierung
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
@@ -58,6 +62,29 @@ title   = Aktualisiere TFMM
 update  = Eine neue Version von TFMM ist verfügbar.\nSoll die Homepage geöffnet werden?
 current = Keine Aktualisierung notwendig.
 failed  = Fehler bei der Abfrage.
+
+[management]
+activate      = Aktiviere: {name}
+activate1     = Soll '{name}' aktiviert werden?
+activate2     = Sollen {count} Modifikationen aktiviert werden?
+deactivate    = Deaktiviere: {name}
+deactivate1   = Soll '{name}' deaktiviert werden?
+deactivate2   = Sollen {count} Modifikationen deaktiviert werden?
+uninstall1    = Soll '{name}' gelöscht werden?
+uninstall2    = Sollen {count} Modifikationen gelöscht werden?
+select_mod    = Wähle Modifikation aus
+files_archive = Datei Archive
+files_all     = Alle Dateien
+
+[information]
+name      = Name:
+version   = Version:
+author    = Ersteller:
+category  = Kategorie:
+download  = Website:
+close     = Schließen
+change    = Anpassen
+save      = Speichern
 
 [category]
 tool                      = Tool
