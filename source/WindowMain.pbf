@@ -12,8 +12,11 @@ Global WindowMain
 Global GadgetNewMod, GadgetHomepage, GadgetStartGame, ImageGadgetLogo, GadgetUninstall, GadgetActivate, ListInstalled, GadgetDeactivate, ImageGadgetHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2
 
 Enumeration FormMenu
-  #MenuItem_Settings
-  #MenuItem_Close
+  CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
+    #PB_Menu_Quit
+    #PB_Menu_Preferences
+    #PB_Menu_About
+  CompilerEndIf
   #MenuItem_AddMod
   #MenuItem_ExportListActivated
   #MenuItem_ExportListAll
@@ -44,19 +47,19 @@ Declare GadgetButtonDeactivate(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 750, height = 480)
   WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #MenuItem_Settings)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #MenuItem_Close)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #PB_Menu_Preferences)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #PB_Menu_Quit)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportListActivated)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_E, #MenuItem_ExportListAll)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_H, #MenuItem_Homepage)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_L, #MenuItem_License)
+  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_L, #PB_Menu_About)
 
   CreateMenu(0, WindowID(WindowMain))
   MenuTitle(l("menu","file"))
-  MenuItem(#MenuItem_Settings, l("menu","settings") + Chr(9) + "Ctrl + S")
-  MenuItem(#MenuItem_Close, l("menu","close") + Chr(9) + "Alt + F4")
+  MenuItem(#PB_Menu_Preferences, l("menu","settings") + Chr(9) + "Ctrl + S")
+  MenuItem(#PB_Menu_Quit, l("menu","close") + Chr(9) + "Alt + F4")
   MenuTitle(l("menu","mods"))
   MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
   OpenSubMenu(l("menu","mod_export"))
@@ -66,7 +69,7 @@ Procedure OpenWindowMain(x = 0, y = 0, width = 750, height = 480)
   MenuTitle(l("menu","about"))
   MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "Ctrl + H")
   MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
-  MenuItem(#MenuItem_License, l("menu","license") + Chr(9) + "Ctrl + L")
+  MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
   GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
   GadgetToolTip(GadgetNewMod, "Add new modification")
   GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
@@ -97,7 +100,7 @@ Procedure ResizeGadgetsWindowMain()
   ResizeGadget(ImageGadgetLogo, FormWindowWidth - 220, 15, 210, 118)
   ResizeGadget(GadgetUninstall, FormWindowWidth - 210, 240, 190, 30)
   ResizeGadget(GadgetActivate, FormWindowWidth - 210, 160, 190, 30)
-  ResizeGadget(ListInstalled, 10, 8, FormWindowWidth - 240, FormWindowHeight - MenuHeight() - 53)
+  ResizeGadget(ListInstalled, 10, 8, FormWindowWidth - 240, FormWindowHeight - max(MenuHeight(), 20) - 53) ; FormWindowHeight - MenuHeight() - 53
   ResizeGadget(GadgetDeactivate, FormWindowWidth - 210, 200, 190, 30)
   ResizeGadget(ImageGadgetHeader, 0, 0, FormWindowWidth - 0, 8)
   ResizeGadget(TextGadgetVersion, FormWindowWidth - 220, FormWindowHeight - 50, 210, 20)
@@ -115,9 +118,9 @@ Procedure WindowMain_Events(event)
 
     Case #PB_Event_Menu
       Select EventMenu()
-        Case #MenuItem_Settings
+        Case #PB_Menu_Preferences
           MenuItemSettings(EventMenu())
-        Case #MenuItem_Close
+        Case #PB_Menu_Quit
           exit(EventMenu())
         Case #MenuItem_AddMod
           GadgetNewMod(EventMenu())
@@ -129,7 +132,7 @@ Procedure WindowMain_Events(event)
           MenuItemHomepage(EventMenu())
         Case #MenuItem_Update
           MenuItemUpdate(EventMenu())
-        Case #MenuItem_License
+        Case #PB_Menu_About
           MenuItemLicense(EventMenu())
       EndSelect
 
@@ -158,3 +161,10 @@ Procedure WindowMain_Events(event)
   ProcedureReturn #True
 EndProcedure
 
+
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 102
+; FirstLine = 69
+; Folding = -
+; EnableUnicode
+; EnableXP

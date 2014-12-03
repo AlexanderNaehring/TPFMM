@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Linux - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (MacOS X - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-12-03 01:08" user="alexander" host="alexander-mint"/>
+    <lastopen date="2014-12-03 01:07" user="trainfever" host="localhost"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
@@ -61,7 +61,7 @@
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="80d0fdc7801d0d3a822a7e2c4b0a24fa"/>
+      <fingerprint md5="3ec6b03c5f977973ff4bd3cbea5bd967"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -69,11 +69,13 @@
     </file>
   </section>
   <section name="targets">
-    <target name="lin" enabled="1" default="1">
+    <target name="mac" enabled="1" default="1">
       <inputfile value="source/main.pb"/>
-      <outputfile value="bin/lin64/TFMM"/>
-      <executable value="bin/lin64/TFMM"/>
+      <outputfile value="bin/mac32/TFMM"/>
+      <compiler version="PureBasic 5.31 (MacOS X - x86)"/>
+      <executable value="bin/mac32/TFMM"/>
       <options unicode="1" thread="1"/>
+      <icon enable="0">source/tf.ico</icon>
       <compilecount enable="1" value="1221"/>
       <buildcount enable="1" value="60"/>
       <execonstant enable="1"/>

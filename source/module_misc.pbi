@@ -2,10 +2,9 @@
    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
  EndMacro
  
- Macro Max(a,b)
+Macro Max(a,b)
    (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
 EndMacro
-
 
 DeclareModule misc
   EnableExplicit
@@ -111,12 +110,13 @@ Module misc
         RunProgram(link$)
       CompilerCase #PB_OS_Linux
         RunProgram("xdg-open", link$, "")
+      CompilerCase #PB_OS_MacOS
+        RunProgram("open", link$, "")
     CompilerEndSelect
   EndProcedure
 EndModule
-
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 22
-; Folding = si
+; CursorPosition = 113
+; Folding = sy
 ; EnableUnicode
 ; EnableXP

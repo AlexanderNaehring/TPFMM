@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.5." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.6." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #False
 
 Enumeration
@@ -24,6 +24,10 @@ XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
 
+CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
+  MessageRequester("TFMM for Mac OS Alpha", "TFMM for Mac OS is still in Alpha. Use with caution!")
+CompilerEndIf
+
 Procedure exit(dummy)
   HideWindow(WindowMain, #True)
   
@@ -40,38 +44,6 @@ Procedure exit(dummy)
   ClosePreferences()
   
   End
-EndProcedure
-
-Procedure checkTFPath(Dir$)
-  If Dir$
-    If FileSize(Dir$) = -2
-      Dir$ = misc::Path(Dir$)
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        If FileSize(Dir$ + "TrainFever.exe") > 1
-          ; TrainFever.exe is located in this path!
-          ; seems to be valid
-          
-          ; check if able to write to path
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
-          EndIf
-          ProcedureReturn -1
-        EndIf
-      CompilerElse
-        If FileSize(Dir$ + "TrainFever") > 1
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
-          EndIf
-          ProcedureReturn -1
-        EndIf
-      CompilerEndIf
-    EndIf
-  EndIf
-  ProcedureReturn #False
 EndProcedure
 
 ;----------------------------------------
@@ -204,8 +176,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 192
-; FirstLine = 48
-; Folding = 1
+; CursorPosition = 5
+; Folding = 5
 ; EnableUnicode
 ; EnableXP

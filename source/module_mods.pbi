@@ -75,6 +75,39 @@ Global InstallInProgress, UpdateResult
   Global ModProgressAnswer = #AnswerNone
   Global MutexQueue
   
+Procedure checkTFPath(Dir$)
+  If Dir$
+    If FileSize(Dir$) = -2
+      Dir$ = misc::Path(Dir$)
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        If FileSize(Dir$ + "TrainFever.exe") > 1
+          ; TrainFever.exe is located in this path!
+          ; seems to be valid
+          
+          ; check if able to write to path
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
+        EndIf
+      CompilerElse
+        If FileSize(Dir$ + "TrainFever") > 1
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
+        EndIf
+      CompilerEndIf
+    EndIf
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+
+
   
   Procedure.s CreateNewID(*modinfo.mod)
     Protected id$, name$, author$
@@ -457,8 +490,6 @@ Global InstallInProgress, UpdateResult
     
     ProcedureReturn #True
   EndProcedure
-  
-  
   
   Procedure ActivateThread(*modinfo.mod)
     debugger::Add("ActivateThread("+Str(*modinfo)+")")
@@ -900,8 +931,6 @@ Global InstallInProgress, UpdateResult
     AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
     ProcedureReturn #False
   EndProcedure
-  
-  
   
   Procedure ShowProgressWindow(*modinfo.mod)
     Protected NewMap var$()
@@ -1456,9 +1485,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 923
-; FirstLine = 534
-; Folding = AoHRw
-; Markers = 1320
+; CursorPosition = 109
+; FirstLine = 68
+; Folding = CgAEB-
+; Markers = 1349
 ; EnableUnicode
 ; EnableXP

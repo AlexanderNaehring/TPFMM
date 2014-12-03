@@ -49,9 +49,12 @@ Procedure InitWindows()
     DefineListCallback(ListInstalled, #Edit)
     UnuseModule ListIcon
   CompilerEndIf
-  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
-    SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " BETA for Linux")
-  CompilerEndIf
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Linux
+      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Linux")
+    CompilerCase #PB_OS_MacOS
+      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for MacOS ALPHA")
+  CompilerEndSelect
   
   ; load images
   ResizeImage(images::Images("headermain"), GadgetWidth(ImageGadgetHeader), GadgetHeight(ImageGadgetHeader), #PB_Image_Raw)
@@ -689,14 +692,17 @@ EndProcedure
 Procedure GadgetButtonAutodetect(event)
   Protected Dir$
   
-  CompilerIf #PB_Compiler_OS = #PB_OS_Windows 
-    Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
-    If Not FileSize(Dir$) = -2 ; -2 = directory
-      Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
-    EndIf
-  CompilerElseIf #PB_Compiler_OS = #PB_OS_Linux
-    Dir$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
-  CompilerEndIf
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows 
+      Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+      If Not FileSize(Dir$) = -2 ; -2 = directory
+        Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+      EndIf
+    CompilerCase #PB_OS_Linux
+      Dir$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
+    CompilerCase #PB_OS_MacOS
+      Dir$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Train Fever/")
+  CompilerEndSelect
   
   If Dir$
     SetGadgetText(GadgetPath, Dir$)  
@@ -719,8 +725,6 @@ Procedure HandleDroppedFiles(Files$)
     AddToQueue(#QueueActionNew, 0, File$)
   Next i
 EndProcedure
-
-
 
 Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change gadgets, #false = show display gadgets
   debugger::Add("Show Change Gadgets = "+Str(show))
@@ -839,8 +843,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 273
-; FirstLine = 46
-; Folding = mAAAAQA+
+; CursorPosition = 55
+; FirstLine = 23
+; Folding = HAAAAAg
 ; EnableUnicode
 ; EnableXP
