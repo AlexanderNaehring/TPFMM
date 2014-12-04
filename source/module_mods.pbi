@@ -295,7 +295,6 @@ EndProcedure
           ; for backwards compatibility: extract also when loading list
           Path$ = misc::Path(TF$ + "TFMM/Mods/" + \id$)
           If FileSize(Path$) <> -2 ; if directory does not exist
-            misc::CreateDirectoryAll(Path$)
             ExtractModInformation(*modinfo, Path$)
           EndIf
           
@@ -959,6 +958,9 @@ EndProcedure
     If Not *modinfo
       ProcedureReturn #False
     EndIf
+    If *modinfo\active
+      ProcedureReturn #False
+    EndIf
     Protected i
     InstallInProgress = #True
     
@@ -976,6 +978,7 @@ EndProcedure
       For i = 0 To CountGadgetItems(ListInstalled) - 1
         If *modinfo = ListIcon::GetListItemData(ListInstalled, i)
           ListIcon::RemoveListItem(ListInstalled, i)
+          FreeStructure(*modinfo)
           InstallInProgress = #False
           ProcedureReturn #True
         EndIf
@@ -1000,9 +1003,10 @@ Procedure ExtractModInformation(*modinfo.mod, Path$)
   AddElement(Files$())
   Files$() = "readme.txt"
   AddElement(Files$())
-  Files$() = "header.jpg" ; out of compatibility reasons
+  Files$() = "header.jpg" ; backwards compatibility
   
   File$ = misc::Path(TF$ + "TFMM/Mods/") + *modinfo\file$
+  misc::CreateDirectoryAll(Path$)
   
   Select LCase(GetExtensionPart(File$))
     Case "zip"
@@ -1068,7 +1072,7 @@ Procedure CheckModFile(File$) ; Check mod for a "res" folder!
 EndProcedure
 
 
-Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (all subdirs!) to given directory
+Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
   debugger::Add("ExtractFilesZip("+ZIP$+", Files$(), "+dir$+")")
   debugger::Add("search for:")
   ForEach Files$()
@@ -1099,7 +1103,7 @@ Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (al
   EndIf
 EndProcedure
 
-Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (all subdirs!) to given directory
+Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
   debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
   debugger::Add("search for:")
   ForEach Files$()
@@ -1345,11 +1349,10 @@ Procedure AddModToList(File$) ; Read File$ from any location, extract mod into m
     ProcedureReturn #False 
   EndIf
   
-  ; extract images etc
-  ExtractModInformation(*modinfo, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$))
-  
   *modinfo\file$ = FileTarget$
   
+  ; extract images etc
+  ExtractModInformation(*modinfo, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$))
   WriteModToIni(*modinfo)
   
   count = CountGadgetItems(ListInstalled)
@@ -1485,9 +1488,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 109
-; FirstLine = 68
-; Folding = CgAEB-
-; Markers = 1349
+; CursorPosition = 966
+; FirstLine = 90
+; Folding = CgQEB-
+; Markers = 1350
 ; EnableUnicode
 ; EnableXP

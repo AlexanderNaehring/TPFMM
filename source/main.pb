@@ -46,8 +46,6 @@ Procedure exit(dummy)
   End
 EndProcedure
 
-;----------------------------------------
-
 Procedure init()
   If #DEBUG
     debugger::SetLogFile("tfmm-output.txt")
@@ -65,6 +63,11 @@ Procedure init()
   If Not UsePNGImageDecoder()
     debugger::Add("ERROR: UsePNGImageDecoder()")
     MessageRequester("Error", "Could not initialize PNG Decoder.")
+    End
+  EndIf
+  If Not UsePNGImageEncoder()
+    debugger::Add("ERROR: UsePNGImageEncoder()")
+    MessageRequester("Error", "Could not initialize PNG Encoder.")
     End
   EndIf
   If Not UseJPEGImageDecoder()
@@ -176,7 +179,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 5
-; Folding = 5
+; CursorPosition = 65
+; FirstLine = 21
+; Folding = 9
 ; EnableUnicode
 ; EnableXP

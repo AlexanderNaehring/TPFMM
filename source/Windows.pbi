@@ -194,6 +194,11 @@ Procedure updateGUI()
           im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png")
         ElseIf FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg") > 0
           im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
+;           If im
+;             If SaveImage(im, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png", #PB_ImagePlugin_PNG)
+;               DeleteFile(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
+;             EndIf
+;           EndIf
         EndIf
         ; if load was successfull
         If IsImage(im)
@@ -843,8 +848,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 55
-; FirstLine = 23
-; Folding = HAAAAAg
+; CursorPosition = 200
+; FirstLine = 134
+; Folding = OAAAAAg
 ; EnableUnicode
 ; EnableXP
