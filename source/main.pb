@@ -25,10 +25,11 @@ XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
 
 CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
-  MessageRequester("TFMM for Mac OS Alpha", "TFMM for Mac OS is still in Alpha. Use with caution!")
+  MessageRequester("TFMM for Mac OS", "TFMM for Mac OS is still in Beta. Please use with caution!")
 CompilerEndIf
 
 Procedure exit(dummy)
+  Protected i.i
   HideWindow(WindowMain, #True)
   
   FreeModList()
@@ -41,6 +42,10 @@ Procedure exit(dummy)
     WritePreferenceInteger("width", WindowWidth(WindowMain))
     WritePreferenceInteger("height", WindowHeight(WindowMain))
   EndIf
+  PreferenceGroup("columns")
+  For i = 0 To 5
+    WritePreferenceInteger(Str(i), GetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, i))
+  Next
   ClosePreferences()
   
   End
@@ -75,6 +80,9 @@ Procedure init()
     MessageRequester("Error", "Could not initialize JPEG Decoder.")
     End
   EndIf
+  
+;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
+  
   images::LoadImages()
   
   CreateRegularExpression(0, "[^A-Za-z0-9]") ; non-alphanumeric characters
@@ -163,9 +171,9 @@ Repeat
     Case WindowModInformation
       If EventType() = #PB_EventType_LeftClick
         ForEach InformationGadgetAuthor()
-          If EventGadget() = InformationGadgetAuthor()
-            If GetGadgetData(InformationGadgetAuthor())
-              misc::openLink("http://www.train-fever.net/index.php/User/" + Str(GetGadgetData(InformationGadgetAuthor())))
+          If EventGadget() = InformationGadgetAuthor()\display
+            If GetGadgetData(InformationGadgetAuthor()\display)
+              misc::openLink("http://www.train-fever.net/index.php/User/" + Str(GetGadgetData(InformationGadgetAuthor()\display)))
             EndIf
           EndIf
         Next
@@ -179,8 +187,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 65
-; FirstLine = 21
-; Folding = 9
+; CursorPosition = 50
+; FirstLine = 10
+; Folding = +
 ; EnableUnicode
 ; EnableXP

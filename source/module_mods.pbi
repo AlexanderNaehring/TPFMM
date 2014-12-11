@@ -59,6 +59,15 @@ Global InstallInProgress, UpdateResult
     File$
   EndStructure
   
+  Structure filetrackerEntry
+    file$
+    md5$
+  EndStructure
+  
+  Structure filetracker
+    mod$
+    file.filetrackerEntry
+  EndStructure
   
   Declare UserAnswer(answer)  ; receive user input upon question
   
@@ -393,18 +402,24 @@ EndProcedure
     
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
     If Not zip
-      Debug "error opening pack "+File$
+      debugger::Add("ExtractModZip() - error opening pack "+File$)
       ProcedureReturn #False 
     EndIf
     
     If Not ExaminePack(zip)
-      Debug "error examining pack "+File$
+      debugger::Add("ExtractModZip() - error examining pack "+File$)
       ProcedureReturn #False
     EndIf
     
     Path$ = misc::Path(Path$)
     
     While NextPackEntry(zip)
+      ; filter out Mac OS X bullshit
+      If FindString(PackEntryName(zip), "__MACOSX") Or FindString(PackEntryName(zip), ".DS_Store") Or Left(GetFilePart(PackEntryName(zip)), 2) = "._"
+        debugger::Add("ExtractModZip() - skip "+PackEntryName(zip))
+        Continue
+      EndIf
+      
       If PackEntryType(zip) = #PB_Packer_File
         If FindString(PackEntryName(zip), "res/") ; only extract files to list which are located in subfoldres of res/
           File$ = PackEntryName(zip)
@@ -413,7 +428,7 @@ EndProcedure
           File$ = misc::Path(GetPathPart(File$)) + GetFilePart(File$)
           misc::CreateDirectoryAll(GetPathPart(Path$ + File$))
           If UncompressPackFile(zip, Path$ + File$, PackEntryName(zip)) = 0
-            debugger::Add("ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!")
+            debugger::Add("ExtractModZip() - ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!")
           EndIf
         EndIf
       EndIf
@@ -441,13 +456,20 @@ EndProcedure
         Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
       CompilerEndIf
       
+      ; filter out Mac OS X bullshit
+      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+        debugger::Add("ExtractModRar() - skip "+Entry$)
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        Continue
+      EndIf
+      
       If FindString(Entry$, "res\") ; only extract files to list which are located in subfoldres of res
         Entry$ = Entry$
         Entry$ = Mid(Entry$, FindString(Entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
-        Entry$ = misc::Path(GetPathPart(Entry$)) + GetFilePart(Entry$)
+        Entry$ = misc::Path(GetPathPart(Entry$)) + GetFilePart(Entry$) ; translate to correct delimiter: \ or /
   
         If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + Entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
-          debugger::Add("ERROR: uncrompressing rar: '"+File$+"' failed!")
+          debugger::Add("ExtractModRar() - ERROR: uncrompressing rar: '"+File$+"' failed!")
         EndIf
       Else
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
@@ -473,12 +495,14 @@ EndProcedure
     While NextDirectoryEntry(dir)
       Entry$ = DirectoryEntryName(dir)
       If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
-        If Entry$ <> "." And Entry$ <> ".."
+        If Entry$ <> "." And Entry$ <> ".." And Entry$ <> "__MACOS"
           ActivateThread_ReadFiles(dir$ + Entry$, files$())
         EndIf
       ElseIf DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-        AddElement(files$())
-        files$() = dir$ + Entry$
+        If Entry$ <> ".DS_Store" And LCase(Entry$) <> "thumbs.db"
+          AddElement(files$())
+          files$() = dir$ + Entry$
+        EndIf
       EndIf
     Wend
     FinishDirectory(dir)
@@ -498,7 +522,7 @@ EndProcedure
     InstallInProgress = #True
     
     Protected dir, i, CopyFile, isModded, error, count, ok
-    Protected NewList Files$(), NewList FileTracker$()
+    Protected NewList Files$(), NewList FileTracker.filetracker()
     Protected Backup$, File$, Mod$, tmpDir$, extension$, ReqMod$, ReqVer$
     Protected *tmpinfo.mod
     
@@ -630,7 +654,7 @@ EndProcedure
       
       ; load filetracker list
       debugger::Add("load filetracker")
-      ClearList(FileTracker$())
+      ClearList(FileTracker())
       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
       ExaminePreferenceGroups()
       While NextPreferenceGroup()
@@ -638,12 +662,14 @@ EndProcedure
         PreferenceGroup(PreferenceGroupName())
         ExaminePreferenceKeys()
         While NextPreferenceKey()
-          AddElement(FileTracker$())
-          FileTracker$() = LCase(PreferenceKeyName())
+          AddElement(FileTracker())
+          FileTracker()\file\file$ = PreferenceKeyName()
+          FileTracker()\file\md5$ = PreferenceKeyValue()
+          FileTracker()\mod$ = PreferenceGroupName()
         Wend
       Wend
       ClosePreferences()
-      debugger::Add("filetracker: " + Str(ListSize(FileTracker$())) + " files")
+      debugger::Add("filetracker: found " + Str(ListSize(FileTracker())) + " files")
       
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
@@ -668,9 +694,10 @@ EndProcedure
         isModded = #False
         
         ; check filetracker for any other mods that may have modified this file before
-        ForEach FileTracker$()
+        ForEach FileTracker()
           ; compare files from filetracker with files from new mod
-          If FileTracker$() = File$
+          If LCase(FileTracker()\file\file$) = LCase(File$) ; check also other cases (for case insensitive filesystems)
+            
             ; file found in list of already installed files
             CopyFile = #False
             isModded = #True
@@ -678,7 +705,7 @@ EndProcedure
             ; ask user if file should be overwritten
             If ModProgressAnswer = #AnswerNone
               ; only ask again if user has not selected "yes/no to all" before
-              SetGadgetText(GadgetModText, "'" + GetFilePart(File$) + "' has already been modified by another mod." +#CRLF$+ "Do you want To overwrite this file?")
+              SetGadgetText(GadgetModText, "'" + GetFilePart(FileTracker()\file\file$) + "' has already been modified by another '"+FileTracker()\mod$+"'." +#CRLF$+ "Do you want To overwrite this file?")
               HideGadget(GadgetModYes, #False)
               HideGadget(GadgetModNo, #False)
               HideGadget(GadgetModYesAll, #False)
@@ -767,13 +794,6 @@ EndProcedure
       \active = #True
       WriteModToIni(*modinfo) ; update mod entry
       
-;       HideGadget(GadgetModProgress, #True)
-;       SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully activated")
-;       HideGadget(GadgetModOk, #False)
-;       ModProgressAnswer = #AnswerNone
-;       While ModProgressAnswer = #AnswerNone
-;         Delay(10)
-;       Wend
       
       ; task clean up procedure
       debugger::Add("install finished!")
@@ -790,7 +810,7 @@ EndProcedure
     InstallInProgress = #True
     
     Protected File$, md5$, Backup$
-    Protected NewList Files$()
+    Protected NewList Files.filetrackerEntry(), NewList Filetracker.filetracker()
     Protected count, countAll, i
     Protected *tmpinfo.mod
     
@@ -825,6 +845,43 @@ EndProcedure
     
     ; read list of files from ini file
     With *modinfo
+      
+;       ; load filetracker list
+;       debugger::Add("load filetracker")
+;       ClearList(FileTracker())
+;       ClearList(Files())
+;       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
+;       ExaminePreferenceGroups()
+;       While NextPreferenceGroup()
+;         PreferenceGroup(PreferenceGroupName())
+;         debugger::Add("filetracker: " + PreferenceGroupName())
+;         If PreferenceGroupName() = \name$
+;           ; filetracker of current mod!
+;           ; add to "files$()" list
+;           ExaminePreferenceKeys()
+;           While NextPreferenceKey()
+;             File$ = PreferenceKeyName()
+;             md5$ = ReadPreferenceString(File$, "")
+;             Files()\file$ = File$
+;             Files()\md5$ = md5$
+;           Wend
+;         Else
+;           ; filetracker of other mods!
+;           ; add to "filertracker()" list
+;           ExaminePreferenceKeys()
+;           While NextPreferenceKey()
+;             AddElement(FileTracker())
+;             FileTracker()\file\file$ = PreferenceKeyName()
+;             Filetracker()\file\md5$ = PreferenceKeyValue()
+;             FileTracker()\mod$ = PreferenceGroupName()
+;           Wend
+;         EndIf
+;       Wend
+;       ClosePreferences()
+;       debugger::Add("filetracker: found " + Str(ListSize(FileTracker())) + " files")
+            
+      
+      
       debugger::Add("read filetracker and check MD5")
       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
       PreferenceGroup(\name$)
@@ -832,7 +889,7 @@ EndProcedure
       ExaminePreferenceKeys()
       count = 0
       countAll = 0
-      ClearList(Files$())
+      ClearList(Files())
       While NextPreferenceKey()
         countAll = countAll + 1
         File$ = PreferenceKeyName()
@@ -841,14 +898,14 @@ EndProcedure
           If FileSize(TF$ + File$) >= 0
             If MD5FileFingerprint(TF$ + File$) = md5$
               count = count + 1
-              AddElement(Files$())
-              Files$() = File$
+              AddElement(Files())
+              Files()\file$ = File$
             EndIf
           EndIf
         EndIf
       Wend
       ClosePreferences()
-      debugger::Add("count = "+Str(count)+", countAll = "+Str(countAll)+", Files$() = "+ListSize(Files$()))
+      debugger::Add("count = "+Str(count)+", countAll = "+Str(countAll)+", Files() = "+ListSize(Files()))
       
       If countAll <= 0
         Debug "no files altered?"
@@ -856,7 +913,7 @@ EndProcedure
       
       ModProgressAnswer = #AnswerNone
       If count = 0 ;And countAll > 0
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten Or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
+        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
         ModProgressAnswer = #AnswerYes
       ElseIf count > 0 And count = countAll
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
@@ -884,10 +941,10 @@ EndProcedure
       misc::CreateDirectoryAll(Backup$)
       i = 0
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
-      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files$()))
+      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files()))
       HideGadget(GadgetModProgress, #False)
-      ForEach Files$()
-        File$ = Files$()
+      ForEach Files()
+        File$ = Files()\file$
         SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
         
         ; delete file
@@ -1074,7 +1131,7 @@ EndProcedure
 
 Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
   debugger::Add("ExtractFilesZip("+ZIP$+", Files$(), "+dir$+")")
-  debugger::Add("search for:")
+  debugger::Add("ExtractFilesZip() - search for:")
   ForEach Files$()
     debugger::Add(Files$())
   Next
@@ -1087,9 +1144,15 @@ Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (fr
     If ExaminePack(zip)
       While NextPackEntry(zip)
         Entry$ = PackEntryName(zip)
+        
+        If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+          debugger::Add("ExtractFilesZip() - skip "+Entry$)
+          Continue
+        EndIf
+        
         ForEach Files$()
           If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
-            debugger::Add("UncompressPackFile("+dir$ + Files$()+")")
+            debugger::Add("ExtractFilesZip() - UncompressPackFile("+dir$ + Files$()+")")
             UncompressPackFile(zip, dir$ + Files$())
             DeleteElement(Files$()) ; if file is extracted, delete from list
             Break ; ForEach
@@ -1099,13 +1162,13 @@ Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (fr
     EndIf
     ClosePack(zip)
   Else
-    debugger::Add("Error opnening zip: "+ZIP$)
+    debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
   EndIf
 EndProcedure
 
 Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
   debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
-  debugger::Add("search for:")
+  debugger::Add("ExtractFilesRar() - search for:")
   ForEach Files$()
     debugger::Add(Files$())
   Next
@@ -1124,10 +1187,17 @@ Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (fr
         Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
       CompilerEndIf
       
+      ; filter out Mac OS X bullshit
+      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+        debugger::Add("ExtractFilesRar() - skip "+Entry$)
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        Continue
+      EndIf
+      
       hit = #False
       ForEach Files$()
         If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
-          debugger::Add("RARProcessFile("+dir$ + Files$()+")")
+          debugger::Add("ExtractFilesRar() - RARProcessFile("+dir$ + Files$()+")")
           unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
           DeleteElement(Files$()) ; if file is extracted, delete from list
           hit = #True
@@ -1142,7 +1212,7 @@ Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (fr
     Wend
     unrar::RARCloseArchive(hRAR)
   Else
-    debugger::Add("Error opnening rar: "+RAR$)
+    debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
   EndIf
   ProcedureReturn #False
 EndProcedure
@@ -1488,9 +1558,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 966
-; FirstLine = 90
-; Folding = CgQEB-
-; Markers = 1350
+; CursorPosition = 492
+; FirstLine = 101
+; Folding = CgBEB-
+; Markers = 1420
 ; EnableUnicode
 ; EnableXP

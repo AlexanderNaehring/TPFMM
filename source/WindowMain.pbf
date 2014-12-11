@@ -47,17 +47,21 @@ Declare GadgetButtonDeactivate(EventType)
 
 Procedure OpenWindowMain(x = 0, y = 0, width = 750, height = 480)
   WindowMain = OpenWindow(#PB_Any, x, y, width, height, "Train Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #PB_Menu_Preferences)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #PB_Menu_Quit)
+  CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
+    AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_S, #PB_Menu_Preferences)
+    AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_F4, #PB_Menu_Quit)
+    AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_L, #PB_Menu_About)
+  CompilerEndIf
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportListActivated)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Alt | #PB_Shortcut_E, #MenuItem_ExportListAll)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_H, #MenuItem_Homepage)
   AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
-  AddKeyboardShortcut(WindowMain, #PB_Shortcut_Control | #PB_Shortcut_L, #PB_Menu_About)
 
   CreateMenu(0, WindowID(WindowMain))
-  MenuTitle(l("menu","file"))
+  CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
+    MenuTitle(l("menu","file"))
+  CompilerEndIf
   MenuItem(#PB_Menu_Preferences, l("menu","settings") + Chr(9) + "Ctrl + S")
   MenuItem(#PB_Menu_Quit, l("menu","close") + Chr(9) + "Alt + F4")
   MenuTitle(l("menu","mods"))

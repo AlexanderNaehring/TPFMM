@@ -11,11 +11,16 @@ XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
 XIncludeFile "WindowModInformation.pbf"
 
-
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
 
 Global NewMap PreviewImages.i()
-Global NewList InformationGadgetAuthor() ; list of Gadget IDs for Author links
+
+Structure authorGadget
+  display.i
+  changeName.i
+  changeID.i
+EndStructure
+Global NewList InformationGadgetAuthor.authorGadget() ; list of Gadget IDs for Author links
 
 Global MenuListInstalled
 Enumeration 100
@@ -32,6 +37,7 @@ Declare ResizeUpdate()
 
 Procedure InitWindows()
   debugger::Add("init windows")
+  Protected i.i
   
   ; Open Windows
   OpenWindowMain()
@@ -73,6 +79,17 @@ Procedure InitWindows()
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
   
+  ; reload column sizing
+  OpenPreferences("TFMM.ini")
+  PreferenceGroup("columns")
+  For i = 0 To 5
+    If ReadPreferenceInteger(Str(i), 0)
+      SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+    EndIf
+  Next
+  ClosePreferences()
+  
+  ; init gui
   updateGUI()
 EndProcedure
 
@@ -81,7 +98,6 @@ Procedure ResizeUpdate()
   ResizeImage(images::Images("headermain"), GadgetWidth(ImageGadgetHeader), GadgetHeight(ImageGadgetHeader), #PB_Image_Raw)
   SetGadgetState(ImageGadgetHeader, ImageID(images::Images("headermain")))
 EndProcedure
-
 
 ; TIMER
 
@@ -366,10 +382,18 @@ EndProcedure
 
 Procedure checkUpdate(auto.i)
   debugger::Add("checkUpdate")
-  Protected URL$
+  Protected URL$, OS$
   
   DeleteFile("tfmm-update.ini")
-  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&auto="+Str(auto))
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      OS$ = "win"
+    CompilerCase #PB_OS_Linux
+      OS$ = "lin"
+    CompilerCase #PB_OS_MacOS
+      OS$ = "mac"
+  CompilerEndSelect
+  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&os="+OS$+"&auto="+Str(auto))
   debugger::Add(URL$)
   If ReceiveHTTPFile(URL$, "tfmm-update.ini")
     OpenPreferences("tfmm-update.ini")
@@ -623,15 +647,16 @@ EndProcedure
 
 Procedure GadgetNewMod(event)
   Protected File$
-  File$ = OpenFileRequester(l("management","select_mod"), "", l("management","files_archive")+"|*.zip;*.rar|"+l("management","files_all")+"|*.*", 0)
-  
   If FileSize(TF$) <> -2
     ProcedureReturn #False
   EndIf
-  
-  If File$
-    AddToQueue(#QueueActionNew, 0, File$)
-  EndIf
+  File$ = OpenFileRequester(l("management","select_mod"), "", l("management","files_archive")+"|*.zip;*.rar|"+l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
+  While File$
+    If FileSize(File$) > 0
+      AddToQueue(#QueueActionNew, 0, File$)
+    EndIf
+    File$ = NextSelectedFileName()
+  Wend
 EndProcedure
 
 Procedure GadgetModYes(event)
@@ -731,8 +756,12 @@ Procedure HandleDroppedFiles(Files$)
   Next i
 EndProcedure
 
+; - Information Window
+
 Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change gadgets, #false = show display gadgets
   debugger::Add("Show Change Gadgets = "+Str(show))
+  show = Bool(show)
+  
   HideGadget(ModInformationButtonSave, 1 - show)
   HideGadget(ModInformationChangeName, 1 - show)
   HideGadget(ModInformationChangeVersion, 1 - show)
@@ -744,6 +773,12 @@ Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change ga
   HideGadget(ModInformationDisplayVersion, show)
   HideGadget(ModInformationDisplayCategory, show)
   HideGadget(ModInformationDisplayDownload, show)
+  
+  ForEach InformationGadgetAuthor()
+    HideGadget(InformationGadgetAuthor()\changeName, 1-show)
+    HideGadget(InformationGadgetAuthor()\changeID, 1-show)
+    HideGadget(InformationGadgetAuthor()\display, show)
+  Next
 EndProcedure
 
 Procedure GadgetButtonInformation(event)
@@ -789,11 +824,12 @@ Procedure GadgetButtonInformation(event)
       i + 1
       UseGadgetList(WindowID(WindowModInformation))
       If \author()\tfnet_id
-        Gadget = HyperLinkGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
-        SetGadgetData(Gadget, \author()\tfnet_id)
-        SetGadgetColor(Gadget, #PB_Gadget_FrontColor, RGB(131,21,85))
         AddElement(InformationGadgetAuthor())
-        InformationGadgetAuthor() = Gadget
+        InformationGadgetAuthor()\changeName  = StringGadget(#PB_Any, 90, 50 + i*30, 200, 20, \author()\name$)
+        InformationGadgetAuthor()\changeID    = StringGadget(#PB_Any, 300, 50 + i*30, 50, 20, Str(\author()\tfnet_id), #PB_String_Numeric)
+        InformationGadgetAuthor()\display     = HyperLinkGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
+        SetGadgetData(InformationGadgetAuthor()\display, \author()\tfnet_id)
+        SetGadgetColor(InformationGadgetAuthor()\display, #PB_Gadget_FrontColor, RGB(131,21,85))
       Else
         TextGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$)
       EndIf
@@ -848,8 +884,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 200
-; FirstLine = 134
-; Folding = OAAAAAg
+; CursorPosition = 39
+; FirstLine = 19
+; Folding = DAAAAQg
 ; EnableUnicode
 ; EnableXP
