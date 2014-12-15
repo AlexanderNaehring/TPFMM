@@ -39,7 +39,6 @@ Module misc
   EndProcedure
 
   Procedure CreateDirectoryAll(dir$, delimiter$ = "")
-    debugger::Add("CreateDirectoryAll("+dir$+")")
     Protected result, dir_sub$, dir_total$, count
     If delimiter$ = ""
       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -61,6 +60,7 @@ Module misc
     
     While dir_sub$ <> ""
       If Not FileSize(dir_total$) = -2
+        debugger::Add("misc::CreateDirectory("+dir_total$+")")
         CreateDirectory(dir_total$)
       EndIf
       count + 1
@@ -116,7 +116,7 @@ Module misc
   EndProcedure
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 113
-; Folding = sy
+; CursorPosition = 62
+; Folding = sz
 ; EnableUnicode
 ; EnableXP

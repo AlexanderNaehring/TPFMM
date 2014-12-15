@@ -1,7 +1,7 @@
 ﻿EnableExplicit
 
 #VERSION$ = "Version 0.6." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
-#DEBUG = #False
+#DEBUG = #True
 
 Enumeration
   #UpdateNew
@@ -84,8 +84,6 @@ Procedure init()
 ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
   
   images::LoadImages()
-  
-  CreateRegularExpression(0, "[^A-Za-z0-9]") ; non-alphanumeric characters
   
   OpenPreferences("TFMM.ini")
   locale::use(ReadPreferenceString("locale","en"))
@@ -187,8 +185,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 50
-; FirstLine = 10
-; Folding = +
+; CursorPosition = 85
+; FirstLine = 30
+; Folding = 9
 ; EnableUnicode
 ; EnableXP

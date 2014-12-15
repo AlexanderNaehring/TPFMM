@@ -270,14 +270,15 @@ EndProcedure
 Procedure updateQueue()
   Protected *modinfo.mod, element.queue
   Protected text$, author$
-    
+  
+  If Not MutexQueue
+    debugger::Add("MutexQueue = CreateMutex()")
+    MutexQueue = CreateMutex()
+  EndIf
+  
+  LockMutex(MutexQueue) ; lock even bevore InstallInProgress is checked!
   
   If Not InstallInProgress And TF$
-    If Not MutexQueue
-      debugger::Add("MutexQueue = CreateMutex()")
-      MutexQueue = CreateMutex()
-    EndIf
-    LockMutex(MutexQueue)
     If ListSize(queue()) > 0
       debugger::Add("QUEUE: Handle next element")
       FirstElement(queue())
@@ -290,6 +291,7 @@ Procedure updateQueue()
           debugger::Add("#QueueActionActivate")
           If element\modinfo
             ShowProgressWindow(element\modinfo)
+            InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
             CreateThread(@ActivateThread(), element\modinfo)
           EndIf
           
@@ -297,6 +299,7 @@ Procedure updateQueue()
           debugger::Add("#QueueActionDeactivate")
           If element\modinfo
             ShowProgressWindow(element\modinfo)
+            InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
             CreateThread(@DeactivateThread(), element\modinfo)
           EndIf
           
@@ -314,8 +317,9 @@ Procedure updateQueue()
       EndSelect
       
     EndIf
-    UnlockMutex(MutexQueue)
   EndIf
+  
+  UnlockMutex(MutexQueue) ; unlock at the very end
 EndProcedure
 
 Procedure TimerMain()
@@ -884,8 +888,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 39
-; FirstLine = 19
-; Folding = DAAAAQg
+; CursorPosition = 319
+; FirstLine = 80
+; Folding = SAAAAQg
 ; EnableUnicode
 ; EnableXP

@@ -116,39 +116,63 @@ Procedure checkTFPath(Dir$)
   ProcedureReturn #False
 EndProcedure
 
-
   
-  Procedure.s CreateNewID(*modinfo.mod)
-    Protected id$, name$, author$
+  Procedure CreateID(*modinfo.mod)
+    debugger::Add("CreateID("+Str(*modinfo)+")")
+    Protected id$, name$, author$, author_tmp$
+    Static RegExp
+    If Not RegExp
+      RegExp = CreateRegularExpression(#PB_Any, "[^A-Za-z0-9]") ; non-alphanumeric characters
+      ; regexp matches all non alphanum characters including spaces etc.
+    EndIf
     
     With *modinfo
-      If ListSize(\author()) = 0
-        author$ = "unknown"
-      Else
-        LastElement(\author())
-        Repeat
+      LastElement(\author())
+      Repeat
+        author_tmp$ = LCase(ReplaceRegularExpression(RegExp, \author()\name$, "")) ; remove all non alphanum + make lowercase
+        If author_tmp$ <> ""
           If author$ <> ""
             author$ + "."
           EndIf
-          author$ + LCase(ReplaceRegularExpression(0, \author()\name$, ""))
-        Until Not PreviousElement(\author())
+          author$ + author_tmp$
+        EndIf
+      Until Not PreviousElement(\author())
+      If author$ = ""
+        author$ = "unknown"
       EndIf
       
       name$ = "unknown"
       If \name$
-        name$ = LCase(ReplaceRegularExpression(0, \name$, ""))
+        name$ = LCase(ReplaceRegularExpression(RegExp, \name$, "")) ; remove all non alphanum + make lowercase
       EndIf
       
       id$ = author$ + "." + name$
       
-      If \id$ = ""
-        \id$ = id$
-      EndIf
+      \id$ = id$
     EndWith
     
-    ProcedureReturn id$
+    ProcedureReturn #True
   EndProcedure
   
+  Procedure ValidateID(*modinfo.mod)
+    Protected id$
+    
+    If Not *modinfo
+      ProcedureReturn #False
+    EndIf
+    
+    Static RegExp
+    If Not RegExp : RegExp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+\.)+[a-z0-9]+$") : EndIf ; ID match TODO : case-sensitive?
+    
+    With *modinfo
+      \id$ = LCase(\id$)
+      If Not MatchRegularExpression(RegExp, \id$) ; if regexp matches, ID is valid, if not -> create new ID
+        CreateID(*modinfo)
+      EndIf
+    EndWith
+    ProcedureReturn #True 
+  EndProcedure
+    
   Procedure AddToQueue(action, *modinfo.mod, File$="")
     debugger::Add("AddToQueue("+Str(action)+", "+Str(*modinfo.mod)+", "+File$+")")
     If Not MutexQueue
@@ -162,8 +186,8 @@ EndProcedure
           ProcedureReturn #False
         EndIf
           
-        debugger::Add("Append to queue: QueueActionNew: " + File$)
         LockMutex(MutexQueue)
+        debugger::Add("Append to queue: QueueActionNew: " + File$)
         LastElement(queue())
         AddElement(queue())
         queue()\action = action
@@ -175,8 +199,8 @@ EndProcedure
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("Append to queue: QueueActionActivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
+        debugger::Add("Append to queue: QueueActionActivate: " + *modinfo\name$)
         LastElement(queue())
         AddElement(queue())
         queue()\action = action
@@ -188,8 +212,8 @@ EndProcedure
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("Append to queue: QueueActionDeactivate: " + *modinfo\name$)
         LockMutex(MutexQueue)
+        debugger::Add("Append to queue: QueueActionDeactivate: " + *modinfo\name$)
         LastElement(queue())
         AddElement(queue())
         queue()\action = action
@@ -201,8 +225,8 @@ EndProcedure
           ProcedureReturn #False
         EndIf
         
-        debugger::Add("Append to queue: QueueActionUninstall: " + *modinfo\name$)
         LockMutex(MutexQueue)
+        debugger::Add("Append to queue: QueueActionUninstall: " + *modinfo\name$)
         LastElement(queue())
         AddElement(queue())
         queue()\action = action
@@ -240,14 +264,13 @@ EndProcedure
       ProcedureReturn #False
     EndIf
     
-    
     OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
     If ExaminePreferenceGroups()
       While NextPreferenceGroup()
         *modinfo = AllocateStructure(mod)
         With *modinfo
           \name$ = PreferenceGroupName()
-          debugger::Add(" - found mod: "+\name$)
+          debugger::Add("LoadModList() - {"+\name$+"}")
           \file$ = ReadPreferenceString("file", "")
           If \file$ = ""
             ; no valid mod
@@ -257,6 +280,7 @@ EndProcedure
           EndIf
           
           ClearList(\author())
+          \id$ = ReadPreferenceString("id", "") ; ID will be checked and rewritten after reading name & author
           \name$ = ReadPreferenceString("name", \name$)
           author$ = ReadPreferenceString("author", "")
           author$ = ReplaceString(author$, "/", ",")
@@ -288,7 +312,7 @@ EndProcedure
             Next
           EndIf
           
-          \id$ = ReadPreferenceString("id", CreateNewID(*modinfo))
+          ValidateID(*modinfo) ; check ID and create new if neccessary
           
           count = CountGadgetItems(ListInstalled)
           ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \categoryDisplay$ + Chr(10) + \version$); + Chr(10) + active$)
@@ -482,7 +506,6 @@ EndProcedure
   EndProcedure
   
   Procedure ActivateThread_ReadFiles(dir$, List files$())
-    debugger::Add("ActivateThread_ReadFiles() - "+dir$)
     Protected dir, Entry$
     
     dir$ = misc::Path(dir$)
@@ -494,12 +517,13 @@ EndProcedure
     
     While NextDirectoryEntry(dir)
       Entry$ = DirectoryEntryName(dir)
-      If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
+      If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory ; DIR: recursively call function, ignore ., .., __MACOS
         If Entry$ <> "." And Entry$ <> ".." And Entry$ <> "__MACOS"
           ActivateThread_ReadFiles(dir$ + Entry$, files$())
         EndIf
-      ElseIf DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+      ElseIf DirectoryEntryType(dir) = #PB_DirectoryEntry_File  ; FILE: add file to list, ignore .DS_Store, thumbs.db
         If Entry$ <> ".DS_Store" And LCase(Entry$) <> "thumbs.db"
+          debugger::Add("ActivateThread_ReadFiles() - add file to list {" + dir$ + Entry$ + "}")
           AddElement(files$())
           files$() = dir$ + Entry$
         EndIf
@@ -516,10 +540,17 @@ EndProcedure
   
   Procedure ActivateThread(*modinfo.mod)
     debugger::Add("ActivateThread("+Str(*modinfo)+")")
+    
     If Not *modinfo
+      InstallInProgress = #False
       ProcedureReturn #False
     EndIf
-    InstallInProgress = #True
+    
+    If *modinfo\active
+      InstallInProgress = #False
+      ProcedureReturn #False
+    EndIf
+    
     
     Protected dir, i, CopyFile, isModded, error, count, ok
     Protected NewList Files$(), NewList FileTracker.filetracker()
@@ -530,14 +561,16 @@ EndProcedure
       Mod$ = misc::Path(TF$ + "TFMM/Mods") + \file$
       tmpDir$ = misc::Path(TF$ + "TFMM/mod_tmp")
       
-      debugger::Add("Activate "+\file$+"'")
+      debugger::Add("ActivateThread() - id={"+\id$+"} name={"+\name$+"} file={"+\file$+"}")
       
       ;--------------------------------------------------------------------------------------------------
       ;- check dependencies
       
+      debugger::Add("ActivateThread() - ##### checking dependencies #####")
       SetGadgetText(GadgetModText, "Checking dependencies...")
       
       ForEach \dependencies$()
+        debugger::Add("ActivateThread() - check dependency {"+MapKey(\dependencies$())+"}")
         ReqMod$ = MapKey(\dependencies$())
         ReqVer$ = \dependencies$()
         If ReqVer$ = "0" Or ReqVer$ = "any"
@@ -550,8 +583,9 @@ EndProcedure
         For i = 0 To count-1
           *tmpinfo.mod = ListIcon::GetListItemData(ListInstalled, i)
           If *tmpinfo\active
-            If *tmpinfo\name$ = ReqMod$
+            If *tmpinfo\name$ = ReqMod$ Or *tmpinfo\id$ = ReqMod$ ; TODO ID check as only option? - other option? - think about...
               If *tmpinfo\version$ = ReqVer$ Or ReqVer$ = ""
+                debugger::Add("ActivateThread() - dependency match found :)")
                 ok = #True
                 Break
               EndIf
@@ -559,6 +593,7 @@ EndProcedure
           EndIf
         Next
         If Not ok
+          debugger::Add("ActivateThread() - no match found for dependency - abort activation")
           ModProgressAnswer = #AnswerNone
           If ReqVer$
             ReqVer$ = " version '" + ReqVer$ + "'"
@@ -577,17 +612,16 @@ EndProcedure
       ;--------------------------------------------------------------------------------------------------
       ;- start installation
       
+      debugger::Add("ActivateThread() - ##### loading modification #####")
       SetGadgetText(GadgetModText, "Loading modification...")
-      
-      debugger::Add("uncompress mod into temporary folder")
-      ; first step: uncompress complete mod into temporary folder!
-      extension$ = LCase(GetExtensionPart(Mod$))
       ; clean temporary directory
-      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+      debugger::Add("ActivateThread() - create temporary directoy {"+tmpDir$+"}")
+      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
       misc::CreateDirectoryAll(tmpDir$)                                            ; create temp dir
+      debugger::Add("ActivateThread() - uncompress into temporary folder")
       If FileSize(tmpDir$) <> -2
-        ; error opening archive
-        DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
+        debugger::Add("ActivateThread() - failed to create temporary directory")
+        ; error with tmpDir$
         ModProgressAnswer = #AnswerNone
         SetGadgetText(GadgetModText, "Failed to create temporary directory for extraction!")
         HideGadget(GadgetModOk, #False)
@@ -599,8 +633,9 @@ EndProcedure
         ProcedureReturn #False
       EndIf
       
-  
       error = #False 
+      extension$ = LCase(GetExtensionPart(Mod$))
+      debugger::Add("ActivateThread() - check extension {"+extension$+"} and choose extractor")
       If extension$ = "zip"
         If Not ExtractModZip(Mod$, tmpDir$)
           error = #True
@@ -610,11 +645,13 @@ EndProcedure
           error = #True
         EndIf
       Else ; unknown extension
+        debugger::Add("ActivateThread() - no extractor for {"+extension$+"}")
         error = #True
       EndIf
       
       If error
         ; error opening archive
+        debugger::Add("ActivateThread() - error extracting modification")
         DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
         ModProgressAnswer = #AnswerNone
         SetGadgetText(GadgetModText, "Error opening modification file!")
@@ -629,6 +666,7 @@ EndProcedure
       
       
       ; mod should now be extracted to temporary directory tmpDir$
+      debugger::Add("ActivateThread() - reading modification content into file list")
       SetGadgetText(GadgetModText, "Reading modification...")
       ClearList(files$())
       If Not ActivateThread_ReadFiles(tmpDir$, files$()) ; add all files from tmpDir to files$()
@@ -645,20 +683,21 @@ EndProcedure
         ProcedureReturn #False
       EndIf
       
-      debugger::Add("found "+Str(ListSize(files$()))+" files for activation")
+      debugger::Add("ActivateThread() - found "+Str(ListSize(files$()))+" files for activation")
       SetGadgetText(GadgetModText, Str(ListSize(files$()))+" files found")
       
       Backup$ = misc::Path(TF$ + "TFMM/Backup/")
-      debugger::Add("Backup folder: "+Backup$)
+      debugger::Add("ActivateThread() - backup folder for vanilla game files {"+Backup$+"}")
       misc::CreateDirectoryAll(Backup$)
       
+      
       ; load filetracker list
-      debugger::Add("load filetracker")
+      debugger::Add("ActivateThread() - ##### load filetracker #####")
       ClearList(FileTracker())
       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
       ExaminePreferenceGroups()
       While NextPreferenceGroup()
-        debugger::Add("filetracker: " + PreferenceGroupName())
+        debugger::Add("ActivateThread() - filetracker {"+PreferenceGroupName()+"}")
         PreferenceGroup(PreferenceGroupName())
         ExaminePreferenceKeys()
         While NextPreferenceKey()
@@ -669,8 +708,9 @@ EndProcedure
         Wend
       Wend
       ClosePreferences()
-      debugger::Add("filetracker: found " + Str(ListSize(FileTracker())) + " files")
+      debugger::Add("ActivateThread() - filetracker found "+Str(ListSize(FileTracker()))+" files")
       
+      debugger::Add("ActivateThread() - initialize progress bar")
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
       SetGadgetState(GadgetModProgress, 0)
@@ -680,14 +720,14 @@ EndProcedure
       
       ;--------------------------------------------------------------------------------------------------
       ;- process all files
-      debugger::Add("process files")
+      debugger::Add("ActivateThread() - ##### process files #####")
       ForEach files$()
         Delay(0) ; let the CPU breath
         File$ = files$()
         File$ = misc::Path(GetPathPart(File$)) + GetFilePart(File$)
         File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path of mod
         
-        SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(Files$()) + "'...")
+        SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(Files$()) + "'")
         
         ; normal case: copy the modificated file to game directoy
         CopyFile = #True
@@ -696,8 +736,9 @@ EndProcedure
         ; check filetracker for any other mods that may have modified this file before
         ForEach FileTracker()
           ; compare files from filetracker with files from new mod
-          If LCase(FileTracker()\file\file$) = LCase(File$) ; check also other cases (for case insensitive filesystems)
-            
+          
+          If LCase(FileTracker()\file\file$) = LCase(File$) ; check also other cases (for case insensitive filesystems - all mods should be case sensitive but should work with insensitive environments like windows)
+            debugger::Add("ActivateThread() - found match in filetracker {"+File$+"}")
             ; file found in list of already installed files
             CopyFile = #False
             isModded = #True
@@ -705,7 +746,7 @@ EndProcedure
             ; ask user if file should be overwritten
             If ModProgressAnswer = #AnswerNone
               ; only ask again if user has not selected "yes/no to all" before
-              SetGadgetText(GadgetModText, "'" + GetFilePart(FileTracker()\file\file$) + "' has already been modified by another '"+FileTracker()\mod$+"'." +#CRLF$+ "Do you want To overwrite this file?")
+              SetGadgetText(GadgetModText, "'" + GetFilePart(FileTracker()\file\file$) + "' has already been modified by '"+FileTracker()\mod$+"'." +#CRLF$+ "Do you want To overwrite this file?")
               HideGadget(GadgetModYes, #False)
               HideGadget(GadgetModNo, #False)
               HideGadget(GadgetModYesAll, #False)
@@ -713,7 +754,7 @@ EndProcedure
               While ModProgressAnswer = #AnswerNone
                 Delay(10)
               Wend
-              SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+              SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'")
               HideGadget(GadgetModYes, #True)
               HideGadget(GadgetModNo, #True)
               HideGadget(GadgetModYesAll, #True)
@@ -743,7 +784,7 @@ EndProcedure
         
         ;--------------------------------------------------------------------------------------------------
         ;- copy file
-      
+        
         If CopyFile ; install (copy) new modification file
           ; backup original file if any
           ; only backup vanilla files, DO NOT BACKUP MODDED FILES!
@@ -764,30 +805,31 @@ EndProcedure
           
           DeleteFile(TF$ + File$)
           If RenameFile(Files$(), TF$ + File$)
-            debugger::Add("installed file "+File$)
+            debugger::Add("ActivateThread() - copy file {"+File$+"}")
+            
+            OpenPreferences(misC::Path(TF$ + "TFMM") + "filetracker.ini")
+            PreferenceGroup(\name$) ; TODO : may overwrite entry here (only in case of other errors, since no two mods are allowed to have the same name)
+            ; TODO : change to \id$ (have to update all old entries in order to do this)
+            ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
+            WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
+            ClosePreferences()
           Else
-            debugger::Add("ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")")
+            debugger::Add("ActivateThread() - ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")")
+            ; do not add this file to filetracker!
           EndIf
           
-          
-          OpenPreferences(misC::Path(TF$ + "TFMM") + "filetracker.ini")
-          PreferenceGroup(\name$)
-          ; TODO check if overwriting entries ?
-          ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
-          WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
-          ClosePreferences()
         EndIf
         
-        i = i + 1
+        i = i + 1 ; count files for progress bar
         SetGadgetState(GadgetModProgress, i)
       Next 
       
       ;--------------------------------------------------------------------------------------------------
       ;- install finished
-      debugger::Add("finish install...")
+      debugger::Add("ActivateThread() - ##### finish activation #####")
       HideGadget(GadgetModProgress, #True)
-      If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
-        debugger::Add("ERROR: failed to remove tmpDir$ ("+tmpDir$+")")
+      If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
+        debugger::Add("ActivateThread() - ERROR: failed to remove tmpDir$ {"+tmpDir$+"}")
       EndIf
       
       ; activate mod in mod list
@@ -796,43 +838,48 @@ EndProcedure
       
       
       ; task clean up procedure
-      debugger::Add("install finished!")
+      debugger::Add("ActivateThread() - activation finished successfully")
       AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
       ProcedureReturn #True 
     EndWith
   EndProcedure
   
   Procedure DeactivateThread(*modinfo.mod)
-    debugger::Add("DeactivateThread()")
+    debugger::Add("DeactivateThread("+Str(*modinfo)+")")
     If Not *modinfo
+      InstallInProgress = #False
       ProcedureReturn #False
     EndIf
-    InstallInProgress = #True
+    
+    If Not *modinfo\active
+      InstallInProgress = #False
+      ProcedureReturn #False
+    EndIf
     
     Protected File$, md5$, Backup$
     Protected NewList Files.filetrackerEntry(), NewList Filetracker.filetracker()
     Protected count, countAll, i
     Protected *tmpinfo.mod
     
-    debugger::Add("deactivate "+*modinfo\name$)
+    debugger::Add("DeactivateThread() - id={"+*modinfo\id$+"} name={"+*modinfo\name$+"}")
     
-    debugger::Add("check dependencies")
-    ; check dependencies
+    debugger::Add("DeactivateThread() - ##### check dependencies #####")
     count = CountGadgetItems(ListInstalled)
     For i = 0 To count-1
+      *tmpinfo = ListIcon::GetListItemData(ListInstalled, i)
       With *tmpinfo
-        *tmpinfo = ListIcon::GetListItemData(ListInstalled, i)
         If \active
           ForEach \dependencies$()
-            If MapKey(\dependencies$()) = *modinfo\name$
+            If MapKey(\dependencies$()) = *modinfo\name$ Or MapKey(\dependencies$()) = *modinfo\id$ ; TODO - ID system!
               ; this mod is required by another active mod!
-              debugger::Add("this mod is required required by " + \name$)
+              debugger::Add("DeactivateThread() - ERROR: this mod is required required by id={"+\id$+"} name={"+\name$+"}")
               ModProgressAnswer = #AnswerNone
               SetGadgetText(GadgetModText, "This modification is required by '" + \name$ + "'." + #CRLF$ + "Please deactivate all mods that depend on this mod before deactivating this mod.")
               HideGadget(GadgetModOk, #False)
               While ModProgressAnswer = #AnswerNone
                 Delay(10)
               Wend
+              debugger::Add("DeactivateThread() - abort deactivation")
               ; task clean up procedure
               AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
               ProcedureReturn #False
@@ -882,7 +929,7 @@ EndProcedure
             
       
       
-      debugger::Add("read filetracker and check MD5")
+      debugger::Add("DeactivateThread() - ##### load filetracker #####")
       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
       PreferenceGroup(\name$)
       ; read md5 of installed files in order to keep track of all files that have been changed by this mod
@@ -905,32 +952,37 @@ EndProcedure
         EndIf
       Wend
       ClosePreferences()
-      debugger::Add("count = "+Str(count)+", countAll = "+Str(countAll)+", Files() = "+ListSize(Files()))
+      debugger::Add("DeactivateThread() - filetracker: count = "+Str(count)+", countAll = "+Str(countAll)+", Files() = "+ListSize(Files()))
       
       If countAll <= 0
         Debug "no files altered?"
       EndIf
       
       ModProgressAnswer = #AnswerNone
-      If count = 0 ;And countAll > 0
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
+      If count = 0 ; no active files! - savely deactivate this mod
+        debugger::Add("DeactivateThread() - no files are active! mod has no effect on game, deactivate savely")
+;         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
         ModProgressAnswer = #AnswerYes
-      ElseIf count > 0 And count = countAll
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
+      ElseIf count = countAll ; all files are active - savely deactivate this mod
+        debugger::Add("DeactivateThread() - all of the mods files are active! deactivate as wished by user")
+;         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
         ModProgressAnswer = #AnswerYes
-      ElseIf count > 0 And count < countAll
+      ElseIf count > 0 And count < countAll ; some active files (more than 0 but not all) - ask user
+        debugger::Add("DeactivateThread() - only some of the mods files are still active, while other are overwritten or modified - ASK USER!")
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"All other files may have been altered by other mods and cannot be restored savely."+#CRLF$+"Do you want to deactivate this modification?")
-      Else
+      Else  ; all other cases (if any :D ) - ask user
         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"Do you want to deactivate this mod?")
       EndIf
       
-      HideGadget(GadgetModNo, #False)
-      HideGadget(GadgetModYes, #False)
-      While ModProgressAnswer = #AnswerNone
-        Delay(10)
-      Wend
-      HideGadget(GadgetModNo, #True)
-      HideGadget(GadgetModYes, #True)
+      If ModProgressAnswer <> #AnswerYes ; skip display if answer is already given
+        HideGadget(GadgetModNo, #False)
+        HideGadget(GadgetModYes, #False)
+        While ModProgressAnswer = #AnswerNone
+          Delay(10)
+        Wend
+        HideGadget(GadgetModNo, #True)
+        HideGadget(GadgetModYes, #True)
+      EndIf
       
       If ModProgressAnswer = #AnswerNo
         AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
@@ -938,24 +990,26 @@ EndProcedure
       EndIf
       
       Backup$ = misc::Path(TF$ + "TFMM/Backup/")
+      debugger::Add("DeactivateThread() - backup folder {"+Backup$+"}")
       misc::CreateDirectoryAll(Backup$)
       i = 0
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files()))
       HideGadget(GadgetModProgress, #False)
+      
+      debugger::Add("DeactivateThread() - ##### process files #####")
       ForEach Files()
         File$ = Files()\file$
         SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
         
         ; delete file
-        debugger::Add("delete file: "+File$)
+        debugger::Add("DeactivateThread() - delete file: "+File$)
         DeleteFile(TF$ + File$,  #PB_FileSystem_Force)
         
         ; restore backup if any
         If FileSize(Backup$ + File$) >= 0
-          debugger::Add("restore backup: "+File$)
-          CopyFile(Backup$ + File$, TF$ + File$)
-          DeleteFile(Backup$ + File$)
+          debugger::Add("DeactivateThread() - restore backup: "+File$)
+          RenameFile(Backup$ + File$, TF$ + File$)
         EndIf
         
         i = i + 1
@@ -963,7 +1017,7 @@ EndProcedure
       Next
       HideGadget(GadgetModProgress, #True)
       
-      debugger::Add("finish uninstall...")
+      debugger::Add("DeactivateThread() - finish deactivation...")
       SetGadgetText(GadgetModText, "Cleanup...")
       
       ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
@@ -974,16 +1028,9 @@ EndProcedure
       \active = #False
       WriteModToIni(*modinfo) ; update mod entry
       
-;       SetGadgetText(GadgetModText, "'" + \name$ + "' was successfully deactivated")
-;       HideGadget(GadgetModOk, #False)
-;       ModProgressAnswer = #AnswerNone
-;       While ModProgressAnswer = #AnswerNone
-;         Delay(10)
-;       Wend
-      
     EndWith
     
-    debugger::Add("uninstall finished!")
+    debugger::Add("DeactivateThread() - deactivation finished successfully!")
     AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
     ProcedureReturn #False
   EndProcedure
@@ -1012,13 +1059,17 @@ EndProcedure
   EndProcedure
   
   Procedure RemoveModFromList(*modinfo.mod) ; Deletes entry from ini file and deletes file from mod folder
+    debugger::Add("RemoveModFromList("+Str(*modinfo)+")")
+    Protected i
+    
     If Not *modinfo
       ProcedureReturn #False
     EndIf
     If *modinfo\active
+      debugger::Add("RemoveModFromList() - ERROR: mod "+Str(*modinfo)+" is still active - cancel uninstall")
       ProcedureReturn #False
     EndIf
-    Protected i
+    
     InstallInProgress = #True
     
     With *modinfo
@@ -1029,18 +1080,23 @@ EndProcedure
       RemovePreferenceGroup(\name$)
       ClosePreferences()
       
+      debugger::Add("RemoveModFromList() - delete file " + *modinfo\file$)
       DeleteFile(misc::Path(TF$ + "TFMM/Mods/") + *modinfo\file$, #PB_FileSystem_Force)
+      debugger::Add("RemoveModFromList() - delete dir  " + *modinfo\id$)
       DeleteDirectory(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$), "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)
       
       For i = 0 To CountGadgetItems(ListInstalled) - 1
         If *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+          debugger::Add("RemoveModFromList() - remove list item " + Str(i))
           ListIcon::RemoveListItem(ListInstalled, i)
           FreeStructure(*modinfo)
           InstallInProgress = #False
+          debugger::Add("RemoveModFromList() - finished!")
           ProcedureReturn #True
         EndIf
       Next i
     EndWith
+    
     InstallInProgress = #False
     ProcedureReturn #False 
   EndProcedure
@@ -1235,16 +1291,15 @@ Procedure GetModInfo(File$, *modinfo.mod)
     \active = 0
     
     ; read info from TFMM.ini in mod if any
-    DeleteFile(tmpDir$ + "tfmm.ini") ; clean old tfmm.ini if exists
-                                     ; TODO Check if tfmm.ini is deleted?
+    DeleteFile(tmpDir$ + "tfmm.ini", #PB_FileSystem_Force) ; clean old tfmm.ini if exists
+                                                           ; TODO Check If tfmm.ini is deleted?
+    
     Protected NewList Files$()
     AddElement(Files$())
     Files$() = "tfmm.ini"
     If extension$ = "zip"
-;       ExtractTFMMiniZip(File$, tmpDir$)
       ExtractFilesZip(File$, Files$(), tmpDir$)
     ElseIf extension$ = "rar"
-;       ExtractTFMMiniRar(File$, tmpDir$)
       ExtractFilesRar(File$, Files$(), tmpDir$)
     EndIf
     ClearList(Files$())
@@ -1255,6 +1310,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
       MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
     EndIf
     
+    \id$ = ReadPreferenceString("id", "") ; ID will be checked after reading name & author
     \name$ = ReadPreferenceString("name", \name$)
     \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
     \version$ = ReadPreferenceString("version", \version$)
@@ -1286,8 +1342,7 @@ Procedure GetModInfo(File$, *modinfo.mod)
       Next
     EndIf
     
-    PreferenceGroup("")
-    \id$ = ReadPreferenceString("id", CreateNewID(*modinfo))
+    ValidateID(*modinfo)
     
     ; read dependencies from tfmm.ini
     If PreferenceGroup("dependencies")
@@ -1558,9 +1613,9 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 492
-; FirstLine = 101
-; Folding = CgBEB-
-; Markers = 1420
+; CursorPosition = 164
+; FirstLine = 75
+; Folding = KCBIG+
+; Markers = 1475
 ; EnableUnicode
 ; EnableXP
