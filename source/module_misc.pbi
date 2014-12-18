@@ -14,11 +14,15 @@ DeclareModule misc
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
   Declare openLink(link$)
+  Declare ResizeCenterImage(im, width, height)
 EndDeclareModule
 
 
 Module misc
-  
+  Macro Min(a,b)
+    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
+  EndMacro
+ 
   Procedure.s Path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
     path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
@@ -114,9 +118,33 @@ Module misc
         RunProgram("open", link$, "")
     CompilerEndSelect
   EndProcedure
+  
+  Procedure ResizeCenterImage(im, width, height)
+    If IsImage(im)
+      Protected image.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
+      im_w = ImageWidth(im)
+      im_h = ImageHeight(im)
+      factor_w = width / im_w
+      factor_h = width / im_h
+      factor = Min(factor_w, factor_h)
+      im_w * factor
+      im_h * factor
+      
+      ResizeImage(im, im_w, im_h)
+      
+      image = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent)
+      If StartDrawing(ImageOutput(image))
+        DrawingMode(#PB_2DDrawing_AlphaBlend)
+        DrawAlphaImage(ImageID(im), (width - im_w)/2, (height - im_h)/2) ; center the image onto a new image
+        StopDrawing()
+      EndIf
+      ProcedureReturn image
+    EndIf
+  EndProcedure
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 62
-; Folding = sz
+; CursorPosition = 118
+; FirstLine = 44
+; Folding = dn-
 ; EnableUnicode
 ; EnableXP

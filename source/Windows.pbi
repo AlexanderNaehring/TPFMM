@@ -453,16 +453,7 @@ Procedure MenuItemSettings(event) ; open settings window
   ClosePreferences()
   
   Protected NewMap locale$(), count.i = 0
-  locale::listAvailable(locale$())
-  ClearGadgetItems(GadgetSettingsLocale)
-  ForEach locale$()
-    AddGadgetItem(GadgetSettingsLocale, -1, "<" + MapKey(locale$()) + ">" + " " + locale$())
-    If locale$ = MapKey(locale$())
-      SetGadgetState(GadgetSettingsLocale, count)
-    EndIf
-    count + 1
-  Next
-  GadgetSettingsLocale(#PB_EventType_Change)
+  locale::listAvailable(GadgetSettingsLocale, locale$)
   
   AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
   HideWindow(WindowSettings, #False, #PB_Window_WindowCentered)
@@ -885,16 +876,11 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 
-Procedure GadgetSettingsLocale(event)
-  If event = #PB_EventType_Change
-    locale::showFlag(StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<"), ImageLocale)
-  EndIf
-EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 464
-; FirstLine = 46
-; Folding = CABAAAA-
+; CursorPosition = 699
+; FirstLine = 91
+; Folding = CABAAAg
 ; EnableUnicode
 ; EnableXP

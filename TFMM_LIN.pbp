@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-12-03 01:08" user="alexander" host="alexander-mint"/>
+    <lastopen date="2014-12-18 18:37" user="alexander" host="alexander-mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="9bceab6a14f4f1c5ea554c37eccf7d88"/>
+      <fingerprint md5="d70dda4fc05e587435b7a79730971b00"/>
     </file>
     <file name="source/module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -29,15 +29,15 @@
     </file>
     <file name="source/module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="dccab9e372ce2edd0312808eed2e5006"/>
+      <fingerprint md5="55ac766ecd767ac801b721633b74ba9c"/>
     </file>
     <file name="source/module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="eea813b8274039cf43f33e4f3732fcf6"/>
+      <fingerprint md5="129e5f3606d028283c41b3785a67d81f"/>
     </file>
     <file name="source/module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="3eb24502d1e1dc6d9d0b532be6a2fcbd"/>
+      <fingerprint md5="4faf89efcd8996a0ff8ec1ff3360f980"/>
     </file>
     <file name="source/module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -49,23 +49,23 @@
     </file>
     <file name="source/WindowMain.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="91781598b597b39600168ab04b22d320"/>
+      <fingerprint md5="e6d5439a388ebb3fa94212ecc3d688f8"/>
     </file>
     <file name="source/WindowModInformation.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="605d5b986774c3be7be553e8b33163ad"/>
+      <fingerprint md5="6dc1467a812fcd1ce5327e7dd0a63601"/>
     </file>
     <file name="source/WindowModProgress.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="5ac6bb9dbe85b407a87a161c1eb7a28d"/>
+      <fingerprint md5="7f491ba607ea18f9347bb48ece47caf0"/>
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="80d0fdc7801d0d3a822a7e2c4b0a24fa"/>
+      <fingerprint md5="aa575fb36f8e1b29219c150262c42944"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="bc0d4edaf0c83063999fa623e38c50e0"/>
+      <fingerprint md5="8ee02912a49b5e2196db280927825f36"/>
     </file>
   </section>
   <section name="targets">
@@ -74,8 +74,8 @@
       <outputfile value="bin/lin64/TFMM"/>
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1"/>
-      <compilecount enable="1" value="1257"/>
-      <buildcount enable="1" value="61"/>
+      <compilecount enable="1" value="1311"/>
+      <buildcount enable="1" value="67"/>
       <execonstant enable="1"/>
     </target>
   </section>

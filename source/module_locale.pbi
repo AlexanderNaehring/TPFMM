@@ -9,11 +9,11 @@ EndMacro
 DeclareModule locale
   EnableExplicit
   
-  Declare listAvailable(Map locale())
+  Declare listAvailable(ComboBoxGadget, current_locale$)
   Declare use(new_locale$)
   Declare.s getEx(group$, string$, Map var$())
   Declare.s get(group$, string$)
-  Declare showFlag(locale$, ImageGadget)
+  Declare getFlag(locale$)
 EndDeclareModule
 
 Module locale
@@ -67,29 +67,35 @@ Module locale
     EndIf
   EndProcedure
   
-  Procedure listAvailable(Map locale$())
+  Procedure listAvailable(ComboBoxGadget, current_locale$)
     debugger::Add("locale::listAvailable()")
-    Protected dir.i
-    Protected file$, lang$, name$
+    Protected dir.i, count.i
+    Protected file$, locale$, name$
     
-    ClearMap(locale$())
+    ClearGadgetItems(ComboBoxGadget)
     
     dir = ExamineDirectory(#PB_Any, "locale", "*.locale")
     If dir
+      count = 0
       While NextDirectoryEntry(dir)
         file$ = DirectoryEntryName(dir)
-        lang$ = GetFilePart(file$, #PB_FileSystem_NoExtension)
-        debugger::Add("found localisation file "+file$)
-        If Not MatchRegularExpression(RegExpAlpha, lang$)
-          debugger::Add(lang$ + " does not match convention")
+        locale$ = GetFilePart(file$, #PB_FileSystem_NoExtension)
+        debugger::Add("locale:: found localisation file "+file$)
+        If Not MatchRegularExpression(RegExpAlpha, locale$)
+          debugger::Add("locale:: {"+locale$+"} does Not match convention")
           Continue
         EndIf
         If OpenPreferences(misc::Path("locale")+file$)
           name$ = ReadPreferenceString("locale", "")
           ClosePreferences()
           If name$ <> ""
-            debugger::Add("add localisation to list: "+lang$+" = "+name$)
-            locale$(lang$) = name$
+            debugger::Add("locale:: add localisation to list: {"+locale$+"} = {"+name$+"}")
+;             locale$(lang$) = name$
+            AddGadgetItem(ComboBoxGadget, -1, "<"+locale$+">"+" "+name$, getFlag(locale$))
+            If current_locale$ = locale$
+              SetGadgetState(ComboBoxGadget, count)
+            EndIf
+            count + 1
           EndIf
         EndIf
       Wend
@@ -99,7 +105,7 @@ Module locale
       ProcedureReturn #False
     EndIf
   EndProcedure
-  
+    
   Procedure use(locale$)
     debugger::Add("locale::use("+locale$+")")
     
@@ -166,20 +172,21 @@ Module locale
     ProcedureReturn getEx(group$, string$, var$())
   EndProcedure
   
-  Procedure showFlag(locale$, ImageGadget)
-    Static image
+  Procedure getFlag(locale$)
+    Protected im.i
+    Protected max_w.i, max_h.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
+    Static NewMap flag()
     
-    SetGadgetState(ImageGadget, 0)
-    If image
-      FreeImage(image)
-      image = 0
+    If flag(locale$)
+      ProcedureReturn ImageID(flag(locale$))
     EndIf
     
-    image = LoadImage(#PB_Any, path$ + locale$ + ".png")
-    If image 
-      ResizeImage(image, GadgetWidth(ImageGadget), GadgetHeight(ImageGadget), #PB_Image_Raw)
-      SetGadgetState(ImageGadget, ImageID(image))
+    im = LoadImage(#PB_Any, path$ + locale$ + ".png")
+    If im
+      flag(locale$) = misc::ResizeCenterImage(im, 20, 20)
+      ProcedureReturn ImageID(flag(locale$))
     EndIf
+    ProcedureReturn 0
   EndProcedure
   
   DataSection
@@ -203,8 +210,8 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 183
-; FirstLine = 26
-; Folding = P5
+; CursorPosition = 187
+; FirstLine = 22
+; Folding = H5
 ; EnableUnicode
 ; EnableXP
