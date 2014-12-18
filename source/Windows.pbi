@@ -462,6 +462,7 @@ Procedure MenuItemSettings(event) ; open settings window
     EndIf
     count + 1
   Next
+  GadgetSettingsLocale(#PB_EventType_Change)
   
   AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
   HideWindow(WindowSettings, #False, #PB_Window_WindowCentered)
@@ -499,8 +500,7 @@ Procedure GadgetSaveSettings(event)
   
   TF$ = Dir$ ; store in global variable
   
-  locale$ = GetGadgetText(GadgetSettingsLocale)
-  locale$ = StringField(StringField(locale$, 1, ">"), 2, "<") ; extract string between < and >
+  locale$ = StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<") ; extract string between < and >
   If locale$ = ""
     locale$ = "en"
   EndIf
@@ -885,10 +885,16 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 
+Procedure GadgetSettingsLocale(event)
+  If event = #PB_EventType_Change
+    locale::showFlag(StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<"), ImageLocale)
+  EndIf
+EndProcedure
+
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 462
-; FirstLine = 100
-; Folding = SARAAQg
+; CursorPosition = 464
+; FirstLine = 46
+; Folding = CABAAAA-
 ; EnableUnicode
 ; EnableXP

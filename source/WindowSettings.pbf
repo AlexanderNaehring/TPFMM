@@ -9,7 +9,7 @@
 
 Global WindowSettings
 
-Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate, GadgetFrame, GadgetFrame, GadgetSettingsLocale
+Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate, GadgetFrame, GadgetFrame, GadgetSettingsLocale, ImageLocale
 
 Declare ResizeGadgetsWindowSettings()
 
@@ -18,6 +18,7 @@ Declare GadgetSaveSettings(EventType)
 Declare GadgetButtonOpenPath(EventType)
 Declare GadgetButtonAutodetect(EventType)
 Declare GadgetButtonBrowse(EventType)
+Declare GadgetSettingsLocale(EventType)
 
 Procedure OpenWindowSettings(x = 0, y = 0, width = 580, height = 240)
   WindowSettings = OpenWindow(#PB_Any, x, y, width, height, l("settings","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_ScreenCentered, WindowID(WindowMain))
@@ -41,7 +42,8 @@ Procedure OpenWindowSettings(x = 0, y = 0, width = 580, height = 240)
   GadgetToolTip(GadgetSettingsAutomaticUpdate, l("settings","update_tip"))
   GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, l("settings","other"))
   GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, l("settings","locale"))
-  GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25, #PB_ComboBox_Image)
+  GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 370, 170, 190, 25, #PB_ComboBox_Image)
+  ImageLocale = ImageGadget(#PB_Any, 330, 172, 30, 20, 0)
 EndProcedure
 
 Procedure ResizeGadgetsWindowSettings()
@@ -76,6 +78,8 @@ Procedure WindowSettings_Events(event)
           GadgetSaveSettings(EventType())          
         Case GadgetCancelSettings
           GadgetCloseSettings(EventType())          
+        Case GadgetSettingsLocale
+          GadgetSettingsLocale(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True
