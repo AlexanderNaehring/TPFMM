@@ -41,7 +41,7 @@ Procedure OpenWindowSettings(x = 0, y = 0, width = 580, height = 240)
   GadgetToolTip(GadgetSettingsAutomaticUpdate, l("settings","update_tip"))
   GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, l("settings","other"))
   GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, l("settings","locale"))
-  GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25)
+  GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25, #PB_ComboBox_Image)
 EndProcedure
 
 Procedure ResizeGadgetsWindowSettings()

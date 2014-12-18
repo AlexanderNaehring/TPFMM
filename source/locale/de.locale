@@ -75,6 +75,21 @@ uninstall2    = Sollen {count} Modifikationen gelöscht werden?
 select_mod    = Wähle Modifikation aus
 files_archive = Datei Archive
 files_all     = Alle Dateien
+dependencies  = Prüfe Abhängigkeiten...
+loading       = Lade Modifikation...
+processing    = Verarbeite Datei '{file}'
+requires      = Diese Modifikation benötigt {name} {version}.\nAlle benötigten Modifikationen müssen installiert und aktiviert sein.
+required      = Diese Modifikation wird von {name} benötigt.\nSoll diese Modifikation auch deaktiviert werden?
+overwrite     = {file} wurde bereits von {name} modifiziert.\nSoll die Datei überschrieben werden?
+error_tmpdir  = Fehler bei der Erstellung des temporären Verzeichnis.
+error_open    = Fehler beim öffnen der Modifikation.
+error_reading = Error reading extracted files.
+yes           = Ja
+no            = Nein
+yes_all       = Ja zu allen
+no_all        = Nein zu allen
+ok            = Okay
+
 
 [information]
 name      = Name:

@@ -185,8 +185,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 85
-; FirstLine = 30
+; CursorPosition = 12
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

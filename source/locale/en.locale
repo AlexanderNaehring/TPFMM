@@ -75,6 +75,20 @@ uninstall2    = Do you want to uninstall {count} modifications?
 select_mod    = Select new modification to add
 files_archive = Archive files
 files_all     = All files
+dependencies  = Checking dependencies...
+loading       = Loading modification...
+processing    = Processing file '{file}'
+requires      = This modification requires {name} {version}.\nPlease make sure all required mods are installed and activated.
+required      = This modification is required by {name}.\nDo you want to deactivate this modification as well?
+overwrite     = {file} has already been modified by {name}.\nDo you want to overwrite this file?
+error_tmpdir  = Failed to create temporary directory for extraction.
+error_open    = Error opening modification file.
+error_reading = Error reading extracted files.
+yes           = Yes
+no            = No
+yes_all       = Yes to all
+no_all        = No to all
+ok            = OK
 
 [information]
 name      = Name:

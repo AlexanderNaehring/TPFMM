@@ -13,6 +13,7 @@ DeclareModule locale
   Declare use(new_locale$)
   Declare.s getEx(group$, string$, Map var$())
   Declare.s get(group$, string$)
+  Declare showFlag(locale$, ImageGadget)
 EndDeclareModule
 
 Module locale
@@ -54,7 +55,9 @@ Module locale
       ; create locale files
       misc::CreateDirectoryAll(path$)
       misc::extractBinary(path$ + "en.locale", ?DataLocaleEnglish, ?DataLocaleEnglishEnd - ?DataLocaleEnglish, #True)
+      misc::extractBinary(path$ + "en.png", ?DataLocaleEnglishFlag, ?DataLocaleEnglishFlagEnd - ?DataLocaleEnglishFlag, #False)
       misc::extractBinary(path$ + "de.locale", ?DataLocaleGerman, ?DataLocaleGermanEnd - ?DataLocaleGerman, #True)
+      misc::extractBinary(path$ + "de.png", ?DataLocaleGermanFlag, ?DataLocaleGermanFlagEnd - ?DataLocaleGermanFlag, #False)
       
       ; load fallback (EN)
       ClearMap(localeEN$())
@@ -163,23 +166,45 @@ Module locale
     ProcedureReturn getEx(group$, string$, var$())
   EndProcedure
   
+  Procedure showFlag(locale$, ImageGadget)
+    Static image
+    
+    SetGadgetState(ImageGadget, 0)
+    If image
+      FreeImage(image)
+      image = 0
+    EndIf
+    
+    image = LoadImage(#PB_Any, path$ + locale$ + ".png")
+    If image 
+      ResizeImage(image, GadgetWidth(ImageGadget), GadgetHeight(ImageGadget), #PB_Image_Raw)
+      SetGadgetState(ImageGadget, ImageID(image))
+    EndIf
+  EndProcedure
+  
   DataSection
     DataLocaleEnglish:
     IncludeBinary "locale/en.locale"
     DataLocaleEnglishEnd:
+    DataLocaleEnglishFlag:
+    IncludeBinary "locale/en.png"
+    DataLocaleEnglishFlagEnd:
     
     DataLocaleGerman:
     IncludeBinary "locale/de.locale"
     DataLocaleGermanEnd:
+    DataLocaleGermanFlag:
+    IncludeBinary "locale/de.png"
+    DataLocaleGermanFlagEnd:
   EndDataSection
   
-  init()
+  init() ; call init when loading module
 EndModule
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 154
-; FirstLine = 15
-; Folding = H7
+; CursorPosition = 183
+; FirstLine = 26
+; Folding = P5
 ; EnableUnicode
 ; EnableXP

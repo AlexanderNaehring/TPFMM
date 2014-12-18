@@ -62,6 +62,7 @@ Global InstallInProgress, UpdateResult
   Structure filetrackerEntry
     file$
     md5$
+    required.b
   EndStructure
   
   Structure filetracker
@@ -552,10 +553,11 @@ EndProcedure
     EndIf
     
     
-    Protected dir, i, CopyFile, isModded, error, count, ok
+    Protected dir, i, CopyFile, isModded, error, count, ok, time
     Protected NewList Files$(), NewList FileTracker.filetracker()
     Protected Backup$, File$, Mod$, tmpDir$, extension$, ReqMod$, ReqVer$
     Protected *tmpinfo.mod
+    Protected NewMap strings$()
     
     With *modinfo
       Mod$ = misc::Path(TF$ + "TFMM/Mods") + \file$
@@ -563,11 +565,11 @@ EndProcedure
       
       debugger::Add("ActivateThread() - id={"+\id$+"} name={"+\name$+"} file={"+\file$+"}")
       
-      ;--------------------------------------------------------------------------------------------------
-      ;- check dependencies
+      ; --------------------------------------------------------------------------------------------------
+      ; check dependencies
       
       debugger::Add("ActivateThread() - ##### checking dependencies #####")
-      SetGadgetText(GadgetModText, "Checking dependencies...")
+      SetGadgetText(GadgetModText, l("management", "dependencies"))
       
       ForEach \dependencies$()
         debugger::Add("ActivateThread() - check dependency {"+MapKey(\dependencies$())+"}")
@@ -596,9 +598,13 @@ EndProcedure
           debugger::Add("ActivateThread() - no match found for dependency - abort activation")
           ModProgressAnswer = #AnswerNone
           If ReqVer$
-            ReqVer$ = " version '" + ReqVer$ + "'"
+            ReqVer$ = "v" + ReqVer$ + ""
           EndIf
-          SetGadgetText(GadgetModText, "This modification requires '" + ReqMod$ + "'" + ReqVer$ + "." + #CRLF$ + "Please make sure all required mods are activated.")
+          
+          ClearMap(strings$())
+          strings$("name") = ReqMod$
+          strings$("version") = ReqVer$
+          SetGadgetText(GadgetModText, locale::getEx("management", "requires", strings$()))
           HideGadget(GadgetModOk, #False)
           While ModProgressAnswer = #AnswerNone
             Delay(10)
@@ -609,11 +615,12 @@ EndProcedure
         EndIf
       Next
       
-      ;--------------------------------------------------------------------------------------------------
-      ;- start installation
+      ; --------------------------------------------------------------------------------------------------
+      ; start installation
       
       debugger::Add("ActivateThread() - ##### loading modification #####")
-      SetGadgetText(GadgetModText, "Loading modification...")
+      time = ElapsedMilliseconds()
+      SetGadgetText(GadgetModText, l("management", "loading"))
       ; clean temporary directory
       debugger::Add("ActivateThread() - create temporary directoy {"+tmpDir$+"}")
       DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
@@ -623,7 +630,7 @@ EndProcedure
         debugger::Add("ActivateThread() - failed to create temporary directory")
         ; error with tmpDir$
         ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, "Failed to create temporary directory for extraction!")
+        SetGadgetText(GadgetModText, l("management", "error_tmpdir"))
         HideGadget(GadgetModOk, #False)
         While ModProgressAnswer = #AnswerNone
           Delay(10)
@@ -654,7 +661,7 @@ EndProcedure
         debugger::Add("ActivateThread() - error extracting modification")
         DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
         ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, "Error opening modification file!")
+        SetGadgetText(GadgetModText, l("management", "error_open"))
         HideGadget(GadgetModOk, #False)
         While ModProgressAnswer = #AnswerNone
           Delay(10)
@@ -667,13 +674,12 @@ EndProcedure
       
       ; mod should now be extracted to temporary directory tmpDir$
       debugger::Add("ActivateThread() - reading modification content into file list")
-      SetGadgetText(GadgetModText, "Reading modification...")
       ClearList(files$())
       If Not ActivateThread_ReadFiles(tmpDir$, files$()) ; add all files from tmpDir to files$()
         ; error opening tmpDir$
         DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
         ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, "Error reading extracted files!")
+        SetGadgetText(GadgetModText, l("management", "error_reading"))
         HideGadget(GadgetModOk, #False)
         While ModProgressAnswer = #AnswerNone
           Delay(10)
@@ -684,20 +690,21 @@ EndProcedure
       EndIf
       
       debugger::Add("ActivateThread() - found "+Str(ListSize(files$()))+" files for activation")
-      SetGadgetText(GadgetModText, Str(ListSize(files$()))+" files found")
+      debugger::Add("ActivateThread() - loaded modification in "+Str(ElapsedMilliseconds()-time)+"ms")
       
       Backup$ = misc::Path(TF$ + "TFMM/Backup/")
       debugger::Add("ActivateThread() - backup folder for vanilla game files {"+Backup$+"}")
       misc::CreateDirectoryAll(Backup$)
       
       
+      ; --------------------------------------------------------------------------------------------------
       ; load filetracker list
       debugger::Add("ActivateThread() - ##### load filetracker #####")
+      time = ElapsedMilliseconds()
       ClearList(FileTracker())
       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
       ExaminePreferenceGroups()
       While NextPreferenceGroup()
-        debugger::Add("ActivateThread() - filetracker {"+PreferenceGroupName()+"}")
         PreferenceGroup(PreferenceGroupName())
         ExaminePreferenceKeys()
         While NextPreferenceKey()
@@ -708,9 +715,8 @@ EndProcedure
         Wend
       Wend
       ClosePreferences()
-      debugger::Add("ActivateThread() - filetracker found "+Str(ListSize(FileTracker()))+" files")
+      debugger::Add("ActivateThread() - filetracker found "+Str(ListSize(FileTracker()))+" files in "+Str(ElapsedMilliseconds()-time)+"ms")
       
-      debugger::Add("ActivateThread() - initialize progress bar")
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
       SetGadgetState(GadgetModProgress, 0)
@@ -718,16 +724,19 @@ EndProcedure
       i = 0
       ModProgressAnswer = #AnswerNone
       
-      ;--------------------------------------------------------------------------------------------------
-      ;- process all files
+      ; --------------------------------------------------------------------------------------------------
+      ; process all files
       debugger::Add("ActivateThread() - ##### process files #####")
-      ForEach files$()
+      time = ElapsedMilliseconds()
+      ForEach Files$()
         Delay(0) ; let the CPU breath
-        File$ = files$()
+        File$ = Files$()
         File$ = misc::Path(GetPathPart(File$)) + GetFilePart(File$)
         File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path of mod
         
-        SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(Files$()) + "'")
+        ClearMap(strings$())
+        strings$("file") = GetFilePart(File$)
+        SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
         
         ; normal case: copy the modificated file to game directoy
         CopyFile = #True
@@ -738,15 +747,31 @@ EndProcedure
           ; compare files from filetracker with files from new mod
           
           If LCase(FileTracker()\file\file$) = LCase(File$) ; check also other cases (for case insensitive filesystems - all mods should be case sensitive but should work with insensitive environments like windows)
-            debugger::Add("ActivateThread() - found match in filetracker {"+File$+"}")
+            debugger::Add("ActivateThread() - found conflict match in filetracker {"+File$+"}")
             ; file found in list of already installed files
             CopyFile = #False
             isModded = #True
             
+            If MD5FileFingerprint(TF$ + File$) = MD5FileFingerprint(Files$())
+              debugger::Add("ActivateThread() - installed file is identical to new file")
+              ; check if md5 of already installed modded file is identical to new modded file
+              ; if file has same md5 -> save to overwrite (since it is already the same file)
+              If ModProgressAnswer <> #AnswerYesAll And ModProgressAnswer <> #AnswerNoAll
+                ; choose anser only if user has not already selected a "to all" answer
+                ; yes all -> file is copied anyway
+                ; no all -> no file is copied (respect users answer in this case)
+                ; file is added to filetracker in any case
+                ModProgressAnswer = #AnswerYes
+              EndIf
+            EndIf
+            
             ; ask user if file should be overwritten
             If ModProgressAnswer = #AnswerNone
-              ; only ask again if user has not selected "yes/no to all" before
-              SetGadgetText(GadgetModText, "'" + GetFilePart(FileTracker()\file\file$) + "' has already been modified by '"+FileTracker()\mod$+"'." +#CRLF$+ "Do you want To overwrite this file?")
+              ; only ask again if user has not selected "yes/no to all" before or md5 match 
+              ClearMap(strings$())
+              strings$("file") = GetFilePart(FileTracker()\file\file$)
+              strings$("name") = FileTracker()\mod$
+              SetGadgetText(GadgetModText, locale::getEx("management", "overwrite", strings$()))
               HideGadget(GadgetModYes, #False)
               HideGadget(GadgetModNo, #False)
               HideGadget(GadgetModYesAll, #False)
@@ -754,7 +779,9 @@ EndProcedure
               While ModProgressAnswer = #AnswerNone
                 Delay(10)
               Wend
-              SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'")
+              ClearMap(strings$())
+              strings$("file") = GetFilePart(File$)
+              SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
               HideGadget(GadgetModYes, #True)
               HideGadget(GadgetModNo, #True)
               HideGadget(GadgetModYesAll, #True)
@@ -779,11 +806,13 @@ EndProcedure
             ; filetracker will list the file as modified by multiple mods! (may result in multiple entries for single file)
             ; leave multiple entries for logging purpose and information during deactivation
             Break ; foreach loop can be broke after one entry is found in filetracker
+            ; this also works with automatic overwrite in case of MD5 match since only the currently installed file is checked
           EndIf
         Next
+        SetGadgetText(GadgetModText, "")
         
-        ;--------------------------------------------------------------------------------------------------
-        ;- copy file
+        ; --------------------------------------------------------------------------------------------------
+        ; copy file
         
         If CopyFile ; install (copy) new modification file
           ; backup original file if any
@@ -806,26 +835,29 @@ EndProcedure
           DeleteFile(TF$ + File$)
           If RenameFile(Files$(), TF$ + File$)
             debugger::Add("ActivateThread() - copy file {"+File$+"}")
-            
-            OpenPreferences(misC::Path(TF$ + "TFMM") + "filetracker.ini")
-            PreferenceGroup(\name$) ; TODO : may overwrite entry here (only in case of other errors, since no two mods are allowed to have the same name)
-            ; TODO : change to \id$ (have to update all old entries in order to do this)
-            ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
-            WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
-            ClosePreferences()
           Else
-            debugger::Add("ActivateThread() - ERROR: failed to move file: RenameFile(" + Files$() + ", " + TF$ + File$ + ")")
-            ; do not add this file to filetracker!
+            debugger::Add("ActivateThread() - ERROR: failed to move file: {("+Files$()+"} -> {"+TF$+File$+"}")
           EndIf
-          
         EndIf
         
+        ; --------------------------------------------------------------------------------------------------
+        ; Add to filetracker -> Even if file is NOT copied, it is still required by the modification -> add in any case!
+        
+        OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
+        PreferenceGroup(\name$) ; TODO : may overwrite entry here (only in case of other errors, since no two mods are allowed to have the same name)
+        ; TODO : change to \id$ (have to update all old entries in order to do this)
+        ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
+        WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
+        ClosePreferences()
+        
+        ; --------------------------------------------------------------------------------------------------
         i = i + 1 ; count files for progress bar
         SetGadgetState(GadgetModProgress, i)
-      Next 
+      Next
+      debugger::Add("ActivateThread() - processed files in "+Str(ElapsedMilliseconds()-time)+"ms")
       
-      ;--------------------------------------------------------------------------------------------------
-      ;- install finished
+      ; --------------------------------------------------------------------------------------------------
+      ; install finished
       debugger::Add("ActivateThread() - ##### finish activation #####")
       HideGadget(GadgetModProgress, #True)
       If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
@@ -858,12 +890,14 @@ EndProcedure
     
     Protected File$, md5$, Backup$
     Protected NewList Files.filetrackerEntry(), NewList Filetracker.filetracker()
-    Protected count, countAll, i
+    Protected count, countAll, countReq, i, time
     Protected *tmpinfo.mod
+    Protected NewMap strings$()
     
     debugger::Add("DeactivateThread() - id={"+*modinfo\id$+"} name={"+*modinfo\name$+"}")
     
     debugger::Add("DeactivateThread() - ##### check dependencies #####")
+    SetGadgetText(GadgetModText, l("management", "dependencies"))
     count = CountGadgetItems(ListInstalled)
     For i = 0 To count-1
       *tmpinfo = ListIcon::GetListItemData(ListInstalled, i)
@@ -874,121 +908,95 @@ EndProcedure
               ; this mod is required by another active mod!
               debugger::Add("DeactivateThread() - ERROR: this mod is required required by id={"+\id$+"} name={"+\name$+"}")
               ModProgressAnswer = #AnswerNone
-              SetGadgetText(GadgetModText, "This modification is required by '" + \name$ + "'." + #CRLF$ + "Please deactivate all mods that depend on this mod before deactivating this mod.")
-              HideGadget(GadgetModOk, #False)
+              ClearMap(strings$())
+              strings$("name") = \name$
+              SetGadgetText(GadgetModText, locale::getEx("management", "required", strings$()))
+              HideGadget(GadgetModYes, #False)
+              HideGadget(GadgetModNo, #False)
               While ModProgressAnswer = #AnswerNone
                 Delay(10)
               Wend
-              debugger::Add("DeactivateThread() - abort deactivation")
-              ; task clean up procedure
-              AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-              ProcedureReturn #False
+              If ModProgressAnswer = #AnswerYes
+                ; queue deactivation of this mod
+                ; continue loop!
+                debugger::Add("DeactivateThread() - queue deactivation {"+\name$+"}")
+                AddToQueue(#QueueActionDeactivate, *tmpinfo)
+                SetGadgetText(GadgetModText, l("management", "dependencies"))
+                HideGadget(GadgetModYes, #True)
+                HideGadget(GadgetModNo, #True)
+              Else
+                ; if user does not want to deactivate this mod -> cancel deactivation
+                debugger::Add("DeactivateThread() - abort deactivation")
+                ; task clean up procedure
+                AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+                ProcedureReturn #False
+              EndIf
             EndIf
           Next
         EndIf 
       EndWith
     Next
     
+    SetGadgetText(GadgetModText, l("management", "loading"))
     
     ; read list of files from ini file
-    With *modinfo
-      
-;       ; load filetracker list
-;       debugger::Add("load filetracker")
-;       ClearList(FileTracker())
-;       ClearList(Files())
-;       OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-;       ExaminePreferenceGroups()
-;       While NextPreferenceGroup()
-;         PreferenceGroup(PreferenceGroupName())
-;         debugger::Add("filetracker: " + PreferenceGroupName())
-;         If PreferenceGroupName() = \name$
-;           ; filetracker of current mod!
-;           ; add to "files$()" list
-;           ExaminePreferenceKeys()
-;           While NextPreferenceKey()
-;             File$ = PreferenceKeyName()
-;             md5$ = ReadPreferenceString(File$, "")
-;             Files()\file$ = File$
-;             Files()\md5$ = md5$
-;           Wend
-;         Else
-;           ; filetracker of other mods!
-;           ; add to "filertracker()" list
-;           ExaminePreferenceKeys()
-;           While NextPreferenceKey()
-;             AddElement(FileTracker())
-;             FileTracker()\file\file$ = PreferenceKeyName()
-;             Filetracker()\file\md5$ = PreferenceKeyValue()
-;             FileTracker()\mod$ = PreferenceGroupName()
-;           Wend
-;         EndIf
-;       Wend
-;       ClosePreferences()
-;       debugger::Add("filetracker: found " + Str(ListSize(FileTracker())) + " files")
-            
-      
-      
-      debugger::Add("DeactivateThread() - ##### load filetracker #####")
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-      PreferenceGroup(\name$)
-      ; read md5 of installed files in order to keep track of all files that have been changed by this mod
-      ExaminePreferenceKeys()
-      count = 0
-      countAll = 0
-      ClearList(Files())
-      While NextPreferenceKey()
-        countAll = countAll + 1
-        File$ = PreferenceKeyName()
-        md5$ = ReadPreferenceString(File$, "")
-        If File$ And md5$
-          If FileSize(TF$ + File$) >= 0
-            If MD5FileFingerprint(TF$ + File$) = md5$
-              count = count + 1
-              AddElement(Files())
-              Files()\file$ = File$
-            EndIf
-          EndIf
-        EndIf
-      Wend
-      ClosePreferences()
-      debugger::Add("DeactivateThread() - filetracker: count = "+Str(count)+", countAll = "+Str(countAll)+", Files() = "+ListSize(Files()))
-      
-      If countAll <= 0
-        Debug "no files altered?"
-      EndIf
-      
-      ModProgressAnswer = #AnswerNone
-      If count = 0 ; no active files! - savely deactivate this mod
-        debugger::Add("DeactivateThread() - no files are active! mod has no effect on game, deactivate savely")
-;         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files."+#CRLF$+"All of these files have been overwritten or altered by other modifications."+#CRLF$+"This modification currently has no effect To the game And can savely be deactiveted."+#CRLF$+"Do you want To deactivate this modification?")
-        ModProgressAnswer = #AnswerYes
-      ElseIf count = countAll ; all files are active - savely deactivate this mod
-        debugger::Add("DeactivateThread() - all of the mods files are active! deactivate as wished by user")
-;         SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(count) + " files."+#CRLF$+"Do you want to deactivate this modification?")
-        ModProgressAnswer = #AnswerYes
-      ElseIf count > 0 And count < countAll ; some active files (more than 0 but not all) - ask user
-        debugger::Add("DeactivateThread() - only some of the mods files are still active, while other are overwritten or modified - ASK USER!")
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"All other files may have been altered by other mods and cannot be restored savely."+#CRLF$+"Do you want to deactivate this modification?")
-      Else  ; all other cases (if any :D ) - ask user
-        SetGadgetText(GadgetModText, "Modification '" + \name$ + "' has changed " + Str(countAll) + " files of which " + Str(count) + " are still present."+#CRLF$+"Do you want to deactivate this mod?")
-      EndIf
-      
-      If ModProgressAnswer <> #AnswerYes ; skip display if answer is already given
-        HideGadget(GadgetModNo, #False)
-        HideGadget(GadgetModYes, #False)
-        While ModProgressAnswer = #AnswerNone
-          Delay(10)
+    debugger::Add("DeactivateThread() - ##### load filetracker #####")
+    time = ElapsedMilliseconds()
+    ClearList(FileTracker())
+    ClearList(Files())
+    OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
+    ExaminePreferenceGroups()
+    While NextPreferenceGroup()
+      PreferenceGroup(PreferenceGroupName())
+      If PreferenceGroupName() = *modinfo\name$ ; TODO change to ID?
+        ; filetracker of current mod!
+        ; add to "files()" list
+        ExaminePreferenceKeys()
+        While NextPreferenceKey()
+          AddElement(Files())
+          Files()\file$ = PreferenceKeyName()
+          Files()\md5$ = PreferenceKeyValue()
         Wend
-        HideGadget(GadgetModNo, #True)
-        HideGadget(GadgetModYes, #True)
+      Else
+        ; filetracker of other mods!
+        ; add to "filertracker()" list
+        ExaminePreferenceKeys()
+        While NextPreferenceKey()
+          AddElement(FileTracker())
+          FileTracker()\file\file$ = PreferenceKeyName()
+          Filetracker()\file\md5$ = PreferenceKeyValue()
+          FileTracker()\mod$ = PreferenceGroupName()
+        Wend
       EndIf
-      
-      If ModProgressAnswer = #AnswerNo
-        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-        ProcedureReturn #False
-      EndIf
-      
+    Wend
+    ClosePreferences()
+    debugger::Add("DeactivateThread() - filetracker: found " + Str(ListSize(FileTracker())) + " files in "+Str(ElapsedMilliseconds()-time)+"ms")
+    
+    debugger::Add("DeactivateThread() - filetracker: filecheck")
+    time = ElapsedMilliseconds()
+    ResetList(Files())
+    countAll = ListSize(Files())
+    countReq = 0
+    ForEach Files()
+      ; check all Files of the mod about to be deactivated
+      Files()\required = #False ; init: assume file is not required by other mods
+      ForEach Filetracker()
+        If LCase(Files()\file$) = LCase(Filetracker()\file\file$) ; TODO case sensitive?
+          ; the same file is required by another mod currently activated
+          Files()\required = #True
+          countReq + 1
+          Break
+        EndIf
+      Next
+    Next
+    count = countAll - countReq
+    debugger::Add("DeactivateThread() - filetracker: filecheck finished in"+Str(ElapsedMilliseconds()-time)+"ms")
+    debugger::Add("DeactivateThread() - filetracker: "+Str(countReq)+"/"+Str(countAll)+" files are required by other mods")
+    debugger::Add("DeactivateThread() - filetracker: deactivate "+Str(count)+" files")
+    
+    ; --------------------------------------------------------------------------------------------------
+    ; start deactivation
+    With *modinfo
       Backup$ = misc::Path(TF$ + "TFMM/Backup/")
       debugger::Add("DeactivateThread() - backup folder {"+Backup$+"}")
       misc::CreateDirectoryAll(Backup$)
@@ -997,10 +1005,19 @@ EndProcedure
       SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files()))
       HideGadget(GadgetModProgress, #False)
       
+      
       debugger::Add("DeactivateThread() - ##### process files #####")
+      time = ElapsedMilliseconds()
       ForEach Files()
+        If files()\required ; do not touch files required by other mods
+          Continue
+        EndIf
+        
         File$ = Files()\file$
-        SetGadgetText(GadgetModText, "Processing file '" + GetFilePart(File$) + "'...")
+        
+        ClearMap(strings$())
+        strings$("file") = GetFilePart(File$)
+        SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
         
         ; delete file
         debugger::Add("DeactivateThread() - delete file: "+File$)
@@ -1015,9 +1032,12 @@ EndProcedure
         i = i + 1
         SetGadgetState(GadgetModProgress, i)
       Next
+      debugger::Add("DeactivateThread() - processing took "+Str(ElapsedMilliseconds()-time)+"ms")
+      
+      SetGadgetText(GadgetModText, "")
       HideGadget(GadgetModProgress, #True)
       
-      debugger::Add("DeactivateThread() - finish deactivation...")
+      debugger::Add("DeactivateThread() - remove mod from filetracker")
       SetGadgetText(GadgetModText, "Cleanup...")
       
       ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
@@ -1025,6 +1045,7 @@ EndProcedure
       RemovePreferenceGroup(\name$)
       ClosePreferences()
       
+      debugger::Add("DeactivateThread() - update modinfo")
       \active = #False
       WriteModToIni(*modinfo) ; update mod entry
       
@@ -1613,9 +1634,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 164
-; FirstLine = 75
-; Folding = KCBIG+
-; Markers = 1475
+; CursorPosition = 834
+; FirstLine = 381
+; Folding = CAFIC+
 ; EnableUnicode
 ; EnableXP
