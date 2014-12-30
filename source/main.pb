@@ -81,7 +81,14 @@ Procedure init()
     End
   EndIf
   
-;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
+  ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    debugger::Add("CurrentDirectory = {"+GetCurrentDirectory()+"}")
+    misc::CreateDirectoryAll(misc::path(GetHomeDirectory()+"/.tfmm"))
+    SetCurrentDirectory(misc::path(GetHomeDirectory()+"/.tfmm"))
+    debugger::Add("CurrentDirectory = {"+GetCurrentDirectory()+"}")
+  CompilerEndIf
+  
   
   images::LoadImages()
   
@@ -184,8 +191,9 @@ Repeat
   EndSelect
 ForEver
 End
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 12
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 88
+; FirstLine = 36
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

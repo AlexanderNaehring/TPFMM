@@ -15,6 +15,10 @@ DeclareModule misc
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
   Declare openLink(link$)
   Declare ResizeCenterImage(im, width, height)
+  Declare HexStrToMem(hex$, *memlen = 0)
+  Declare.s MemToHexStr(*mem, memlen.i)
+  Declare.s FileToHexStr(file$)
+  Declare HexStrToFile(hex$, file$)
 EndDeclareModule
 
 
@@ -22,7 +26,7 @@ Module misc
   Macro Min(a,b)
     (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
   EndMacro
- 
+  
   Procedure.s Path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
     path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
@@ -41,7 +45,7 @@ Module misc
     EndIf
     ProcedureReturn path$  
   EndProcedure
-
+  
   Procedure CreateDirectoryAll(dir$, delimiter$ = "")
     Protected result, dir_sub$, dir_total$, count
     If delimiter$ = ""
@@ -73,7 +77,7 @@ Module misc
     Wend
     ProcedureReturn #True
   EndProcedure
-
+  
   Procedure.s Bytes(bytes.d)
     If bytes > 1024*1024*1024
       ProcedureReturn StrD(bytes/1024/1024/1024,2) + " GiB"
@@ -130,7 +134,7 @@ Module misc
       im_w * factor
       im_h * factor
       
-      ResizeImage(im, im_w, im_h)
+      ResizeImage(im, im_w, im_h, #PB_Image_Raw)
       
       image = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent)
       If StartDrawing(ImageOutput(image))
@@ -141,10 +145,77 @@ Module misc
       ProcedureReturn image
     EndIf
   EndProcedure
+  
+  Procedure HexStrToMem(hex$, *memlen = 0)
+    debugger::Add("misc::HexStrToMem("+hex$+")")
+    Protected strlen.i, memlen.i, pos.i, *memory
+    strlen = Len(hex$)
+    If strlen % 2 = 1 Or strlen = 0
+      ProcedureReturn #False
+    EndIf
+    memlen = strlen / 2
+    *memory = AllocateMemory(memlen, #PB_Memory_NoClear)
+    If Not *memory
+      debugger::Add("misc::HexStrToMem() - Error allocating memory")
+      ProcedureReturn #False
+    EndIf
+    For pos = 0 To memlen-1
+      PokeB(*memory+pos, Val("$"+Mid(hex$, 1+pos*2, 2)))
+    Next pos
+    If *memlen
+      PokeI(*memlen, memlen)
+    EndIf
+    ProcedureReturn *memory
+  EndProcedure
+  
+  Procedure.s MemToHexStr(*mem, memlen.i)
+    debugger::Add("misc::MemToHexStr("+Str(*mem)+", "+Str(memlen)+")")
+    Protected hex$ = ""
+    Protected pos.i
+    For pos = 0 To memlen-1
+      hex$ + RSet(Hex(PeekB(*mem+pos), #PB_Byte), 2, "0")
+    Next pos
+    ProcedureReturn hex$
+  EndProcedure
+  
+  Procedure.s FileToHexStr(file$)
+    debugger::Add("misc::FileToHexStr("+file$+")")
+    Protected hex$ = ""
+    Protected file.i, *memory, size.i
+    
+    size = FileSize(file$)
+    If size > 0
+      *memory = AllocateMemory(FileSize(file$))
+      If *memory
+        file = ReadFile(#PB_Any, file$)
+        If file
+          ReadData(file, *memory, FileSize(file$))
+          CloseFile(file)
+          hex$ = MemToHexStr(*memory, size)
+          FreeMemory(*memory)
+          ProcedureReturn hex$
+        EndIf
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure HexStrToFile(hex$, file$)
+    debugger::Add("misc::HexStrToFile("+hex$+")")
+    Protected file.i, *memory, memlen.i
+    *memory = HexStrToMem(hex$, @memlen)
+    file = CreateFile(#PB_Any, file$)
+    If file
+      WriteData(file, *memory, memlen)
+      CloseFile(file)
+      ProcedureReturn #True
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 118
-; FirstLine = 44
-; Folding = dn-
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 136
+; FirstLine = 28
+; Folding = NF-
 ; EnableUnicode
 ; EnableXP

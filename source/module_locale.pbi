@@ -38,7 +38,6 @@ Module locale
   EndProcedure
   
   Procedure init()
-    
     Protected file.i
     If Not init
       debugger::Add("locale::init()")
@@ -57,7 +56,6 @@ Module locale
       misc::extractBinary(path$ + "en.locale", ?DataLocaleEnglish, ?DataLocaleEnglishEnd - ?DataLocaleEnglish, #True)
       misc::extractBinary(path$ + "en.png", ?DataLocaleEnglishFlag, ?DataLocaleEnglishFlagEnd - ?DataLocaleEnglishFlag, #False)
       misc::extractBinary(path$ + "de.locale", ?DataLocaleGerman, ?DataLocaleGermanEnd - ?DataLocaleGerman, #True)
-      misc::extractBinary(path$ + "de.png", ?DataLocaleGermanFlag, ?DataLocaleGermanFlagEnd - ?DataLocaleGermanFlag, #False)
       
       ; load fallback (EN)
       ClearMap(localeEN$())
@@ -68,6 +66,7 @@ Module locale
   EndProcedure
   
   Procedure listAvailable(ComboBoxGadget, current_locale$)
+    init()
     debugger::Add("locale::listAvailable()")
     Protected dir.i, count.i
     Protected file$, locale$, name$
@@ -107,6 +106,7 @@ Module locale
   EndProcedure
     
   Procedure use(locale$)
+    init()
     debugger::Add("locale::use("+locale$+")")
     
     current_locale$ = locale$
@@ -138,6 +138,7 @@ Module locale
   EndProcedure
   
   Procedure.s getEx(group$, string$, Map var$())
+    init()
     Protected out$, key$
     
     If group$ = "" Or string$ = ""
@@ -168,22 +169,48 @@ Module locale
   EndProcedure
   
   Procedure.s get(group$, string$)
+    init()
     Protected NewMap var$()
     ProcedureReturn getEx(group$, string$, var$())
   EndProcedure
   
   Procedure getFlag(locale$)
+    init()
     Protected im.i
     Protected max_w.i, max_h.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
+    Protected flag$, *image
     Static NewMap flag()
     
     If flag(locale$)
       ProcedureReturn ImageID(flag(locale$))
     EndIf
     
-    im = LoadImage(#PB_Any, path$ + locale$ + ".png")
+    OpenPreferences(path$ + locale$ + ".locale")
+    flag$ = ReadPreferenceString("flag", "")
+    If flag$ = ""
+      debugger::Add("locale::getFlag() - no hex found")
+      If FileSize(path$ + locale$ + ".png")
+        flag$ = misc::FileToHexStr(path$ + locale$ + ".png")
+        DeleteFile(path$ + locale$ + ".png")
+        debugger::Add("locale::getFlag() - read flag from file: {flag="+flag$+"}")
+        WritePreferenceString("flag", flag$)
+      EndIf
+    Else
+      DeleteFile(path$ + locale$ + ".png")
+    EndIf
+    ClosePreferences()
+    
+    *image = misc::HexStrToMem(flag$)
+    If *image
+      im = CatchImage(#PB_Any, *image, MemorySize(*image))
+      FreeMemory(*image)
+    Else
+      debugger::Add("locale::getFlag() - Error: {*image="+Str(*image)+"}")
+    EndIf
+    
     If im
       flag(locale$) = misc::ResizeCenterImage(im, 20, 20)
+      FreeImage(im)
       ProcedureReturn ImageID(flag(locale$))
     EndIf
     ProcedureReturn 0
@@ -200,18 +227,12 @@ Module locale
     DataLocaleGerman:
     IncludeBinary "locale/de.locale"
     DataLocaleGermanEnd:
-    DataLocaleGermanFlag:
-    IncludeBinary "locale/de.png"
-    DataLocaleGermanFlagEnd:
   EndDataSection
-  
-  init() ; call init when loading module
 EndModule
 
-
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 187
-; FirstLine = 22
-; Folding = H5
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 57
+; FirstLine = 30
+; Folding = X5
 ; EnableUnicode
 ; EnableXP
