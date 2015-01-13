@@ -85,9 +85,12 @@ Procedure InitWindows()
   For i = 0 To 5
     If ReadPreferenceInteger(Str(i), 0)
       SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+      ; Sorting
+      ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
     EndIf
   Next
   ClosePreferences()
+  
   
   ; init gui
   updateGUI()
@@ -879,8 +882,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 699
-; FirstLine = 91
-; Folding = CABAAAg
+; CursorPosition = 88
+; FirstLine = 63
+; Folding = DAAAAAg
 ; EnableUnicode
 ; EnableXP

@@ -809,7 +809,6 @@ EndProcedure
             ; this also works with automatic overwrite in case of MD5 match since only the currently installed file is checked
           EndIf
         Next
-        SetGadgetText(GadgetModText, "")
         
         ; --------------------------------------------------------------------------------------------------
         ; copy file
@@ -855,6 +854,7 @@ EndProcedure
         SetGadgetState(GadgetModProgress, i)
       Next
       debugger::Add("ActivateThread() - processed files in "+Str(ElapsedMilliseconds()-time)+"ms")
+      SetGadgetText(GadgetModText, "")
       
       ; --------------------------------------------------------------------------------------------------
       ; install finished
@@ -1634,8 +1634,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 834
-; FirstLine = 381
-; Folding = CAFIC+
+; CursorPosition = 176
+; FirstLine = 79
+; Folding = CABIC+
 ; EnableUnicode
 ; EnableXP

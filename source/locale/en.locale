@@ -110,6 +110,7 @@ vehicle/train             = Train
 vehicle/train/steam       = Steamer
 vehicle/train/diesel      = Diesel Engine
 vehicle/train/electric    = Electric Locomotive
+vehicle/train/railcar     = Railcar
 vehicle/wagon             = Wagon
 vehicle/wagon/passenger   =	Passenger Wagon
 vehicle/wagon/goods       = Goods Wagon

@@ -112,6 +112,7 @@ vehicle/train             = Zug
 vehicle/train/steam       = Dampflokomotive
 vehicle/train/diesel      = Diesellokomotive
 vehicle/train/electric    = Elektrolokomotive
+vehicle/train/railcar     = Triebwagen
 vehicle/wagon             = Waggon
 vehicle/wagon/passenger   =	Passagierwaggon
 vehicle/wagon/goods       = Güterwaggon
