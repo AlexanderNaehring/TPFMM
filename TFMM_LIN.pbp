@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2014-12-30 19:07" user="alexander" host="mint"/>
+    <lastopen date="2015-01-13 17:20" user="alexander" host="mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="84a36557f6d26d20e54495ee61e5366d"/>
+      <fingerprint md5="a66952a143dd7118db64d4442a79de4c"/>
     </file>
     <file name="source/module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -29,15 +29,15 @@
     </file>
     <file name="source/module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="c66f41402c26d4828f7fdf9c0138a9b4"/>
+      <fingerprint md5="381511f521070a369fae9a783315cc4e"/>
     </file>
     <file name="source/module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="2be9f983acb842d82e558a63ebd5ed81"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="fc951bcb0e368c4973ac6f6e9f082c28"/>
     </file>
     <file name="source/module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="05579ed69dc6357796d0f3921c02f043"/>
+      <fingerprint md5="386e4c4ddefb18858a0d5063cd45f550"/>
     </file>
     <file name="source/module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -61,7 +61,7 @@
     </file>
     <file name="source/Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="0411131e1faf3753d394749d7b481082"/>
+      <fingerprint md5="97605026ee7ee0459391370f5b09781f"/>
     </file>
     <file name="source/WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -74,7 +74,7 @@
       <outputfile value="bin/lin64/TFMM"/>
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1" debug="1"/>
-      <compilecount enable="1" value="1334"/>
+      <compilecount enable="1" value="1316"/>
       <buildcount enable="1" value="68"/>
       <execonstant enable="1"/>
     </target>
