@@ -586,7 +586,7 @@ EndProcedure
           *tmpinfo.mod = ListIcon::GetListItemData(ListInstalled, i)
           If *tmpinfo\active
             If *tmpinfo\name$ = ReqMod$ Or *tmpinfo\id$ = ReqMod$ ; TODO ID check as only option? - other option? - think about...
-              If *tmpinfo\version$ = ReqVer$ Or ReqVer$ = ""
+              If ReqVer$ = "" Or *tmpinfo\version$ = ReqVer$ Or *tmpinfo\version$ >= ReqVer$
                 debugger::Add("ActivateThread() - dependency match found :)")
                 ok = #True
                 Break
@@ -1634,8 +1634,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 176
-; FirstLine = 79
-; Folding = CABIC+
+; CursorPosition = 588
+; FirstLine = 281
+; Folding = CKFIC+
 ; EnableUnicode
 ; EnableXP

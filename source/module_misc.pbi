@@ -1,9 +1,8 @@
 ﻿Macro Min(a,b)
-   (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
- EndMacro
- 
+  (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
+EndMacro
 Macro Max(a,b)
-   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
 EndMacro
 
 DeclareModule misc
@@ -11,6 +10,7 @@ DeclareModule misc
   
   Declare.s Path(path$, delimiter$ = "")
   Declare.s Bytes(bytes.d)
+  Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
   Declare openLink(link$)
@@ -21,12 +21,14 @@ DeclareModule misc
   Declare HexStrToFile(hex$, file$)
 EndDeclareModule
 
-
 Module misc
   Macro Min(a,b)
     (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
   EndMacro
-  
+  Macro Max(a,b)
+   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  EndMacro
+ 
   Procedure.s Path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
     path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
@@ -90,6 +92,13 @@ Module misc
     Else
       ProcedureReturn ""
     EndIf
+  EndProcedure
+  
+  Procedure VersionCheck(current$, required$)
+  If current$ >= required$
+    ProcedureReturn #True
+  EndIf
+  ProcedureReturn #False
   EndProcedure
   
   Procedure extractBinary(filename$, *adress, len.i, overwrite = #True)
@@ -213,9 +222,8 @@ Module misc
   EndProcedure
   
 EndModule
-; IDE Options = PureBasic 5.31 (Linux - x64)
-; CursorPosition = 136
-; FirstLine = 28
-; Folding = NF-
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 24
+; Folding = vqA+
 ; EnableUnicode
 ; EnableXP

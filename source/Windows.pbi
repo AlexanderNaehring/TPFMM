@@ -37,7 +37,6 @@ Declare ResizeUpdate()
 
 Procedure InitWindows()
   debugger::Add("init windows")
-  Protected i.i
   
   ; Open Windows
   OpenWindowMain()
@@ -78,19 +77,6 @@ Procedure InitWindows()
   
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
-  
-  ; reload column sizing
-  OpenPreferences("TFMM.ini")
-  PreferenceGroup("columns")
-  For i = 0 To 5
-    If ReadPreferenceInteger(Str(i), 0)
-      SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
-      ; Sorting
-      ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
-    EndIf
-  Next
-  ClosePreferences()
-  
   
   ; init gui
   updateGUI()
@@ -882,8 +868,8 @@ EndProcedure
 
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 88
-; FirstLine = 63
+; CursorPosition = 38
+; FirstLine = 36
 ; Folding = DAAAAAg
 ; EnableUnicode
 ; EnableXP

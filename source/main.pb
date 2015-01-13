@@ -89,7 +89,6 @@ Procedure init()
     debugger::Add("CurrentDirectory = {"+GetCurrentDirectory()+"}")
   CompilerEndIf
   
-  
   images::LoadImages()
   
   OpenPreferences("TFMM.ini")
@@ -100,7 +99,10 @@ Procedure init()
   
   debugger::Add("load settings")
   OpenPreferences("TFMM.ini")
+  
   TF$ = ReadPreferenceString("path", "")
+  
+  ; Window Location
   If ReadPreferenceInteger("windowlocation", #False)
     PreferenceGroup("window")
     ResizeWindow(WindowMain,
@@ -108,13 +110,30 @@ Procedure init()
                  ReadPreferenceInteger("y", #PB_Ignore),
                  ReadPreferenceInteger("width", #PB_Ignore),
                  ReadPreferenceInteger("height", #PB_Ignore))
+    PreferenceGroup("")
   EndIf
+  
+  ; reload column sizing
+  Protected i.i
+  PreferenceGroup("columns")
+  For i = 0 To 5
+    If ReadPreferenceInteger(Str(i), 0)
+      SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+      ; Sorting
+      ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
+    EndIf
+  Next
+  PreferenceGroup("")
+  
+  ; update
   If ReadPreferenceInteger("update", 0)
     CreateThread(@checkUpdate(), 1)
   EndIf
+  
   ClosePreferences()
   
   SetGadgetText(GadgetPath, TF$)
+  
   If TF$ = ""
     ; no path specified upon program start -> open settings dialog
     MenuItemSettings(0)
@@ -191,9 +210,9 @@ Repeat
   EndSelect
 ForEver
 End
-; IDE Options = PureBasic 5.31 (Linux - x64)
-; CursorPosition = 88
-; FirstLine = 36
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 116
+; FirstLine = 67
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

@@ -54,7 +54,6 @@ Module locale
       ; create locale files
       misc::CreateDirectoryAll(path$)
       misc::extractBinary(path$ + "en.locale", ?DataLocaleEnglish, ?DataLocaleEnglishEnd - ?DataLocaleEnglish, #True)
-      misc::extractBinary(path$ + "en.png", ?DataLocaleEnglishFlag, ?DataLocaleEnglishFlagEnd - ?DataLocaleEnglishFlag, #False)
       misc::extractBinary(path$ + "de.locale", ?DataLocaleGerman, ?DataLocaleGermanEnd - ?DataLocaleGerman, #True)
       
       ; load fallback (EN)
@@ -191,9 +190,9 @@ Module locale
       debugger::Add("locale::getFlag() - no hex found")
       If FileSize(path$ + locale$ + ".png")
         flag$ = misc::FileToHexStr(path$ + locale$ + ".png")
-        DeleteFile(path$ + locale$ + ".png")
-        debugger::Add("locale::getFlag() - read flag from file: {flag="+flag$+"}")
-        WritePreferenceString("flag", flag$)
+;         DeleteFile(path$ + locale$ + ".png")
+;         debugger::Add("locale::getFlag() - read flag from file: {flag="+flag$+"}")
+;         WritePreferenceString("flag", flag$)
       EndIf
     Else
       DeleteFile(path$ + locale$ + ".png")
@@ -220,9 +219,6 @@ Module locale
     DataLocaleEnglish:
     IncludeBinary "locale/en.locale"
     DataLocaleEnglishEnd:
-    DataLocaleEnglishFlag:
-    IncludeBinary "locale/en.png"
-    DataLocaleEnglishFlagEnd:
     
     DataLocaleGerman:
     IncludeBinary "locale/de.locale"
@@ -230,9 +226,9 @@ Module locale
   EndDataSection
 EndModule
 
-; IDE Options = PureBasic 5.31 (Linux - x64)
-; CursorPosition = 57
-; FirstLine = 30
-; Folding = X5
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 196
+; FirstLine = 31
+; Folding = H5
 ; EnableUnicode
 ; EnableXP
