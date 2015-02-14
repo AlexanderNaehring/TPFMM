@@ -445,7 +445,7 @@ EndProcedure
         Continue
       EndIf
       
-      If PackEntryType(zip) = #PB_Packer_File
+      If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
         If FindString(PackEntryName(zip), "res/") ; only extract files to list which are located in subfoldres of res/
           File$ = PackEntryName(zip)
           File$ = Mid(File$, FindString(File$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
@@ -1634,8 +1634,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 588
-; FirstLine = 281
-; Folding = CKFIC+
+; CursorPosition = 447
+; FirstLine = 92
+; Folding = CQBIC+
 ; EnableUnicode
 ; EnableXP
