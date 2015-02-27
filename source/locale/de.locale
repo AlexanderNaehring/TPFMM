@@ -33,7 +33,6 @@ deactivate_pl   = Deaktiviere Modifikationen
 uninstall       = Lösche Modifikation
 uninstall_pl    = Lösche Modifikationen
 information     = Informationen
-
 [settings]
 title           = TFMM Einstellungen
 path            = Train Fever Verzeichnis
@@ -103,23 +102,30 @@ change    = Anpassen
 save      = Speichern
 
 [category]
-tool                      = Tool
-pack                      = Mod-Pack
-vehicle	                  = Fahrzeug
-vehicle/bus               = Bus
-vehicle/tram              = Straßenbahn
-vehicle/train             = Zug
-vehicle/train/steam       = Dampflokomotive
-vehicle/train/diesel      = Diesellokomotive
-vehicle/train/electric    = Elektrolokomotive
-vehicle/train/railcar     = Triebwagen
-vehicle/wagon             = Waggon
-vehicle/wagon/passenger   =	Passagierwaggon
-vehicle/wagon/goods       = Güterwaggon
-building                  = Gebäude
-building/station          = Bahnhof
-building/deco             = Dekoration
-building/town             = Stadtgebäude
-building/depot            = Depot
-building/signal           = Signal / Wegpunkt
-other                     = anderes
+tool        = Tool
+pack        = Mod-Pack
+vehicle	    = Fahrzeug
+bus         = Bus
+tram        = Straßenbahn
+train       = Zug
+steam       = Dampflokomotive
+diesel      = Diesellokomotive
+electric    = Elektrolokomotive
+railcar     = Triebwagen
+wagon       = Waggon
+passenger   =	Passagierwaggon
+goods       = Güterwaggon
+building    = Gebäude
+station     = Bahnhof
+deco        = Dekoration
+town        = Stadtgebäude
+depot       = Depot
+signal      = Signal
+waypoint    = Wegpunkt
+other       = anderes
+
+[conversion]
+title       = Konvertierung
+start       = TFMM hat Modifikationen gefunden, die mit dem alten Mod-System aktiviert wurden.\nSeit dem 27. Februar 2015 benutzt Train Fever ein neues Modding System. Alle Modifikationen sollten in das neue Format umgewandelt werden. Dadurch erkennt Train Fever die Modifikationen und diese können dann im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen nun automatisiert in das neue Format umgewandelt werden?
+finish      = Die Umwandlung ist abgeschlossen.\nEs wird DRINGEND empfohlen, den Train Fever Installationsordner manuell zu säubern.\nLösche hierzu den "res/" Ordner im Train Fever Verzeichnis und führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch. Hilfe dazu findest Du auf train-fever.net.
+legacy      = Bitte nutze TFMM v0.7 für den Legacy-Modus.

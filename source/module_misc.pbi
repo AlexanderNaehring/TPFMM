@@ -19,6 +19,7 @@ DeclareModule misc
   Declare.s MemToHexStr(*mem, memlen.i)
   Declare.s FileToHexStr(file$)
   Declare HexStrToFile(hex$, file$)
+  Declare.s luaEscape(s$)
 EndDeclareModule
 
 Module misc
@@ -221,9 +222,15 @@ Module misc
     ProcedureReturn #False
   EndProcedure
   
+  Procedure.s luaEscape(s$)
+    s$ = ReplaceString(s$, #DQUOTE$, "\"+#DQUOTE$)
+    ProcedureReturn s$
+  EndProcedure
+  
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 24
+; CursorPosition = 223
+; FirstLine = 8
 ; Folding = vqA+
 ; EnableUnicode
 ; EnableXP

@@ -1,5 +1,7 @@
 ﻿; modified from http://www.purebasic.fr/english/viewtopic.php?f=40&t=56876
 
+XIncludeFile "module_misc.pbi"
+
 DeclareModule unrar
   #ERAR_SUCCESS             = 0
   #ERAR_END_ARCHIVE         = 10
@@ -176,8 +178,7 @@ Module unrar
   CompilerEndIf
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 129
-; FirstLine = 99
-; Folding = --
+; CursorPosition = 118
+; Folding = 9-
 ; EnableUnicode
 ; EnableXP

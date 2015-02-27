@@ -43,6 +43,9 @@ Procedure InitWindows()
   OpenWindowSettings()
   OpenWindowModProgress()
   
+  HideGadget(GadgetDeactivate, 1)
+  HideGadget(GadgetActivate, 1)
+  
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
@@ -55,10 +58,12 @@ Procedure InitWindows()
     UnuseModule ListIcon
   CompilerEndIf
   CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Windows")
     CompilerCase #PB_OS_Linux
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Linux")
     CompilerCase #PB_OS_MacOS
-      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for MacOS ALPHA")
+      SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for MacOS")
   CompilerEndSelect
   
   ; load images
@@ -506,7 +511,7 @@ Procedure GadgetSaveSettings(event)
   EndIf
   
   FreeModList()
-  LoadModList()
+  ;LoadModList()
   GadgetCloseSettings(event)
 EndProcedure
 
@@ -864,12 +869,9 @@ Procedure GadgetInformationLinkTFNET(event)
   misc::openLink(link$)
 EndProcedure
 
-
-
-
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 38
-; FirstLine = 36
-; Folding = DAAAAAg
+; CursorPosition = 513
+; FirstLine = 110
+; Folding = DAQAAAg
 ; EnableUnicode
 ; EnableXP

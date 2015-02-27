@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.6." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.8." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #True
 
 Enumeration
@@ -23,6 +23,7 @@ XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
+XIncludeFile "module_conversion.pbi"
 
 CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
   MessageRequester("TFMM for Mac OS", "TFMM for Mac OS is still in Beta. Please use with caution!")
@@ -80,6 +81,11 @@ Procedure init()
     MessageRequester("Error", "Could not initialize JPEG Decoder.")
     End
   EndIf
+  If Not UseTGAImageDecoder()
+    debugger::Add("ERROR: UseTGAImageDecoder()")
+    MessageRequester("Error", "Could not initialize TGA Decoder.")
+    End
+  EndIf
   
   ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
   CompilerIf #PB_Compiler_OS = #PB_OS_Linux
@@ -111,19 +117,19 @@ Procedure init()
                  ReadPreferenceInteger("width", #PB_Ignore),
                  ReadPreferenceInteger("height", #PB_Ignore))
     PreferenceGroup("")
+    ; reload column sizing
+    Protected i.i
+    PreferenceGroup("columns")
+    For i = 0 To 5
+      If ReadPreferenceInteger(Str(i), 0)
+        SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        ; Sorting
+        ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
+      EndIf
+    Next
+    PreferenceGroup("")
   EndIf
   
-  ; reload column sizing
-  Protected i.i
-  PreferenceGroup("columns")
-  For i = 0 To 5
-    If ReadPreferenceInteger(Str(i), 0)
-      SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
-      ; Sorting
-      ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
-    EndIf
-  Next
-  PreferenceGroup("")
   
   ; update
   If ReadPreferenceInteger("update", 0)
@@ -139,7 +145,15 @@ Procedure init()
     MenuItemSettings(0)
     GadgetButtonAutodetect(0)
   EndIf
-  LoadModList()
+  
+  If TF$ <> ""
+    ;LoadModList()
+    
+    ; one time conversion to new mod system
+    conversion::convert(TF$)
+    
+    ; load list of new mods
+  EndIf
   
   debugger::Add("init complete")
 EndProcedure
@@ -211,8 +225,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 116
-; FirstLine = 67
+; CursorPosition = 87
+; FirstLine = 33
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

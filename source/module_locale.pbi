@@ -9,6 +9,10 @@ EndMacro
 DeclareModule locale
   EnableExplicit
   
+  Macro l(g,s)
+    locale::get(g,s)
+  EndMacro
+  
   Declare listAvailable(ComboBoxGadget, current_locale$)
   Declare use(new_locale$)
   Declare.s getEx(group$, string$, Map var$())
@@ -227,8 +231,7 @@ Module locale
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 196
-; FirstLine = 31
-; Folding = H5
+; CursorPosition = 6
+; Folding = Pg
 ; EnableUnicode
 ; EnableXP
