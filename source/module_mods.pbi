@@ -713,8 +713,8 @@ Module mods
       lua$ = "function data()" + #CRLF$ +
              "return {" + #CRLF$
       lua$ + "  minorVersion = "+Str(\minorVersion)+"," + #CRLF$
-      lua$ + "  severityAdd = "+#DQUOTE$+"WARNING"+#DQUOTE$+"," + #CRLF$
-      lua$ + "  severityRemove = "+#DQUOTE$+"CRITICAL"+#DQUOTE$+"," + #CRLF$
+      lua$ + "  severityAdd = "+#DQUOTE$+misc::luaEscape(\severityAdd$)+#DQUOTE$+"," + #CRLF$
+      lua$ + "  severityRemove = "+#DQUOTE$+misc::luaEscape(\severityRemove$)+#DQUOTE$+"," + #CRLF$
       lua$ + "  name = _("+#DQUOTE$+misc::luaEscape(\name$)+#DQUOTE$+")," + #CRLF$
       lua$ + "  description = _("+#DQUOTE$+" "+#DQUOTE$+")," + #CRLF$
       lua$ + "  authors = {" + #CRLF$
@@ -734,9 +734,13 @@ Module mods
       Next
       lua$ + "}," + #CRLF$
       lua$ + "  tfnetId = "+Str(\tfnetId)+"," + #CRLF$
-      lua$ + "  minGameVersion = 5399," + #CRLF$
-      lua$ + "  dependencies = { }," + #CRLF$
-      lua$ + "  url = "+#DQUOTE$+""+#DQUOTE$+"," + #CRLF$
+      lua$ + "  minGameVersion = "+Str(\minGameVersion)+"," + #CRLF$
+      lua$ + "  dependencies = {"
+      ForEach \dependencies$()
+        lua$ + #DQUOTE$+\dependencies$()+#DQUOTE$+", "
+      Next
+      lua$ + "}," + #CRLF$
+      lua$ + "  url = "+#DQUOTE$+misc::luaEscape(\url$)+#DQUOTE$+"," + #CRLF$
       lua$ + "}" + #CRLF$ +
            "end"
     EndWith
@@ -2032,8 +2036,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 598
-; FirstLine = 43
+; CursorPosition = 719
+; FirstLine = 142
 ; Folding = TIwCRQ5
 ; EnableUnicode
 ; EnableXP
