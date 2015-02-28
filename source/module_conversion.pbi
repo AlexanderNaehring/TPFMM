@@ -72,26 +72,26 @@ Module conversion
       Protected *mod.mods::mod
       *mod = mods::initMod()
       With *mod
-        \file$  = ReadPreferenceString("id","")
+        \aux\file$  = ReadPreferenceString("id","")
         \id$    = ReadPreferenceString("id","")
         \name$  = ReadPreferenceString("name","")
-        \version\version$ = ReadPreferenceString("version","")
-        \version\major   = Val(StringField(\version\version$, 1, "."))
-        \version\minor   = Val(StringField(\version\version$, 2, "."))
-        Protected author$, tfnet_author_id$, count.i, i.i
-        author$ = ReadPreferenceString("author","")
-        tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id","")
-        If author$
-          count  = CountString(author$, ",") + 1
+        \aux\version$ = ReadPreferenceString("version","")
+        \majorVersion   = Val(StringField(\aux\version$, 1, "."))
+        \minorVersion   = Val(StringField(\aux\version$, 2, "."))
+        Protected count.i, i.i
+        \aux\author$ = ReadPreferenceString("author","")
+        \aux\tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id","")
+        If \aux\author$
+          count  = CountString(\aux\author$, ",") + 1
           For i = 1 To count
             AddElement(\authors())
-            \authors()\name$ = Trim(StringField(author$, i, ","))
+            \authors()\name$ = Trim(StringField(\aux\author$, i, ","))
             If i = 1
               \authors()\role$ = "CREATOR"
             Else
               \authors()\role$ = "CO_CREATOR"
             EndIf
-            \authors()\tfnetId = Val(Trim(StringField(tfnet_author_id$, i, ",")))
+            \authors()\tfnetId = Val(Trim(StringField(\aux\tfnet_author_id$, i, ",")))
           Next i
         EndIf
         Protected tags$
@@ -122,7 +122,7 @@ Module conversion
       debugger::Add("conversion::convert() - write LUA -> {"+info_lua$+"}")
       info_lua = CreateFile(#PB_Any, info_lua$)
       If info_lua
-        WriteString(info_lua, *mod\lua$, #PB_UTF8)
+        WriteString(info_lua, *mod\aux\lua$, #PB_UTF8)
         CloseFile(info_lua)
       EndIf
       
@@ -160,8 +160,8 @@ Module conversion
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 48
-; FirstLine = 14
+; CursorPosition = 93
+; FirstLine = 58
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

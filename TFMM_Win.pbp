@@ -2,18 +2,22 @@
 
 <project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
   <section name="config">
-    <options closefiles="1" openmode="2" name="TFMM"/>
+    <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
   </section>
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-02-27 12:04" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-02-28 10:39" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="0ee72f7ca2fa72ee89246af0634fadc5"/>
+      <fingerprint md5="56fa31a446fbfcce05c88ba37b7e40ea"/>
+    </file>
+    <file name="source\module_conversion.pbi">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="9c8b8e15d24ed241097f8e0c9ac32b76"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -28,16 +32,16 @@
       <fingerprint md5="95bbac511bf2f374cb76a61034c11565"/>
     </file>
     <file name="source\module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="051f2b2ee2c60aa9d2468709c3924428"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="cdb181a5c173399921334989fc80cdbf"/>
     </file>
     <file name="source\module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="5456dbe4846bff0010e61b3bcdf4ef7d"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="04a4e4eb4203395e3e7a731a238d4aaf"/>
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="bdc59d52091bb7fb2e42a8c372c9332e"/>
+      <fingerprint md5="67c773aed5973af8eb294e07ddbb6d35"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -45,7 +49,7 @@
     </file>
     <file name="source\module_unrar.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="7f0e94c712cadb0ab295c63c4870ea01"/>
+      <fingerprint md5="5c1439f7815e349fe40d37a309b97ac4"/>
     </file>
     <file name="source\WindowMain.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -61,7 +65,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="70aa8608fc6e68663f6b0e2d50a226fe"/>
+      <fingerprint md5="e18e1bb7821eec347906ff4da26505cd"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -76,12 +80,12 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1317"/>
+      <compilecount enable="1" value="1391"/>
       <buildcount enable="1" value="69"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
-        <field0 value="0,6,%BUILDCOUNT,%COMPILECOUNT"/>
-        <field1 value="0,6,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
         <field3 value="Train Fever Mod Manager"/>
         <field4 value="%BUILDCOUNT"/>
         <field5 value="%COMPILECOUNT"/>

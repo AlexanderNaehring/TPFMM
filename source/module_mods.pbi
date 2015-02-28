@@ -5,10 +5,15 @@ XIncludeFile "module_unrar.pbi"
 DeclareModule mods
   EnableExplicit
   
-  Structure version
+  Structure aux
     version$
-    minor.i
-    major.i
+    author$
+    tfnet_author_id$
+    tags$
+    
+    file$
+    installed.i
+    lua$
   EndStructure
   
   Structure author
@@ -21,7 +26,10 @@ DeclareModule mods
   
   Structure mod
     id$
-    version.version
+    minorVersion.i
+    majorVersion.i
+    severityAdd$
+    severityRemove$
     name$
     description$
     List authors.author()
@@ -31,9 +39,7 @@ DeclareModule mods
     List dependencies$()
     url$
     
-    file$
-    installed.i
-    lua$
+    aux.aux
   EndStructure
   
   Declare initMod() ; allocate structure, return *mod
@@ -109,21 +115,23 @@ Module mods
     debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
     With *mod
       \id$ = ""
-      \version\version$ = ""
-      \version\major = 0
-      \version\minor = 0
+      \aux\version$ = ""
+      \majorVersion = 0
+      \minorVersion = 0
       \name$ = ""
       \description$ = ""
+      \aux\author$ = ""
       ClearList(\authors())
+      \aux\tags$ = ""
       ClearList(\tags$())
       \tfnetId = 0
       \minGameVersion = 0
       ClearList(\dependencies$())
       \url$ = ""
     
-      \file$ = ""
-      \installed = 0
-      \lua$ = ""
+      \aux\file$ = ""
+      \aux\installed = 0
+      \aux\lua$ = ""
     EndWith
   EndProcedure
   
@@ -207,8 +215,48 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure loadInfo(file$, *mod.mod) ; extract info from mod file (tfmm.ini, info.lua, ...)
-    debugger::Add("mods::GetModInfo("+file$+", "+Str(*mod)+")")
+  Procedure parseTFMMini(file$, *mod.mod)
+    debugger::Add("mods::parseTFMMini("+file$+", "+Str(*mod)+")")
+    OpenPreferences(file$)
+    With *mod
+      
+      \id$ = ReadPreferenceString("id", "")
+      \aux\version$ = ReadPreferenceString("version","0")
+      \name$ = ReadPreferenceString("name", \name$)
+      \aux\author$ = ReadPreferenceString("author", "")
+      \aux\tags$ = ReadPreferenceString("category", "")
+      
+      ClearList(\dependencies$())
+      
+      PreferenceGroup("online")
+      \tfnetId = ReadPreferenceInteger("tfnet_mod_id", 0)
+      \aux\tfnet_author_id$ = ReadPreferenceString("tfnet_author_id","")
+      \url$ = ReadPreferenceString("url","")
+      PreferenceGroup("")
+    
+      \aux\file$ = ""
+      \aux\installed = 0
+      \aux\lua$ = ""
+      
+      ; read dependencies from tfmm.ini
+      PreferenceGroup("dependencies")
+      If ExaminePreferenceKeys()
+        While NextPreferenceKey()
+          AddElement(\dependencies$())
+          \dependencies$() = PreferenceKeyName()
+        Wend
+      EndIf 
+    EndWith
+    ClosePreferences()
+  EndProcedure
+  
+  Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
+    debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod)+")")
+    ;TODO
+  EndProcedure
+  
+  Procedure loadInfo(file$, *mod.mod) ; extract info from mod file$ (tfmm.ini, info.lua, ...)
+    debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+")")
     
     Protected tmpDir$ = GetTemporaryDirectory()
     
@@ -217,7 +265,7 @@ Module mods
     
     ; read standard information
     With *mod
-      \file$ = GetFilePart(File$)
+      \aux\file$ = GetFilePart(File$)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -237,45 +285,18 @@ Module mods
     Protected count.i, i.i
     
     ; read tfmm.ini
-    OpenPreferences(tmpDir$ + "tfmm.ini")
-    With *mod
-      
-      \id$ = ReadPreferenceString("id", "")
-      \version\version$ = ReadPreferenceString("version","0")
-      \name$ = ReadPreferenceString("name", \name$)
-      author$ = ReadPreferenceString("author", "")
-      tags$ = ReadPreferenceString("category", "")
-      
-      ClearList(\dependencies$())
-      
-      PreferenceGroup("online")
-      \tfnetId = ReadPreferenceInteger("tfnet_mod_id", 0)
-      tfnet_author_id$ = ReadPreferenceString("tfnet_author_id","")
-      \url$ = ReadPreferenceString("url","")
-      PreferenceGroup("")
-    
-      \file$ = ""
-      \installed = 0
-      \lua$ = ""
-      
-      ;- - - - - - - -
-      
-    EndWith
-    ClosePreferences()
+    parseTFMMini(tmpDir$ + "tfmm.ini", *mod)
     DeleteFile(tmpDir$ + "tfmm.ini")
     
     ; read info.lua
-    
+    parseInfoLUA(tmpDir$ + "info.lua", *mod)
     DeleteFile(tmpDir$ + "info.lua")
-    
-    ;TODO ---------------------------------------------------------------
-    
     
     ; post processing
     With *mod
       \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
-      \version\major = Val(StringField(\version\version$, 1, "."))
-      \version\minor = Val(StringField(\version\version$, 2, "."))
+      \majorVersion = Val(StringField(\aux\version$, 1, "."))
+      \minorVersion = Val(StringField(\aux\version$, 2, "."))
       If author$
         author$ = ReplaceString(author$, "/", ",")
         count  = CountString(author$, ",") + 1
@@ -298,24 +319,9 @@ Module mods
       EndIf
     EndWith
     
+    generateID(*mod)
+    generateLUA(*mod)
     
-    
-    
-    With *mod
-      
-      ; read dependencies from tfmm.ini
-      If PreferenceGroup("dependencies")
-        If ExaminePreferenceKeys()
-          While NextPreferenceKey()
-            AddElement(\dependencies$())
-            \dependencies$() = PreferenceKeyName()
-          Wend
-        EndIf 
-      Else
-        ClearList(\dependencies$())
-      EndIf
-      ClosePreferences()
-    EndWith
     
     ProcedureReturn #True
   EndProcedure
@@ -396,7 +402,7 @@ Module mods
       ; Check if ID in old format
       author$   = StringField(\id$, 1, ".")
       name$     = StringField(\id$, CountString(\id$, ".")+1, ".")
-      version$  = Str(Abs(Val(StringField(\version\version$, 1, "."))))
+      version$  = Str(Abs(Val(StringField(\aux\version$, 1, "."))))
       \id$ = author$ + "_" + name$ + "_" + version$
       
       If \id$ And MatchRegularExpression(RegExp2, \id$)
@@ -417,7 +423,7 @@ Module mods
       If name$ = ""
         name$ = "unknown"
       EndIf
-      version$ = Str(Val(StringField(\version\version$, 1, "."))) ; first part of version string concatenated by "."
+      version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "."
       
       \id$ = author$ + "_" + name$ + "_" + version$
       
@@ -440,7 +446,7 @@ Module mods
     With *mod
       lua$ = "function data()" + #CRLF$ +
              "return {" + #CRLF$
-      lua$ + "  minorVersion = "+Str(\version\minor)+"," + #CRLF$
+      lua$ + "  minorVersion = "+Str(\minorVersion)+"," + #CRLF$
       lua$ + "  severityAdd = "+#DQUOTE$+"WARNING"+#DQUOTE$+"," + #CRLF$
       lua$ + "  severityRemove = "+#DQUOTE$+"CRITICAL"+#DQUOTE$+"," + #CRLF$
       lua$ + "  name = _("+#DQUOTE$+misc::luaEscape(\name$)+#DQUOTE$+")," + #CRLF$
@@ -469,7 +475,7 @@ Module mods
            "end"
     EndWith
     
-    *mod\lua$ = lua$
+    *mod\aux\lua$ = lua$
     ProcedureReturn #True
   EndProcedure
   
@@ -1760,8 +1766,7 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1504
-; FirstLine = 435
-; Folding = T6rQEE+
+; CursorPosition = 5
+; Folding = T6xCRQ5
 ; EnableUnicode
 ; EnableXP
