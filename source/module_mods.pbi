@@ -36,10 +36,9 @@ DeclareModule mods
     lua$
   EndStructure
   
-  Declare initMod()
-  Declare freeMod(*mod.mod)
-  Declare addMod(file$, TF$)
-  Declare loadInfo(*mod.mod)
+  Declare initMod() ; allocate structure, return *mod
+  Declare freeMod(*mod.mod) ; free *mod structure
+  Declare addMod(file$, TF$) ; read mod pack from any location, extract info
   Declare generateID(*mod.mod)
   Declare generateLUA(*mod.mod)
   
@@ -51,7 +50,7 @@ Module mods
   
   ;PRIVATE
   
-  Procedure CheckModFileZip(File$)
+  Procedure checkModFileZip(File$)
     debugger::Add("mods::CheckModFileZip("+File$+")")
     If OpenPack(0, File$)
       If ExaminePack(0)
@@ -67,7 +66,7 @@ Module mods
     ProcedureReturn #False
   EndProcedure
   
-  Procedure CheckModFileRar(File$)
+  Procedure checkModFileRar(File$)
     debugger::Add("mods::CheckModFileRar("+File$+")")
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
@@ -92,109 +91,235 @@ Module mods
     ProcedureReturn #False
   EndProcedure
   
-  Procedure CheckModFile(File$) ; Check mod for a "res" folder!
+  Procedure checkModFile(File$) ; Check mod for a "res" folder!
     debugger::Add("mods::CheckModFile("+File$+")")
     Protected extension$
     extension$ = LCase(GetExtensionPart(File$))
-    If CheckModFileZip(File$)
+    If checkModFileZip(File$)
       ProcedureReturn #True
     EndIf
-    If CheckModFileRar(File$)
+    If checkModFileRar(File$)
       ProcedureReturn #True
     EndIf
     
     ProcedureReturn #False
   EndProcedure
   
-  
-  Procedure GetModInfo(file$, *mod.mod)
-;     Protected tmpDir$, extension$, author$, tfnet_author_id$
-;     Protected count.i, i.i
-;     
-;     extension$ = LCase(GetExtensionPart(File$))
-;     tmpDir$ = GetTemporaryDirectory()
-;     
-;     With *mod
-;       \file$ = GetFilePart(File$)
-;       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
-;       ClearList(\authors())
-;       \version\version$ = ""
-;       
-;       ; read info from TFMM.ini in mod if any
-;       DeleteFile(tmpDir$ + "tfmm.ini", #PB_FileSystem_Force) ; clean old tfmm.ini if exists
-;                                                              ; TODO Check If tfmm.ini is deleted?
-;       
-;       Protected NewList Files$()
-;       AddElement(Files$())
-;       Files$() = "tfmm.ini"
-;       If extension$ = "zip"
-; ;         ExtractFilesZip(File$, Files$(), tmpDir$)
-;       ElseIf extension$ = "rar"
-; ;         ExtractFilesRar(File$, Files$(), tmpDir$)
-;       EndIf
-;       ClearList(Files$())
-;       
-;       OpenPreferences(tmpDir$ + "tfmm.ini")
-;       ; Read required TFMM version
-;       If ReadPreferenceInteger("tfmm", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-;         MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
-;       EndIf
-;       
-;       \id$ = ReadPreferenceString("id", "") ; ID will be checked after reading name & author
-;       \name$ = ReadPreferenceString("name", \name$)
-;       \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
-;       \version\version$ = ReadPreferenceString("version", \version\version$)
-;       author$ = ReadPreferenceString("author", "")
-;       author$ = ReplaceString(author$, "/", ",")
-;       \category$ = ReadPreferenceString("category", "")
-;       \categoryDisplay$ = l("category",\category$)
-;       
-;       ; read online category
-;       PreferenceGroup("online")
-;       tfnet_author_id$ = ReadPreferenceString("tfnet_author_id", "")
-;       \tfnet_mod_id = ReadPreferenceInteger("tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
-;       
-;       ; create author list
-;       count  = CountString(author$, ",") + 1
-;       For i = 1 To count
-;         AddElement(\author())
-;         \author()\name$ = Trim(StringField(author$, i, ","))
-;         \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
-;       Next i
-;       \authors$ = ""
-;       If ListSize(\author()) > 0
-;         ResetList(\author())
-;         ForEach \author()
-;           If \authors$ <> ""
-;             \authors$ + ", "
-;           EndIf
-;           \authors$ + \author()\name$
-;         Next
-;       EndIf
-;       
-;       ValidateID(*modinfo)
-;       
-;       ; read dependencies from tfmm.ini
-;       If PreferenceGroup("dependencies")
-;         debugger::Add("dependencies found:")
-;         If ExaminePreferenceKeys()
-;           While NextPreferenceKey()
-;             debugger::Add(PreferenceKeyName() + " = " + PreferenceKeyValue())
-;             \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
-;           Wend
-;         EndIf 
-;       Else
-;         debugger::Add("No dependencies")
-;         ClearMap(\dependencies$())
-;       EndIf
-;       ClosePreferences()
-;       
-;       DeleteFile(tmpDir$ + "tfmm.ini")
-;       
-;     EndWith
-;     
-;     ProcedureReturn #True
+  Procedure cleanModInfo(*mod.mod)
+    debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
+    With *mod
+      \id$ = ""
+      \version\version$ = ""
+      \version\major = 0
+      \version\minor = 0
+      \name$ = ""
+      \description$ = ""
+      ClearList(\authors())
+      ClearList(\tags$())
+      \tfnetId = 0
+      \minGameVersion = 0
+      ClearList(\dependencies$())
+      \url$ = ""
+    
+      \file$ = ""
+      \installed = 0
+      \lua$ = ""
+    EndWith
   EndProcedure
+  
+  Procedure ExtractFilesZip(zip$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
+    debugger::Add("mods::ExtractFilesZip("+zip$+", Files$(), "+dir$+")")
+    debugger::Add("mods::ExtractFilesZip() - search for:") : ForEach Files$() : debugger::Add(Files$()) : Next
+    
+    Protected zip, Entry$
+    dir$ = misc::Path(dir$)
+    
+    zip = OpenPack(#PB_Any, zip$, #PB_PackerPlugin_Zip)
+    If Not zip
+      debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
+      ProcedureReturn #False
+    EndIf
+    
+    If ExaminePack(zip)
+      While NextPackEntry(zip)
+        Entry$ = PackEntryName(zip)
+        
+        If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+          Continue
+        EndIf
+        
+        ForEach Files$()
+          If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
+            UncompressPackFile(zip, dir$ + Files$())
+            DeleteElement(Files$()) ; if file is extracted, delete from list
+            Break ; ForEach
+          EndIf
+        Next
+      Wend
+    EndIf
+    ClosePack(zip)
+    ProcedureReturn #True
+  EndProcedure
+
+  Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
+    debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
+    debugger::Add("ExtractFilesRar() - search for:") : ForEach Files$() : debugger::Add(Files$()) : Next
+    
+    Protected rarheader.unrar::RARHeaderDataEx
+    Protected hRAR, hit
+    Protected Entry$
+    dir$ = misc::Path(dir$)
+    
+    hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
+    If Not hRAR
+      debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
+      ProcedureReturn #False
+    EndIf
+    
+    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
+      CompilerIf #PB_Compiler_Unicode
+        Entry$ = PeekS(@rarheader\FileNameW)
+      CompilerElse
+        Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
+      CompilerEndIf
+      
+      ; filter out Mac OS X bullshit
+      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        Continue
+      EndIf
+      
+      hit = #False
+      ForEach Files$()
+        If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
+          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
+          DeleteElement(Files$()) ; if file is extracted, delete from list
+          hit = #True
+          Break ; ForEach
+        EndIf
+      Next
+      If Not hit
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
+      EndIf
+      
+    Wend
+    unrar::RARCloseArchive(hRAR)
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure loadInfo(file$, *mod.mod) ; extract info from mod file (tfmm.ini, info.lua, ...)
+    debugger::Add("mods::GetModInfo("+file$+", "+Str(*mod)+")")
+    
+    Protected tmpDir$ = GetTemporaryDirectory()
+    
+    ; clean info
+    cleanModInfo(*mod)
+    
+    ; read standard information
+    With *mod
+      \file$ = GetFilePart(File$)
+      \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
+    EndWith
+    
+    ; extract some files
+    DeleteFile(tmpDir$ + "tfmm.ini", #PB_FileSystem_Force)
+    DeleteFile(tmpDir$ + "info.lua", #PB_FileSystem_Force)
+    Protected NewList files$()
+    AddElement(files$()) : files$() = "tfmm.ini"
+    AddElement(files$()) : files$() = "info.lua"
+    If Not ExtractFilesZip(file$, files$(), tmpDir$)
+      If Not ExtractFilesRar(file$, files$(), tmpDir$)
+        debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
+      EndIf
+    EndIf
+    
+    Protected author$, tfnet_author_id$, tags$
+    Protected count.i, i.i
+    
+    ; read tfmm.ini
+    OpenPreferences(tmpDir$ + "tfmm.ini")
+    With *mod
+      
+      \id$ = ReadPreferenceString("id", "")
+      \version\version$ = ReadPreferenceString("version","0")
+      \name$ = ReadPreferenceString("name", \name$)
+      author$ = ReadPreferenceString("author", "")
+      tags$ = ReadPreferenceString("category", "")
+      
+      ClearList(\dependencies$())
+      
+      PreferenceGroup("online")
+      \tfnetId = ReadPreferenceInteger("tfnet_mod_id", 0)
+      tfnet_author_id$ = ReadPreferenceString("tfnet_author_id","")
+      \url$ = ReadPreferenceString("url","")
+      PreferenceGroup("")
+    
+      \file$ = ""
+      \installed = 0
+      \lua$ = ""
+      
+      ;- - - - - - - -
+      
+    EndWith
+    ClosePreferences()
+    DeleteFile(tmpDir$ + "tfmm.ini")
+    
+    ; read info.lua
+    
+    DeleteFile(tmpDir$ + "info.lua")
+    
+    ;TODO ---------------------------------------------------------------
+    
+    
+    ; post processing
+    With *mod
+      \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
+      \version\major = Val(StringField(\version\version$, 1, "."))
+      \version\minor = Val(StringField(\version\version$, 2, "."))
+      If author$
+        author$ = ReplaceString(author$, "/", ",")
+        count  = CountString(author$, ",") + 1
+        For i = 1 To count
+          AddElement(\authors())
+          \authors()\name$ = Trim(StringField(author$, i, ","))
+          If i = 1 : \authors()\role$ = "CREATOR"
+          Else : \authors()\role$ = "CO_CREATOR"
+          EndIf
+          \authors()\tfnetId = Val(Trim(StringField(tfnet_author_id$, i, ",")))
+        Next i
+      EndIf
+      If tags$
+        tags$ = ReplaceString(tags$, "/", ",")
+        count = CountString(tags$, ",") + 1
+        For i = 1 To count
+          AddElement(\tags$())
+          \tags$() = Trim(StringField(tags$, i, "/"))
+        Next i
+      EndIf
+    EndWith
+    
+    
+    
+    
+    With *mod
+      
+      ; read dependencies from tfmm.ini
+      If PreferenceGroup("dependencies")
+        If ExaminePreferenceKeys()
+          While NextPreferenceKey()
+            AddElement(\dependencies$())
+            \dependencies$() = PreferenceKeyName()
+          Wend
+        EndIf 
+      Else
+        ClearList(\dependencies$())
+      EndIf
+      ClosePreferences()
+    EndWith
+    
+    ProcedureReturn #True
+  EndProcedure
+  
   
   ;PUBLIC
     
@@ -222,36 +347,26 @@ Module mods
     ProcedureReturn #False
   EndProcedure
   
-  Procedure addMod(file$, TF$)
+  Procedure addMod(file$, TF$) ; add new mod from any location to list of mods
     debugger::Add("mods::addMod("+file$+", "+TF$+")")
-    ; add new mod from any location!
-    ; first step: check mod
-    ; second step: move mod to internal TFMM mod folder
-    ; third step: read information
-    ; fourth step: copy files to mods/ folder of Train Fever
     Protected *mod.mod
     
+    ; first step: check mod
     If Not CheckModFile(file$)
       debugger::Add("mods::addMod() - ERROR: check failed, abort")
       ProcedureReturn #False
     EndIf
     
     *mod = initMod()
-    If Not GetModInfo(file$, *mod)
+    ; second step: read information
+    If Not loadInfo(file$, *mod)
       debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
       ProcedureReturn #False
     EndIf
     
-             
+    ; third step: move mod to internal TFMM mod folder
+    ; fourth step: copy files to mods/ folder of Train Fever
     
-  EndProcedure
-  
-  
-  
-  Procedure loadInfo(*mod.mod)
-    debugger::Add("mods::loadInfo("+Str(*mod)+")")
-    
-    ; load info from file name, tfmm.ini and info.lua!
   EndProcedure
   
   Procedure generateID(*mod.mod)
@@ -457,9 +572,6 @@ Global InstallInProgress, UpdateResult
   
   Declare UserAnswer(answer)  ; receive user input upon question
   
-  Declare ExtractModInformation(*modinfo.mod, Path$)
-  Declare ExtractFilesZip(ZIP$, List Files$(), dir$)
-  Declare ExtractFilesRar(RAR$, List Files$(), dir$)
   
  
 ; EndDeclareModule
@@ -1388,103 +1500,15 @@ Procedure ExtractModInformation(*modinfo.mod, Path$)
   
   Select LCase(GetExtensionPart(File$))
     Case "zip"
-      ExtractFilesZip(File$, Files$(), Path$)
+;       ExtractFilesZip(File$, Files$(), Path$)
     Case "rar"
-      ExtractFilesRar(File$, Files$(), Path$)
+;       ExtractFilesRar(File$, Files$(), Path$)
     Default
       debugger::Add("unknown file extension: "+*modinfo\file$)
   EndSelect
 EndProcedure
 
 
-
-Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
-  debugger::Add("ExtractFilesZip("+ZIP$+", Files$(), "+dir$+")")
-  debugger::Add("ExtractFilesZip() - search for:")
-  ForEach Files$()
-    debugger::Add(Files$())
-  Next
-  
-  Protected zip, Entry$
-  dir$ = misc::Path(dir$)
-  
-  zip = OpenPack(#PB_Any, ZIP$, #PB_PackerPlugin_Zip)
-  If zip
-    If ExaminePack(zip)
-      While NextPackEntry(zip)
-        Entry$ = PackEntryName(zip)
-        
-        If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-          debugger::Add("ExtractFilesZip() - skip "+Entry$)
-          Continue
-        EndIf
-        
-        ForEach Files$()
-          If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
-            debugger::Add("ExtractFilesZip() - UncompressPackFile("+dir$ + Files$()+")")
-            UncompressPackFile(zip, dir$ + Files$())
-            DeleteElement(Files$()) ; if file is extracted, delete from list
-            Break ; ForEach
-          EndIf
-        Next
-      Wend
-    EndIf
-    ClosePack(zip)
-  Else
-    debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
-  EndIf
-EndProcedure
-
-Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
-  debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
-  debugger::Add("ExtractFilesRar() - search for:")
-  ForEach Files$()
-    debugger::Add(Files$())
-  Next
-  
-  Protected rarheader.unrar::RARHeaderDataEx
-  Protected hRAR, hit
-  Protected Entry$
-  dir$ = misc::Path(dir$)
-  
-  hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
-  If hRAR
-    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
-      CompilerIf #PB_Compiler_Unicode
-        Entry$ = PeekS(@rarheader\FileNameW)
-      CompilerElse
-        Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
-      CompilerEndIf
-      
-      ; filter out Mac OS X bullshit
-      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        debugger::Add("ExtractFilesRar() - skip "+Entry$)
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
-        Continue
-      EndIf
-      
-      hit = #False
-      ForEach Files$()
-        If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
-          debugger::Add("ExtractFilesRar() - RARProcessFile("+dir$ + Files$()+")")
-          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
-          DeleteElement(Files$()) ; if file is extracted, delete from list
-          hit = #True
-          Break ; ForEach
-        EndIf
-      Next
-      
-      If Not hit
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
-      EndIf
-      
-    Wend
-    unrar::RARCloseArchive(hRAR)
-  Else
-    debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
-  EndIf
-  ProcedureReturn #False
-EndProcedure
 
 
 
@@ -1736,8 +1760,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 331
-; FirstLine = 114
-; Folding = TeFiAM+
+; CursorPosition = 1504
+; FirstLine = 435
+; Folding = T6rQEE+
 ; EnableUnicode
 ; EnableXP

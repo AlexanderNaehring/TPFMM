@@ -20,6 +20,7 @@ DeclareModule misc
   Declare.s FileToHexStr(file$)
   Declare HexStrToFile(hex$, file$)
   Declare.s luaEscape(s$)
+  Declare encodeTGA(image, file$, depth =24)
 EndDeclareModule
 
 Module misc
@@ -227,10 +228,67 @@ Module misc
     ProcedureReturn s$
   EndProcedure
   
+  Procedure encodeTGA(image, file$, depth = 24)
+    ; depth = 24 or 32
+    Protected file.i, color.i, x.i, y.i
+    
+    If Not IsImage(image)
+      debugger::Add("misc::encodeTGA() - ERROR - image {"+Str(image)+"} is no valid image")
+      ProcedureReturn #False
+    EndIf
+    
+    If Not StartDrawing(ImageOutput(image))
+      debugger::Add("misc::encodeTGA() - ERROR - drawing on image failed")
+      ProcedureReturn #False
+    EndIf
+    
+    file = CreateFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("misc::encodeTGA() - ERROR - failed to create {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    If depth <> 24 And depth <> 32
+      depth = 24
+    EndIf
+    
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 2)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 16)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteWord(file, ImageWidth(image))
+    WriteWord(file, ImageHeight(image))    
+    WriteByte(file, depth)
+    WriteByte(file, 32)
+    For y = 0 To ImageHeight(image) - 1
+      For x = 0 To ImageWidth(image) - 1
+        color = Point(x, y)
+        WriteByte(file, Blue(color))
+        WriteByte(file, Green(color))
+        WriteByte(file, Red(color))
+        If depth = 32
+          WriteByte(file, Alpha(color))
+        EndIf
+      Next
+    Next
+    
+    CloseFile(file)
+    StopDrawing()
+    ProcedureReturn #True
+  EndProcedure
+  
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 223
-; FirstLine = 8
-; Folding = vqA+
+; CursorPosition = 269
+; FirstLine = 61
+; Folding = PqA9
 ; EnableUnicode
 ; EnableXP
