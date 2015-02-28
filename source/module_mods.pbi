@@ -251,8 +251,275 @@ Module mods
   EndProcedure
   
   Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
-    debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod)+")")
-    ;TODO
+    debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod.mod)+")")
+    
+    Protected file.i, lua$, i.i
+    Static reg_comments.i, reg_data.i, NewMap reg_val()
+    Static number$, string$, severity$
+;     Static whitespace$, number$, statement$, statements$, variable$, string$, exstring$
+    
+    If FileSize(file$) <= 0
+      debugger::Add("mods::parseInfoLUA() - ERROR: file {"+file$+"} not found or empty!")
+      ProcedureReturn #False
+    EndIf
+    
+    file = ReadFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("mods::parseInfoLUA() - ERROR: cannot read file {"+file$+"}!")
+      ProcedureReturn #False
+    EndIf
+    
+    lua$ = ReadString(file, #PB_File_IgnoreEOL)
+    CloseFile(file)
+    
+    ; SCANNER
+    ; init regular expressions
+    If Not reg_comments
+      debugger::Add("mods::parseInfoLUA() - generate regexp")
+      number$ = "([+-]?(\d+\.?\d*|\.\d+))"
+      string$ = "(.+?)"
+      string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+      string$ = "(_\(("+string$+")\))|("+string$+")"
+      
+      ; remove all comments: one line comment -- , multi line comment --[[ ... ]] and multiple levels: --[===[ --[[ ]] ]===]
+      reg_comments = CreateRegularExpression(#PB_Any, "(--\[(=*)\[(.*?)\]\2\])|(--.*?$)", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+      ; extract return data
+      reg_data = CreateRegularExpression(#PB_Any, "function\s+data\s*\(\s*\)\s*return\s*\{\s*(.*?)\s*\}\s*end", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+      ; values
+      reg_val("minorVersion")     = CreateRegularExpression(#PB_Any, "minorVersion\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("severityAdd")      = CreateRegularExpression(#PB_Any, "severityAdd\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("severityRemove")   = CreateRegularExpression(#PB_Any, "severityRemove\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("name")             = CreateRegularExpression(#PB_Any, "name\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("role")             = CreateRegularExpression(#PB_Any, "role\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("text")             = CreateRegularExpression(#PB_Any, "text\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("steamProfile")     = CreateRegularExpression(#PB_Any, "steamProfile\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("description")      = CreateRegularExpression(#PB_Any, "description\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("authors")          = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{(\s*(\{.*?\}.*?)*?\s*)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("author")           = CreateRegularExpression(#PB_Any, "\{.*?\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("tags")             = CreateRegularExpression(#PB_Any, "tags\s*=\s*\{(.*?)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("string")           = CreateRegularExpression(#PB_Any, string$, #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("tfnetId")          = CreateRegularExpression(#PB_Any, "tfnetId\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("minGameVersion")   = CreateRegularExpression(#PB_Any, "minGameVersion\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("dependencies")     = CreateRegularExpression(#PB_Any, "dependencies\s*=\s*(\{(.*?)\})", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("url")              = CreateRegularExpression(#PB_Any, "url\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      
+      ForEach reg_val()
+        If Not IsRegularExpression(reg_val())
+          Debug "Regular expression {"+MapKey(reg_val())+"} not initialized!"
+          ProcedureReturn #False
+        EndIf
+      Next
+    EndIf
+    
+    ; remove comments
+    lua$ = ReplaceRegularExpression(reg_comments, lua$, "")
+    
+    ; try matching string to "function data() return { ... } end" and extract return value
+    ExamineRegularExpression(reg_data, lua$)
+    If Not NextRegularExpressionMatch(reg_data) ; only expect one match -> read onlyfirst match
+      debugger::Add("mods::parseInfoLUA() - ERROR: no match found (reg_data)")
+      ProcedureReturn #False 
+    EndIf
+    
+    lua$ = Trim(RegularExpressionGroup(reg_data, 1)) ; read only group defined in regexp which should contain definition
+    If lua$ = ""
+      debugger::Add("mods::parseInfoLUA() - ERROR: empty data (reg_data -> group 1)")
+      ProcedureReturn #False 
+    EndIf
+    
+    ; brute force parsing (bad and unsexy) :(
+    ; first: all tables (author, tags, dependencies
+    Protected authors$, author$, s$, tmp.i, tmp$
+    
+    ; extract authors
+    ExamineRegularExpression(reg_val("authors"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      authors$ = RegularExpressionGroup(reg_val(), 1)
+    EndIf
+    ;remove authors from parsing string (in order to not interfere with other "name" and "tfnetId"
+    lua$ = ReplaceRegularExpression(reg_val(), lua$, "")
+    
+    ; authors
+    ExamineRegularExpression(reg_val("author"), authors$)
+    tmp = #False
+    While NextRegularExpressionMatch(reg_val("author"))
+      author$ = RegularExpressionMatchString(reg_val("author"))
+      If author$
+        If Not tmp  ; if a new author is found -> one time clean possible old list
+          ClearList(*mod\authors())
+          tmp = #True
+        EndIf
+        AddElement(*mod\authors())
+        ; name:
+        ExamineRegularExpression(reg_val("name"), author$)
+        If NextRegularExpressionMatch(reg_val())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$
+              *mod\authors()\name$ = s$
+            EndIf
+          Next
+        EndIf
+        ExamineRegularExpression(reg_val("role"), author$)
+        If NextRegularExpressionMatch(reg_val())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$
+              *mod\authors()\role$ = s$
+            EndIf
+          Next
+        EndIf
+        ExamineRegularExpression(reg_val("text"), author$)
+        If NextRegularExpressionMatch(reg_val())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$
+              *mod\authors()\text$ = s$
+            EndIf
+          Next
+        EndIf
+        ExamineRegularExpression(reg_val("steamProfile"), author$)
+        If NextRegularExpressionMatch(reg_val())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$
+              *mod\authors()\steamProfile$ = s$
+            EndIf
+          Next
+        EndIf
+        ExamineRegularExpression(reg_val("tfnetId"), author$)
+        If NextRegularExpressionMatch(reg_val())
+          s$ = RegularExpressionGroup(reg_val(), CountRegularExpressionGroups(reg_val())-1)
+          *mod\authors()\tfnetId = Val(s$)
+        EndIf
+       debugger::Add("mods::parseInfoLUA() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
+      EndIf
+    Wend
+    
+    ; name
+    ExamineRegularExpression(reg_val("name"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      For i = 1 To CountRegularExpressionGroups(reg_val())
+        s$ = RegularExpressionGroup(reg_val(), i)
+        If s$:
+          *mod\name$ = s$
+        EndIf
+      Next
+      debugger::Add("mods::parseInfoLUA() - name: "+*mod\name$)
+    EndIf
+    
+    ; severityAdd
+    ExamineRegularExpression(reg_val("severityAdd"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      For i = 1 To CountRegularExpressionGroups(reg_val())
+        s$ = RegularExpressionGroup(reg_val(), i)
+        If s$:
+          *mod\severityAdd$ = s$
+        EndIf
+      Next
+      debugger::Add("mods::parseInfoLUA() - severityAdd: "+*mod\severityAdd$)
+    EndIf
+    
+    ; severityRemove
+    ExamineRegularExpression(reg_val("severityRemove"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      For i = 1 To CountRegularExpressionGroups(reg_val())
+        s$ = RegularExpressionGroup(reg_val(), i)
+        If s$:
+          *mod\severityRemove$ = s$
+        EndIf
+      Next
+      debugger::Add("mods::parseInfoLUA() - severityRemove: "+*mod\severityRemove$)
+    EndIf
+    
+    ; description
+    ExamineRegularExpression(reg_val("description"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      For i = 1 To CountRegularExpressionGroups(reg_val())
+        s$ = RegularExpressionGroup(reg_val(), i)
+        If s$:
+          *mod\description$ = s$
+        EndIf
+      Next
+      debugger::Add("mods::parseInfoLUA() - description: "+*mod\description$)
+    EndIf
+    
+    ; tfnetId
+    ExamineRegularExpression(reg_val("tfnetId"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      s$ = RegularExpressionGroup(reg_val(), CountRegularExpressionGroups(reg_val())-1)
+      *mod\tfnetId = Val(s$)
+      debugger::Add("mods::parseInfoLUA() - tfnetId: "+Str(*mod\tfnetId))
+    EndIf
+    
+    ; minGameVersion
+    ExamineRegularExpression(reg_val("minGameVersion"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      s$ = RegularExpressionGroup(reg_val(), CountRegularExpressionGroups(reg_val())-1)
+      *mod\minGameVersion = Val(s$)
+      debugger::Add("mods::parseInfoLUA() - minGameVersion: "+Str(*mod\minGameVersion))
+    EndIf
+    
+    ; url
+    ExamineRegularExpression(reg_val("url"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      For i = 1 To CountRegularExpressionGroups(reg_val())
+        s$ = RegularExpressionGroup(reg_val(), i)
+        If s$:
+          *mod\url$ = s$
+        EndIf
+      Next
+      debugger::Add("mods::parseInfoLUA() - url: "+*mod\url$)
+    EndIf
+    
+    ; tags = {"vehicle", "bus", },
+    ExamineRegularExpression(reg_val("tags"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      tmp$ = RegularExpressionGroup(reg_val(), 1)
+      If tmp$
+        ExamineRegularExpression(reg_val("string"), tmp$)
+        tmp = #False
+        While NextRegularExpressionMatch(reg_val())
+          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
+            ClearList(*mod\tags$())
+            tmp = #True
+          EndIf
+          AddElement(*mod\tags$())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$:
+              *mod\tags$() = s$
+            EndIf
+          Next
+          debugger::Add("mods::parseInfoLUA() - tag: "+*mod\tags$())
+        Wend
+      EndIf
+    EndIf
+    
+    ; dependencies = {"mod_1", "mod_2", },
+    ExamineRegularExpression(reg_val("dependencies"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      tmp$ = RegularExpressionGroup(reg_val(), 1)
+      If tmp$
+        ExamineRegularExpression(reg_val("string"), tmp$)
+        tmp = #False
+        While NextRegularExpressionMatch(reg_val())
+          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
+            ClearList(*mod\dependencies$())
+            tmp = #True
+          EndIf
+          AddElement(*mod\dependencies$())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$:
+              *mod\dependencies$() = s$
+            EndIf
+          Next
+          debugger::Add("mods::parseInfoLUA() - dependency: "+*mod\dependencies$())
+        Wend
+      EndIf
+    EndIf
+    ProcedureReturn #True
   EndProcedure
   
   Procedure loadInfo(file$, *mod.mod) ; extract info from mod file$ (tfmm.ini, info.lua, ...)
@@ -328,7 +595,6 @@ Module mods
   
   
   ;PUBLIC
-    
   
   
   Procedure initMod()
@@ -1766,7 +2032,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 5
-; Folding = T6xCRQ5
+; CursorPosition = 598
+; FirstLine = 43
+; Folding = TIwCRQ5
 ; EnableUnicode
 ; EnableXP
