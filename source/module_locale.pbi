@@ -18,6 +18,7 @@ DeclareModule locale
   Declare.s getEx(group$, string$, Map var$())
   Declare.s get(group$, string$)
   Declare getFlag(locale$)
+  Declare.s getCurrentLocale()
 EndDeclareModule
 
 Module locale
@@ -219,6 +220,10 @@ Module locale
     ProcedureReturn 0
   EndProcedure
   
+  Procedure.s getCurrentLocale()
+    ProcedureReturn current_locale$
+  EndProcedure
+  
   DataSection
     DataLocaleEnglish:
     IncludeBinary "locale/en.locale"
@@ -231,7 +236,8 @@ Module locale
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 6
-; Folding = Pg
+; CursorPosition = 225
+; FirstLine = 6
+; Folding = PA-
 ; EnableUnicode
 ; EnableXP

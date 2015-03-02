@@ -33,6 +33,7 @@ remove_pl       = Lösche Mods aus Train Fever
 uninstall       = Lösche Modifikation
 uninstall_pl    = Lösche Modifikationen
 information     = Informationen
+
 [settings]
 title           = TFMM Einstellungen
 path            = Train Fever Verzeichnis
@@ -72,6 +73,17 @@ deactivate1   = Soll '{name}' deaktiviert werden?
 deactivate2   = Sollen {count} Modifikationen deaktiviert werden?
 uninstall1    = Soll '{name}' gelöscht werden?
 uninstall2    = Sollen {count} Modifikationen gelöscht werden?
+add           = Füge {name} zu Train Fever hinzu
+add1          = Soll '{name}' zu Train Fever hinzugefügt werden?
+add2          = Sollen {count} Modifikationen zu Train Fever hinzugefügt werden?
+remove        = Entferne {name} aus Train Fever
+remove1       = Soll '{name}' aus Train Fever entfernt werden?
+remove2       = Sollen {count} Modifikationen aus Train Fever entfernt werden?
+
+hash_inst     = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
+mod_added     = Die Modifikation 
+mod_not_added = Die Modifikation '{name}' wurde bereits installiert, aber noch nicht zu Train Fever hinzugefügt.\nSoll {name} jetzt zu Train Fever hinzugefügt werden?
+
 select_mod    = Wähle Modifikation aus
 files_archive = Datei Archive
 files_all     = Alle Dateien
@@ -79,11 +91,11 @@ dependencies  = Prüfe Abhängigkeiten...
 loading       = Lade Modifikation...
 processing    = Verarbeite Datei '{file}'
 requires      = Diese Modifikation benötigt {name} {version}.\nAlle benötigten Modifikationen müssen installiert und aktiviert sein.
-required      = Diese Modifikation wird von {name} benötigt.\nSoll diese Modifikation auch deaktiviert werden?
+required      = Diese Modifikation wird von {name} benötigt.\nDiese Modifikation wird auch entfernt.
 overwrite     = {file} wurde bereits von {name} modifiziert.\nSoll die Datei überschrieben werden?
 error_tmpdir  = Fehler bei der Erstellung des temporären Verzeichnis.
-error_open    = Fehler beim öffnen der Modifikation.
-error_reading = Error reading extracted files.
+error_open    = Fehler beim Öffnen der Modifikation.
+error_reading = Fehler beim Lesen der entpackten Dateien.
 yes           = Ja
 no            = Nein
 yes_all       = Ja zu allen

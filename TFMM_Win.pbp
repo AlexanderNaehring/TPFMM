@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-03-02 04:53" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-03-02 13:22" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -33,7 +33,7 @@
     </file>
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="cdb181a5c173399921334989fc80cdbf"/>
+      <fingerprint md5="8b1d4f8ea93edc711ee8873d29f49595"/>
     </file>
     <file name="source\module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -41,7 +41,7 @@
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="2971b731f66ab2ed91a3a43274f78568"/>
+      <fingerprint md5="ff379ba339928068e81600a028e5d4c9"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -70,6 +70,10 @@
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="8ee02912a49b5e2196db280927825f36"/>
+    </file>
+    <file name="source\module_parseLUA.pbi">
+      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <fingerprint md5="d41d8cd98f00b204e9800998ecf8427e"/>
     </file>
   </section>
   <section name="targets">

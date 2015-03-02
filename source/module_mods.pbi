@@ -1,9 +1,12 @@
 ﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_unrar.pbi"
+; XIncludeFile "module_parseLUA.pbi"
+XIncludeFile "module_locale.pbi"
 
 DeclareModule mods
   EnableExplicit
+  XIncludeFile "module_locale.pbi"
   
   Structure aux
     version$
@@ -12,6 +15,7 @@ DeclareModule mods
     tags$
     
     file$
+    md5$
     installed.i
     lua$
   EndStructure
@@ -43,8 +47,9 @@ DeclareModule mods
   EndStructure
   
   Declare initMod() ; allocate structure, return *mod
-  Declare freeMod(*mod.mod) ; free *mod structure
-  Declare addMod(file$, TF$) ; read mod pack from any location, extract info
+  Declare freeMod(id$) ; free *mod structure
+  Declare addMod(file$, TF$); read mod pack from any location, extract info
+  Declare loadModList(TF$)
   Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
   
@@ -260,7 +265,114 @@ Module mods
     ClosePreferences()
   EndProcedure
   
-  Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
+  
+  Procedure.s parseLUAstring(regexp, lua$)
+    Protected s$, r$, i.i
+    ExamineRegularExpression(regexp, lua$)
+    If NextRegularExpressionMatch(regexp)
+      For i = 1 To CountRegularExpressionGroups(regexp)
+        s$ = RegularExpressionGroup(regexp, i)
+        If s$
+          r$ = s$
+        EndIf
+      Next
+    EndIf
+    ProcedureReturn r$
+  EndProcedure
+  
+  Procedure.d parseLUAnumber(regexp, lua$)
+    Protected s$, r.d
+    ExamineRegularExpression(regexp, lua$)
+    If NextRegularExpressionMatch(regexp)
+      s$ = RegularExpressionGroup(regexp, CountRegularExpressionGroups(regexp)-1)
+      r = ValD(s$)
+    EndIf
+    
+    ProcedureReturn r
+  EndProcedure
+  
+  Procedure parseLUAlocale(file$, locale$, *mod.mod)
+    debugger::Add("parseLUAlocale("+file$+", "+locale$+", "+Str(*mod)+")")
+    Protected file.i, lua$
+    Protected string$
+    
+    ; TODO use parser module and global string, regexp, etc...
+    string$ = "(.+?)"
+    string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+    string$ = "(_\(("+string$+")\))|("+string$+")"
+    
+    Static reg_comments, reg_data
+    If Not reg_data
+      reg_comments = CreateRegularExpression(#PB_Any, "(--\[(=*)\[(.*?)\]\2\])|(--.*?$)", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+      reg_data = CreateRegularExpression(#PB_Any, "function\s+data\s*\(\s*\)\s*return\s*\{\s*(.*?)\s*\}\s*end", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+      
+    EndIf
+    
+    
+    file = ReadFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("parseLUAlocale() - ERROR - could not read {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
+    CloseFile(file)
+    
+    ; remove comments
+    lua$ = ReplaceRegularExpression(reg_comments, lua$, "")
+    
+    ; try matching string to "function data() return { ... } end" and extract return value
+    ExamineRegularExpression(reg_data, lua$)
+    If Not NextRegularExpressionMatch(reg_data) ; only expect one match -> read onlyfirst match
+      debugger::Add("parseLUAlocale() - ERROR - could not match reg_data")
+      ProcedureReturn #False 
+    EndIf
+    
+    lua$ = Trim(RegularExpressionGroup(reg_data, 1)) ; read only group defined in regexp which should contain definition
+    If lua$ = ""
+      debugger::Add("parseLUAlocale() - ERROR - no data found")
+      ProcedureReturn #False
+    EndIf
+    
+    Protected reg_locale
+    reg_locale = CreateRegularExpression(#PB_Any, locale$ + "\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+    
+    If Not IsRegularExpression(reg_locale)
+      debugger::Add("parseLUAlocale() - ERROR - could not initialize regexp for {"+locale$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    ExamineRegularExpression(reg_locale, lua$)
+    If Not NextRegularExpressionMatch(reg_locale) ; only expect one match -> read onlyfirst match
+      debugger::Add("parseLUAlocale() - ERROR - cannot find a match for locale {"+locale$+"}")
+      ProcedureReturn #False 
+    EndIf
+    lua$ = Trim(RegularExpressionGroup(reg_locale, 1))
+    
+    
+    Protected regexp
+    ; TODO escape characters?
+    ; replace string for name
+    If *mod\name$
+      regexp = CreateRegularExpression(#PB_Any, *mod\name$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      If IsRegularExpression(regexp)
+        *mod\name$ = parseLUAstring(regexp, lua$)
+        FreeRegularExpression(regexp)
+      EndIf
+    EndIf
+    ; replace string for description
+    If *mod\description$
+      regexp = CreateRegularExpression(#PB_Any, *mod\description$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      If IsRegularExpression(regexp)
+        *mod\description$ = parseLUAstring(regexp, lua$)
+        FreeRegularExpression(regexp)
+      EndIf
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure parseInfoLUA(file$, *mod.mods::mod) ; parse info from lua file$ and save to *mod
     debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod.mod)+")")
     
     Protected file.i, lua$, i.i
@@ -279,7 +391,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    lua$ = ReadString(file, #PB_File_IgnoreEOL)
+    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
     CloseFile(file)
     
     ; SCANNER
@@ -288,7 +400,8 @@ Module mods
       debugger::Add("mods::parseInfoLUA() - generate regexp")
       number$ = "([+-]?(\d+\.?\d*|\.\d+))"
       string$ = "(.+?)"
-      string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+;       string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+      string$ = "('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")" ; no multiline strings!
       string$ = "(_\(("+string$+")\))|("+string$+")"
       
       ; remove all comments: one line comment -- , multi line comment --[[ ... ]] and multiple levels: --[===[ --[[ ]] ]===]
@@ -296,22 +409,23 @@ Module mods
       ; extract return data
       reg_data = CreateRegularExpression(#PB_Any, "function\s+data\s*\(\s*\)\s*return\s*\{\s*(.*?)\s*\}\s*end", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
       ; values
-      reg_val("minorVersion")     = CreateRegularExpression(#PB_Any, "minorVersion\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("severityAdd")      = CreateRegularExpression(#PB_Any, "severityAdd\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("severityRemove")   = CreateRegularExpression(#PB_Any, "severityRemove\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("name")             = CreateRegularExpression(#PB_Any, "name\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("role")             = CreateRegularExpression(#PB_Any, "role\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("text")             = CreateRegularExpression(#PB_Any, "text\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("steamProfile")     = CreateRegularExpression(#PB_Any, "steamProfile\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("description")      = CreateRegularExpression(#PB_Any, "description\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("authors")          = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{(\s*(\{.*?\}.*?)*?\s*)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("minorVersion")     = CreateRegularExpression(#PB_Any, "minorVersion\s*=\s*("+number$+")") ; , #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("severityAdd")      = CreateRegularExpression(#PB_Any, "severityAdd\s*=\s*("+string$+")")
+      reg_val("severityRemove")   = CreateRegularExpression(#PB_Any, "severityRemove\s*=\s*("+string$+")")
+      reg_val("name")             = CreateRegularExpression(#PB_Any, "name\s*=\s*("+string$+")")
+      reg_val("role")             = CreateRegularExpression(#PB_Any, "role\s*=\s*("+string$+")")
+      reg_val("text")             = CreateRegularExpression(#PB_Any, "text\s*=\s*("+string$+")")
+      reg_val("steamProfile")     = CreateRegularExpression(#PB_Any, "steamProfile\s*=\s*("+string$+")")
+      reg_val("description")      = CreateRegularExpression(#PB_Any, "description\s*=\s*("+string$+")")
+      reg_val("authors")          = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{(\s*(\{.*?\}\s*,*\s*)*?\s*)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("authors2")         = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
       reg_val("author")           = CreateRegularExpression(#PB_Any, "\{.*?\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
       reg_val("tags")             = CreateRegularExpression(#PB_Any, "tags\s*=\s*\{(.*?)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("string")           = CreateRegularExpression(#PB_Any, string$, #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("tfnetId")          = CreateRegularExpression(#PB_Any, "tfnetId\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("minGameVersion")   = CreateRegularExpression(#PB_Any, "minGameVersion\s*=\s*("+number$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("string")           = CreateRegularExpression(#PB_Any, string$)
+      reg_val("tfnetId")          = CreateRegularExpression(#PB_Any, "tfnetId\s*=\s*("+number$+")")
+      reg_val("minGameVersion")   = CreateRegularExpression(#PB_Any, "minGameVersion\s*=\s*("+number$+")")
       reg_val("dependencies")     = CreateRegularExpression(#PB_Any, "dependencies\s*=\s*(\{(.*?)\})", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("url")              = CreateRegularExpression(#PB_Any, "url\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("url")              = CreateRegularExpression(#PB_Any, "url\s*=\s*("+string$+")")
       
       ForEach reg_val()
         If Not IsRegularExpression(reg_val())
@@ -345,6 +459,11 @@ Module mods
     ExamineRegularExpression(reg_val("authors"), lua$)
     If NextRegularExpressionMatch(reg_val())
       authors$ = RegularExpressionGroup(reg_val(), 1)
+    Else
+      ExamineRegularExpression(reg_val("authors2"), lua$)
+      If NextRegularExpressionMatch(reg_val())
+        authors$ = RegularExpressionGroup(reg_val(), 1)
+      EndIf
     EndIf
     ;remove authors from parsing string (in order to not interfere with other "name" and "tfnetId"
     lua$ = ReplaceRegularExpression(reg_val(), lua$, "")
@@ -529,6 +648,32 @@ Module mods
         Wend
       EndIf
     EndIf
+    
+    
+    ; last step: open strings.lua if present and replace strings
+    Protected locale$ = locale::getCurrentLocale()
+    file = ReadFile(#PB_Any, GetPathPart(file$)+"strings.lua")
+    If file
+      lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
+      CloseFile(file)
+      
+      lua$ = ReplaceRegularExpression(reg_comments, lua$, "")
+      
+      ; try matching string to "function data() return { ... } end" and extract return value
+      ExamineRegularExpression(reg_data, lua$)
+      If Not NextRegularExpressionMatch(reg_data) ; only expect one match -> read onlyfirst match
+        ProcedureReturn #False 
+      EndIf
+      
+      lua$ = Trim(RegularExpressionGroup(reg_data, 1)) ; read only group defined in regexp which should contain definition
+      If lua$ = ""
+        ProcedureReturn #False 
+      EndIf
+    EndIf
+    
+    ; "parse" strings.lua in order to find locale
+    
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -542,7 +687,8 @@ Module mods
     
     ; read standard information
     With *mod
-      \aux\file$ = GetFilePart(File$)
+      \aux\file$ = GetFilePart(file$)
+      \aux\md5$ = MD5FileFingerprint(file$)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -640,6 +786,7 @@ Module mods
     EndIf
     
     *mod = initMod()
+    
     ; second step: read information
     If Not loadInfo(file$, *mod, id$)
       debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
@@ -647,16 +794,101 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    id$ = *mod\id$
     
     ; third step: check if mod with same ID already installed
-    If FindMapElement(*mods(), id$)
+    Protected sameHash.b = #False, sameID.b = #False
+    ForEach *mods()
+      If *mods()\aux\md5$ = *mod\aux\md5$
+        debugger::Add("mods::addMod() - MD5 check found match!")
+        id$ = *mods()\id$
+        sameHash = #True
+        Break
+      EndIf
+    Next
+    
+    If FindMapElement(*mods(),  *mod\id$)
       debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
-      ; TODO ...
+      id$ =  *mod\id$
+      sameID = #True
+    EndIf
+    
+    If sameHash
+      Protected NewMap strings$()
+      ClearMap(strings$())
+      strings$("name") = *mods(id$)\name$
+      If *mods()\aux\installed
+        MessageRequester(locale::l("main","add"), locale::getEx("management","mod_added",strings$()), #PB_MessageRequester_Ok)
+        FreeStructure(*mod)
+        debugger::Add("mods::addMod() - Cancel new installed, mod already installed")
+        ProcedureReturn #True ; mod not installed, but was installed earlier -> success
+      Else
+        If MessageRequester(locale::l("main","add"), locale::getEx("management","mod_not_added",strings$()), #PB_MessageRequester_Ok)
+      EndIf
+      
+    EndIf
+    
+    
+;     If sameHash ; same hash indicates a duplicate - do not care about name or ID!
+;       debugger::Add("same hash indicates a duplicate - do not care about name or ID! - abort installation")
+;       If *tmp\active
+;         
+;       Else
+;         If MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want To activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+;           AddToQueue(#QueueActionActivate, *tmp)
+;         EndIf
+;       EndIf
+;       FreeStructure(*modinfo)
+;       ProcedureReturn #True
+;     EndIf
+;     
+;     If (sameName Or sameID) And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
+;       tmp$ = "Match with already installed modification found:"+#CRLF$+
+;              "Current modification:"+#CRLF$+
+;              #TAB$+"ID: "+*tmp\id$+#CRLF$+
+;              #TAB$+"Name: "+*tmp\name$+#CRLF$+
+;              #TAB$+"Version: "+*tmp\version$+#CRLF$+
+;              #TAB$+"Author: "+*tmp\authors$+#CRLF$+
+;              #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
+;              "New modification:"+#CRLF$+
+;              #TAB$+"ID: "+*modinfo\id$+#CRLF$+
+;              #TAB$+"Name: "+*modinfo\name$+#CRLF$+
+;              #TAB$+"Version: "+*modinfo\version$+#CRLF$+
+;              #TAB$+"Author: "+*modinfo\authors$+#CRLF$+
+;              #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
+;              "Do you want to replace the old modification with the new one?"
+;       If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+;         ; user does not want to replace
+;         debugger::Add("User does not want to replace old mod with new mod. Free new mod: "+Str(*modinfo))
+;         FreeStructure(*modinfo)
+;         ProcedureReturn #False
+;       EndIf
+;       ; user wants to replace mod -> deactivate and uninstall old mod
+;       
+;       If *tmp\active
+;         AddToQueue(#QueueActionDeactivate, *tmp)
+;       EndIf
+;       AddToQueue(#QueueActionUninstall, *tmp)
+;       
+;       ; after old mod is uninstalled: shedule installation of new mod again!
+;       ; TODO make a more efficient way of this process!
+;       AddToQueue(#QueueActionNew, 0, File$)
+;       FreeStructure(*modinfo)
+;       ProcedureReturn #False
+      
+      
+      
+      
+      
+      
+      
     EndIf
     
     ; fourth step: move mod to internal TFMM mod folder
     ; fifth step: copy files to mods/ folder of Train Fever (init install)
+    
+  EndProcedure
+  
+  Procedure loadModList(TF$) ; load all mods in internal modding folder and installed to TF
     
   EndProcedure
   
@@ -2072,8 +2304,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 654
-; FirstLine = 93
-; Folding = TIICRg5
+; CursorPosition = 424
+; FirstLine = 103
+; Folding = TIEiQEI+
 ; EnableUnicode
 ; EnableXP
