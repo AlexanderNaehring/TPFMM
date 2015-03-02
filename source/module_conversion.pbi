@@ -20,6 +20,7 @@ Module conversion
   EndStructure
   
   Procedure convert(TF$)
+    ProcedureReturn #False 
     debugger::Add("conversion::convert("+TF$+")")
     Protected NewList mods.mod(), NewMap allFiles$()
     Protected file$
@@ -160,8 +161,7 @@ Module conversion
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 93
-; FirstLine = 58
+; CursorPosition = 22
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

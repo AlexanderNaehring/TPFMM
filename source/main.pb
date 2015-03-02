@@ -188,10 +188,10 @@ Repeat
       EndIf
       If Event = #PB_Event_Menu
         Select EventMenu()
-          Case #MenuItem_Activate
-            GadgetButtonActivate(#PB_EventType_LeftClick)
-          Case #MenuItem_Deactivate
-            GadgetButtonDeactivate(#PB_EventType_LeftClick)
+          Case #MenuItem_Add
+            GadgetButtonAdd(#PB_EventType_LeftClick)
+          Case #MenuItem_Remove
+            GadgetButtonRemove(#PB_EventType_LeftClick)
           Case #MenuItem_Uninstall
             GadgetButtonUninstall(#PB_EventType_LeftClick)
           Case #MenuItem_Information
@@ -225,8 +225,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 87
-; FirstLine = 33
+; CursorPosition = 193
+; FirstLine = 150
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

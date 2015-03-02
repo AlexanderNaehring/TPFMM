@@ -45,34 +45,37 @@ DeclareModule mods
   Declare initMod() ; allocate structure, return *mod
   Declare freeMod(*mod.mod) ; free *mod structure
   Declare addMod(file$, TF$) ; read mod pack from any location, extract info
-  Declare generateID(*mod.mod)
+  Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
   
 EndDeclareModule
 
 Module mods
-  Global NewList *mods.mod()
-  
+  Global NewMap *mods.mod()
   
   ;PRIVATE
   
-  Procedure checkModFileZip(File$)
+  Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
+    Protected entry$
     If OpenPack(0, File$)
       If ExaminePack(0)
         While NextPackEntry(0)
-          If FindString(PackEntryName(0), "res/")
+          entry$ = PackEntryName(0)
+          If FindString(entry$, "res/")
+            ; found a "res" subfolder, assume this mod is valid 
             ClosePack(0)
-            ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
+            entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2))
+            ProcedureReturn entry$
           EndIf
         Wend
       EndIf
       ClosePack(0)
     EndIf
-    ProcedureReturn #False
+    ProcedureReturn "false"
   EndProcedure
   
-  Procedure checkModFileRar(File$)
+  Procedure.s checkModFileRar(File$) ; check for res/ , return ID if found
     debugger::Add("mods::CheckModFileRar("+File$+")")
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
@@ -88,27 +91,34 @@ Module mods
         CompilerEndIf
         If FindString(Entry$, "res\")
           unrar::RARCloseArchive(hRAR)
-          ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
+          ; found a "res" subfolder, assume this mod is valid
+          entry$ = GetFilePart(Left(entry$, FindString(entry$, "res\")-2))
+          ProcedureReturn entry$ ; entry$ = id, can be empty!
         EndIf
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
       Wend
       unrar::RARCloseArchive(hRAR)
     EndIf
-    ProcedureReturn #False
+    ProcedureReturn "false"
   EndProcedure
   
-  Procedure checkModFile(File$) ; Check mod for a "res" folder!
+  Procedure.s checkModFile(File$) ; Check mod for a "res" folder! -> Return ID if found
     debugger::Add("mods::CheckModFile("+File$+")")
-    Protected extension$
+    Protected extension$, ret$
+    
     extension$ = LCase(GetExtensionPart(File$))
-    If checkModFileZip(File$)
-      ProcedureReturn #True
-    EndIf
-    If checkModFileRar(File$)
-      ProcedureReturn #True
+    
+    ret$ = checkModFileZip(File$)
+    If ret$ <> "false" ; either contains ID or is empty if res folder is found
+      ProcedureReturn ret$
     EndIf
     
-    ProcedureReturn #False
+    ret$ = checkModFileRar(File$)
+    If ret$ <> "false" ; either contains ID or is empty if res folder is found
+      ProcedureReturn ret$
+    EndIf
+    
+    ProcedureReturn "false"
   EndProcedure
   
   Procedure cleanModInfo(*mod.mod)
@@ -522,7 +532,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure loadInfo(file$, *mod.mod) ; extract info from mod file$ (tfmm.ini, info.lua, ...)
+  Procedure loadInfo(file$, *mod.mod, id$) ; extract info from mod file$ (tfmm.ini, info.lua, ...)
     debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+")")
     
     Protected tmpDir$ = GetTemporaryDirectory()
@@ -586,9 +596,10 @@ Module mods
       EndIf
     EndWith
     
-    generateID(*mod)
+    If Not generateID(*mod, id$)
+      ProcedureReturn #False
+    EndIf
     generateLUA(*mod)
-    
     
     ProcedureReturn #True
   EndProcedure
@@ -600,49 +611,57 @@ Module mods
   Procedure initMod()
     Protected *mod.mod
     *mod = AllocateStructure(mod)
-    AddElement(*mods())
-    *mods() = *mod
     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure freeMod(*mod.mod)
-    debugger::Add("mods::freeMod("+Str(*mod)+")")
-    ForEach *mods()
-      If *mods() = *mod
-        DeleteElement(*mods())
-        FreeStructure(*mod)
-        ProcedureReturn #True
-      EndIf
-    Next
-    debugger::Add("mods::freeMod() - ERROR: could not find mod in list")
+  Procedure freeMod(id$)
+    debugger::Add("mods::freeMod("+id$+")")
+    Protected *mod.mod
+    If FindMapElement(*mods(), id$)
+      FreeStructure(*mods())
+      DeleteMapElement(*mods())
+      ProcedureReturn #True
+    EndIf
+    
+    debugger::Add("mods::freeMod() - ERROR: could not find mod {"+id$+"} in List")
     ProcedureReturn #False
   EndProcedure
   
-  Procedure addMod(file$, TF$) ; add new mod from any location to list of mods
+  Procedure addMod(file$, TF$) ; add new mod from any location to list of mods and initiate install
     debugger::Add("mods::addMod("+file$+", "+TF$+")")
-    Protected *mod.mod
+    Protected *mod.mod, id$
     
     ; first step: check mod
-    If Not CheckModFile(file$)
+    id$ = CheckModFile(file$)
+    If id$ = "false"
       debugger::Add("mods::addMod() - ERROR: check failed, abort")
       ProcedureReturn #False
     EndIf
     
     *mod = initMod()
     ; second step: read information
-    If Not loadInfo(file$, *mod)
+    If Not loadInfo(file$, *mod, id$)
       debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
+      FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
     
-    ; third step: move mod to internal TFMM mod folder
-    ; fourth step: copy files to mods/ folder of Train Fever
+    id$ = *mod\id$
+    
+    ; third step: check if mod with same ID already installed
+    If FindMapElement(*mods(), id$)
+      debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
+      ; TODO ...
+    EndIf
+    
+    ; fourth step: move mod to internal TFMM mod folder
+    ; fifth step: copy files to mods/ folder of Train Fever (init install)
     
   EndProcedure
   
-  Procedure generateID(*mod.mod)
-    debugger::Add("mods::generateID("+Str(*mod)+")")
+  Procedure generateID(*mod.mod, id$ = "")
+    debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
     
     If Not *mod
@@ -657,6 +676,25 @@ Module mods
     EndIf
     
     With *mod
+      If id$
+        debugger::Add("mods::generateID() - passed through id = {"+id$+"}")
+        ; this id$ is passed through, extracted from subfolder name
+        ; if it is present, check if it is well-defined
+        If MatchRegularExpression(RegExp2, id$)
+          debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
+          \id$ = id$
+          ProcedureReturn #True
+        Else
+          debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
+        EndIf
+      Else
+        debugger::Add("mods::generateID() - no ID defined - generate new ID")
+      EndIf
+      
+      
+      ; if no id$ was passed through or id was invalid, generate new ID
+      
+      
       \id$ = LCase(\id$)
       
       ; Check if ID already correct
@@ -683,15 +721,15 @@ Module mods
       LastElement(\authors())
       author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
       If author$ = ""
-        author$ = "unknown"
+        author$ = "unknownauthor"
       EndIf
       name$ = ReplaceRegularExpression(RegExp, LCase(\name$), "") ; remove all non alphanum + make lowercase
       If name$ = ""
         name$ = "unknown"
       EndIf
-      version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "."
+      version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
       
-      \id$ = author$ + "_" + name$ + "_" + version$
+      \id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
       
       
       If \id$ And MatchRegularExpression(RegExp2, \id$)
@@ -701,7 +739,7 @@ Module mods
     EndWith
     
     debugger::Add("mods::generateID() - ERROR: No ID generated")
-    ProcedureReturn #True
+    ProcedureReturn #False
   EndProcedure
   
   Procedure generateLUA(*mod.mod)
@@ -1787,8 +1825,6 @@ EndProcedure
 
 
 
-
-
 Procedure AddModToList(File$) ; Read File$ from any location, extract mod into mod-directory, add info, this procedure calls WriteModToList()
   debugger::Add("AddModToList("+File$+")")
   Protected *modinfo.mod, *tmp.mod
@@ -2036,8 +2072,8 @@ Procedure ExportModList(all = #False)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 719
-; FirstLine = 142
-; Folding = TIwCRQ5
+; CursorPosition = 654
+; FirstLine = 93
+; Folding = TIICRg5
 ; EnableUnicode
 ; EnableXP

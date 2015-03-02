@@ -24,8 +24,8 @@ Global NewList InformationGadgetAuthor.authorGadget() ; list of Gadget IDs for A
 
 Global MenuListInstalled
 Enumeration 100
-  #MenuItem_Activate
-  #MenuItem_Deactivate
+  #MenuItem_Add
+  #MenuItem_Remove
   #MenuItem_Uninstall
   #MenuItem_Information
 EndEnumeration
@@ -42,9 +42,6 @@ Procedure InitWindows()
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowModProgress()
-  
-  HideGadget(GadgetDeactivate, 1)
-  HideGadget(GadgetActivate, 1)
   
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -76,8 +73,8 @@ Procedure InitWindows()
   MenuListInstalled = CreatePopupImageMenu(#PB_Any)
   MenuItem(#MenuItem_Information, l("main","information"))
   MenuBar()
-  MenuItem(#MenuItem_Activate, l("main","activate"), ImageID(images::Images("yes")))
-  MenuItem(#MenuItem_Deactivate, l("main","deactivate"), ImageID(images::Images("no")))
+  MenuItem(#MenuItem_Add, l("main","add"), ImageID(images::Images("yes")))
+  MenuItem(#MenuItem_Remove, l("main","remove"), ImageID(images::Images("no")))
   MenuItem(#MenuItem_Uninstall, l("main","uninstall"))
   
   ; Drag & Drop
@@ -124,41 +121,41 @@ Procedure updateGUI()
   Next
   
   If InstallInProgress
-    DisableGadget(GadgetActivate, #True)
-    DisableGadget(GadgetDeactivate, #True)
+    DisableGadget(GadgetAdd, #True)
+    DisableGadget(GadgetRemove, #True)
     DisableGadget(GadgetUninstall, #True)
     DisableGadget(GadgetButtonInformation, #True)
-    DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
-    DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_Add, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #True)
     DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
   Else
     ; no install in progress
     SelectedMod =  GetGadgetState(ListInstalled)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
-      DisableGadget(GadgetActivate, #True)
-      DisableGadget(GadgetDeactivate, #True)
+      DisableGadget(GadgetAdd, #True)
+      DisableGadget(GadgetRemove, #True)
       DisableGadget(GadgetUninstall, #True)
       DisableGadget(GadgetButtonInformation, #True)
-      DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
-      DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Add, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #True)
       DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
       DisableMenuItem(MenuListInstalled, #MenuItem_Information, #True)
     Else
       DisableGadget(GadgetUninstall, #False) ; uninstall is always possible!
       DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #False)
       If selectedActive > 0 ; if at least one of the mods is active
-        DisableGadget(GadgetDeactivate, #False)
-        DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #False)
+        DisableGadget(GadgetRemove, #False)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #False)
       Else  ; if no mod is active 
-        DisableGadget(GadgetDeactivate, #True)
-        DisableMenuItem(MenuListInstalled, #MenuItem_Deactivate, #True)
+        DisableGadget(GadgetRemove, #True)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #True)
       EndIf
       If selectedInactive > 0 ; if at least one of the mods is not active
-        DisableGadget(GadgetActivate, #False)
-        DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #False)
+        DisableGadget(GadgetAdd, #False)
+        DisableMenuItem(MenuListInstalled, #MenuItem_Add, #False)
       Else ; if none of the selected mods is inactive
-        DisableGadget(GadgetActivate, #True)  ; disable activate button
-        DisableMenuItem(MenuListInstalled, #MenuItem_Activate, #True)
+        DisableGadget(GadgetAdd, #True)  ; disable activate button
+        DisableMenuItem(MenuListInstalled, #MenuItem_Add, #True)
       EndIf
       
       If selectedActive + selectedInactive > 1
@@ -177,18 +174,18 @@ Procedure updateGUI()
         SetMenuItemText(MenuListInstalled, #MenuItem_Uninstall, l("main","uninstall"))
       EndIf
       If selectedActive > 1
-        SetGadgetText(GadgetDeactivate, l("main","deactivate_pl"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Deactivate, l("main","deactivate_pl"))
+        SetGadgetText(GadgetRemove, l("main","remove_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Remove, l("main","remove_pl"))
       Else
-        SetGadgetText(GadgetDeactivate, l("main","deactivate"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Deactivate, l("main","deactivate"))
+        SetGadgetText(GadgetRemove, l("main","remove"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Remove, l("main","remove"))
       EndIf
       If selectedInactive > 1
-        SetGadgetText(GadgetActivate, l("main","activate_pl"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Activate, l("main","activate_pl"))
+        SetGadgetText(GadgetAdd, l("main","add_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Add, l("main","add_pl"))
       Else
-        SetGadgetText(GadgetActivate, l("main","activate"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Activate, l("main","activate"))
+        SetGadgetText(GadgetAdd, l("main","add"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_Add, l("main","add"))
       EndIf
     EndIf
     
@@ -515,8 +512,8 @@ Procedure GadgetSaveSettings(event)
   GadgetCloseSettings(event)
 EndProcedure
 
-Procedure GadgetButtonActivate(event)
-  debugger::Add("GadgetButtonActivate")
+Procedure GadgetButtonAdd(event)
+  debugger::Add("GadgetButtonAdd")
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
   Protected NewMap strings$()
@@ -554,7 +551,8 @@ Procedure GadgetButtonActivate(event)
   EndIf
 EndProcedure
 
-Procedure GadgetButtonDeactivate(event)
+Procedure GadgetButtonRemove(event)
+  debugger::Add("GadgetButtonRemove")
   Protected *modinfo.mod, *last.mod
   Protected i, count, result
   Protected NewMap strings$()
@@ -870,8 +868,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 513
-; FirstLine = 110
-; Folding = DAQAAAg
+; CursorPosition = 186
+; FirstLine = 111
+; Folding = IAAAAAg
 ; EnableUnicode
 ; EnableXP
