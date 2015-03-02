@@ -46,12 +46,20 @@ DeclareModule mods
     aux.aux
   EndStructure
   
-  Declare initMod() ; allocate structure, return *mod
-  Declare freeMod(id$) ; free *mod structure
-  Declare addMod(file$, TF$); read mod pack from any location, extract info
+  Declare init() ; allocate structure, return *mod
+  Declare free(id$) ; free *mod structure
+  
+  Declare new(file$, TF$) ; read mod pack from any location, extract info
+  Declare delete(id$)     ; delete mod from library
+  
   Declare loadModList(TF$)
+  
   Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
+  
+  Declare InstallThread(*dummy) ; add mod to TF
+  Declare RemoveThread(*dummy)  ; remove mod from TF
+  
   
 EndDeclareModule
 
@@ -697,14 +705,14 @@ Module mods
   ;PUBLIC
   
   
-  Procedure initMod()
+  Procedure init()
     Protected *mod.mod
     *mod = AllocateStructure(mod)
     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure freeMod(id$)
+  Procedure free(id$)
     debugger::Add("mods::freeMod("+id$+")")
     Protected *mod.mod
     If FindMapElement(*mods(), id$)
@@ -717,7 +725,7 @@ Module mods
     ProcedureReturn #False
   EndProcedure
   
-  Procedure addMod(file$, TF$) ; add new mod from any location to list of mods and initiate install
+  Procedure new(file$, TF$) ; add new mod from any location to list of mods and initiate install
     debugger::Add("mods::addMod("+file$+", "+TF$+")")
     Protected *mod.mod, id$
     
@@ -728,7 +736,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    *mod = initMod()
+    *mod = init()
     
     ; second step: read information
     If Not loadInfo(file$, *mod, id$)
@@ -760,12 +768,13 @@ Module mods
       ClearMap(strings$())
       strings$("name") = *mods(id$)\name$
       If *mods()\aux\installed
-        MessageRequester(locale::l("main","add"), locale::getEx("management","mod_added",strings$()), #PB_MessageRequester_Ok)
+        MessageRequester(locale::l("main","add"), locale::getEx("management","hash_inst",strings$()), #PB_MessageRequester_Ok)
         FreeStructure(*mod)
-        debugger::Add("mods::addMod() - Cancel new installed, mod already installed")
-        ProcedureReturn #True ; mod not installed, but was installed earlier -> success
+        debugger::Add("mods::addMod() - cancel new installed, mod already installed")
+        ProcedureReturn #True
       Else
-        If MessageRequester(locale::l("main","add"), locale::getEx("management","mod_not_added",strings$()), #PB_MessageRequester_Ok)
+        debugger::Add("mods::addMod() - trigger install of previous mod")
+        
       EndIf
       
     EndIf
@@ -817,14 +826,8 @@ Module mods
 ;       AddToQueue(#QueueActionNew, 0, File$)
 ;       FreeStructure(*modinfo)
 ;       ProcedureReturn #False
-      
-      
-      
-      
-      
-      
-      
-    EndIf
+;       
+;     EndIf
     
     ; fourth step: move mod to internal TFMM mod folder
     ; fifth step: copy files to mods/ folder of Train Fever (init install)
@@ -832,6 +835,18 @@ Module mods
   EndProcedure
   
   Procedure loadModList(TF$) ; load all mods in internal modding folder and installed to TF
+    
+  EndProcedure
+  
+  Procedure InstallThread(*dummy)
+    
+  EndProcedure
+  
+  Procedure RemoveThread(*dummy)
+    
+  EndProcedure
+  
+  Procedure delete(id$) ; delete mod from library
     
   EndProcedure
   
@@ -962,11 +977,12 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 965
-; FirstLine = 55
-; Folding = TIAw
+; CursorPosition = 312
+; FirstLine = 73
+; Folding = TIAA+
 ; EnableUnicode
 ; EnableXP

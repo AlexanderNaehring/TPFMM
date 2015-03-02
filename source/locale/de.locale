@@ -30,8 +30,8 @@ add             = Füge Mod in Train Fever ein
 activate_pl     = Füge Mods in Train Fever ein
 remove          = Lösche Mod aus Train Fever
 remove_pl       = Lösche Mods aus Train Fever
-uninstall       = Lösche Modifikation
-uninstall_pl    = Lösche Modifikationen
+delete          = Lösche Modifikation
+delete_pl       = Lösche Modifikationen
 information     = Informationen
 
 [settings]
@@ -73,15 +73,17 @@ deactivate1   = Soll '{name}' deaktiviert werden?
 deactivate2   = Sollen {count} Modifikationen deaktiviert werden?
 uninstall1    = Soll '{name}' gelöscht werden?
 uninstall2    = Sollen {count} Modifikationen gelöscht werden?
+
 add           = Füge {name} zu Train Fever hinzu
 add1          = Soll '{name}' zu Train Fever hinzugefügt werden?
 add2          = Sollen {count} Modifikationen zu Train Fever hinzugefügt werden?
 remove        = Entferne {name} aus Train Fever
 remove1       = Soll '{name}' aus Train Fever entfernt werden?
 remove2       = Sollen {count} Modifikationen aus Train Fever entfernt werden?
+delete1       = Soll '{name}' gelöscht werden?
+delete2       = Sollen {count} Modifikationen gelöscht werden?
 
 hash_inst     = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
-mod_added     = Die Modifikation 
 mod_not_added = Die Modifikation '{name}' wurde bereits installiert, aber noch nicht zu Train Fever hinzugefügt.\nSoll {name} jetzt zu Train Fever hinzugefügt werden?
 
 select_mod    = Wähle Modifikation aus

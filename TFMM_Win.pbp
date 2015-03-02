@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-03-02 13:22" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-03-02 16:50" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -32,7 +32,7 @@
       <fingerprint md5="95bbac511bf2f374cb76a61034c11565"/>
     </file>
     <file name="source\module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
       <fingerprint md5="8b1d4f8ea93edc711ee8873d29f49595"/>
     </file>
     <file name="source\module_misc.pbi">
@@ -41,7 +41,7 @@
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="ff379ba339928068e81600a028e5d4c9"/>
+      <fingerprint md5="c806d60d5764f86f9d6bd99d208e4319"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -65,15 +65,15 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="372198f62d3dd13d1ed07548a89dd330"/>
+      <fingerprint md5="0702f09bf6514cfb708ae4a985261e69"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="8ee02912a49b5e2196db280927825f36"/>
     </file>
     <file name="source\module_parseLUA.pbi">
-      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="d41d8cd98f00b204e9800998ecf8427e"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="aeedfad1da8aaff6df0fb2bfd878f6d1"/>
     </file>
   </section>
   <section name="targets">
@@ -84,7 +84,7 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1407"/>
+      <compilecount enable="1" value="1439"/>
       <buildcount enable="1" value="79"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

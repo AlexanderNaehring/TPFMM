@@ -25,10 +25,6 @@ XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_conversion.pbi"
 
-CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
-  MessageRequester("TFMM for Mac OS", "TFMM for Mac OS is still in Beta. Please use with caution!")
-CompilerEndIf
-
 Procedure exit(dummy)
   Protected i.i
   HideWindow(WindowMain, #True)
@@ -192,8 +188,8 @@ Repeat
             GadgetButtonAdd(#PB_EventType_LeftClick)
           Case #MenuItem_Remove
             GadgetButtonRemove(#PB_EventType_LeftClick)
-          Case #MenuItem_Uninstall
-            GadgetButtonUninstall(#PB_EventType_LeftClick)
+          Case #MenuItem_Delete
+            GadgetButtonDelete(#PB_EventType_LeftClick)
           Case #MenuItem_Information
             GadgetButtonInformation(#PB_EventType_LeftClick)
         EndSelect
@@ -225,8 +221,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 193
-; FirstLine = 150
+; CursorPosition = 191
+; FirstLine = 50
 ; Folding = 9
 ; EnableUnicode
 ; EnableXP

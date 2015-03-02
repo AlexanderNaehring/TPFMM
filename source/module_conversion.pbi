@@ -2,13 +2,11 @@
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_mods.pbi"
 
-
 DeclareModule conversion
   EnableExplicit
   
   Declare convert(TF$)
 EndDeclareModule
-
 
 Module conversion
   EnableExplicit
@@ -71,7 +69,7 @@ Module conversion
       PreferenceGroup(mods()\name$)
       
       Protected *mod.mods::mod
-      *mod = mods::initMod()
+      *mod = mods::init()
       With *mod
         \aux\file$  = ReadPreferenceString("id","")
         \id$    = ReadPreferenceString("id","")
@@ -158,10 +156,10 @@ Module conversion
     
     MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
   EndProcedure
+  
 EndModule
-
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 22
-; Folding = -
+; CursorPosition = 159
+; Folding = 8
 ; EnableUnicode
 ; EnableXP

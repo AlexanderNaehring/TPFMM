@@ -6,6 +6,7 @@ XIncludeFile "module_registry.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
+XIncludeFile "module_queue.pbi"
 XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
@@ -24,92 +25,15 @@ Enumeration
   #AnswerOk
 EndEnumeration
 
-Enumeration
-  #QueueActionNew
-  #QueueActionActivate
-  #QueueActionDeactivate
-  #QueueActionUninstall
-EndEnumeration
 
 Global GadgetModNo, GadgetModNoAll, GadgetModOK, GadgetModProgress, GadgetModText, GadgetModYes, GadgetModYesAll
 Global WindowMain, WindowModProgress
 Global TimerFinishUnInstall, TimerUpdate
 Global ListInstalled
 
-Structure queue
-  action.i
-  *mod.mods::mod
-  file$
-EndStructure
 
-Global NewList queue.queue()
 Global ModProgressAnswer = #AnswerNone
-Global MutexQueue
 
-
-Procedure AddToQueue(action, *mod.mods::mod, file$="")
-  debugger::Add("AddToQueue("+Str(action)+", "+Str(*mod)+", "+file$+")")
-  If Not MutexQueue
-    debugger::Add("MutexQueue = CreateMutex()")
-    MutexQueue = CreateMutex()
-  EndIf
-  
-  Select action
-    Case #QueueActionNew
-      If File$ = ""
-        ProcedureReturn #False
-      EndIf
-        
-      LockMutex(MutexQueue)
-      debugger::Add("Append to queue: QueueActionNew: " + File$)
-      LastElement(queue())
-      AddElement(queue())
-      queue()\action = action
-      queue()\File$ = File$
-      UnlockMutex(MutexQueue)
-      
-    Case #QueueActionActivate
-      If Not *mod
-        ProcedureReturn #False
-      EndIf
-      
-      LockMutex(MutexQueue)
-      debugger::Add("Append to queue: QueueActionActivate: " + *mod\name$)
-      LastElement(queue())
-      AddElement(queue())
-      queue()\action = action
-      queue()\mod = *mod
-      UnlockMutex(MutexQueue)
-      
-    Case #QueueActionDeactivate
-      If Not *mod
-        ProcedureReturn #False
-      EndIf
-      
-      LockMutex(MutexQueue)
-      debugger::Add("Append to queue: QueueActionDeactivate: " + *mod\name$)
-      LastElement(queue())
-      AddElement(queue())
-      queue()\action = action
-      queue()\mod = *mod
-      UnlockMutex(MutexQueue)
-      
-    Case #QueueActionUninstall
-      If Not *mod
-        ProcedureReturn #False
-      EndIf
-      
-      LockMutex(MutexQueue)
-      debugger::Add("Append to queue: QueueActionUninstall: " + *mod\name$)
-      LastElement(queue())
-      AddElement(queue())
-      queue()\action = action
-      queue()\mod = *mod
-      UnlockMutex(MutexQueue)
-      
-      
-  EndSelect
-EndProcedure
 
 Procedure checkTFPath(Dir$)
   If Dir$
@@ -193,7 +117,7 @@ Global MenuListInstalled
 Enumeration 100
   #MenuItem_Add
   #MenuItem_Remove
-  #MenuItem_Uninstall
+  #MenuItem_delete
   #MenuItem_Information
 EndEnumeration
 
@@ -242,7 +166,7 @@ Procedure InitWindows()
   MenuBar()
   MenuItem(#MenuItem_Add, l("main","add"), ImageID(images::Images("yes")))
   MenuItem(#MenuItem_Remove, l("main","remove"), ImageID(images::Images("no")))
-  MenuItem(#MenuItem_Uninstall, l("main","uninstall"))
+  MenuItem(#MenuItem_delete, l("main","delete"))
   
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
@@ -290,26 +214,26 @@ Procedure updateGUI()
   If InstallInProgress
     DisableGadget(GadgetAdd, #True)
     DisableGadget(GadgetRemove, #True)
-    DisableGadget(GadgetUninstall, #True)
+    DisableGadget(GadgetDelete, #True)
     DisableGadget(GadgetButtonInformation, #True)
     DisableMenuItem(MenuListInstalled, #MenuItem_Add, #True)
     DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #True)
-    DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
+    DisableMenuItem(MenuListInstalled, #MenuItem_delete, #True)
   Else
     ; no install in progress
     SelectedMod =  GetGadgetState(ListInstalled)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
       DisableGadget(GadgetAdd, #True)
       DisableGadget(GadgetRemove, #True)
-      DisableGadget(GadgetUninstall, #True)
+      DisableGadget(GadgetDelete, #True)
       DisableGadget(GadgetButtonInformation, #True)
       DisableMenuItem(MenuListInstalled, #MenuItem_Add, #True)
       DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #True)
-      DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #True)
+      DisableMenuItem(MenuListInstalled, #MenuItem_delete, #True)
       DisableMenuItem(MenuListInstalled, #MenuItem_Information, #True)
     Else
-      DisableGadget(GadgetUninstall, #False) ; uninstall is always possible!
-      DisableMenuItem(MenuListInstalled, #MenuItem_Uninstall, #False)
+      DisableGadget(GadgetDelete, #False) ; delete is always possible!
+      DisableMenuItem(MenuListInstalled, #MenuItem_delete, #False)
       If selectedActive > 0 ; if at least one of the mods is active
         DisableGadget(GadgetRemove, #False)
         DisableMenuItem(MenuListInstalled, #MenuItem_Remove, #False)
@@ -334,11 +258,11 @@ Procedure updateGUI()
       EndIf
       
       If selectedActive + selectedInactive > 1
-        SetGadgetText(GadgetUninstall, l("main","uninstall_pl"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Uninstall, l("main","uninstall_pl"))
+        SetGadgetText(GadgetDelete, l("main","delete_pl"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_delete, l("main","delete_pl"))
       Else
-        SetGadgetText(GadgetUninstall, l("main","uninstall"))
-        SetMenuItemText(MenuListInstalled, #MenuItem_Uninstall, l("main","uninstall"))
+        SetGadgetText(Gadgetdelete, l("main","delete"))
+        SetMenuItemText(MenuListInstalled, #MenuItem_delete, l("main","delete"))
       EndIf
       If selectedActive > 1
         SetGadgetText(GadgetRemove, l("main","remove_pl"))
@@ -425,60 +349,6 @@ Procedure updateGUI()
 ;   EndIf
 EndProcedure
 
-Procedure updateQueue()
-  Protected *mod.mods::mod, element.queue
-  Protected text$, author$
-  
-  If Not MutexQueue
-    debugger::Add("updateQueue() - MutexQueue = CreateMutex()")
-    MutexQueue = CreateMutex()
-  EndIf
-  
-  LockMutex(MutexQueue) ; lock even bevore InstallInProgress is checked!
-  
-  If Not InstallInProgress And TF$
-    If ListSize(queue()) > 0
-      debugger::Add("updateQueue() - handle next element")
-      FirstElement(queue())
-      element = queue()
-      DeleteElement(queue(),1)
-      
-      
-      Select element\action
-        Case #QueueActionActivate
-          debugger::Add("updateQueue() - #QueueActionActivate")
-          If element\mod
-            ShowProgressWindow(element\mod)
-            InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-            CreateThread(@ActivateThread(), element\mod)
-          EndIf
-          
-        Case #QueueActionDeactivate
-          debugger::Add("updateQueue() - #QueueActionDeactivate")
-          If element\mod
-            ShowProgressWindow(element\mod)
-            InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-            CreateThread(@DeactivateThread(), element\mod)
-          EndIf
-          
-        Case #QueueActionUninstall
-          debugger::Add("updateQueue() - #QueueActionUninstall")
-          If element\mod
-            RemoveModFromList(element\mod)
-          EndIf
-          
-        Case #QueueActionNew
-          debugger::Add("updateQueue() - #QueueActionNew")
-          If element\File$
-            mods::addMod(element\File$, TF$)
-          EndIf
-      EndSelect
-      
-    EndIf
-  EndIf
-  
-  UnlockMutex(MutexQueue) ; unlock at the very end
-EndProcedure
 
 Procedure TimerMain()
   Static LastDir$ = ""
@@ -492,7 +362,7 @@ Procedure TimerMain()
   EndIf
   
   updateGUI()
-  updateQueue()
+  queue::update(InstallInProgress, TF$)
   
 EndProcedure
 
@@ -710,7 +580,7 @@ Procedure GadgetButtonAdd(event)
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(ListInstalled, i)
           If Not *mod\aux\installed
-            AddToQueue(#QueueActionActivate, *mod)
+            queue::add(queue::#QueueActionActivate, *mod)
           EndIf
         EndIf
       Next i
@@ -752,7 +622,7 @@ Procedure GadgetButtonRemove(event)
           *mod = ListIcon::GetListItemData(ListInstalled, i)
           With *mod
             If \aux\installed
-              AddToQueue(#QueueActionDeactivate, *mod)
+              queue::add(queue::#QueueActionDeactivate, *mod)
             EndIf
           EndWith
         EndIf
@@ -761,8 +631,8 @@ Procedure GadgetButtonRemove(event)
   EndIf
 EndProcedure
 
-Procedure GadgetButtonUninstall(event)
-  debugger::Add("GadgetButtonUninstall")
+Procedure GadgetButtonDelete(event)
+  debugger::Add("GadgetButtonDelete")
   Protected *mod.mods::mod, *last.mods::mod
   Protected i, count, result
   Protected NewMap strings$()
@@ -778,11 +648,11 @@ Procedure GadgetButtonUninstall(event)
     If count = 1
       ClearMap(strings$())
       strings$("name") = *last\name$
-      result = MessageRequester(l("main","uninstall"), locale::getEx("management", "uninstall1", strings$()), #PB_MessageRequester_YesNo)
+      result = MessageRequester(l("main","delete"), locale::getEx("management", "delete1", strings$()), #PB_MessageRequester_YesNo)
     Else
       ClearMap(strings$())
       strings$("count") = Str(count)
-      result = MessageRequester(l("main","uninstall_pl"), locale::getEx("management", "uninstall2", strings$()), #PB_MessageRequester_YesNo)
+      result = MessageRequester(l("main","delete_pl"), locale::getEx("management", "delete2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -790,9 +660,9 @@ Procedure GadgetButtonUninstall(event)
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(ListInstalled, i)
           If *mod\aux\installed
-            AddToQueue(#QueueActionDeactivate, *mod)
+            queue::add(queue::#QueueActionDeactivate, *mod)
           EndIf
-          AddToQueue(#QueueActionUninstall, *mod)
+          queue::add(queue::#QueueActiondelete, *mod)
         EndIf
       Next i
     EndIf
@@ -807,7 +677,7 @@ Procedure GadgetNewMod(event)
   File$ = OpenFileRequester(l("management","select_mod"), "", l("management","files_archive")+"|*.zip;*.rar|"+l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
   While File$
     If FileSize(File$) > 0
-      AddToQueue(#QueueActionNew, 0, File$)
+      queue::add(queue::#QueueActionNew, 0, File$)
     EndIf
     File$ = NextSelectedFileName()
   Wend
@@ -906,7 +776,7 @@ Procedure HandleDroppedFiles(Files$)
   count  = CountString(Files$, Chr(10)) + 1
   For i = 1 To count
     File$ = StringField(Files$, i, Chr(10))
-    AddToQueue(#QueueActionNew, 0, File$)
+    queue::add(queue::#QueueActionNew, 0, File$)
   Next i
 EndProcedure
 
@@ -1035,8 +905,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 174
-; FirstLine = 38
-; Folding = JAIAbAAAw
+; CursorPosition = 778
+; FirstLine = 138
+; Folding = FAEAAAAA9
 ; EnableUnicode
 ; EnableXP
