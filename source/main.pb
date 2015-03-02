@@ -41,7 +41,7 @@ Procedure exit(dummy)
   EndIf
   PreferenceGroup("columns")
   For i = 0 To 5
-    WritePreferenceInteger(Str(i), GetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, i))
+    WritePreferenceInteger(Str(i), GetGadgetItemAttribute(Library, #PB_Any, #PB_Explorer_ColumnWidth, i))
   Next
   ClosePreferences()
   
@@ -118,9 +118,9 @@ Procedure init()
     PreferenceGroup("columns")
     For i = 0 To 5
       If ReadPreferenceInteger(Str(i), 0)
-        SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        SetGadgetItemAttribute(Library, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
         ; Sorting
-        ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
+        ListIcon::SetColumnFlag(Library, i, ListIcon::#String) 
       EndIf
     Next
     PreferenceGroup("")
@@ -143,7 +143,7 @@ Procedure init()
   EndIf
   
   If TF$ <> ""
-    ;LoadModList()
+    mods::load(TF$)
     
     ; one time conversion to new mod system
     conversion::convert(TF$)
@@ -184,8 +184,8 @@ Repeat
       EndIf
       If Event = #PB_Event_Menu
         Select EventMenu()
-          Case #MenuItem_Add
-            GadgetButtonAdd(#PB_EventType_LeftClick)
+          Case #MenuItem_Install
+            GadgetButtonInstall(#PB_EventType_LeftClick)
           Case #MenuItem_Remove
             GadgetButtonRemove(#PB_EventType_LeftClick)
           Case #MenuItem_Delete
@@ -221,8 +221,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 191
-; FirstLine = 50
-; Folding = 9
+; CursorPosition = 186
+; FirstLine = 175
+; Folding = -
 ; EnableUnicode
 ; EnableXP

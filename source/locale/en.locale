@@ -26,12 +26,12 @@ new_mod         = Add New Mod
 download        = Download Mods
 start_tf        = Start Train Fever
 management      = Mod Management
-add             = Add Mod to Train Fever
-add_pl          = Add Mods to Train Fever
+install         = Add Mod to Train Fever
+install_pl      = Add Mods to Train Fever
 remove          = Remove Mod from Train Fever
 remove_pl       = Remove Mods from Train Fever
-uninstall       = Uninstall Mod
-uninstall_pl    = Uninstall Mods
+delete          = Uninstall Mod
+delete_pl       = Uninstall Mods
 information     = Mod Information
 
 [settings]
@@ -65,14 +65,19 @@ current = You already have the newest version of TFMM.
 failed  = Failed to retrieve version info from server.
 
 [management]
-activate      = Activate '{name}'
-activate1     = Do you want to activate '{name}'?
-activate2     = Do you want to activate {count} modifications?
-deactivate    = Deactivate '{name}'
-deactivate1   = Do you want to deactivate '{name}'?
-deactivate2   = Do you want to deactivate {count} modifications?
-uninstall1    = Do you want to uninstall '{name}'?
-uninstall2    = Do you want to uninstall {count} modifications?
+install       = Add '{name}' to Train Fever
+install1      = Do you want to add '{name}' to Train Fever?
+install2      = Do you want to add {count} modifications to Train Fever?
+remove        = Remove '{name}' from Train Fever
+remove1       = Do you want to remove '{name}' from Train Fever?
+remove2       = Do you want to remove {count} modifications from Train Fever?
+delete        = Delete '{name}'
+delete1       = Do you want to permanently delete '{name}'?
+delete2       = Do you want to permanently delete {count} modifications?
+
+conflict_hash = Modification '{name}' is already installed and added to Train Fever.
+conflict_id   = Conflict while installing {new_name}:\nA mod with id '{id}' already exists: {old_name} {old_version}\nShould {old_name} {old_version} be replaced by {new_name} {new_version}?
+
 select_mod    = Select new modification to add
 files_archive = Archive files
 files_all     = All files

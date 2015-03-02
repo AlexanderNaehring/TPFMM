@@ -78,13 +78,13 @@ Module conversion
         \majorVersion   = Val(StringField(\aux\version$, 1, "."))
         \minorVersion   = Val(StringField(\aux\version$, 2, "."))
         Protected count.i, i.i
-        \aux\author$ = ReadPreferenceString("author","")
+        \aux\authors$ = ReadPreferenceString("author","")
         \aux\tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id","")
-        If \aux\author$
-          count  = CountString(\aux\author$, ",") + 1
+        If \aux\authors$
+          count  = CountString(\aux\authors$, ",") + 1
           For i = 1 To count
             AddElement(\authors())
-            \authors()\name$ = Trim(StringField(\aux\author$, i, ","))
+            \authors()\name$ = Trim(StringField(\aux\authors$, i, ","))
             If i = 1
               \authors()\role$ = "CREATOR"
             Else
@@ -159,7 +159,8 @@ Module conversion
   
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 159
-; Folding = 8
+; CursorPosition = 92
+; FirstLine = 82
+; Folding = -
 ; EnableUnicode
 ; EnableXP

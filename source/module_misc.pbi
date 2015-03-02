@@ -79,7 +79,12 @@ Module misc
       dir_sub$ = StringField(dir$, count, delimiter$)
       dir_total$ + dir_sub$ + delimiter$
     Wend
-    ProcedureReturn #True
+    
+    
+    If FileSize(dir$) = -2
+      ProcedureReturn #True
+    EndIf
+    ProcedureReturn #False
   EndProcedure
   
   Procedure.s Bytes(bytes.d)
@@ -153,6 +158,7 @@ Module misc
         DrawAlphaImage(ImageID(im), (width - im_w)/2, (height - im_h)/2) ; center the image onto a new image
         StopDrawing()
       EndIf
+      FreeImage(im)
       ProcedureReturn image
     EndIf
   EndProcedure
@@ -251,31 +257,34 @@ Module misc
     If depth <> 24 And depth <> 32
       depth = 24
     EndIf
-    
-    WriteByte(file, 0)
-    WriteByte(file, 0)
+    WriteByte(file, 0) 
+    WriteByte(file, 0) 
     WriteByte(file, 2)
     WriteByte(file, 0)
+    WriteByte(file, 0) 
     WriteByte(file, 0)
-    WriteByte(file, 0)
-    WriteByte(file, 0)
+    WriteByte(file, 0) 
     WriteByte(file, 16)
-    WriteByte(file, 0)
+    WriteByte(file, 0) 
     WriteByte(file, 0)
     WriteByte(file, 0)
     WriteByte(file, 0)
     WriteWord(file, ImageWidth(image))
     WriteWord(file, ImageHeight(image))    
     WriteByte(file, depth)
-    WriteByte(file, 32)
-    For y = 0 To ImageHeight(image) - 1
+    WriteByte(file, 0) ; 32 flipped
+    For y = ImageHeight(image) - 1 To 0 Step -1
       For x = 0 To ImageWidth(image) - 1
         color = Point(x, y)
         WriteByte(file, Blue(color))
         WriteByte(file, Green(color))
         WriteByte(file, Red(color))
         If depth = 32
-          WriteByte(file, Alpha(color))
+          If ImageDepth(image) = 32
+            WriteByte(file, 255-Alpha(color))
+          Else
+            WriteByte(file, 0)
+          EndIf
         EndIf
       Next
     Next
@@ -287,8 +296,8 @@ Module misc
   
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 269
-; FirstLine = 61
-; Folding = PqA9
+; CursorPosition = 283
+; FirstLine = 9
+; Folding = PKA5
 ; EnableUnicode
 ; EnableXP

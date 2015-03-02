@@ -3,70 +3,26 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_unrar.pbi"
 ; XIncludeFile "module_parseLUA.pbi"
 XIncludeFile "module_locale.pbi"
+XIncludeFile "module_queue.pbi"
 
-DeclareModule mods
-  EnableExplicit
-  XIncludeFile "module_locale.pbi"
-  
-  Structure aux
-    version$
-    author$
-    tfnet_author_id$
-    tags$
-    
-    file$
-    md5$
-    installed.i
-    lua$
-  EndStructure
-  
-  Structure author
-    name$
-    role$
-    text$
-    steamProfile$
-    tfnetId.i
-  EndStructure
-  
-  Structure mod
-    id$
-    minorVersion.i
-    majorVersion.i
-    severityAdd$
-    severityRemove$
-    name$
-    description$
-    List authors.author()
-    List tags$()
-    tfnetId.i
-    minGameVersion.i
-    List dependencies$()
-    url$
-    
-    aux.aux
-  EndStructure
-  
-  Declare init() ; allocate structure, return *mod
-  Declare free(id$) ; free *mod structure
-  
-  Declare new(file$, TF$) ; read mod pack from any location, extract info
-  Declare delete(id$)     ; delete mod from library
-  
-  Declare loadModList(TF$)
-  
-  Declare generateID(*mod.mod, id$ = "")
-  Declare generateLUA(*mod.mod)
-  
-  Declare InstallThread(*dummy) ; add mod to TF
-  Declare RemoveThread(*dummy)  ; remove mod from TF
-  
-  
-EndDeclareModule
+XIncludeFile "module_mods_h.pbi"
 
 Module mods
   Global NewMap *mods.mod()
+  Global changed.i ; report variable if mod states have changed
+  Global library.i ; library gadget
   
   ;PRIVATE
+  
+  Procedure checkID(id$)
+    debugger::Add("mods::checkID("+id$+")")
+    Static regexp
+    If Not IsRegularExpression(regexp)
+      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$")
+    EndIf
+    
+    ProcedureReturn MatchRegularExpression(regexp, id$)
+  EndProcedure
   
   Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
@@ -143,7 +99,7 @@ Module mods
       \minorVersion = 0
       \name$ = ""
       \description$ = ""
-      \aux\author$ = ""
+      \aux\authors$ = ""
       ClearList(\authors())
       \aux\tags$ = ""
       ClearList(\tags$())
@@ -256,7 +212,7 @@ Module mods
       \id$ = ReadPreferenceString("id", "")
       \aux\version$ = ReadPreferenceString("version","0")
       \name$ = ReadPreferenceString("name", \name$)
-      \aux\author$ = ReadPreferenceString("author", "")
+      \aux\authors$ = ReadPreferenceString("author", "")
       \aux\tags$ = ReadPreferenceString("category", "")
       
       ClearList(\dependencies$())
@@ -385,7 +341,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure parseInfoLUA(file$, *mod.mods::mod) ; parse info from lua file$ and save to *mod
+  Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
     debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod.mod)+")")
     
     Protected file.i, lua$, i.i
@@ -466,6 +422,8 @@ Module mods
       ProcedureReturn #False 
     EndIf
     
+    Debug lua$
+    
     ; brute force parsing (bad and unsexy) :(
     ; first: all tables (author, tags, dependencies
     Protected authors$, author$, s$, s.d, tmp.i, tmp$
@@ -538,6 +496,11 @@ Module mods
     s$ = parseLUAstring(reg_val("url"), lua$)
     If s$
       *mod\url$ = s$
+    EndIf
+    
+    s = parseLUAnumber(reg_val("minorVersion"), lua$)
+    If s
+      *mod\minorVersion = s
     EndIf
     s = parseLUAnumber(reg_val("tfnetId"), lua$)
     If s
@@ -626,7 +589,41 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure loadInfo(file$, *mod.mod, id$) ; extract info from mod file$ (tfmm.ini, info.lua, ...)
+  Procedure infoPP(*mod.mod)    ; post processing
+    debugger::Add("mods::infoPP("+Str(*mod)+")")
+    ; authors
+    With *mod
+      \aux\authors$ = ""
+      ForEach \authors()
+        If \aux\authors$
+          \aux\authors$ + ", "
+        EndIf
+        \aux\authors$ + \authors()\name$
+      Next
+    EndWith
+    ; version
+    With *mod
+      \majorVersion = Val(StringField(*mod\id$, CountString(*mod\id$, "_")+1, "_"))
+      If \aux\version$ And Not \minorVersion
+        \minorVersion = Val(StringField(\aux\version$, 2, "."))
+      EndIf
+      \aux\version$ = Str(\majorVersion)+"."+Str(\minorVersion)
+    EndWith
+    ; tags
+    With *mod
+      \aux\tags$ = ""
+      ForEach \tags$()
+        If \aux\tags$
+          \aux\tags$ + ", "
+        EndIf
+        \aux\tags$ + \tags$()
+      Next
+    EndWith
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
     debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
     
     Protected tmpDir$ = GetTemporaryDirectory()
@@ -696,16 +693,57 @@ Module mods
     If Not generateID(*mod, id$)
       ProcedureReturn #False
     EndIf
+    
+    ; Post Processing
+    infoPP(*mod)
+    
+    ; generate info.lua (in memory)
     generateLUA(*mod)
     
     ProcedureReturn #True
   EndProcedure
   
+  Procedure loadInfo(TF$, id$, *mod.mod)
+    debugger::Add("loadInfo("+TF$+", "+id$+", "+Str(*mod.mod)+")")
+    
+    If TF$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    *mod\id$ = id$
+    parseInfoLUA(misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua", *mod)
+    infoPP(*mod)
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure toList(*mod.mod)
+    Protected count.i
+    *mods(*mod\id$) = *mod
+    If IsGadget(library)
+      count = CountGadgetItems(library)
+      With *mod
+        ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+        ListIcon::SetListItemData(library, count, *mod)
+      EndWith
+    EndIf
+  EndProcedure
   
   ;PUBLIC
   
+  Procedure changed()
+    Protected ret = changed
+    changed = #False
+    ProcedureReturn ret
+  EndProcedure
   
-  Procedure init()
+  Procedure registerLibraryGadget(lib)
+    debugger::Add("registerLibraryGadget("+Str(lib)+")")
+    library = lib
+    ProcedureReturn lib
+  EndProcedure
+  
+  Procedure init() ; allocate mod structure
     Protected *mod.mod
     *mod = AllocateStructure(mod)
     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
@@ -739,7 +777,7 @@ Module mods
     *mod = init()
     
     ; second step: read information
-    If Not loadInfo(file$, *mod, id$)
+    If Not getInfo(file$, *mod, id$)
       debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
       FreeStructure(*mod)
       ProcedureReturn #False
@@ -749,7 +787,7 @@ Module mods
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
-      If *mods()\aux\md5$ = *mod\aux\md5$
+      If *mods()\aux\md5$ = *mod\aux\md5$ And *mod\aux\md5$
         debugger::Add("mods::addMod() - MD5 check found match!")
         id$ = *mods()\id$
         sameHash = #True
@@ -757,88 +795,173 @@ Module mods
       EndIf
     Next
     
-    If FindMapElement(*mods(),  *mod\id$)
-      debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
-      id$ =  *mod\id$
-      sameID = #True
-    EndIf
-    
     If sameHash
       Protected NewMap strings$()
       ClearMap(strings$())
       strings$("name") = *mods(id$)\name$
       If *mods()\aux\installed
         MessageRequester(locale::l("main","add"), locale::getEx("management","hash_inst",strings$()), #PB_MessageRequester_Ok)
-        FreeStructure(*mod)
         debugger::Add("mods::addMod() - cancel new installed, mod already installed")
-        ProcedureReturn #True
       Else
         debugger::Add("mods::addMod() - trigger install of previous mod")
-        
+        queue::add(queue::#QueueActionInstall, id$)
       EndIf
-      
+      FreeStructure(*mod)
+      ProcedureReturn #True
+    EndIf
+    
+    If FindMapElement(*mods(),  *mod\id$)
+      debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
+      id$ = *mod\id$
+      sameID = #True
+    EndIf
+    
+    If sameID
+      Protected NewMap strings$()
+      ClearMap(strings$())
+      strings$("id") = *mod\id$
+      strings$("old_name") = *mods(id$)\name$
+      strings$("old_version") = *mods(id$)\aux\version$
+      strings$("new_name") = *mod\name$
+      strings$("new_version") = *mod\aux\version$
+      If MessageRequester(locale::l("main","add"), locale::getEx("management","id_inst",strings$()), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+        ; user does not want to replace
+        FreeStructure(*mod)
+        ProcedureReturn #True
+      Else
+        ; user wants to replace
+        queue::add(queue::#QueueActionRemove, *mod\id$) ; remove from TF is present
+        queue::add(queue::#QueueActionDelete, *mod\id$) ; delete from library
+        queue::add(queue::#QueueActionNew, file$) ; re-schedule this mod
+        FreeStructure(*mod)
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    
+    ; fourth step: move mod to internal TFMM mod folder and extract all recognised info files
+    id$ = *mod\id$
+    Protected dir$ = misc::Path(TF$+"/TFMM/library/"+id$)
+    debugger::Add("mods::addMod() - add mod to library: {"+dir$+"}")
+    ; create library entry (subdir)
+    If Not misc::CreateDirectoryAll(dir$)
+      debugger::Add("mods::addMod() - ERROR - failed to create {"+dir$+"}")
+      FreeStructure(*mod)
+      ProcedureReturn #False
+    EndIf
+    ; copy file to library
+    
+    If Not CopyFile(file$, dir$ + id$ + "." + "tfmod")
+      debugger::Add("mods::addMod() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
+      FreeStructure(*mod)
+      ProcedureReturn #False
+    EndIf
+    
+    file$ = dir$+GetFilePart(file$)
+    
+    ; extract files
+    Protected NewList files$()
+    ClearList(files$())
+    AddElement(files$()) : files$() = "info.lua"
+    AddElement(files$()) : files$() = "strings.lua"
+    AddElement(files$()) : files$() = "header.jpg"
+    AddElement(files$()) : files$() = "preview.png"
+    AddElement(files$()) : files$() = "image_00.tga"
+    If Not ExtractFilesZip(file$, files$(), dir$)
+      If Not ExtractFilesRar(file$, files$(), dir$)
+        debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
+      EndIf
+    EndIf
+    
+    Protected file
+    If FileSize(dir$ + "info.lua") <= 0
+      file = CreateFile(#PB_Any, dir$ + "info.lua")
+      If file
+        WriteString(file, *mod\aux\lua$, #PB_UTF8)
+        CloseFile(file)
+      EndIf
     EndIf
     
     
-;     If sameHash ; same hash indicates a duplicate - do not care about name or ID!
-;       debugger::Add("same hash indicates a duplicate - do not care about name or ID! - abort installation")
-;       If *tmp\active
-;         
-;       Else
-;         If MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want To activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-;           AddToQueue(#QueueActionActivate, *tmp)
-;         EndIf
-;       EndIf
-;       FreeStructure(*modinfo)
-;       ProcedureReturn #True
-;     EndIf
-;     
-;     If (sameName Or sameID) And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
-;       tmp$ = "Match with already installed modification found:"+#CRLF$+
-;              "Current modification:"+#CRLF$+
-;              #TAB$+"ID: "+*tmp\id$+#CRLF$+
-;              #TAB$+"Name: "+*tmp\name$+#CRLF$+
-;              #TAB$+"Version: "+*tmp\version$+#CRLF$+
-;              #TAB$+"Author: "+*tmp\authors$+#CRLF$+
-;              #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
-;              "New modification:"+#CRLF$+
-;              #TAB$+"ID: "+*modinfo\id$+#CRLF$+
-;              #TAB$+"Name: "+*modinfo\name$+#CRLF$+
-;              #TAB$+"Version: "+*modinfo\version$+#CRLF$+
-;              #TAB$+"Author: "+*modinfo\authors$+#CRLF$+
-;              #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
-;              "Do you want to replace the old modification with the new one?"
-;       If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-;         ; user does not want to replace
-;         debugger::Add("User does not want to replace old mod with new mod. Free new mod: "+Str(*modinfo))
-;         FreeStructure(*modinfo)
-;         ProcedureReturn #False
-;       EndIf
-;       ; user wants to replace mod -> deactivate and uninstall old mod
-;       
-;       If *tmp\active
-;         AddToQueue(#QueueActionDeactivate, *tmp)
-;       EndIf
-;       AddToQueue(#QueueActionUninstall, *tmp)
-;       
-;       ; after old mod is uninstalled: shedule installation of new mod again!
-;       ; TODO make a more efficient way of this process!
-;       AddToQueue(#QueueActionNew, 0, File$)
-;       FreeStructure(*modinfo)
-;       ProcedureReturn #False
-;       
-;     EndIf
+    ; images
+    Protected im, image$, i
+    image$ = dir$ + "header.jpg"
+    Debug "---------------------------------"
+    Debug image$
+    If FileSize(image$) > 0
+      im = LoadImage(#PB_Any, image$)
+      If IsImage(im)
+        im = misc::ResizeCenterImage(im, 320, 180)
+        i = 0
+        Repeat
+          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
+          i + 1
+        Until FileSize(image$) <= 0
+        misc::encodeTGA(im, image$, 24)
+        FreeImage(im)
+        DeleteFile(dir$ + "header.jpg")
+      EndIf
+    EndIf
+    image$ = dir$ + "preview.png"
+    If FileSize(image$) > 0
+      im = LoadImage(#PB_Any, image$)
+      If IsImage(im)
+        im = misc::ResizeCenterImage(im, 320, 180)
+        i = 0
+        Repeat
+          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
+          i + 1
+        Until FileSize(image$) <= 0
+        misc::encodeTGA(im, image$, 32)
+        FreeImage(im)
+        DeleteFile(dir$ + "preview.png")
+      EndIf
+    EndIf
     
-    ; fourth step: move mod to internal TFMM mod folder
-    ; fifth step: copy files to mods/ folder of Train Fever (init install)
     
+    ; fifth step: add mod to list
+    toList(*mod)
+    
+    changed = #True
+    
+    ; last step: init install
+    queue::add(queue::#QueueActionInstall, id$)
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure loadModList(TF$) ; load all mods in internal modding folder and installed to TF
+  Procedure load(TF$) ; load all mods in internal modding folder and installed to TF
+    debugger::Add("mods::load("+TF$+")")
     
+    Protected lib$ = misc::Path(TF$ + "/TFMM/library/")
+    debugger::Add("mods::load() - read library {"+lib$+"}")
+    
+    Protected dir = ExamineDirectory(#PB_Any, lib$, "")
+    If Not dir
+      ProcedureReturn #False
+    EndIf
+    
+    While NextDirectoryEntry(dir)
+      If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+        Continue
+      EndIf
+      Protected entry$ = DirectoryEntryName(dir)
+      If Not checkID(entry$)
+        Continue
+      EndIf
+      debugger::Add("mods::load() - found mod {"+entry$+"}")
+      
+      Protected *mod.mod = init()
+      loadInfo(TF$, entry$, *mod)
+      toList(*mod)
+    Wend
   EndProcedure
   
-  Procedure InstallThread(*dummy)
+  Procedure InstallThread(*id)
+    debugger::Add("InstallThread("+Str(*id)+")")
+    Protected id$
+    id$ = PeekS(*id)
+    FreeMemory(*id)
+    
+    debugger::Add("InstallThread() - install mod {"+id$+"}")
     
   EndProcedure
   
@@ -858,10 +981,9 @@ Module mods
       ProcedureReturn
     EndIf
     
-    Static RegExp, RegExp2
-    If Not RegExp Or Not RegExp2
+    Static RegExp
+    If Not RegExp
       RegExp  = CreateRegularExpression(#PB_Any, "^[a-z0-9]*$") ; non-alphanumeric characters
-      RegExp2  = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$") ; non-alphanumeric characters
       ; regexp matches all non alphanum characters including spaces etc.
     EndIf
     
@@ -870,7 +992,7 @@ Module mods
         debugger::Add("mods::generateID() - passed through id = {"+id$+"}")
         ; this id$ is passed through, extracted from subfolder name
         ; if it is present, check if it is well-defined
-        If MatchRegularExpression(RegExp2, id$)
+        If checkID(id$)
           debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
           \id$ = id$
           ProcedureReturn #True
@@ -888,7 +1010,7 @@ Module mods
       \id$ = LCase(\id$)
       
       ; Check if ID already correct
-      If \id$ And MatchRegularExpression(RegExp2, \id$)
+      If \id$ And checkID(\id$)
         debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined (first)")
         ProcedureReturn #True
       EndIf
@@ -899,7 +1021,7 @@ Module mods
       version$  = Str(Abs(Val(StringField(\aux\version$, 1, "."))))
       \id$ = author$ + "_" + name$ + "_" + version$
       
-      If \id$ And MatchRegularExpression(RegExp2, \id$)
+      If \id$ And checkID(\id$)
         debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
         ProcedureReturn #True
       EndIf
@@ -922,7 +1044,7 @@ Module mods
       \id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
       
       
-      If \id$ And MatchRegularExpression(RegExp2, \id$)
+      If \id$ And checkID(\id$)
         debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
         ProcedureReturn #True
       EndIf
@@ -981,8 +1103,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 312
-; FirstLine = 73
-; Folding = TIAA+
+; CursorPosition = 502
+; FirstLine = 161
+; Folding = RIEgD-
 ; EnableUnicode
 ; EnableXP

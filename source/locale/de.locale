@@ -26,12 +26,12 @@ new_mod         = Neue Mod
 download        = Download Mods
 start_tf        = Starte Train Fever
 management      = Mod Verwaltung
-add             = Füge Mod in Train Fever ein
-activate_pl     = Füge Mods in Train Fever ein
+install         = Füge Mod in Train Fever ein
+install_pl      = Füge Mods in Train Fever ein
 remove          = Lösche Mod aus Train Fever
 remove_pl       = Lösche Mods aus Train Fever
-delete          = Lösche Modifikation
-delete_pl       = Lösche Modifikationen
+delete          = Lösche Mod aus TFMM
+delete_pl       = Lösche Mods aus TFMM
 information     = Informationen
 
 [settings]
@@ -65,26 +65,18 @@ current = Keine Aktualisierung notwendig.
 failed  = Fehler bei der Abfrage.
 
 [management]
-activate      = Aktiviere: {name}
-activate1     = Soll '{name}' aktiviert werden?
-activate2     = Sollen {count} Modifikationen aktiviert werden?
-deactivate    = Deaktiviere: {name}
-deactivate1   = Soll '{name}' deaktiviert werden?
-deactivate2   = Sollen {count} Modifikationen deaktiviert werden?
-uninstall1    = Soll '{name}' gelöscht werden?
-uninstall2    = Sollen {count} Modifikationen gelöscht werden?
-
-add           = Füge {name} zu Train Fever hinzu
-add1          = Soll '{name}' zu Train Fever hinzugefügt werden?
-add2          = Sollen {count} Modifikationen zu Train Fever hinzugefügt werden?
-remove        = Entferne {name} aus Train Fever
+install       = Füge '{name}' zu Train Fever hinzu
+install1      = Soll '{name}' zu Train Fever hinzugefügt werden?
+install2      = Sollen {count} Modifikationen zu Train Fever hinzugefügt werden?
+remove        = Entferne '{name}' aus Train Fever
 remove1       = Soll '{name}' aus Train Fever entfernt werden?
 remove2       = Sollen {count} Modifikationen aus Train Fever entfernt werden?
+delete        = Lösche '{name}'
 delete1       = Soll '{name}' gelöscht werden?
 delete2       = Sollen {count} Modifikationen gelöscht werden?
 
-hash_inst     = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
-mod_not_added = Die Modifikation '{name}' wurde bereits installiert, aber noch nicht zu Train Fever hinzugefügt.\nSoll {name} jetzt zu Train Fever hinzugefügt werden?
+conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
+conflict_id   = Konflikt bei der Installation von '{new_name}':\nEs existiert bereits eine Modifikation mit der ID '{id}': {old_name} {old_version}\nSoll {old_name} {old_version} durch {new_name} {new_version} ersetzt werden?
 
 select_mod    = Wähle Modifikation aus
 files_archive = Datei Archive
@@ -103,7 +95,6 @@ no            = Nein
 yes_all       = Ja zu allen
 no_all        = Nein zu allen
 ok            = Okay
-
 
 [information]
 name      = Name:

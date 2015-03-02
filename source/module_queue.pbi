@@ -1,21 +1,18 @@
-﻿EnableExplicit
-
-XIncludeFile "module_mods.pbi"
-
-
+﻿XIncludeFile "module_mods_h.pbi"
 
 DeclareModule queue
   EnableExplicit
   
   Enumeration
     #QueueActionNew
-    #QueueActionActivate
-    #QueueActionDeactivate
     #QueueActionDelete
+    
+    #QueueActionInstall
+    #QueueActionRemove
   EndEnumeration
   
-  Declare add(action, *mods.mods::mod, file$ = "")
-  Declare update(InstallInProgress, TF$)
+  Declare add(action, val$)
+  Declare update(TF$)
   
 EndDeclareModule
 
@@ -23,79 +20,38 @@ Module queue
   
   Structure queue
     action.i
-    *mod.mods::mod
-    file$
+    val$
   EndStructure
   
-  Global MutexQueue
+  Global MutexQueue.i, InstallInProgress.i
   Global NewList queue.queue()
   
-  Procedure add(action, *mod.mods::mod, file$="")
-    debugger::Add("AddToQueue("+Str(action)+", "+Str(*mod)+", "+file$+")")
+  Procedure add(action, val$)
+    debugger::Add("queue::add("+Str(action)+", "+val$+")")
     If Not MutexQueue
-      debugger::Add("MutexQueue = CreateMutex()")
+      debugger::Add("queue::add() - MutexQueue created")
       MutexQueue = CreateMutex()
     EndIf
     
-    Select action
-      Case #QueueActionNew
-        If File$ = ""
-          ProcedureReturn #False
-        EndIf
-          
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionNew: " + File$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\File$ = File$
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionActivate
-        If Not *mod
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionActivate: " + *mod\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\mod = *mod
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionDeactivate
-        If Not *mod
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionDeactivate: " + *mod\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\mod = *mod
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionDelete
-        If Not *mod
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActiondelete: " + *mod\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\mod = *mod
-        UnlockMutex(MutexQueue)
-        
-        
-    EndSelect
+    If val$ = ""
+      ProcedureReturn #False
+    EndIf
+    If action <> #QueueActionNew And action <> #QueueActionDelete And action <> #QueueActionInstall And action <> #QueueActionRemove
+      ProcedureReturn #False
+    EndIf
+    
+    LockMutex(MutexQueue)
+    LastElement(queue())
+    AddElement(queue())
+    queue()\action = action
+    queue()\val$ = val$
+    UnlockMutex(MutexQueue)
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure update(InstallInProgress, TF$)
-    Protected *mod.mods::mod, element.queue
+  Procedure update(TF$)
+    Protected element.queue, *buffer
     Protected text$, author$
     
     If Not MutexQueue
@@ -103,57 +59,63 @@ Module queue
       MutexQueue = CreateMutex()
     EndIf
     
-    LockMutex(MutexQueue) ; lock even bevore InstallInProgress is checked!
     
-    If Not InstallInProgress And TF$
+    LockMutex(MutexQueue) ; lock even bevore InstallInProgress is checked!
+    If TF$
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
         FirstElement(queue())
         element = queue()
         DeleteElement(queue(),1)
         
+        If element\val$
+          *buffer = AllocateMemory((Len(element\val$)+1) * SizeOf(Character))
+          PokeS(*buffer, element\val$)
+        Else
+          ProcedureReturn #False
+        EndIf
         
         Select element\action
-          Case #QueueActionActivate
-            debugger::Add("updateQueue() - #QueueActionActivate")
-            If element\mod
-;               ShowProgressWindow(element\mod)
+          Case #QueueActionInstall
+            debugger::Add("updateQueue() - #QueueActionInstall")
+            If element\val$
               InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-              CreateThread(mods::@InstallThread(), element\mod)
+              CreateThread(mods::@InstallThread(), *buffer)
             EndIf
             
-          Case #QueueActionDeactivate
-            debugger::Add("updateQueue() - #QueueActionDeactivate")
-            If element\mod
-;               ShowProgressWindow(element\mod)
+          Case #QueueActionRemove
+            debugger::Add("updateQueue() - #QueueActionRemove")
+            If element\val$
               InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-              CreateThread(mods::@RemoveThread(), element\mod)
-            EndIf
-            
-          Case #QueueActionDelete
-            debugger::Add("updateQueue() - #QueueActiondelete")
-            If element\mod
-              mods::delete(element\mod\id$)
+              CreateThread(mods::@RemoveThread(), *buffer)
             EndIf
             
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
-            If element\File$
-              mods::new(element\File$, TF$)
+            If element\val$
+              mods::new(element\val$, TF$)
             EndIf
+            
+          Case #QueueActionDelete
+            debugger::Add("updateQueue() - #QueueActionDelete")
+            If element\val$
+              mods::delete(element\val$)
+            EndIf
+            
         EndSelect
         
       EndIf
     EndIf
     
     UnlockMutex(MutexQueue) ; unlock at the very end
+    ProcedureReturn #True
   EndProcedure
     
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 141
-; FirstLine = 44
-; Folding = 8
+; CursorPosition = 73
+; FirstLine = 48
+; Folding = -
 ; EnableUnicode
 ; EnableXP
