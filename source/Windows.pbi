@@ -11,9 +11,176 @@ XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
 XIncludeFile "WindowModInformation.pbf"
 
+;{ -------------------------------------------------------------------------------- TEMPORARY
+Global InstallInProgress, UpdateResult
+
+
+Enumeration
+  #AnswerNone
+  #AnswerYes
+  #AnswerNo
+  #AnswerYesAll
+  #AnswerNoAll
+  #AnswerOk
+EndEnumeration
+
+Enumeration
+  #QueueActionNew
+  #QueueActionActivate
+  #QueueActionDeactivate
+  #QueueActionUninstall
+EndEnumeration
+
+Global GadgetModNo, GadgetModNoAll, GadgetModOK, GadgetModProgress, GadgetModText, GadgetModYes, GadgetModYesAll
+Global WindowMain, WindowModProgress
+Global TimerFinishUnInstall, TimerUpdate
+Global ListInstalled
+
+Structure queue
+  action.i
+  *mod.mods::mod
+  file$
+EndStructure
+
+Global NewList queue.queue()
+Global ModProgressAnswer = #AnswerNone
+Global MutexQueue
+
+
+Procedure AddToQueue(action, *mod.mods::mod, file$="")
+  debugger::Add("AddToQueue("+Str(action)+", "+Str(*mod)+", "+file$+")")
+  If Not MutexQueue
+    debugger::Add("MutexQueue = CreateMutex()")
+    MutexQueue = CreateMutex()
+  EndIf
+  
+  Select action
+    Case #QueueActionNew
+      If File$ = ""
+        ProcedureReturn #False
+      EndIf
+        
+      LockMutex(MutexQueue)
+      debugger::Add("Append to queue: QueueActionNew: " + File$)
+      LastElement(queue())
+      AddElement(queue())
+      queue()\action = action
+      queue()\File$ = File$
+      UnlockMutex(MutexQueue)
+      
+    Case #QueueActionActivate
+      If Not *mod
+        ProcedureReturn #False
+      EndIf
+      
+      LockMutex(MutexQueue)
+      debugger::Add("Append to queue: QueueActionActivate: " + *mod\name$)
+      LastElement(queue())
+      AddElement(queue())
+      queue()\action = action
+      queue()\mod = *mod
+      UnlockMutex(MutexQueue)
+      
+    Case #QueueActionDeactivate
+      If Not *mod
+        ProcedureReturn #False
+      EndIf
+      
+      LockMutex(MutexQueue)
+      debugger::Add("Append to queue: QueueActionDeactivate: " + *mod\name$)
+      LastElement(queue())
+      AddElement(queue())
+      queue()\action = action
+      queue()\mod = *mod
+      UnlockMutex(MutexQueue)
+      
+    Case #QueueActionUninstall
+      If Not *mod
+        ProcedureReturn #False
+      EndIf
+      
+      LockMutex(MutexQueue)
+      debugger::Add("Append to queue: QueueActionUninstall: " + *mod\name$)
+      LastElement(queue())
+      AddElement(queue())
+      queue()\action = action
+      queue()\mod = *mod
+      UnlockMutex(MutexQueue)
+      
+      
+  EndSelect
+EndProcedure
+
+Procedure checkTFPath(Dir$)
+  If Dir$
+    If FileSize(Dir$) = -2
+      Dir$ = misc::Path(Dir$)
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        If FileSize(Dir$ + "TrainFever.exe") > 1
+          ; TrainFever.exe is located in this path!
+          ; seems to be valid
+          
+          ; check if able to write to path
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
+        EndIf
+      CompilerElse
+        If FileSize(Dir$ + "TrainFever") > 1
+          If CreateFile(0, Dir$ + "TFMM.tmp")
+            CloseFile(0)
+            DeleteFile(Dir$ + "TFMM.tmp")
+            ProcedureReturn #True
+          EndIf
+          ProcedureReturn -1
+        EndIf
+      CompilerEndIf
+    EndIf
+  EndIf
+  ProcedureReturn #False
+EndProcedure
+
+
+Procedure ShowProgressWindow(*mod.mods::mod)
+  
+EndProcedure
+
+Procedure ActivateThread(*dummy)
+  
+EndProcedure
+
+Procedure DeactivateThread(*dummy)
+  
+EndProcedure
+
+Procedure RemoveModFromList(*mod.mods::mod)
+  
+EndProcedure
+
+Procedure ExportModList(dummy=0)
+  
+EndProcedure
+
+Procedure FreeModList()
+  
+EndProcedure
+
+Procedure FinishDeActivate()
+  
+EndProcedure
+
+
+
+
+;} --------------------------------------------------------------------------------
+
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
 
 Global NewMap PreviewImages.i()
+
 
 Structure authorGadget
   display.i
@@ -94,31 +261,31 @@ EndProcedure
 
 Procedure updateGUI()
   Protected SelectedMod, i, selectedActive, selectedInactive, countActive, countInactive
-  Protected *modinfo.mod
+  Protected *mod.mods::mod
   Protected text$, author$
   Static LastSelect
   
   selectedActive = 0
   selectedInactive = 0
-  For i = 0 To CountGadgetItems(ListInstalled) - 1
-    *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-    If Not *modinfo
-      Continue
-    EndIf
-    If *modinfo\active
-      countActive + 1
-    Else
-      countInactive + 1
-    EndIf
-    If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
-      SelectedMod = i
-      If *modinfo\active
-        selectedActive + 1
-      Else
-        selectedInactive + 1
-      EndIf
-    EndIf
-  Next
+;   For i = 0 To CountGadgetItems(ListInstalled) - 1
+;     *modinfo = ListIcon::GetListItemData(ListInstalled, i)
+;     If Not *modinfo
+;       Continue
+;     EndIf
+;     If *modinfo\active
+;       countActive + 1
+;     Else
+;       countInactive + 1
+;     EndIf
+;     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
+;       SelectedMod = i
+;       If *modinfo\active
+;         selectedActive + 1
+;       Else
+;         selectedInactive + 1
+;       EndIf
+;     EndIf
+;   Next
   
   If InstallInProgress
     DisableGadget(GadgetAdd, #True)
@@ -193,14 +360,14 @@ Procedure updateGUI()
     If selectedActive + selectedInactive = 1
       ; one mod selected
       ; display image
-      *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
-      If Not IsImage(PreviewImages(*modinfo\id$)) ; if image is not yet loaded
+      *mod = ListIcon::GetListItemData(ListInstalled, SelectedMod)
+      If Not IsImage(PreviewImages(*mod\id$)) ; if image is not yet loaded
         Protected im.i
         ; search for image
-        If FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png") > 0
-          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png")
-        ElseIf FileSize(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg") > 0
-          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
+        If FileSize(misc::Path(TF$ + "TFMM/Mods/" + *mod\id$) + "preview.png") > 0
+          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *mod\id$) + "preview.png")
+        ElseIf FileSize(misc::Path(TF$ + "TFMM/Mods/" + *mod\id$) + "header.jpg") > 0
+          im = LoadImage(#PB_Any, misc::Path(TF$ + "TFMM/Mods/" + *mod\id$) + "header.jpg")
 ;           If im
 ;             If SaveImage(im, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "preview.png", #PB_ImagePlugin_PNG)
 ;               DeleteFile(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$) + "header.jpg")
@@ -223,8 +390,8 @@ Procedure updateGUI()
           debugger::Add("Image: ("+Str(im_w)+", "+Str(im_h)+")")
           ResizeImage(im, im_w, im_h)
           
-          PreviewImages(*modinfo\id$) = CreateImage(#PB_Any, max_w, max_h, 32, #PB_Image_Transparent)
-          If StartDrawing(ImageOutput(PreviewImages(*modinfo\id$)))
+          PreviewImages(*mod\id$) = CreateImage(#PB_Any, max_w, max_h, 32, #PB_Image_Transparent)
+          If StartDrawing(ImageOutput(PreviewImages(*mod\id$)))
             DrawingMode(#PB_2DDrawing_AlphaBlend)
             DrawAlphaImage(ImageID(im), (max_w - im_w)/2, (max_h - im_h)/2) ; center the image onto a new image
             StopDrawing()
@@ -235,11 +402,11 @@ Procedure updateGUI()
         EndIf
       EndIf
       ; if image is leaded now
-      If IsImage(PreviewImages(*modinfo\id$))
+      If IsImage(PreviewImages(*mod\id$))
         ; display image
-        If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*modinfo\id$))
+        If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*mod\id$))
           debugger::Add("ImageLogo: Display custom image")
-          SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*modinfo\id$)))
+          SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*mod\id$)))
         EndIf
       Else
         ; else: display normal logo
@@ -259,11 +426,11 @@ Procedure updateGUI()
 EndProcedure
 
 Procedure updateQueue()
-  Protected *modinfo.mod, element.queue
+  Protected *mod.mods::mod, element.queue
   Protected text$, author$
   
   If Not MutexQueue
-    debugger::Add("MutexQueue = CreateMutex()")
+    debugger::Add("updateQueue() - MutexQueue = CreateMutex()")
     MutexQueue = CreateMutex()
   EndIf
   
@@ -271,7 +438,7 @@ Procedure updateQueue()
   
   If Not InstallInProgress And TF$
     If ListSize(queue()) > 0
-      debugger::Add("QUEUE: Handle next element")
+      debugger::Add("updateQueue() - handle next element")
       FirstElement(queue())
       element = queue()
       DeleteElement(queue(),1)
@@ -279,31 +446,31 @@ Procedure updateQueue()
       
       Select element\action
         Case #QueueActionActivate
-          debugger::Add("#QueueActionActivate")
-          If element\modinfo
-            ShowProgressWindow(element\modinfo)
+          debugger::Add("updateQueue() - #QueueActionActivate")
+          If element\mod
+            ShowProgressWindow(element\mod)
             InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-            CreateThread(@ActivateThread(), element\modinfo)
+            CreateThread(@ActivateThread(), element\mod)
           EndIf
           
         Case #QueueActionDeactivate
-          debugger::Add("#QueueActionDeactivate")
-          If element\modinfo
-            ShowProgressWindow(element\modinfo)
+          debugger::Add("updateQueue() - #QueueActionDeactivate")
+          If element\mod
+            ShowProgressWindow(element\mod)
             InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-            CreateThread(@DeactivateThread(), element\modinfo)
+            CreateThread(@DeactivateThread(), element\mod)
           EndIf
           
         Case #QueueActionUninstall
-          debugger::Add("#QueueActionUninstall")
-          If element\modinfo
-            RemoveModFromList(element\modinfo)
+          debugger::Add("updateQueue() - #QueueActionUninstall")
+          If element\mod
+            RemoveModFromList(element\mod)
           EndIf
           
         Case #QueueActionNew
-          debugger::Add("#QueueActionNew")
+          debugger::Add("updateQueue() - #QueueActionNew")
           If element\File$
-            AddModToList(element\File$)
+            mods::addMod(element\File$, TF$)
           EndIf
       EndSelect
       
@@ -514,15 +681,15 @@ EndProcedure
 
 Procedure GadgetButtonAdd(event)
   debugger::Add("GadgetButtonAdd")
-  Protected *modinfo.mod, *last.mod
+  Protected *mod.mods::mod, *last.mods::mod
   Protected i, count, result
   Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      If Not *modinfo\active
-        *last = *modinfo
+      *mod = ListIcon::GetListItemData(ListInstalled, i)
+      If Not *mod\aux\installed
+        *last = *mod
         count + 1
       EndIf
     EndIf
@@ -541,9 +708,9 @@ Procedure GadgetButtonAdd(event)
     If result = #PB_MessageRequester_Yes
       For i = 0 To CountGadgetItems(ListInstalled) - 1
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
-          *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-          If Not *modinfo\active
-            AddToQueue(#QueueActionActivate, *modinfo)
+          *mod = ListIcon::GetListItemData(ListInstalled, i)
+          If Not *mod\aux\installed
+            AddToQueue(#QueueActionActivate, *mod)
           EndIf
         EndIf
       Next i
@@ -553,16 +720,16 @@ EndProcedure
 
 Procedure GadgetButtonRemove(event)
   debugger::Add("GadgetButtonRemove")
-  Protected *modinfo.mod, *last.mod
+  Protected *mod.mods::mod, *last.mods::mod
   Protected i, count, result
   Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      With *modinfo
-        If \active
-          *last = *modinfo
+      *mod = ListIcon::GetListItemData(ListInstalled, i)
+      With *mod
+        If \aux\installed
+          *last = *mod
           count + 1
         EndIf
       EndWith
@@ -582,10 +749,10 @@ Procedure GadgetButtonRemove(event)
     If result = #PB_MessageRequester_Yes
       For i = 0 To CountGadgetItems(ListInstalled) - 1
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
-          *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-          With *modinfo
-            If \active
-              AddToQueue(#QueueActionDeactivate, *modinfo)
+          *mod = ListIcon::GetListItemData(ListInstalled, i)
+          With *mod
+            If \aux\installed
+              AddToQueue(#QueueActionDeactivate, *mod)
             EndIf
           EndWith
         EndIf
@@ -596,14 +763,14 @@ EndProcedure
 
 Procedure GadgetButtonUninstall(event)
   debugger::Add("GadgetButtonUninstall")
-  Protected *modinfo.mod, *last.mod
+  Protected *mod.mods::mod, *last.mods::mod
   Protected i, count, result
   Protected NewMap strings$()
   
   For i = 0 To CountGadgetItems(ListInstalled) - 1
     If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected 
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      *last = *modinfo
+      *mod = ListIcon::GetListItemData(ListInstalled, i)
+      *last = *mod
       count + 1
     EndIf
   Next i
@@ -621,11 +788,11 @@ Procedure GadgetButtonUninstall(event)
     If result = #PB_MessageRequester_Yes
       For i = 0 To CountGadgetItems(ListInstalled) - 1
         If GetGadgetItemState(ListInstalled, i) & #PB_ListIcon_Selected
-          *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-          If *modinfo\active
-            AddToQueue(#QueueActionDeactivate, *modinfo)
+          *mod = ListIcon::GetListItemData(ListInstalled, i)
+          If *mod\aux\installed
+            AddToQueue(#QueueActionDeactivate, *mod)
           EndIf
-          AddToQueue(#QueueActionUninstall, *modinfo)
+          AddToQueue(#QueueActionUninstall, *mod)
         EndIf
       Next i
     EndIf
@@ -667,7 +834,7 @@ Procedure GadgetModOk(event)
 EndProcedure
 
 Procedure GadgetListInstalled(event)
-  Protected *modinfo.mod
+  Protected *mod.mods::mod
   Protected position
   updateGUI()
   If event = #PB_EventType_LeftDoubleClick
@@ -769,7 +936,7 @@ Procedure ModInformationShowChangeGadgets(show = #True) ; #true = show change ga
 EndProcedure
 
 Procedure GadgetButtonInformation(event)
-  Protected *modinfo.mod
+  Protected *mod.mods::mod
   Protected SelectedMod, i, Gadget
   Protected tfnet_mod_url$
   
@@ -778,8 +945,8 @@ Procedure GadgetButtonInformation(event)
   If SelectedMod = -1
     ProcedureReturn #False
   EndIf
-  *modinfo = ListIcon::GetListItemData(ListInstalled, SelectedMod)
-  If Not *modinfo
+  *mod = ListIcon::GetListItemData(ListInstalled, SelectedMod)
+  If Not *mod
     ProcedureReturn #False
   EndIf
   
@@ -788,44 +955,44 @@ Procedure GadgetButtonInformation(event)
   SetGadgetState(ImageGadgetInformationheader, ImageID(images::Images("headerinfo")))
   
   ; fill in values for mod
-  With *modinfo
-    If \tfnet_mod_id
-      tfnet_mod_url$ = "train-fever.net/filebase/index.php/Entry/"+Str(\tfnet_mod_id)
+  With *mod
+    If \tfnetId
+      tfnet_mod_url$ = "train-fever.net/filebase/index.php/Entry/"+Str(\tfnetId)
     EndIf
     
     SetWindowTitle(WindowModInformation, \name$)
     
     SetGadgetText(ModInformationChangeName, \name$)
-    SetGadgetText(ModInformationChangeVersion, \version$)
-    SetGadgetText(ModInformationChangeCategory, \categoryDisplay$)
-    SetGadgetText(ModInformationChangeDownload, tfnet_mod_url$)
+    SetGadgetText(ModInformationChangeVersion, \aux\version$)
+;     SetGadgetText(ModInformationChangeCategory, \categoryDisplay$)
+    SetGadgetText(ModInformationChangeDownload, \url$)
     
     SetGadgetText(ModInformationDisplayName, \name$)
-    SetGadgetText(ModInformationDisplayVersion, \version$)
-    SetGadgetText(ModInformationDisplayCategory, \categoryDisplay$)
+    SetGadgetText(ModInformationDisplayVersion, \aux\version$)
+;     SetGadgetText(ModInformationDisplayCategory, \categoryDisplay$)
     SetGadgetText(ModInformationDisplayDownload, tfnet_mod_url$)
     
     i = 0
-    ResetList(\author())
-    ForEach \author()
+    ResetList(\authors())
+    ForEach \authors()
       i + 1
       UseGadgetList(WindowID(WindowModInformation))
-      If \author()\tfnet_id
+      If \authors()\tfnetId
         AddElement(InformationGadgetAuthor())
-        InformationGadgetAuthor()\changeName  = StringGadget(#PB_Any, 90, 50 + i*30, 200, 20, \author()\name$)
-        InformationGadgetAuthor()\changeID    = StringGadget(#PB_Any, 300, 50 + i*30, 50, 20, Str(\author()\tfnet_id), #PB_String_Numeric)
-        InformationGadgetAuthor()\display     = HyperLinkGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$, 0, #PB_HyperLink_Underline)
-        SetGadgetData(InformationGadgetAuthor()\display, \author()\tfnet_id)
+        InformationGadgetAuthor()\changeName  = StringGadget(#PB_Any, 90, 50 + i*30, 200, 20, \authors()\name$)
+        InformationGadgetAuthor()\changeID    = StringGadget(#PB_Any, 300, 50 + i*30, 50, 20, Str(\authors()\tfnetId), #PB_String_Numeric)
+        InformationGadgetAuthor()\display     = HyperLinkGadget(#PB_Any, 90, 50 + i*30, 260, 20, \authors()\name$, 0, #PB_HyperLink_Underline)
+        SetGadgetData(InformationGadgetAuthor()\display, \authors()\tfnetId)
         SetGadgetColor(InformationGadgetAuthor()\display, #PB_Gadget_FrontColor, RGB(131,21,85))
       Else
-        TextGadget(#PB_Any, 90, 50 + i*30, 260, 20, \author()\name$)
+        TextGadget(#PB_Any, 90, 50 + i*30, 260, 20, \authors()\name$)
       EndIf
       If i > 1
         ResizeWindow(WindowModInformation, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowHeight(WindowModInformation) + 30)
       EndIf
     Next
     
-    StatusBarText(0, 0, \file$ + " " + "(" + misc::Bytes(\size) + ")")
+    StatusBarText(0, 0, \aux\file$ + " " + "(" + misc::Bytes(0) + ")")
     
   EndWith
   
@@ -868,8 +1035,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 186
-; FirstLine = 111
-; Folding = IAAAAAg
+; CursorPosition = 174
+; FirstLine = 38
+; Folding = JAIAbAAAw
 ; EnableUnicode
 ; EnableXP
