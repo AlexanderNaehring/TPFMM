@@ -142,12 +142,13 @@ Procedure init()
     GadgetButtonAutodetect(0)
   EndIf
   
+  
   If TF$ <> ""
+    queue::add(queue::#QueueActionLoad, TF$)
+    
     If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
       queue::add(queue::#QueueActionConvert, TF$)
     EndIf
-    
-    queue::add(queue::#QueueActionLoad, TF$)
   EndIf
   
   debugger::Add("init complete")
@@ -220,8 +221,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 148
-; FirstLine = 123
+; CursorPosition = 147
+; FirstLine = 120
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

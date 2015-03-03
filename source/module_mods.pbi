@@ -715,12 +715,10 @@ Module mods
     ; read tfmm.ini
     parseTFMMini(tmpDir$ + "tfmm.ini", *mod)
     DeleteFile(tmpDir$ + "tfmm.ini")
-    debugInfo(*mod)
     
     ; read info.lua
     parseInfoLUA(tmpDir$ + "info.lua", *mod)
     DeleteFile(tmpDir$ + "info.lua")
-    debugInfo(*mod)
     
     If Not generateID(*mod, id$)
       ProcedureReturn #False
@@ -728,6 +726,8 @@ Module mods
     
     ; Post Processing
     infoPP(*mod)
+    
+    debugInfo(*mod)
     
     ; generate info.lua (in memory)
     generateLUA(*mod)
@@ -748,15 +748,28 @@ Module mods
     fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
     
     *mod\id$ = id$
-    *mod\aux\TFonly = #True 
     
-    If FileSize(fileMods$) > 0
-      parseInfoLUA(fileMods$, *mod)
+    Protected sizeLib, sizeMods
+    sizeLib = FileSize(fileLib$)
+    sizeMods = FileSize(fileMods$)
+    
+    If sizeLib >= 0 And sizeMods >= 0 ; in lib and mods -> installed
+      *mod\aux\TFonly = #False
       *mod\aux\installed = #True
-    ElseIf FileSize(fileLib$) > 0
-      parseInfoLUA(fileLib$, *mod)
-    Else
-      debugger::Add("mods::loadInfo() - ")
+      parseInfoLUA(fileMods$, *mod) ; parse from install location
+      
+    ElseIf sizeLib >= 0 And sizeMods < 0 ; in lib, not in mods -> not installed
+      *mod\aux\TFonly = #False
+      *mod\aux\installed = #False
+      parseInfoLUA(fileLib$, *mod) ; parse from lib
+      
+    ElseIf sizeLib < 0 And sizeMods >= 0 ; not in lib but in mods -> installed (TFONLY)
+      *mod\aux\TFonly = #True
+      *mod\aux\installed = #True
+      parseInfoLUA(fileMods$, *mod) ; parse from install location
+      
+    Else ; not installed and not in lib -> mod does not exist!
+      debugger::Add("mods::loadInfo() - ERROR - mod not found in lib and mods!")
       ProcedureReturn #False
     EndIf
     
@@ -766,19 +779,26 @@ Module mods
   EndProcedure
   
   Procedure toList(*mod.mod)
+    debugger::Add("mods::toList("+Str(*mod)+")")
     Protected count.i
-    *mods(*mod\id$) = *mod
-    If IsGadget(library)
-      count = CountGadgetItems(library)
-      With *mod
-        ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
-        ListIcon::SetListItemData(library, count, *mod)
-        If \aux\installed
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
-        Else 
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
-        EndIf
-      EndWith
+    If FindMapElement(*mods(), *mod\id$)
+      *mods(*mod\id$) = *mod
+      ; *mod already in list
+      debugger::Add("mods::toList() - ERROR - mod already in list")
+    Else
+      *mods(*mod\id$) = *mod
+      If IsGadget(library)
+        count = CountGadgetItems(library)
+        With *mod
+          ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+          ListIcon::SetListItemData(library, count, *mod)
+          If \aux\installed
+            ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+          Else 
+            ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+          EndIf
+        EndWith
+      EndIf
     EndIf
   EndProcedure
   
@@ -817,11 +837,7 @@ Module mods
           If UncompressPackFile(zip, path$ + file$, PackEntryName(zip)) = 0
             debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
           EndIf
-        Else
-          debugger::Add("mods::extractZIP() - not in res/: {"+file$+"}")
         EndIf
-      Else
-        debugger::Add("mods::extractZIP() - not file or zero byte: {"+file$+"}")
       EndIf
     Wend
     
@@ -1201,7 +1217,6 @@ Module mods
       Wend
     EndIf
     ClosePreferences()
-    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mods.ini")
     i = 0
     If ListSize(mods$()) > 0
       ; just add everything
@@ -1209,11 +1224,11 @@ Module mods
         i + 1
         queue::progressVal(i, ListSize(mods$()))
         ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
-        
         new(mods$(), TF$)
       Next
       ClearList(mods$())
     EndIf
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mods.ini")
     
     ; delete mod folder
     DeleteDirectory(misc::path(TF$ + "TFMM/Mods/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -1343,7 +1358,8 @@ Module mods
     
     ; TODO alternatively, backup mod
     If *mod\aux\TFonly
-      queue::add(queue::#QueueActionDelete, id$)
+      ; queue::add(queue::#QueueActionDelete, id$)
+      delete(*data)
     EndIf
     
     ; check prequesits
@@ -1574,8 +1590,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1247
-; FirstLine = 133
-; Folding = RIARgg
+; CursorPosition = 768
+; FirstLine = 103
+; Folding = RIgRAg
 ; EnableUnicode
 ; EnableXP

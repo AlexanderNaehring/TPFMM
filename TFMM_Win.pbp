@@ -8,12 +8,12 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-03-03 18:34" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-03-03 19:33" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="3b55f64c20dc0c3631e1e06acc747662"/>
+      <fingerprint md5="6eb63fa69d444a45b56f28633a455942"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -37,7 +37,7 @@
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="34840eb4025d5c8813009e0cbe8d7f94"/>
+      <fingerprint md5="565d8d1071970c830bba93e37c48d6cb"/>
     </file>
     <file name="source\module_mods_h.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -84,8 +84,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1681"/>
-      <buildcount enable="1" value="109"/>
+      <compilecount enable="1" value="1700"/>
+      <buildcount enable="1" value="113"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
