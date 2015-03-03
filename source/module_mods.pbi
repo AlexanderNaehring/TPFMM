@@ -26,33 +26,34 @@ Module mods
   
   Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
-    Protected entry$
+    Protected entry$, pack
     If FileSize(File$) <= 0
       debugger::Add("mods::checkModFileZip() - ERROR - {"+File$+"} not found")
       ProcedureReturn "false"
     EndIf
     
-    If OpenPack(0, File$, #PB_PackerPlugin_Zip)
-      If ExaminePack(0)
-        While NextPackEntry(0)
-          entry$ = PackEntryName(0)
+    pack = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+    If pack
+      If ExaminePack(pack)
+        While NextPackEntry(pack)
+          entry$ = PackEntryName(pack)
           entry$ = misc::Path(GetPathPart(entry$), "/")+GetFilePart(entry$)
           debugger::Add("mods::checkModFileZip() - {"+entry$+"}")
           If FindString(entry$, "res/") ; found a "res" subfolder, assume this mod is valid 
-            ClosePack(0)
+            ClosePack(pack)
             entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2)) ; entry = folder name (id)
             debugger::Add("mods::checkModFileZip() - found res/ - return {"+entry$+"}")
             ProcedureReturn entry$
           EndIf
           If GetFilePart(entry$) =  "info.lua" ; found info.lua, asume mod is valid
-            ClosePack(0)
+            ClosePack(pack)
             entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry = folder name (id)
             debugger::Add("mods::checkModFileZip() - found info.lua - return {"+entry$+"}")
             ProcedureReturn entry$
           EndIf
         Wend
       EndIf
-      ClosePack(0)
+      ClosePack(pack)
     Else
       debugger::Add("mods::checkModFileZip() - ERROR - cannot open pack {"+File$+"}")
     EndIf
@@ -765,7 +766,7 @@ Module mods
   EndProcedure
   
   Procedure extractZIP(file$, path$)
-    debugger::Add("mods::extractZIP() "+File$)
+    debugger::Add("mods::extractZIP("+File$+")")
     Protected zip, error
     
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
@@ -788,9 +789,10 @@ Module mods
       EndIf
       
       file$ = PackEntryName(zip)
-      file$ = misc::Path(GetPathPart(file$),"/")+GetFilePart(file$)
+      file$ = misc::Path(GetPathPart(file$), "/")+GetFilePart(file$)
+      debugger::Add("mods::extractZIP() - {"+file$+"}")
       If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
-        If FindString(PackEntryName(zip), "res/") ; only extract files which are located in subfoldres of res/
+        If FindString(file$, "res/") ; only extract files which are located in subfoldres of res/
           file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
           ; adjust path delimiters to OS
           file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
@@ -798,7 +800,11 @@ Module mods
           If UncompressPackFile(zip, path$ + file$, PackEntryName(zip)) = 0
             debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
           EndIf
+        Else
+          debugger::Add("mods::extractZIP() - not in res/: {"+file$+"}")
         EndIf
+      Else
+        debugger::Add("mods::extractZIP() - not file or zero byte: {"+file$+"}")
       EndIf
     Wend
     
@@ -1144,6 +1150,7 @@ Module mods
   EndProcedure
   
   Procedure convert(*data.queue::dat)
+    ProcedureReturn #False 
     Protected TF$ = *data\tf$
     debugger::Add("mods::convert("+TF$+")")
     
@@ -1157,13 +1164,23 @@ Module mods
         If file$
           debugger::Add("mods::convert() - found {"+file$+"}")
           AddElement(files$())
-          files$() = file$
+          files$() = misc::path(TF$ + "TFMM/Mods" + file$)
         EndIf
       Wend
     EndIf
     ClosePreferences()
     
     ; just add everything
+    If ListSize(files$()) > 0
+      If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+        MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
+        ProcedureReturn #False
+      EndIf
+      
+      ForEach files$()
+;         queue::add(queue::#QueueActionNew, files$()
+      Next
+    EndIf
   EndProcedure
   
   Procedure install(*data.queue::dat)
@@ -1483,8 +1500,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1442
-; FirstLine = 56
-; Folding = RIAQAw
+; CursorPosition = 1155
+; FirstLine = 37
+; Folding = RIAQgg
 ; EnableUnicode
 ; EnableXP
