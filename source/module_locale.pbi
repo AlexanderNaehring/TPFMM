@@ -214,7 +214,6 @@ Module locale
     
     If im
       flag(locale$) = misc::ResizeCenterImage(im, 20, 20)
-      FreeImage(im)
       ProcedureReturn ImageID(flag(locale$))
     EndIf
     ProcedureReturn 0
@@ -236,8 +235,8 @@ Module locale
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 225
-; FirstLine = 6
-; Folding = PA-
+; CursorPosition = 217
+; FirstLine = 48
+; Folding = PQ-
 ; EnableUnicode
 ; EnableXP

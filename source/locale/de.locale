@@ -106,7 +106,7 @@ close     = Schließen
 change    = Anpassen
 save      = Speichern
 
-[category]
+[tags]
 tool        = Tool
 pack        = Mod-Pack
 vehicle	    = Fahrzeug

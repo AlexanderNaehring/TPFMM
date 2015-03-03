@@ -27,7 +27,7 @@ Module mods
   Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
     Protected entry$
-    If OpenPack(0, File$)
+    If OpenPack(0, File$, #PB_PackerPlugin_Zip)
       If ExaminePack(0)
         While NextPackEntry(0)
           entry$ = PackEntryName(0)
@@ -422,8 +422,6 @@ Module mods
       ProcedureReturn #False 
     EndIf
     
-    Debug lua$
-    
     ; brute force parsing (bad and unsexy) :(
     ; first: all tables (author, tags, dependencies
     Protected authors$, author$, s$, s.d, tmp.i, tmp$
@@ -568,6 +566,7 @@ Module mods
     ForEach *mod\authors()
       debugger::Add("mods::parseInfoLUA() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
     Next
+    debugger::Add("mods::parseInfoLUA() - minorVersion: "+Str(*mod\minorVersion))
     debugger::Add("mods::parseInfoLUA() - name: "+*mod\name$)
     debugger::Add("mods::parseInfoLUA() - severityAdd: "+*mod\severityAdd$)
     debugger::Add("mods::parseInfoLUA() - severityRemove: "+*mod\severityRemove$)
@@ -601,6 +600,7 @@ Module mods
         \aux\authors$ + \authors()\name$
       Next
     EndWith
+    
     ; version
     With *mod
       \majorVersion = Val(StringField(*mod\id$, CountString(*mod\id$, "_")+1, "_"))
@@ -609,6 +609,7 @@ Module mods
       EndIf
       \aux\version$ = Str(\majorVersion)+"."+Str(\minorVersion)
     EndWith
+    
     ; tags
     With *mod
       \aux\tags$ = ""
@@ -616,12 +617,14 @@ Module mods
         If \aux\tags$
           \aux\tags$ + ", "
         EndIf
-        \aux\tags$ + \tags$()
+        \aux\tags$ + locale::l("tags", \tags$())
       Next
     EndWith
     
     ProcedureReturn #True
   EndProcedure
+  
+  ; TODO : extract & load all necesarry information at each startup!
   
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
     debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
@@ -659,11 +662,7 @@ Module mods
     parseTFMMini(tmpDir$ + "tfmm.ini", *mod)
     DeleteFile(tmpDir$ + "tfmm.ini")
     
-    ; read info.lua
-    parseInfoLUA(tmpDir$ + "info.lua", *mod)
-    DeleteFile(tmpDir$ + "info.lua")
-    
-    ; post processing
+    ; post processing for tfmm.ini
     With *mod
       \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
       \majorVersion = Val(StringField(\aux\version$, 1, "."))
@@ -689,6 +688,11 @@ Module mods
         Next i
       EndIf
     EndWith
+    
+    ; read info.lua
+    parseInfoLUA(tmpDir$ + "info.lua", *mod)
+    DeleteFile(tmpDir$ + "info.lua")
+    
     
     If Not generateID(*mod, id$)
       ProcedureReturn #False
@@ -800,7 +804,7 @@ Module mods
       ClearMap(strings$())
       strings$("name") = *mods(id$)\name$
       If *mods()\aux\installed
-        MessageRequester(locale::l("main","add"), locale::getEx("management","hash_inst",strings$()), #PB_MessageRequester_Ok)
+        MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
         debugger::Add("mods::addMod() - cancel new installed, mod already installed")
       Else
         debugger::Add("mods::addMod() - trigger install of previous mod")
@@ -824,7 +828,7 @@ Module mods
       strings$("old_version") = *mods(id$)\aux\version$
       strings$("new_name") = *mod\name$
       strings$("new_version") = *mod\aux\version$
-      If MessageRequester(locale::l("main","add"), locale::getEx("management","id_inst",strings$()), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+      If MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_id",strings$()), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
         ; user does not want to replace
         FreeStructure(*mod)
         ProcedureReturn #True
@@ -850,13 +854,14 @@ Module mods
     EndIf
     ; copy file to library
     
-    If Not CopyFile(file$, dir$ + id$ + "." + "tfmod")
+    Protected newfile$ = dir$+GetFilePart(file$, #PB_FileSystem_NoExtension)+".tfmod"
+    
+    If Not CopyFile(file$, newfile$)
       debugger::Add("mods::addMod() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
       FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
     
-    file$ = dir$+GetFilePart(file$)
     
     ; extract files
     Protected NewList files$()
@@ -866,9 +871,9 @@ Module mods
     AddElement(files$()) : files$() = "header.jpg"
     AddElement(files$()) : files$() = "preview.png"
     AddElement(files$()) : files$() = "image_00.tga"
-    If Not ExtractFilesZip(file$, files$(), dir$)
-      If Not ExtractFilesRar(file$, files$(), dir$)
-        debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
+    If Not ExtractFilesZip(newfile$, files$(), dir$)
+      If Not ExtractFilesRar(newfile$, files$(), dir$)
+        debugger::Add("mods::GetModInfo() - failed to open {"+newfile$+"} for extraction")
       EndIf
     EndIf
     
@@ -930,29 +935,57 @@ Module mods
   
   Procedure load(TF$) ; load all mods in internal modding folder and installed to TF
     debugger::Add("mods::load("+TF$+")")
+    Protected dir$, dir
+    Protected entry$
+    Protected *mod.mod
     
-    Protected lib$ = misc::Path(TF$ + "/TFMM/library/")
-    debugger::Add("mods::load() - read library {"+lib$+"}")
-    
-    Protected dir = ExamineDirectory(#PB_Any, lib$, "")
-    If Not dir
-      ProcedureReturn #False
+    dir$ = misc::Path(TF$ + "/TFMM/library/")
+    debugger::Add("mods::load() - read library {"+dir$+"}")
+    dir = ExamineDirectory(#PB_Any, dir$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          Continue
+        EndIf
+        entry$ = DirectoryEntryName(dir)
+        If Not checkID(entry$)
+          Continue
+        EndIf
+        debugger::Add("mods::load() - found {"+entry$+"} in library")
+        
+        *mod = init()
+        loadInfo(TF$, entry$, *mod)
+        *mod\aux\file$ = misc::Path(TF$ + "/TFMM/library/" + entry$ + "/") + entry$ + ".tfmod"
+        *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
+        toList(*mod)
+      Wend
+      FinishDirectory(dir)
     EndIf
     
-    While NextDirectoryEntry(dir)
-      If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-        Continue
-      EndIf
-      Protected entry$ = DirectoryEntryName(dir)
-      If Not checkID(entry$)
-        Continue
-      EndIf
-      debugger::Add("mods::load() - found mod {"+entry$+"}")
-      
-      Protected *mod.mod = init()
-      loadInfo(TF$, entry$, *mod)
-      toList(*mod)
-    Wend
+    dir$ = misc::Path(TF$ + "/mods/")
+    debugger::Add("mods::load() - read installed mods {"+dir$+"}")
+    dir = ExamineDirectory(#PB_Any, dir$, "")
+    If dir 
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          Continue
+        EndIf
+        entry$ = DirectoryEntryName(dir)
+        If Not checkID(entry$)
+          Continue
+        EndIf
+        debugger::Add("mods::load() - found {"+entry$+"} installed")
+        
+        If FindMapElement(*mods(), entry$)
+          *mods()\aux\installed = #True
+        Else
+          ; mod installed but not in list
+          ; TODO -> add to library
+        EndIf
+        
+      Wend
+      FinishDirectory(dir)
+    EndIf
   EndProcedure
   
   Procedure InstallThread(*id)
@@ -1103,8 +1136,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 502
-; FirstLine = 161
-; Folding = RIEgD-
+; CursorPosition = 734
+; FirstLine = 73
+; Folding = RIIAC-
 ; EnableUnicode
 ; EnableXP
