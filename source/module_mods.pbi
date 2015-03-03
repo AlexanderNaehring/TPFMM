@@ -1330,7 +1330,6 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
@@ -1419,7 +1418,29 @@ Module mods
     
     ; severity = "NONE", "WARNING", "CRITICAL"
     ; author role = "CREATOR", "CO_CREATOR", "TESTER", "BASED_ON", "OTHER"
+    
     With *mod
+      Select LCase(\severityAdd$)
+        Case "none"
+          \severityAdd$ = "NONE"
+        Case "warning"
+          \severityAdd$ = "WARNING"
+        Case "critical"
+          \severityAdd$ = "CRITICAL"
+        Default
+          \severityAdd$ = "NONE"
+      EndSelect
+      Select LCase(\severityRemove$)
+        Case "none"
+          \severityRemove$ = "NONE"
+        Case "warning"
+          \severityRemove$ = "WARNING"
+        Case "critical"
+          \severityRemove$ = "CRITICAL"
+        Default
+          \severityRemove$ = "WARNING"
+      EndSelect
+      
       lua$ = "function data()" + #CRLF$ +
              "return {" + #CRLF$
       lua$ + "  minorVersion = "+Str(\minorVersion)+"," + #CRLF$
@@ -1459,12 +1480,11 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 75
-; FirstLine = 14
-; Folding = ZIAQAg
+; CursorPosition = 1442
+; FirstLine = 56
+; Folding = RIAQAw
 ; EnableUnicode
 ; EnableXP
