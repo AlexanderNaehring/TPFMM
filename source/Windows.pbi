@@ -132,7 +132,7 @@ Procedure InitWindows()
   ; Open Windows
   OpenWindowMain()
   OpenWindowSettings()
-  OpenWindowModProgress()
+  OpenWindowProgress()
   
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -172,8 +172,11 @@ Procedure InitWindows()
   ; Drag & Drop
   EnableWindowDrop(WindowMain, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
   
-  ; library
+  
+  
+  ; library & queue
   mods::registerLibraryGadget(Library)
+  queue::progressRegister(WindowProgress, GadgetProgress, GadgetProgressText)
   
   ; init gui
   updateGUI()
@@ -871,8 +874,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 540
-; FirstLine = 118
-; Folding = FgAAMAAA9
+; CursorPosition = 178
+; FirstLine = 113
+; Folding = FwAAMAAA9
 ; EnableUnicode
 ; EnableXP

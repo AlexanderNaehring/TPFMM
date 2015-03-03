@@ -748,11 +748,11 @@ Module mods
     fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
     
     *mod\id$ = id$
-    *mod\aux\installed = #True
     *mod\aux\TFonly = #True 
     
     If FileSize(fileMods$) > 0
       parseInfoLUA(fileMods$, *mod)
+      *mod\aux\installed = #True
     ElseIf FileSize(fileLib$) > 0
       parseInfoLUA(fileLib$, *mod)
     Else
@@ -1039,7 +1039,7 @@ Module mods
     If FileSize(image$) > 0
       im = LoadImage(#PB_Any, image$)
       If IsImage(im)
-        im = misc::ResizeCenterImage(im, 320, 180)
+;         im = misc::ResizeCenterImage(im, 320, 180)
         i = 0
         Repeat
           image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
@@ -1054,7 +1054,7 @@ Module mods
     If FileSize(image$) > 0
       im = LoadImage(#PB_Any, image$)
       If IsImage(im)
-        im = misc::ResizeCenterImage(im, 320, 180)
+;         im = misc::ResizeCenterImage(im, 320, 180)
         i = 0
         Repeat
           image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
@@ -1177,11 +1177,16 @@ Module mods
   EndProcedure
   
   Procedure convert(*data.queue::dat)
-    ProcedureReturn #False 
+    If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+      MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
+      ProcedureReturn #False
+    EndIf
+    
     Protected TF$ = *data\tf$
     debugger::Add("mods::convert("+TF$+")")
     
-    Protected file$, NewList files$()
+    Protected file$, NewList mods$(), NewMap files$()
+    Protected i
     debugger::Add("mods::convert() - load mods.ini")
     
     OpenPreferences(misc::Path(TF$ + "/TFMM/") + "mods.ini")
@@ -1190,24 +1195,60 @@ Module mods
         file$ = ReadPreferenceString("file", "")
         If file$
           debugger::Add("mods::convert() - found {"+file$+"}")
-          AddElement(files$())
-          files$() = misc::path(TF$ + "TFMM/Mods" + file$)
+          AddElement(mods$())
+          mods$() = misc::path(TF$ + "TFMM/Mods/") + file$
         EndIf
       Wend
     EndIf
     ClosePreferences()
-    
-    ; just add everything
-    If ListSize(files$()) > 0
-      If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-        MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
-        ProcedureReturn #False
-      EndIf
-      
-      ForEach files$()
-;         queue::add(queue::#QueueActionNew, files$()
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mods.ini")
+    i = 0
+    If ListSize(mods$()) > 0
+      ; just add everything
+      ForEach mods$()
+        i + 1
+        queue::progressVal(i, ListSize(mods$()))
+        ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
+        
+        new(mods$(), TF$)
       Next
+      ClearList(mods$())
     EndIf
+    
+    ; delete mod folder
+    DeleteDirectory(misc::path(TF$ + "TFMM/Mods/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    ; delete filetracker files +filetracker.ini
+    OpenPreferences(misc::Path(TF$ + "/TFMM/") + "filetracker.ini")
+    If ExaminePreferenceGroups()
+      While NextPreferenceGroup()
+        If ExaminePreferenceKeys()
+          While NextPreferenceKey()
+            file$ = TF$ + PreferenceKeyName()
+            files$(file$) = PreferenceKeyValue()
+          Wend
+        EndIf
+      Wend
+    EndIf
+    ClosePreferences()
+    i = 0
+    ForEach files$()
+      file$ = MapKey(files$())
+      If MD5FileFingerprint(file$) = files$()
+        i + 1
+        queue::progressVal(i, MapSize(files$()))
+        debugger::Add("mods::convert() - delete {"+file$+"}")
+      DeleteFile(file$, #PB_FileSystem_Force)
+      EndIf
+    Next
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "filetracker.ini")
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mod-dependencies.ini")
+    
+    ; delete backup folder
+    DeleteDirectory(misc::path(TF$ + "TFMM/Backup/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
+    ProcedureReturn #True
   EndProcedure
   
   Procedure install(*data.queue::dat)
@@ -1533,8 +1574,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1306
-; FirstLine = 65
-; Folding = RIAQAi
+; CursorPosition = 1247
+; FirstLine = 133
+; Folding = RIARgg
 ; EnableUnicode
 ; EnableXP

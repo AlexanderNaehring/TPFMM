@@ -365,8 +365,9 @@ EnableExplicit
   
   Procedure.i GetListItemData(GadgetID.i, Position.i)
     Protected GID.s = Str(GadgetID)
-    SelectElement(ListIcon(GID)\Item(), Position)
-    ProcedureReturn ListIcon(GID)\Item()\ItemData
+    If SelectElement(ListIcon(GID)\Item(), Position)
+      ProcedureReturn ListIcon(GID)\Item()\ItemData
+    EndIf
   EndProcedure
   
   Procedure SetListItemText(GadgetID.i, Position.i, Text.s, Column.i)
@@ -684,7 +685,7 @@ CompilerIf #PB_Compiler_IsMainFile
   
 CompilerEndIf
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 505
+; CursorPosition = 447
 ; FirstLine = 143
 ; Folding = j-AAqAg-+
 ; EnableUnicode

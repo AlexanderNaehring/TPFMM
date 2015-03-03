@@ -143,10 +143,10 @@ Procedure init()
   EndIf
   
   If TF$ <> ""
-    ; conversion::convert(TF$)
-    queue::add(queue::#QueueActionConvert, TF$)
+    If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
+      queue::add(queue::#QueueActionConvert, TF$)
+    EndIf
     
-    ; mods::load(TF$)
     queue::add(queue::#QueueActionLoad, TF$)
   EndIf
   
@@ -198,7 +198,7 @@ Repeat
         GadgetCloseSettings(0)
       EndIf
     Case WindowModProgress
-      If Not WindowModProgress_Events(Event)
+      If Not WindowProgress_Events(Event)
         ; user wants to close progress window -> no action, just wait for progress to finish
       EndIf
     Case WindowModInformation
@@ -220,8 +220,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 58
-; FirstLine = 46
+; CursorPosition = 148
+; FirstLine = 123
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

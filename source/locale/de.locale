@@ -129,6 +129,15 @@ signal      = Signal
 waypoint    = Wegpunkt
 other       = anderes
 
+[progress]
+title       = Fortschritt
+load        = Lade Bibliothek
+new         = Füge neue Modifikation hinzu
+install     = Installiere Modifikation
+remove      = Entferne Modifikation aus Train Fever
+delete      = Entferne Modifikation
+convert     = Konvertiere Modifikationen
+
 [conversion]
 title       = Konvertierung
 start       = TFMM hat Modifikationen gefunden, die mit dem alten Mod-System aktiviert wurden.\nSeit dem 27. Februar 2015 benutzt Train Fever ein neues Modding System. Alle Modifikationen sollten in das neue Format umgewandelt werden. Dadurch erkennt Train Fever die Modifikationen und diese können dann im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt automatisiert in das neue Format umgewandelt werden?
