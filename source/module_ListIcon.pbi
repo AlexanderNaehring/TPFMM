@@ -634,7 +634,6 @@ EnableExplicit
     DeleteMapElement(ListIcon(), Str(GadgetID))
   EndProcedure
   
-  
   Procedure SetListItemImage(GadgetID.i, Position.i, ImageID.i)
     Protected GID.s = Str(GadgetID)
     If ImageID
@@ -685,8 +684,8 @@ CompilerIf #PB_Compiler_IsMainFile
   
 CompilerEndIf
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 636
-; FirstLine = 626
-; Folding = ---------
+; CursorPosition = 505
+; FirstLine = 143
+; Folding = j-AAqAg-+
 ; EnableUnicode
 ; EnableXP

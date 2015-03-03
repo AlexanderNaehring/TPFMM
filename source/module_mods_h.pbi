@@ -44,23 +44,23 @@
   
   Declare init() ; allocate structure, return *mod
   Declare free(id$) ; free *mod structure
-  
-  Declare new(file$, TF$) ; read mod pack from any location, extract info
-  Declare delete(id$)     ; delete mod from library
-  
   Declare load(TF$)
   
   Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
   
-  Declare InstallThread(*dummy) ; add mod to TF
-  Declare RemoveThread(*dummy)  ; remove mod from TF
+  Declare new(file$, TF$) ; read mod pack from any location, extract info
+  Declare delete(*data)   ; delete mod from library
+  
+  Declare install(*data)  ; add mod to TF
+  Declare remove(*data)   ; remove mod from TF
+  
   
   
 EndDeclareModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 50
+; CursorPosition = 55
 ; FirstLine = 14
 ; Folding = -
 ; EnableUnicode

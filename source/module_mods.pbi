@@ -729,6 +729,11 @@ Module mods
       With *mod
         ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
         ListIcon::SetListItemData(library, count, *mod)
+        If \aux\installed
+          ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+        Else 
+          ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+        EndIf
       EndWith
     EndIf
   EndProcedure
@@ -1043,11 +1048,16 @@ Module mods
         loadInfo(TF$, entry$, *mod)
         *mod\aux\file$ = misc::Path(TF$ + "/TFMM/library/" + entry$ + "/") + entry$ + ".tfmod"
         *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
+        If FileSize(misc::Path(TF$ + "/mods/" + entry$ + "/")) = -2
+          *mod\aux\installed = #True
+        EndIf
         toList(*mod)
       Wend
       FinishDirectory(dir)
     EndIf
     
+    
+    ; TODO -> CHECK FOR MODS THAT ARE NOT ALREADY IN LIBRARY
     dir$ = misc::Path(TF$ + "/mods/")
     debugger::Add("mods::load() - read installed mods {"+dir$+"}")
     dir = ExamineDirectory(#PB_Any, dir$, "")
@@ -1072,53 +1082,148 @@ Module mods
       Wend
       FinishDirectory(dir)
     EndIf
+    
   EndProcedure
   
-  Procedure InstallThread(*data.queue::dat)
-    debugger::Add("mods::InstallThread("+Str(*data)+")")
+  Procedure install(*data.queue::dat)
+    debugger::Add("mods::install("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
     tf$ = *data\tf$
     
-    debugger::Add("mods::InstallThread() - install mod {"+id$+"}")
+    debugger::Add("mods::install() - mod {"+id$+"}")
     
     Protected *mod.mod = *mods(id$)
+    Protected sourceFile$, targetDir$
+    Protected i
     
+    ; check prequesits
     If Not *mod
-      debugger::Add("mods::InstallThread() - ERROR - cannot find mod in map")
+      debugger::Add("mods::install() - ERROR - cannot find mod in map")
       ProcedureReturn #False
     EndIf
     If *mod\aux\installed
-      debugger::Add("mods::InstallThread() - ERROR - {"+id$+"} already installed")
+      debugger::Add("mods::install() - ERROR - {"+id$+"} already installed")
       ProcedureReturn #False
     EndIf
     
-    Protected sourceFile$, targetDir$
-    
+    ; extract files
     sourceFile$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + id$ + ".tfmod"
     targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
     
     If FileSize(targetDir$) = -2
-      debugger::Add("mods::InstallThread() - ERROR - {"+targetDir$+"} already exists")
+      debugger::Add("mods::install() - ERROR - {"+targetDir$+"} already exists")
       ProcedureReturn #False
     EndIf
     misc::CreateDirectoryAll(targetDir$)
     
     If Not extractZIP(sourceFile$, targetDir$)
       If Not extractRAR(sourceFile$, targetDir$)
-        debugger::Add("mods::InstallThread() - ERROR - failed to extract files")
+        debugger::Add("mods::install() - ERROR - failed to extract files")
         ProcedureReturn #False
       EndIf
     EndIf
     
+    ; finish installation
+    
+    *mod\aux\installed = #True
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+          Break
+        EndIf
+      Next
+    EndIf
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure RemoveThread(*dummy)
+  Procedure remove(*data.queue::dat)
+    debugger::Add("mods::remove("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
     
+    debugger::Add("mods::remove() - mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    Protected targetDir$
+    Protected i
+    
+    ; check prequesits
+    If Not *mod
+      debugger::Add("mods::remove() - ERROR - cannot find mod in map")
+      ProcedureReturn #False
+    EndIf
+    If Not *mod\aux\installed
+      debugger::Add("mods::remove() - ERROR - {"+id$+"} not installed")
+      ProcedureReturn #False
+    EndIf
+    
+    ; delete folder
+    targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    
+    debugger::add("mods::remove() - delete {"+targetDir$+"} and all subfolders")
+    DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    ; finish removal
+    
+    *mod\aux\installed = #False
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::SetListItemImage(library, i, ImageID(images::Images("no")))
+          Break
+        EndIf
+      Next
+    EndIf
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure delete(id$) ; delete mod from library
+  Procedure delete(*data.queue::dat) ; delete mod from library
+    debugger::Add("mods::delete("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
     
+    debugger::Add("mods::delete() - mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    Protected targetDir$
+    Protected i
+    
+    ; check prequesits
+    If Not *mod
+      debugger::Add("mods::delete() - ERROR - cannot find mod in map")
+      ProcedureReturn #False
+    EndIf
+    If *mod\aux\installed
+      debugger::Add("mods::delete() - ERROR - mod is still installed, remove first")
+      If Not remove(*data)
+        ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    ; delete folder
+    targetDir$ = misc::Path(tf$+"/TFMM/library/"+id$+"/")
+    
+    debugger::add("mods::delete() - delete {"+targetDir$+"} and all subfolders")
+    DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    ; finish deletion
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::RemoveListItem(library, i)
+          Break
+        EndIf
+      Next
+    EndIf
+    free(id$)
+    
+    ProcedureReturn #True
   EndProcedure
   
   Procedure generateID(*mod.mod, id$ = "")
@@ -1251,8 +1356,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1112
-; FirstLine = 106
-; Folding = RIIIQ5
+; CursorPosition = 1193
+; FirstLine = 61
+; Folding = RIAIA6
 ; EnableUnicode
 ; EnableXP

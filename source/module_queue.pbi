@@ -79,7 +79,7 @@ Module queue
             If element\val$
               dat\id$ = element\val$
               dat\tf$ = TF$
-              *thread = CreateThread(mods::@InstallThread(), dat)
+              *thread = CreateThread(mods::@install(), dat)
             EndIf
             
           Case #QueueActionRemove
@@ -87,7 +87,7 @@ Module queue
             If element\val$
               dat\id$ = element\val$
               dat\tf$ = TF$
-              *thread = CreateThread(mods::@RemoveThread(), dat)
+              *thread = CreateThread(mods::@remove(), dat)
             EndIf
             
           Case #QueueActionNew
@@ -99,7 +99,9 @@ Module queue
           Case #QueueActionDelete
             debugger::Add("updateQueue() - #QueueActionDelete")
             If element\val$
-              mods::delete(element\val$)
+              dat\id$ = element\val$
+              dat\tf$ = TF$
+              *thread = CreateThread(mods::@delete(), dat)
             EndIf
             
         EndSelect
@@ -130,7 +132,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 16
+; CursorPosition = 103
+; FirstLine = 68
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
