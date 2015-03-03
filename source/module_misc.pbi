@@ -19,6 +19,9 @@ DeclareModule misc
   Declare.s MemToHexStr(*mem, memlen.i)
   Declare.s FileToHexStr(file$)
   Declare HexStrToFile(hex$, file$)
+  Declare.s luaEscape(s$)
+  Declare encodeTGA(image, file$, depth =24)
+  Declare packDirectory(dir$, file$)
 EndDeclareModule
 
 Module misc
@@ -77,7 +80,12 @@ Module misc
       dir_sub$ = StringField(dir$, count, delimiter$)
       dir_total$ + dir_sub$ + delimiter$
     Wend
-    ProcedureReturn #True
+    
+    
+    If FileSize(dir$) = -2
+      ProcedureReturn #True
+    EndIf
+    ProcedureReturn #False
   EndProcedure
   
   Procedure.s Bytes(bytes.d)
@@ -151,6 +159,7 @@ Module misc
         DrawAlphaImage(ImageID(im), (width - im_w)/2, (height - im_h)/2) ; center the image onto a new image
         StopDrawing()
       EndIf
+      FreeImage(im)
       ProcedureReturn image
     EndIf
   EndProcedure
@@ -221,9 +230,130 @@ Module misc
     ProcedureReturn #False
   EndProcedure
   
+  Procedure.s luaEscape(s$)
+    s$ = ReplaceString(s$, #DQUOTE$, "\"+#DQUOTE$)
+    ProcedureReturn s$
+  EndProcedure
+  
+  Procedure encodeTGA(image, file$, depth = 24)
+    ; depth = 24 or 32
+    Protected file.i, color.i, x.i, y.i
+    
+    If Not IsImage(image)
+      debugger::Add("misc::encodeTGA() - ERROR - image {"+Str(image)+"} is no valid image")
+      ProcedureReturn #False
+    EndIf
+    
+    If Not StartDrawing(ImageOutput(image))
+      debugger::Add("misc::encodeTGA() - ERROR - drawing on image failed")
+      ProcedureReturn #False
+    EndIf
+    
+    file = CreateFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("misc::encodeTGA() - ERROR - failed to create {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    If depth <> 24 And depth <> 32
+      depth = 24
+    EndIf
+    WriteByte(file, 0) 
+    WriteByte(file, 0) 
+    WriteByte(file, 2)
+    WriteByte(file, 0)
+    WriteByte(file, 0) 
+    WriteByte(file, 0)
+    WriteByte(file, 0) 
+    WriteByte(file, 16)
+    WriteByte(file, 0) 
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteByte(file, 0)
+    WriteWord(file, ImageWidth(image))
+    WriteWord(file, ImageHeight(image))    
+    WriteByte(file, depth)
+    WriteByte(file, 0) ; 32 flipped
+    For y = ImageHeight(image) - 1 To 0 Step -1
+      For x = 0 To ImageWidth(image) - 1
+        color = Point(x, y)
+        WriteByte(file, Blue(color))
+        WriteByte(file, Green(color))
+        WriteByte(file, Red(color))
+        If depth = 32
+          If ImageDepth(image) = 32
+            WriteByte(file, 255-Alpha(color))
+          Else
+            WriteByte(file, 0)
+          EndIf
+        EndIf
+      Next
+    Next
+    
+    CloseFile(file)
+    StopDrawing()
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure addDirToPack(pack.i, dir$, root$ = "")
+    Protected relative$, dir.i, entry$
+    dir$ = Path(dir$)
+    If root$ = ""
+      root$ = GetPathPart(Left(dir$,Len(dir$)-1))
+    EndIf
+    root$ = Path(root$)
+    relative$ = Mid(dir$, Len(root$)+1)
+    
+;     debugger::Add("addDirToPack("+Str(pack)+", "+dir$+", "+root$+")")
+    
+    dir = ExamineDirectory(#PB_Any, dir$, "")
+    If Not IsDirectory(dir)
+      ProcedureReturn #False
+    EndIf
+    While NextDirectoryEntry(dir)
+      entry$ = DirectoryEntryName(dir)
+      Select DirectoryEntryType(dir)
+        Case #PB_DirectoryEntry_File
+          debugger::Add("misc::addDirToPack() - addPackFile {"+relative$ + entry$+"}")
+          AddPackFile(pack, dir$ + entry$, relative$ + entry$)
+        Case #PB_DirectoryEntry_Directory
+          If entry$ = "." Or entry$ = ".."
+            Continue
+          EndIf
+          If Not addDirToPack(pack, dir$+entry$, root$)
+            ProcedureReturn #False
+          EndIf
+      EndSelect
+    Wend
+    FinishDirectory(dir)
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure packDirectory(dir$, file$)
+    debugger::Add("packDirectory("+dir$+", "+file$+")")
+    Protected.i pack, result
+    
+    DeleteFile(file$)
+    pack = CreatePack(#PB_Any, file$, #PB_PackerPlugin_Zip)
+    If Not pack
+      ProcedureReturn #False
+    EndIf
+    
+    result = addDirToPack(pack, dir$)
+    debugger::Add("packDirectory() - close")
+    ClosePack(pack)
+    
+    If Not result
+      DeleteFile(file$)
+    EndIf
+    ProcedureReturn result
+  EndProcedure
+
+  
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 24
-; Folding = vqA+
+; CursorPosition = 327
+; FirstLine = 45
+; Folding = PKA5
 ; EnableUnicode
 ; EnableXP

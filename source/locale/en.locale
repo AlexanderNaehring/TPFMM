@@ -26,12 +26,12 @@ new_mod         = Add New Mod
 download        = Download Mods
 start_tf        = Start Train Fever
 management      = Mod Management
-activate        = Activate Mod
-activate_pl     = Activate Mods
-deactivate      = Deactivate Mod
-deactivate_pl   = Deactivate Mods
-uninstall       = Uninstall Mod
-uninstall_pl    = Uninstall Mods
+install         = Add Mod to Train Fever
+install_pl      = Add Mods to Train Fever
+remove          = Remove Mod from Train Fever
+remove_pl       = Remove Mods from Train Fever
+delete          = Uninstall Mod
+delete_pl       = Uninstall Mods
 information     = Mod Information
 
 [settings]
@@ -65,14 +65,19 @@ current = You already have the newest version of TFMM.
 failed  = Failed to retrieve version info from server.
 
 [management]
-activate      = Activate '{name}'
-activate1     = Do you want to activate '{name}'?
-activate2     = Do you want to activate {count} modifications?
-deactivate    = Deactivate '{name}'
-deactivate1   = Do you want to deactivate '{name}'?
-deactivate2   = Do you want to deactivate {count} modifications?
-uninstall1    = Do you want to uninstall '{name}'?
-uninstall2    = Do you want to uninstall {count} modifications?
+install       = Add '{name}' to Train Fever
+install1      = Do you want to add '{name}' to Train Fever?
+install2      = Do you want to add {count} modifications to Train Fever?
+remove        = Remove '{name}' from Train Fever
+remove1       = Do you want to remove '{name}' from Train Fever?
+remove2       = Do you want to remove {count} modifications from Train Fever?
+delete        = Delete '{name}'
+delete1       = Do you want to permanently delete '{name}'?
+delete2       = Do you want to permanently delete {count} modifications?
+
+conflict_hash = Modification '{name}' is already installed and added to Train Fever.
+conflict_id   = Conflict while installing '{new_name}':\nA mod with id '{id}' already exists: '{old_name} v{old_version}'\nShould '{old_name} v{old_version}' be replaced by '{new_name} v{new_version}'?
+
 select_mod    = Select new modification to add
 files_archive = Archive files
 files_all     = All files
@@ -101,24 +106,40 @@ close     = Close
 change    = Change
 save      = Save
 
-[category]
-tool                      = Tool
-pack                      = Mod-Pack
-vehicle	                  = Vehicle
-vehicle/bus               = Bus
-vehicle/tram              = Trams
-vehicle/train             = Train
-vehicle/train/steam       = Steamer
-vehicle/train/diesel      = Diesel Engine
-vehicle/train/electric    = Electric Locomotive
-vehicle/train/railcar     = Railcar
-vehicle/wagon             = Wagon
-vehicle/wagon/passenger   =	Passenger Wagon
-vehicle/wagon/goods       = Goods Wagon
-building                  = Building
-building/station          = Train Station
-building/deco             = Decoration
-building/town             = Town Building
-building/depot            = Depot
-building/signal           = Signals & Waypoints
-other                     = Other Modifications
+[tags]
+tool        = Tool
+pack        = Mod-Pack
+vehicle	    = Vehicle
+bus         = Bus
+tram        = Trams
+train       = Train
+steam       = Steamer
+diesel      = Diesel Engine
+electric    = Electric Locomotive
+railcar     = Railcar
+wagon       = Wagon
+passenger   =	Passenger Wagon
+goods       = Goods Wagon
+building    = Building
+station     = Train Station
+deco        = Decoration
+town        = Town Building
+depot       = Depot
+signal      = Signal
+waypoint    = Waypoint
+other       = Other Modifications
+
+[progress]
+title       = Progress
+load        = Load library
+new         = Add new modification
+install     = Install modification
+remove      = Remove modification from Train Fever
+delete      = Permanently delete modification
+convert     = Convert modifications
+
+[conversion]
+title       = Conversion
+start       = TFMM found modifications installed using the old technique.\nStarting of February 27, 2015, Train Fever has native modding support. All modifications have to be converted to the new format. This enabled Train Fever to recognise installed modifications and the player to manage modification for each save game individually.\n\nDo you want to convert all activated modification now?
+finish      = Conversion of modifications is finished.\nIt is HIGHLY RECOMMENDED to manually clean you Train Fever installation by deleting the "res" folder in your Train Fever directory and afterwards verify the game cache via Steam.\nPlease do this now. If you need help with this, visit train-fever.net for further instructions.
+legacy      = Please use TFMM 0.7 for legacy mode.

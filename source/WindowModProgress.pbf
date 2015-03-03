@@ -7,28 +7,18 @@
 ; Event procedures needs to be put in another source file.
 ;
 
-Global WindowModProgress
+Global WindowProgress
 
-Global GadgetModYes, GadgetModNo, GadgetModText, GadgetModNoAll, GadgetModYesAll, GadgetModProgress, GadgetModOK
+Global GadgetProgressText, GadgetProgress
 
-Declare GadgetModNoAll(EventType)
-Declare GadgetModOk(EventType)
-Declare GadgetModYes(EventType)
-Declare GadgetModNo(EventType)
-Declare GadgetModYesAll(EventType)
 
-Procedure OpenWindowModProgress(x = 0, y = 0, width = 410, height = 130)
-  WindowModProgress = OpenWindow(#PB_Any, x, y, width, height, "Install modification", #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_Tool | #PB_Window_WindowCentered, WindowID(WindowMain))
-  GadgetModYes = ButtonGadget(#PB_Any, 100, 70, 100, 30, l("management","yes"), #PB_Button_Default)
-  GadgetModNo = ButtonGadget(#PB_Any, 210, 70, 100, 30, l("management","no"))
-  GadgetModText = TextGadget(#PB_Any, 10, 10, 390, 50, "", #PB_Text_Center)
-  GadgetModNoAll = ButtonGadget(#PB_Any, 320, 70, 80, 30, l("management","no_all"))
-  GadgetModYesAll = ButtonGadget(#PB_Any, 10, 70, 80, 30, l("management","yes_all"))
-  GadgetModProgress = ProgressBarGadget(#PB_Any, 0, 110, 410, 20, 0, 100, #PB_ProgressBar_Smooth)
-  GadgetModOK = ButtonGadget(#PB_Any, 170, 70, 80, 30, l("management","ok"), #PB_Button_Default)
+Procedure OpenWindowProgress(x = 0, y = 0, width = 400, height = 70)
+  WindowProgress = OpenWindow(#PB_Any, x, y, width, height, l("progress","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_Tool | #PB_Window_WindowCentered, WindowID(WindowMain))
+  GadgetProgressText = TextGadget(#PB_Any, -10, 10, 410, 25, "", #PB_Text_Center)
+  GadgetProgress = ProgressBarGadget(#PB_Any, -10, 40, 410, 30, 0, 100, #PB_ProgressBar_Smooth)
 EndProcedure
 
-Procedure WindowModProgress_Events(event)
+Procedure WindowProgress_Events(event)
   Select event
     Case #PB_Event_CloseWindow
       ProcedureReturn #False
@@ -39,16 +29,6 @@ Procedure WindowModProgress_Events(event)
 
     Case #PB_Event_Gadget
       Select EventGadget()
-        Case GadgetModYes
-          GadgetModYes(EventType())          
-        Case GadgetModNo
-          GadgetModNo(EventType())          
-        Case GadgetModNoAll
-          GadgetModNoAll(EventType())          
-        Case GadgetModYesAll
-          GadgetModYesAll(EventType())          
-        Case GadgetModOK
-          GadgetModOk(EventType())          
       EndSelect
   EndSelect
   ProcedureReturn #True

@@ -1,459 +1,841 @@
-﻿XIncludeFile "module_ListIcon.pbi"
+﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_misc.pbi"
-XIncludeFile "module_images.pbi"
 XIncludeFile "module_unrar.pbi"
+; XIncludeFile "module_parseLUA.pbi"
 XIncludeFile "module_locale.pbi"
+XIncludeFile "module_queue.pbi"
 
-Global GadgetModNo, GadgetModNoAll, GadgetModOK, GadgetModProgress, GadgetModText, GadgetModYes, GadgetModYesAll
-Global WindowMain, WindowModProgress
-Global TimerFinishUnInstall, TimerUpdate
-Global ListInstalled
+XIncludeFile "module_mods_h.pbi"
 
-Global InstallInProgress, UpdateResult
-
-; DeclareModule mods
-;   EnableExplicit
+Module mods
+  Global NewMap *mods.mod()
+  Global changed.i ; report variable if mod states have changed
+  Global library.i ; library gadget
   
-  Enumeration
-    #AnswerNone
-    #AnswerYes
-    #AnswerNo
-    #AnswerYesAll
-    #AnswerNoAll
-    #AnswerOk
-  EndEnumeration
+  ;PRIVATE
   
-  Enumeration
-    #QueueActionNew
-    #QueueActionActivate
-    #QueueActionDeactivate
-    #QueueActionUninstall
-  EndEnumeration
-  
-  Structure author
-    name$
-    tfnet_id.i
-  EndStructure
+  Procedure checkID(id$)
+    debugger::Add("mods::checkID("+id$+")")
+    Static regexp
+    If Not IsRegularExpression(regexp)
+      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$")
+    EndIf
     
-  Structure mod
-    id$
-    name$
-    file$
-    authors$ ; full list
-    List author.author()
-    version$
-    category$
-    categoryDisplay$
-    tfnet_mod_id.i
-    size.i
-    md5$
-    active.i
-    Map dependencies$()
-  ;   Map conflicts$()
-  EndStructure
+    ProcedureReturn MatchRegularExpression(regexp, id$)
+  EndProcedure
   
-  Structure queue
-    action.i
-    *modinfo.mod
-    File$
-  EndStructure
-  
-  Structure filetrackerEntry
-    file$
-    md5$
-    required.b
-  EndStructure
-  
-  Structure filetracker
-    mod$
-    file.filetrackerEntry
-  EndStructure
-  
-  Declare UserAnswer(answer)  ; receive user input upon question
-  
-  Declare ExtractModInformation(*modinfo.mod, Path$)
-  Declare ExtractFilesZip(ZIP$, List Files$(), dir$)
-  Declare ExtractFilesRar(RAR$, List Files$(), dir$)
-  
- 
-; EndDeclareModule
-; 
-; 
-; Module mods
-  Global NewList queue.queue()
-  Global ModProgressAnswer = #AnswerNone
-  Global MutexQueue
-  
-Procedure checkTFPath(Dir$)
-  If Dir$
-    If FileSize(Dir$) = -2
-      Dir$ = misc::Path(Dir$)
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        If FileSize(Dir$ + "TrainFever.exe") > 1
-          ; TrainFever.exe is located in this path!
-          ; seems to be valid
-          
-          ; check if able to write to path
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
+  Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
+    debugger::Add("mods::CheckModFileZip("+File$+")")
+    Protected entry$, pack
+    
+    If FileSize(File$) <= 0
+      debugger::Add("mods::checkModFileZip() - ERROR - {"+File$+"} not found")
+      ProcedureReturn "false"
+    EndIf
+    
+    pack = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+    If pack
+      If ExaminePack(pack)
+        While NextPackEntry(pack)
+          entry$ = PackEntryName(pack)
+          entry$ = misc::Path(GetPathPart(entry$), "/")+GetFilePart(entry$)
+          debugger::Add("mods::checkModFileZip() - {"+entry$+"}")
+          If FindString(entry$, "res/") ; found a "res" subfolder, assume this mod is valid 
+            ClosePack(pack)
+            entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2)) ; entry = folder name (id)
+            debugger::Add("mods::checkModFileZip() - found res/ - return {"+entry$+"}")
+            ProcedureReturn entry$
           EndIf
-          ProcedureReturn -1
+          If GetFilePart(entry$) =  "info.lua" ; found info.lua, asume mod is valid
+            ClosePack(pack)
+            entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry = folder name (id)
+            debugger::Add("mods::checkModFileZip() - found info.lua - return {"+entry$+"}")
+            ProcedureReturn entry$
+          EndIf
+        Wend
+      EndIf
+      ClosePack(pack)
+    Else
+      debugger::Add("mods::checkModFileZip() - ERROR - cannot open pack {"+File$+"}")
+    EndIf
+    ProcedureReturn "false"
+  EndProcedure
+  
+  Procedure.s checkModFileRar(File$) ; check for res/ , return ID if found
+    debugger::Add("mods::CheckModFileRar("+File$+")")
+    Protected rarheader.unrar::RARHeaderDataEx
+    Protected hRAR
+    Protected Entry$
+    
+    hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
+    If hRAR
+      While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS ; read header of file in rar
+        CompilerIf #PB_Compiler_Unicode
+          Entry$ = PeekS(@rarheader\FileNameW)
+        CompilerElse
+          Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+        CompilerEndIf
+        
+        debugger::Add("mods::checkModFileRar() - {"+entry$+"}")
+        If FindString(Entry$, "res\")
+          unrar::RARCloseArchive(hRAR) ; found a "res" subfolder, assume this mod is valid
+          entry$ = GetFilePart(Left(entry$, FindString(entry$, "res\")-2)) ; entry$ = parent folder = id
+          debugger::Add("mods::checkModFileRar() - found res\ - return {"+entry$+"}")
+          ProcedureReturn entry$ ; entry$ = id, can be empty!
         EndIf
+        If GetFilePart(Entry$) =  "info.lua"
+          unrar::RARCloseArchive(hRAR) ; found info.lua subfolder, assume this mod is valid
+          entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry$ = parent folder = id
+          debugger::Add("mods::checkModFileRar() - found info.lua - return {"+entry$+"}")
+          ProcedureReturn entry$ ; entry$ = id, can be empty!
+        EndIf
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
+      Wend
+      unrar::RARCloseArchive(hRAR)
+    EndIf
+    ProcedureReturn "false"
+  EndProcedure
+  
+  Procedure.s checkModFile(File$) ; Check mod for a "res" folder! -> Return ID if found
+    debugger::Add("mods::CheckModFile("+File$+")")
+    Protected extension$, ret$
+    
+    extension$ = LCase(GetExtensionPart(File$))
+    
+    ret$ = checkModFileZip(File$)
+    If ret$ <> "false" ; either contains ID or is empty if res folder is found
+      ProcedureReturn ret$
+    EndIf
+    
+    ret$ = checkModFileRar(File$)
+    If ret$ <> "false" ; either contains ID or is empty if res folder is found
+      ProcedureReturn ret$
+    EndIf
+    
+    ProcedureReturn "false"
+  EndProcedure
+  
+  Procedure cleanModInfo(*mod.mod)
+    debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
+    With *mod
+      \id$ = ""
+      \aux\version$ = ""
+      \majorVersion = 0
+      \minorVersion = 0
+      \name$ = ""
+      \description$ = ""
+      \aux\authors$ = ""
+      ClearList(\authors())
+      \aux\tags$ = ""
+      ClearList(\tags$())
+      \tfnetId = 0
+      \minGameVersion = 0
+      ClearList(\dependencies$())
+      \url$ = ""
+    
+      \aux\file$ = ""
+      \aux\installed = 0
+      \aux\lua$ = ""
+    EndWith
+  EndProcedure
+  
+  Procedure ExtractFilesZip(zip$, List files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
+    debugger::Add("mods::ExtractFilesZip("+zip$+", Files$(), "+dir$+")")
+    Protected deb$ = "mods::ExtractFilesZip() - search for: "
+    ForEach Files$() : deb$ + files$()+", " : Next
+    debugger::Add(deb$)
+    
+    Protected zip, Entry$
+    dir$ = misc::Path(dir$)
+    
+    zip = OpenPack(#PB_Any, zip$, #PB_PackerPlugin_Zip)
+    If Not zip
+      debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
+      ProcedureReturn #False
+    EndIf
+    
+    If ExaminePack(zip)
+      While NextPackEntry(zip)
+        entry$ = PackEntryName(zip)
+        If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+          Continue
+        EndIf
+        
+        entry$ = GetFilePart(entry$)
+        ForEach Files$()
+          If LCase(Entry$) = LCase(Files$())
+            UncompressPackFile(zip, dir$ + Files$())
+            DeleteElement(Files$()) ; if file is extracted, delete from list
+            Break ; ForEach
+          EndIf
+        Next
+      Wend
+    EndIf
+    ClosePack(zip)
+    ProcedureReturn #True
+  EndProcedure
+
+  Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
+    debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
+    Protected deb$ = "mods::ExtractFilesZip() - search for: "
+    ForEach Files$() : deb$ + files$()+", " : Next
+    debugger::Add(deb$)
+    
+    Protected rarheader.unrar::RARHeaderDataEx
+    Protected hRAR, hit
+    Protected Entry$
+    dir$ = misc::Path(dir$)
+    
+    hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
+    If Not hRAR
+      debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
+      ProcedureReturn #False
+    EndIf
+    
+    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
+      CompilerIf #PB_Compiler_Unicode
+        Entry$ = PeekS(@rarheader\FileNameW)
       CompilerElse
-        If FileSize(Dir$ + "TrainFever") > 1
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
-          EndIf
-          ProcedureReturn -1
-        EndIf
+        Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
       CompilerEndIf
-    EndIf
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
+      
+      ; filter out Mac OS X bullshit
+      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        Continue
+      EndIf
+      
+      hit = #False
+      ForEach Files$()
+        entry$ = GetFilePart(entry$)
+        If LCase(entry$) = LCase(Files$())
+          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
+          DeleteElement(Files$()) ; if file is extracted, delete from list
+          hit = #True
+          Break ; ForEach
+        EndIf
+      Next
+      If Not hit
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
+      EndIf
+      
+    Wend
+    unrar::RARCloseArchive(hRAR)
+    ProcedureReturn #True
+  EndProcedure
   
-  Procedure CreateID(*modinfo.mod)
-    debugger::Add("CreateID("+Str(*modinfo)+")")
-    Protected id$, name$, author$, author_tmp$
-    Static RegExp
-    If Not RegExp
-      RegExp = CreateRegularExpression(#PB_Any, "[^A-Za-z0-9]") ; non-alphanumeric characters
-      ; regexp matches all non alphanum characters including spaces etc.
+  Procedure parseTFMMini(file$, *mod.mod)
+    debugger::Add("mods::parseTFMMini("+file$+", "+Str(*mod)+")")
+    
+    If FileSize(file$) <= 0
+      debugger::Add("mods::parseTFMMini() - ERROR - file {"+file$+"} not found or empty")
+      ProcedureReturn #False
     EndIf
     
-    With *modinfo
-      LastElement(\author())
-      Repeat
-        author_tmp$ = LCase(ReplaceRegularExpression(RegExp, \author()\name$, "")) ; remove all non alphanum + make lowercase
-        If author_tmp$ <> ""
-          If author$ <> ""
-            author$ + "."
+    OpenPreferences(file$)
+    With *mod
+      
+      \id$ = ReadPreferenceString("id", "")
+      \aux\version$ = ReadPreferenceString("version","0")
+      \name$ = ReadPreferenceString("name", \name$)
+      \aux\authors$ = ReadPreferenceString("author", "")
+      \aux\tags$ = ReadPreferenceString("category", "")
+      
+      ClearList(\dependencies$())
+      
+      PreferenceGroup("online")
+      \tfnetId = ReadPreferenceInteger("tfnet_mod_id", 0)
+      \aux\tfnet_author_id$ = ReadPreferenceString("tfnet_author_id","")
+      \url$ = ReadPreferenceString("url","")
+      PreferenceGroup("")
+    
+      \aux\file$ = ""
+      \aux\installed = 0
+      \aux\lua$ = ""
+      
+      ; read dependencies from tfmm.ini
+      PreferenceGroup("dependencies")
+      If ExaminePreferenceKeys()
+        While NextPreferenceKey()
+          AddElement(\dependencies$())
+          \dependencies$() = PreferenceKeyName()
+        Wend
+      EndIf 
+    EndWith
+    ClosePreferences()
+    
+    ; Post Processing
+    Protected count.i, i.i
+    With *mod
+      \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
+      \majorVersion = Val(StringField(\aux\version$, 1, "."))
+      \minorVersion = Val(StringField(\aux\version$, 2, "."))
+      If \aux\authors$
+        \aux\authors$ = ReplaceString(\aux\authors$, "/", ",")
+        count  = CountString(\aux\authors$, ",") + 1
+        For i = 1 To count
+          AddElement(\authors())
+          \authors()\name$ = Trim(StringField(\aux\authors$, i, ","))
+          If i = 1 : \authors()\role$ = "CREATOR"
+          Else : \authors()\role$ = "CO_CREATOR"
           EndIf
-          author$ + author_tmp$
-        EndIf
-      Until Not PreviousElement(\author())
-      If author$ = ""
-        author$ = "unknown"
+          \authors()\tfnetId = Val(Trim(StringField(\aux\tfnet_author_id$, i, ",")))
+        Next i
       EndIf
-      
-      name$ = "unknown"
-      If \name$
-        name$ = LCase(ReplaceRegularExpression(RegExp, \name$, "")) ; remove all non alphanum + make lowercase
+      If \aux\tags$
+        \aux\tags$ = ReplaceString(\aux\tags$, "/", ",")
+        count = CountString(\aux\tags$, ",") + 1
+        For i = 1 To count
+          AddElement(\tags$())
+          \tags$() = Trim(StringField(\aux\tags$, i, ","))
+        Next i
       EndIf
-      
-      id$ = author$ + "." + name$
-      
-      \id$ = id$
     EndWith
     
     ProcedureReturn #True
   EndProcedure
   
-  Procedure ValidateID(*modinfo.mod)
-    Protected id$
+  Procedure.s parseLUAstring(regexp, lua$)
+    Protected s$, r$, i.i
+    ExamineRegularExpression(regexp, lua$)
+    If NextRegularExpressionMatch(regexp)
+      For i = 1 To CountRegularExpressionGroups(regexp)
+        s$ = RegularExpressionGroup(regexp, i)
+        If s$
+          r$ = s$
+        EndIf
+      Next
+    EndIf
+    ProcedureReturn r$
+  EndProcedure
+  
+  Procedure.d parseLUAnumber(regexp, lua$)
+    Protected s$, r.d
+    ExamineRegularExpression(regexp, lua$)
+    If NextRegularExpressionMatch(regexp)
+      s$ = RegularExpressionGroup(regexp, CountRegularExpressionGroups(regexp)-1)
+      r = ValD(s$)
+    EndIf
     
-    If Not *modinfo
+    ProcedureReturn r
+  EndProcedure
+  
+  Procedure parseLUAlocale(file$, locale$, *mod.mod, Map reg_val())
+    debugger::Add("parseLUAlocale("+file$+", "+locale$+", "+Str(*mod)+")")
+    Protected file.i, lua$
+    Protected string$
+    
+    ; TODO use parser module and global string, regexp, etc...
+    string$ = "(.+?)"
+    string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+    string$ = "(_\(("+string$+")\))|("+string$+")"
+    
+    file = ReadFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("parseLUAlocale() - ERROR - could not read {"+file$+"}")
       ProcedureReturn #False
     EndIf
     
-    Static RegExp
-    If Not RegExp : RegExp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+\.)+[a-z0-9]+$") : EndIf ; ID match TODO : case-sensitive?
+    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
+    CloseFile(file)
     
-    With *modinfo
-      \id$ = LCase(\id$)
-      If Not MatchRegularExpression(RegExp, \id$) ; if regexp matches, ID is valid, if not -> create new ID
-        CreateID(*modinfo)
-      EndIf
-    EndWith
-    ProcedureReturn #True 
-  EndProcedure
+    ; remove comments
+    lua$ = ReplaceRegularExpression(reg_val("comments1"), lua$, "")
+    lua$ = ReplaceRegularExpression(reg_val("comments2"), lua$, "")
     
-  Procedure AddToQueue(action, *modinfo.mod, File$="")
-    debugger::Add("AddToQueue("+Str(action)+", "+Str(*modinfo.mod)+", "+File$+")")
-    If Not MutexQueue
-      debugger::Add("MutexQueue = CreateMutex()")
-      MutexQueue = CreateMutex()
+    ; try matching string to "function data() return { ... } end" and extract return value
+    ExamineRegularExpression(reg_val("data"), lua$)
+    If Not NextRegularExpressionMatch(reg_val("data")) ; only expect one match -> read onlyfirst match
+      debugger::Add("parseLUAlocale() - ERROR - could not match reg_data")
+      ProcedureReturn #False 
     EndIf
     
-    Select action
-      Case #QueueActionNew
-        If File$ = ""
-          ProcedureReturn #False
-        EndIf
-          
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionNew: " + File$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\File$ = File$
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionActivate
-        If Not *modinfo
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionActivate: " + *modinfo\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\modinfo = *modinfo
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionDeactivate
-        If Not *modinfo
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionDeactivate: " + *modinfo\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\modinfo = *modinfo
-        UnlockMutex(MutexQueue)
-        
-      Case #QueueActionUninstall
-        If Not *modinfo
-          ProcedureReturn #False
-        EndIf
-        
-        LockMutex(MutexQueue)
-        debugger::Add("Append to queue: QueueActionUninstall: " + *modinfo\name$)
-        LastElement(queue())
-        AddElement(queue())
-        queue()\action = action
-        queue()\modinfo = *modinfo
-        UnlockMutex(MutexQueue)
-        
-        
-    EndSelect
-  EndProcedure
-  
-  Procedure UserAnswer(answer)
-    ModProgressAnswer = answer
-  EndProcedure
-  
-  Procedure FreeModList()
-    debugger::Add("FreeModList()")
-    Protected i, count
-    Protected *modinfo.mod
+    lua$ = Trim(RegularExpressionGroup(reg_val("data"), 1)) ; read only group defined in regexp which should contain definition
+    If lua$ = ""
+      debugger::Add("parseLUAlocale() - ERROR - no data found")
+      ProcedureReturn #False
+    EndIf
     
-    count = CountGadgetItems(ListInstalled)
-    For i = 0 To count-1
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      FreeStructure(*modinfo) ; this automatically also frees all strings in the strucute element
-    Next
-    ListIcon::ClearListItems(ListInstalled)
+    Protected reg_locale
+    reg_locale = CreateRegularExpression(#PB_Any, locale$ + "\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+    
+    If Not IsRegularExpression(reg_locale)
+      debugger::Add("parseLUAlocale() - ERROR - could not initialize regexp for {"+locale$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    ExamineRegularExpression(reg_locale, lua$)
+    If Not NextRegularExpressionMatch(reg_locale) ; only expect one match -> read onlyfirst match
+      debugger::Add("parseLUAlocale() - ERROR - cannot find a match for locale {"+locale$+"}")
+      ProcedureReturn #False 
+    EndIf
+    lua$ = Trim(RegularExpressionGroup(reg_locale, 1))
+    
+    
+    Protected regexp
+    ; TODO escape characters?
+    ; replace string for name
+    If *mod\name$
+      regexp = CreateRegularExpression(#PB_Any, *mod\name$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      If IsRegularExpression(regexp)
+        *mod\name$ = parseLUAstring(regexp, lua$)
+        FreeRegularExpression(regexp)
+      EndIf
+    EndIf
+    ; replace string for description
+    If *mod\description$
+      regexp = CreateRegularExpression(#PB_Any, *mod\description$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      If IsRegularExpression(regexp)
+        *mod\description$ = parseLUAstring(regexp, lua$)
+        FreeRegularExpression(regexp)
+      EndIf
+    EndIf
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure LoadModList()
-    debugger::Add("LoadModList()")
-    Protected active$, author$, tfnet_author_id$, Path$
-    Protected i.i, count.i
-    Protected *modinfo.mod
+  Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
+    debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod.mod)+")")
+    
+    Protected file.i, lua$, i.i
+    Static NewMap reg_val()
+    Static number$, string$, severity$
+;     Static whitespace$, number$, statement$, statements$, variable$, string$, exstring$
+    
+    If FileSize(file$) <= 0
+      debugger::Add("mods::parseInfoLUA() - ERROR: file {"+file$+"} not found or empty")
+      ProcedureReturn #False
+    EndIf
+    
+    file = ReadFile(#PB_Any, file$)
+    If Not file
+      debugger::Add("mods::parseInfoLUA() - ERROR: cannot read file {"+file$+"}!")
+      ProcedureReturn #False
+    EndIf
+    
+    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
+    CloseFile(file)
+    
+    ; SCANNER
+    ; init regular expressions
+    If Not reg_val("data")
+      debugger::Add("mods::parseInfoLUA() - generate regexp")
+      number$ = "([+-]?(\d+\.?\d*|\.\d+))"
+      string$ = "(.+?)"
+;       string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
+      string$ = "('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")" ; no multiline strings!
+      string$ = "(_\(("+string$+")\))|("+string$+")"
+      
+      ; extract return data
+      reg_val("data")             = CreateRegularExpression(#PB_Any, "function\s+Data\s*\(\s*\)\s*Return\s*\{\s*(.*?)\s*\}\s*End", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+     ; remove all comments: one line comment -- , multi line comment --[[ ... ]] and multiple levels: --[===[ --[[ ]] ]===]
+      reg_val("comments1")        = CreateRegularExpression(#PB_Any, "(--\[(=*)\[.*?\]\2\])", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+      reg_val("comments2")        = CreateRegularExpression(#PB_Any, "(--(.*?)$)", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
+       ; values
+      reg_val("minorVersion")     = CreateRegularExpression(#PB_Any, "minorVersion\s*=\s*("+number$+")") ; , #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("severityAdd")      = CreateRegularExpression(#PB_Any, "severityAdd\s*=\s*("+string$+")")
+      reg_val("severityRemove")   = CreateRegularExpression(#PB_Any, "severityRemove\s*=\s*("+string$+")")
+      reg_val("name")             = CreateRegularExpression(#PB_Any, "name\s*=\s*("+string$+")")
+      reg_val("role")             = CreateRegularExpression(#PB_Any, "role\s*=\s*("+string$+")")
+      reg_val("text")             = CreateRegularExpression(#PB_Any, "text\s*=\s*("+string$+")")
+      reg_val("steamProfile")     = CreateRegularExpression(#PB_Any, "steamProfile\s*=\s*("+string$+")")
+      reg_val("description")      = CreateRegularExpression(#PB_Any, "description\s*=\s*("+string$+")")
+      reg_val("authors")          = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{(\s*(\{.*?\}\s*,*\s*)*?\s*)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("authors2")         = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("author")           = CreateRegularExpression(#PB_Any, "\{.*?\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("tags")             = CreateRegularExpression(#PB_Any, "tags\s*=\s*\{(.*?)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("string")           = CreateRegularExpression(#PB_Any, string$)
+      reg_val("tfnetId")          = CreateRegularExpression(#PB_Any, "tfnetId\s*=\s*("+number$+")")
+      reg_val("minGameVersion")   = CreateRegularExpression(#PB_Any, "minGameVersion\s*=\s*("+number$+")")
+      reg_val("dependencies")     = CreateRegularExpression(#PB_Any, "dependencies\s*=\s*(\{(.*?)\})", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
+      reg_val("url")              = CreateRegularExpression(#PB_Any, "url\s*=\s*("+string$+")")
+      
+      ForEach reg_val()
+        If Not IsRegularExpression(reg_val())
+          debugger::Add("mods::parseInfoLUA() - ERROR - regexp {"+MapKey(reg_val())+"} not initialized")
+          ProcedureReturn #False
+        EndIf
+      Next
+    EndIf
+    
+    ; remove comments
+    lua$ = ReplaceRegularExpression(reg_val("comments1"), lua$, "")
+    lua$ = ReplaceRegularExpression(reg_val("comments2"), lua$, "")
+    
+    ; try matching string to "function data() return { ... } end" and extract return value
+    ExamineRegularExpression(reg_val("data"), lua$)
+    If Not NextRegularExpressionMatch(reg_val()) ; only expect one match -> read onlyfirst match
+      debugger::Add("mods::parseInfoLUA() - ERROR: no match found (reg_data)")
+      ProcedureReturn #False 
+    EndIf
+    
+    lua$ = Trim(RegularExpressionGroup(reg_val(), 1)) ; read only group defined in regexp which should contain definition
+    If lua$ = ""
+      debugger::Add("mods::parseInfoLUA() - ERROR: empty data (reg_data -> group 1)")
+      ProcedureReturn #False 
+    EndIf
+    
+    ; brute force parsing (bad and unsexy) :(
+    ; first: all tables (author, tags, dependencies
+    Protected authors$, author$, s$, s.d, tmp.i, tmp$
+    
+    ; extract authors
+    ExamineRegularExpression(reg_val("authors"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      authors$ = RegularExpressionGroup(reg_val(), 1)
+    Else
+      ExamineRegularExpression(reg_val("authors2"), lua$)
+      If NextRegularExpressionMatch(reg_val())
+        authors$ = RegularExpressionGroup(reg_val(), 1)
+      EndIf
+    EndIf
+    ;remove authors from parsing string (in order to not interfere with other "name" and "tfnetId"
+    lua$ = ReplaceRegularExpression(reg_val(), lua$, "")
+    
+    ; authors
+    ExamineRegularExpression(reg_val("author"), authors$)
+    tmp = #False
+    While NextRegularExpressionMatch(reg_val("author"))
+      author$ = RegularExpressionMatchString(reg_val("author"))
+      If author$
+        If Not tmp  ; if a new author is found -> one time clean possible old list
+          ClearList(*mod\authors())
+          tmp = #True
+        EndIf
+        AddElement(*mod\authors())
+        ; name:
+        s$ = parseLUAstring(reg_val("name"), author$)
+        If s$
+          *mod\authors()\name$ = s$
+        EndIf
+        s$ = parseLUAstring(reg_val("role"), author$)
+        If s$
+          *mod\authors()\role$ = s$
+        EndIf
+        s$ = parseLUAstring(reg_val("text"), author$)
+        If s$
+          *mod\authors()\text$ = s$
+        EndIf
+        s$ = parseLUAstring(reg_val("steamProfile"), author$)
+        If s$
+          *mod\authors()\steamProfile$ = s$
+        EndIf
+        s = parseLUAnumber(reg_val("tfnetId"), author$)
+        If s
+          *mod\authors()\tfnetId = s
+        EndIf
+      EndIf
+    Wend
+    
+    ; name
+    s$ = parseLUAstring(reg_val("name"), lua$)
+    If s$
+      *mod\name$ = s$
+    EndIf
+    s$ = parseLUAstring(reg_val("severityAdd"), lua$)
+    If s$
+      *mod\severityAdd$ = s$
+    EndIf
+    s$ = parseLUAstring(reg_val("severityRemove"), lua$)
+    If s$
+      *mod\severityRemove$ = s$
+    EndIf
+    s$ = parseLUAstring(reg_val("description"), lua$)
+    If s$
+      *mod\description$ = s$
+    EndIf
+    s$ = parseLUAstring(reg_val("url"), lua$)
+    If s$
+      *mod\url$ = s$
+    EndIf
+    
+    s = parseLUAnumber(reg_val("minorVersion"), lua$)
+    If s
+      *mod\minorVersion = s
+    EndIf
+    s = parseLUAnumber(reg_val("tfnetId"), lua$)
+    If s
+      *mod\tfnetId = s
+    EndIf
+    s = parseLUAnumber(reg_val("minGameVersion"), lua$)
+    If s
+      *mod\minGameVersion = s
+    EndIf
+    
+    ; tags = {"vehicle", "bus", },
+    ExamineRegularExpression(reg_val("tags"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      tmp$ = RegularExpressionGroup(reg_val(), 1)
+      If tmp$
+        ExamineRegularExpression(reg_val("string"), tmp$)
+        tmp = #False
+        While NextRegularExpressionMatch(reg_val())
+          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
+            ClearList(*mod\tags$())
+            tmp = #True
+          EndIf
+          AddElement(*mod\tags$())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$:
+              *mod\tags$() = s$
+            EndIf
+          Next
+        Wend
+      EndIf
+    EndIf
+    
+    ; dependencies = {"mod_1", "mod_2", },
+    ExamineRegularExpression(reg_val("dependencies"), lua$)
+    If NextRegularExpressionMatch(reg_val())
+      tmp$ = RegularExpressionGroup(reg_val(), 1)
+      If tmp$
+        ExamineRegularExpression(reg_val("string"), tmp$)
+        tmp = #False
+        While NextRegularExpressionMatch(reg_val())
+          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
+            ClearList(*mod\dependencies$())
+            tmp = #True
+          EndIf
+          AddElement(*mod\dependencies$())
+          For i = 1 To CountRegularExpressionGroups(reg_val())
+            s$ = RegularExpressionGroup(reg_val(), i)
+            If s$:
+              *mod\dependencies$() = s$
+            EndIf
+          Next
+        Wend
+      EndIf
+    EndIf
+    
+    
+    ; last step: open strings.lua if present and replace strings
+    If FileSize(GetPathPart(file$)+"strings.lua") > 0
+      parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+      parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure infoPP(*mod.mod)    ; post processing
+    debugger::Add("mods::infoPP("+Str(*mod)+")")
+    ; authors
+    With *mod
+      \aux\authors$ = ""
+      ForEach \authors()
+        If \aux\authors$
+          \aux\authors$ + ", "
+        EndIf
+        \aux\authors$ + \authors()\name$
+      Next
+    EndWith
+    
+    ; version
+    With *mod
+      \majorVersion = Val(StringField(*mod\id$, CountString(*mod\id$, "_")+1, "_"))
+      If \aux\version$ And Not \minorVersion
+        \minorVersion = Val(StringField(\aux\version$, 2, "."))
+      EndIf
+      \aux\version$ = Str(\majorVersion)+"."+Str(\minorVersion)
+    EndWith
+    
+    ; tags
+    With *mod
+      \aux\tags$ = ""
+      ForEach \tags$()
+        If \aux\tags$
+          \aux\tags$ + ", "
+        EndIf
+        \aux\tags$ + locale::l("tags", \tags$())
+      Next
+    EndWith
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  ; TODO : extract & load all necesarry information at each startup!
+  
+  Procedure debugInfo(*mod.mod)
+    Protected deb$
+    debugger::Add("mods::debugInfo() - id: "+*mod\id$)
+    debugger::Add("mods::debugInfo() - name: "+*mod\name$)
+    ForEach *mod\authors()
+      debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
+    Next
+    debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
+    debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
+    debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
+    debugger::Add("mods::debugInfo() - description: "+*mod\description$)
+    debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
+    debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
+    debugger::Add("mods::debugInfo() - url: "+*mod\url$)
+    deb$ = "mods::debugInfo() - tags: "
+    ForEach *mod\tags$()
+      deb$ + *mod\tags$()+", "
+    Next
+    debugger::Add(deb$)
+    deb$ = "mods::debugInfo() - dependencies: "
+    ForEach *mod\dependencies$()
+      deb$ + *mod\dependencies$()+", "
+    Next
+    debugger::Add(deb$)
+  EndProcedure
+  
+  Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
+    debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
+    Protected tmpDir$ = GetTemporaryDirectory()
+    
+    ; clean info
+    cleanModInfo(*mod)
+    
+    ; read standard information
+    With *mod
+      \aux\file$ = GetFilePart(file$)
+      \aux\md5$ = MD5FileFingerprint(file$)
+      \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
+    EndWith
+    
+    ; extract some files
+    Protected NewList files$()
+    AddElement(files$()) : files$() = "tfmm.ini"
+    AddElement(files$()) : files$() = "info.lua"
+    AddElement(files$()) : files$() = "strings.lua"
+    
+    ForEach files$()
+      DeleteFile(tmpDir$ + files$(), #PB_FileSystem_Force)
+    Next
+    
+    If Not ExtractFilesZip(file$, files$(), tmpDir$)
+      If Not ExtractFilesRar(file$, files$(), tmpDir$)
+        debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
+      EndIf
+    EndIf
+    
+    ; read tfmm.ini
+    parseTFMMini(tmpDir$ + "tfmm.ini", *mod)
+    DeleteFile(tmpDir$ + "tfmm.ini")
+    
+    ; read info.lua
+    parseInfoLUA(tmpDir$ + "info.lua", *mod)
+    DeleteFile(tmpDir$ + "info.lua")
+    
+    If Not generateID(*mod, id$)
+      ProcedureReturn #False
+    EndIf
+    
+    ; Post Processing
+    infoPP(*mod)
+    
+    debugInfo(*mod)
+    
+    ; generate info.lua (in memory)
+    generateLUA(*mod)
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure loadInfo(TF$, id$, *mod.mod)
+    debugger::Add("mods::loadInfo("+TF$+", "+id$+", "+Str(*mod.mod)+")")
     
     If TF$ = ""
       ProcedureReturn #False
     EndIf
     
-    OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
-    If ExaminePreferenceGroups()
-      While NextPreferenceGroup()
-        *modinfo = AllocateStructure(mod)
-        With *modinfo
-          \name$ = PreferenceGroupName()
-          debugger::Add("LoadModList() - {"+\name$+"}")
-          \file$ = ReadPreferenceString("file", "")
-          If \file$ = ""
-            ; no valid mod
-            ; free memory and continue with next entry
-            FreeStructure(*modinfo)
-            Continue
-          EndIf
-          
-          ClearList(\author())
-          \id$ = ReadPreferenceString("id", "") ; ID will be checked and rewritten after reading name & author
-          \name$ = ReadPreferenceString("name", \name$)
-          author$ = ReadPreferenceString("author", "")
-          author$ = ReplaceString(author$, "/", ",")
-          \version$ = ReadPreferenceString("version", "")
-          \category$ = ReadPreferenceString("category", "")
-          \categoryDisplay$ = l("category", \category$)
-          
-          tfnet_author_id$ = ReadPreferenceString("online_tfnet_author_id", "")
-          \tfnet_mod_id = ReadPreferenceInteger("online_tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
-          \md5$ = ReadPreferenceString("md5", "")
-          \size = ReadPreferenceInteger("size", 0)
-          \active = ReadPreferenceInteger("active", 0)
-          
-          count  = CountString(author$, ",") + 1
-          For i = 1 To count
-            AddElement(\author())
-            \author()\name$ = Trim(StringField(author$, i, ","))
-            \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
-          Next i
-          
-          \authors$ = ""
-          If ListSize(\author()) > 0
-            ResetList(\author())
-            ForEach \author()
-              If \authors$ <> ""
-                \authors$ + ", "
-              EndIf
-              \authors$ + \author()\name$
-            Next
-          EndIf
-          
-          ValidateID(*modinfo) ; check ID and create new if neccessary
-          
-          count = CountGadgetItems(ListInstalled)
-          ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \categoryDisplay$ + Chr(10) + \version$); + Chr(10) + active$)
-          ListIcon::SetListItemData(ListInstalled, count, *modinfo)
-          If \active
-            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
-          Else
-            ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
-          EndIf
-          
-          ; check additional data (preview.png, tfmm.ini, readme.txt, etc...)
-          ; new versions extract these information directy
-          ; for backwards compatibility: extract also when loading list
-          Path$ = misc::Path(TF$ + "TFMM/Mods/" + \id$)
-          If FileSize(Path$) <> -2 ; if directory does not exist
-            ExtractModInformation(*modinfo, Path$)
-          EndIf
-          
-        EndWith
-      Wend
-    EndIf
-    ClosePreferences()
+    Protected fileLib$, fileMods$
     
+    fileLib$ = misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua"
+    fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
     
-    ; load dependencies
-    debugger::Add("Load Dependencies")
-    OpenPreferences(misc::Path(TF$ + "TFMM") + "mod-dependencies.ini")
-    count = CountGadgetItems(ListInstalled)
-    For i = 0 To count-1
-      With *modinfo
-        *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-        If PreferenceGroup(\name$)
-          debugger::Add(" - Dependencies for "+\name$+":")
-          If ExaminePreferenceKeys()
-            While NextPreferenceKey()
-              debugger::Add(" - - " + PreferenceKeyName() + " = " + PreferenceKeyValue())
-              \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
-            Wend
-          EndIf
-        EndIf
-      EndWith
-    Next
-    ClosePreferences()
-  EndProcedure
-
-  Procedure FinishDeActivate()
-    debugger::Add("FinishDeActivate()")
-    Protected i, *modinfo.mod
-    RemoveWindowTimer(WindowModProgress, TimerFinishUnInstall)
+    *mod\id$ = id$
     
-    For i = 0 To CountGadgetItems(ListInstalled) - 1
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      If *modinfo\active
-        ListIcon::SetListItemImage(ListInstalled, i, ImageID(images::Images("yes")))
-      Else
-        ListIcon::SetListItemImage(ListInstalled, i, ImageID(images::Images("no")))
-      EndIf
-    Next i
+    Protected sizeLib, sizeMods
+    sizeLib = FileSize(fileLib$)
+    sizeMods = FileSize(fileMods$)
     
-    DisableWindow(WindowMain, #False)
-    HideWindow(WindowModProgress, #True)
-    SetActiveWindow(WindowMain)
-    InstallInProgress = #False 
-  EndProcedure
-  
-  Procedure WriteModToIni(*modinfo.mod) ; write *modinfo to mod list ini file
-    Protected author$, tfnet_author_id$
-    If Not *modinfo
+    If sizeLib >= 0 And sizeMods >= 0 ; in lib and mods -> installed
+      *mod\aux\TFonly = #False
+      *mod\aux\installed = #True
+      parseInfoLUA(fileMods$, *mod) ; parse from install location
+      
+    ElseIf sizeLib >= 0 And sizeMods < 0 ; in lib, not in mods -> not installed
+      *mod\aux\TFonly = #False
+      *mod\aux\installed = #False
+      parseInfoLUA(fileLib$, *mod) ; parse from lib
+      
+    ElseIf sizeLib < 0 And sizeMods >= 0 ; not in lib but in mods -> installed (TFONLY)
+      *mod\aux\TFonly = #True
+      *mod\aux\installed = #True
+      parseInfoLUA(fileMods$, *mod) ; parse from install location
+      
+    Else ; not installed and not in lib -> mod does not exist!
+      debugger::Add("mods::loadInfo() - ERROR - mod not found in lib and mods!")
       ProcedureReturn #False
     EndIf
     
-    With *modinfo
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
-      PreferenceGroup(\name$)
-      WritePreferenceString("file", \file$)
-      ForEach \author()
-        If author$ <> ""
-          author$ + ", "
-          tfnet_author_id$ + ", "
-        EndIf
-        author$ + \author()\name$
-        tfnet_author_id$ + Str(\author()\tfnet_id)
-      Next
-      WritePreferenceString("id", \id$)
-      WritePreferenceString("name", \name$)
-      WritePreferenceString("version", \version$)
-      WritePreferenceString("author", author$)
-      WritePreferenceString("category", \category$)
-      WritePreferenceString("online_tfnet_author_id", tfnet_author_id$)
-      WritePreferenceInteger("online_tfnet_mod_id", \tfnet_mod_id)
-      WritePreferenceInteger("size", \size)
-      WritePreferenceString("md5", \md5$)
-      WritePreferenceInteger("active", \active)
-      ClosePreferences()
-      
-      ; write dependencies
-      If MapSize(\dependencies$()) > 0
-        OpenPreferences(misc::Path(TF$ + "TFMM") + "mod-dependencies.ini")
-        RemovePreferenceGroup(\name$)
-        PreferenceGroup(\name$)
-        ForEach \dependencies$()
-          WritePreferenceString(MapKey(\dependencies$()), \dependencies$())
-        Next
-        ClosePreferences()
-      EndIf
-    EndWith
+    infoPP(*mod)
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure ExtractModZip(File$, Path$)
+  Procedure toList(*mod.mod)
+    debugger::Add("mods::toList("+Str(*mod)+")")
+    Protected count.i
+    If FindMapElement(*mods(), *mod\id$)
+      *mods(*mod\id$) = *mod
+      ; *mod already in list
+      debugger::Add("mods::toList() - ERROR - mod already in list")
+    Else
+      *mods(*mod\id$) = *mod
+      If IsGadget(library)
+        count = CountGadgetItems(library)
+        With *mod
+          ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+          ListIcon::SetListItemData(library, count, *mod)
+          If \aux\installed
+            ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+          Else 
+            ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+          EndIf
+        EndWith
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure extractZIP(file$, path$)
+    debugger::Add("mods::extractZIP("+File$+")")
     Protected zip, error
     
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
     If Not zip
-      debugger::Add("ExtractModZip() - error opening pack "+File$)
+      debugger::Add("mods::extractZIP() - ERROR - failed to open {"+file$+"}")
       ProcedureReturn #False 
     EndIf
     
     If Not ExaminePack(zip)
-      debugger::Add("ExtractModZip() - error examining pack "+File$)
+      debugger::Add("mods::ExtractModZip() - ERROR - failed to examining pack")
       ProcedureReturn #False
     EndIf
     
-    Path$ = misc::Path(Path$)
+    path$ = misc::Path(path$)
     
     While NextPackEntry(zip)
       ; filter out Mac OS X bullshit
       If FindString(PackEntryName(zip), "__MACOSX") Or FindString(PackEntryName(zip), ".DS_Store") Or Left(GetFilePart(PackEntryName(zip)), 2) = "._"
-        debugger::Add("ExtractModZip() - skip "+PackEntryName(zip))
         Continue
       EndIf
       
+      file$ = PackEntryName(zip)
+      file$ = misc::Path(GetPathPart(file$), "/")+GetFilePart(file$)
+      debugger::Add("mods::extractZIP() - {"+file$+"}")
       If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
-        If FindString(PackEntryName(zip), "res/") ; only extract files to list which are located in subfoldres of res/
-          File$ = PackEntryName(zip)
-          File$ = Mid(File$, FindString(File$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
+        If FindString(file$, "res/") ; only extract files which are located in subfoldres of res/
+          file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
           ; adjust path delimiters to OS
-          File$ = misc::Path(GetPathPart(File$)) + GetFilePart(File$)
-          misc::CreateDirectoryAll(GetPathPart(Path$ + File$))
-          If UncompressPackFile(zip, Path$ + File$, PackEntryName(zip)) = 0
-            debugger::Add("ExtractModZip() - ERROR: uncrompressing zip: '"+PackEntryName(zip)+"' to '"+Path$ + File$+"' failed!")
+          file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
+          misc::CreateDirectoryAll(GetPathPart(path$ + file$))
+          If UncompressPackFile(zip, path$ + file$, PackEntryName(zip)) = 0
+            debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
           EndIf
         EndIf
       EndIf
@@ -464,13 +846,16 @@ EndProcedure
     ProcedureReturn #True
   EndProcedure
   
-  Procedure ExtractModRar(File$, Path$)
+  Procedure extractRAR(file$, path$)
+    debugger::Add("mods::extractRAR("+file$+", "+path$+")")
+    
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
     Protected Entry$
     
-    hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_EXTRACT)
+    hRAR = unrar::OpenRar(file$, unrar::#RAR_OM_EXTRACT)
     If Not hRAR
+      debugger::Add("mods::extractRAR() - ERROR - failed to open {"+file$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -483,18 +868,16 @@ EndProcedure
       
       ; filter out Mac OS X bullshit
       If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        debugger::Add("ExtractModRar() - skip "+Entry$)
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
         Continue
       EndIf
       
-      If FindString(Entry$, "res\") ; only extract files to list which are located in subfoldres of res
-        Entry$ = Entry$
-        Entry$ = Mid(Entry$, FindString(Entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
-        Entry$ = misc::Path(GetPathPart(Entry$)) + GetFilePart(Entry$) ; translate to correct delimiter: \ or /
+      If FindString(entry$, "res\") ; only extract files to list which are located in subfoldres of res
+        entry$ = Mid(entry$, FindString(entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
+        entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
   
-        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + Entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
-          debugger::Add("ExtractModRar() - ERROR: uncrompressing rar: '"+File$+"' failed!")
+        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+          debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
         EndIf
       Else
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
@@ -506,1136 +889,709 @@ EndProcedure
     ProcedureReturn #True
   EndProcedure
   
-  Procedure ActivateThread_ReadFiles(dir$, List files$())
-    Protected dir, Entry$
+  ;PUBLIC
+  
+  Procedure changed()
+    Protected ret = changed
+    changed = #False
+    ProcedureReturn ret
+  EndProcedure
+  
+  Procedure registerLibraryGadget(lib)
+    debugger::Add("registerLibraryGadget("+Str(lib)+")")
+    library = lib
+    ProcedureReturn lib
+  EndProcedure
+  
+  Procedure init() ; allocate mod structure
+    Protected *mod.mod
+    *mod = AllocateStructure(mod)
+    debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
+    ProcedureReturn *mod
+  EndProcedure
+  
+  Procedure free(id$)
+    debugger::Add("mods::freeMod("+id$+")")
+    Protected *mod.mod
+    If FindMapElement(*mods(), id$)
+      FreeStructure(*mods())
+      DeleteMapElement(*mods())
+      ProcedureReturn #True
+    EndIf
     
-    dir$ = misc::Path(dir$)
+    debugger::Add("mods::freeMod() - ERROR: could not find mod {"+id$+"} in List")
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure new(file$, TF$) ; add new mod from any location to list of mods and initiate install
+    debugger::Add("mods::addMod("+file$+", "+TF$+")")
+    Protected *mod.mod, id$
     
-    dir = ExamineDirectory(#PB_Any, dir$, "")
-    If Not dir
+    ; first step: check mod
+    id$ = CheckModFile(file$)
+    If id$ = "false"
+      debugger::Add("mods::addMod() - ERROR: check failed, abort")
       ProcedureReturn #False
     EndIf
     
-    While NextDirectoryEntry(dir)
-      Entry$ = DirectoryEntryName(dir)
-      If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory ; DIR: recursively call function, ignore ., .., __MACOS
-        If Entry$ <> "." And Entry$ <> ".." And Entry$ <> "__MACOS"
-          ActivateThread_ReadFiles(dir$ + Entry$, files$())
-        EndIf
-      ElseIf DirectoryEntryType(dir) = #PB_DirectoryEntry_File  ; FILE: add file to list, ignore .DS_Store, thumbs.db
-        If Entry$ <> ".DS_Store" And LCase(Entry$) <> "thumbs.db"
-          debugger::Add("ActivateThread_ReadFiles() - add file to list {" + dir$ + Entry$ + "}")
-          AddElement(files$())
-          files$() = dir$ + Entry$
-        EndIf
-      EndIf
-    Wend
-    FinishDirectory(dir)
+    *mod = init()
     
-    If ListSize(files$()) <= 0
+    ; second step: read information
+    If Not getInfo(file$, *mod, id$)
+      debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
+      FreeStructure(*mod)
       ProcedureReturn #False
+    EndIf
+    
+    
+    ; third step: check if mod with same ID already installed
+    Protected sameHash.b = #False, sameID.b = #False
+    ForEach *mods()
+      If *mods()\aux\md5$ = *mod\aux\md5$ And *mod\aux\md5$
+        debugger::Add("mods::addMod() - MD5 check found match!")
+        id$ = *mods()\id$
+        sameHash = #True
+        Break
+      EndIf
+    Next
+    
+    If sameHash
+      Protected NewMap strings$()
+      ClearMap(strings$())
+      strings$("name") = *mods(id$)\name$
+      If *mods()\aux\installed
+        MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
+        debugger::Add("mods::addMod() - cancel new installed, mod already installed")
+      Else
+        debugger::Add("mods::addMod() - trigger install of previous mod")
+        queue::add(queue::#QueueActionInstall, id$)
+      EndIf
+      FreeStructure(*mod)
+      ProcedureReturn #True
+    EndIf
+    
+    If FindMapElement(*mods(),  *mod\id$)
+      debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
+      id$ = *mod\id$
+      sameID = #True
+    EndIf
+    
+    If sameID
+      Protected NewMap strings$()
+      ClearMap(strings$())
+      strings$("id") = *mod\id$
+      strings$("old_name") = *mods(id$)\name$
+      strings$("old_version") = *mods(id$)\aux\version$
+      strings$("new_name") = *mod\name$
+      strings$("new_version") = *mod\aux\version$
+      If MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_id",strings$()), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+        ; user does not want to replace
+        FreeStructure(*mod)
+        ProcedureReturn #True
+      Else
+        ; user wants to replace
+        queue::add(queue::#QueueActionRemove, *mod\id$) ; remove from TF is present
+        queue::add(queue::#QueueActionDelete, *mod\id$) ; delete from library
+        queue::add(queue::#QueueActionNew, file$) ; re-schedule this mod
+        FreeStructure(*mod)
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    
+    ; fourth step: move mod to internal TFMM mod folder and extract all recognised info files
+    id$ = *mod\id$
+    Protected dir$ = misc::Path(TF$+"/TFMM/library/"+id$)
+    debugger::Add("mods::addMod() - add mod to library: {"+dir$+"}")
+    ; create library entry (subdir)
+    If Not misc::CreateDirectoryAll(dir$)
+      debugger::Add("mods::addMod() - ERROR - failed to create {"+dir$+"}")
+      FreeStructure(*mod)
+      ProcedureReturn #False
+    EndIf
+    
+    ; copy file to library
+;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
+    Protected newfile$ = dir$ + id$ + ".tfmod"
+    debugger::Add("mods::addMod() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
+    
+    If Not CopyFile(file$, newfile$)
+      debugger::Add("mods::addMod() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
+      FreeStructure(*mod)
+      ProcedureReturn #False
+    EndIf
+    
+    ; extract files
+    Protected NewList files$()
+    ClearList(files$())
+    AddElement(files$()) : files$() = "info.lua"
+    AddElement(files$()) : files$() = "strings.lua"
+    AddElement(files$()) : files$() = "main.lua"
+    AddElement(files$()) : files$() = "filesystem.lua"
+    ; TODO check if these important files needs to be re-extracted ?!
+    
+    AddElement(files$()) : files$() = "header.jpg"
+    AddElement(files$()) : files$() = "preview.png"
+    AddElement(files$()) : files$() = "image_00.tga"
+    If Not ExtractFilesZip(newfile$, files$(), dir$)
+      If Not ExtractFilesRar(newfile$, files$(), dir$)
+        debugger::Add("mods::GetModInfo() - failed to open {"+newfile$+"} for extraction")
+      EndIf
+    EndIf
+    
+    Protected file
+    If FileSize(dir$ + "info.lua") <= 0
+      file = CreateFile(#PB_Any, dir$ + "info.lua")
+      If file
+        WriteString(file, *mod\aux\lua$, #PB_UTF8)
+        CloseFile(file)
+      EndIf
+    EndIf
+    
+    
+    ; images
+    debugger::Add("mosd::new() - convert images")
+    Protected im, image$, i
+    image$ = dir$ + "header.jpg"
+    If FileSize(image$) > 0
+      im = LoadImage(#PB_Any, image$)
+      If IsImage(im)
+;         im = misc::ResizeCenterImage(im, 320, 180)
+        i = 0
+        Repeat
+          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
+          i + 1
+        Until FileSize(image$) <= 0
+        misc::encodeTGA(im, image$, 24)
+        FreeImage(im)
+        DeleteFile(dir$ + "header.jpg")
+      EndIf
+    EndIf
+    image$ = dir$ + "preview.png"
+    If FileSize(image$) > 0
+      im = LoadImage(#PB_Any, image$)
+      If IsImage(im)
+;         im = misc::ResizeCenterImage(im, 320, 180)
+        i = 0
+        Repeat
+          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
+          i + 1
+        Until FileSize(image$) <= 0
+        misc::encodeTGA(im, image$, 32)
+        FreeImage(im)
+        DeleteFile(dir$ + "preview.png")
+      EndIf
+    EndIf
+    
+    
+    ; fifth step: add mod to list
+    toList(*mod)
+    
+    changed = #True
+    
+    ; last step: init install
+    queue::add(queue::#QueueActionInstall, id$)
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure load(*data.queue::dat) ; TF$) ; load all mods in internal modding folder and installed to TF
+    Protected TF$ = *data\tf$
+    debugger::Add("mods::load("+TF$+")")
+    Protected pmods$, plib$, ptmp$, entry$
+    Protected pmodsentry$, plibentry$, image$
+    Protected dir, i
+    Protected *mod.mod
+    
+    plib$   = misc::Path(TF$ + "/TFMM/library/")
+    pmods$  = misc::Path(TF$ + "/mods/")
+    ptmp$   = GetTemporaryDirectory()
+    
+    debugger::Add("mods::load() - read library {"+plib$+"}")
+    dir = ExamineDirectory(#PB_Any, plib$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          Continue
+        EndIf
+        entry$ = DirectoryEntryName(dir)
+        If Not checkID(entry$)
+          Continue
+        EndIf
+        debugger::Add("mods::load() - found {"+entry$+"} in library")
+        ; id$ = entry$
+        
+        plibentry$  = misc::Path(plib$ + entry$ + "/")
+        pmodsentry$ = misc::Path(pmods$ + entry$ + "/")
+        
+        *mod = init()
+        *mod\aux\file$ = plibentry$ + entry$ + ".tfmod"
+        *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
+        
+        ; check if installed
+        If FileSize(misc::Path(pmods$ + entry$ + "/")) = -2
+          ; TODO re-import mod if it was changed manually or with another manager! (version check?)
+          
+          *mod\aux\installed = #True
+          debugger::Add("mods::load() - update info of {"+entry$+"} from mod directory")
+          ; copy info.lua from TF/mods/ to TFMM/library to have current information available
+          CopyFile(pmodsentry$ + "info.lua", plibentry$ + "info.lua")
+          CopyFile(pmodsentry$ + "strings.lua", plibentry$ + "strings.lua")
+          i = 0
+          Repeat
+            image$ = "image_" + RSet(Str(i), 2, "0")
+            If FileSize(pmodsentry$ + image$) <= 0
+              Break
+            EndIf
+            DeleteFile(plibentry$ + image$)
+            CopyFile(pmodsentry$ + image$, plibentry$ + image$)
+            i + 1
+          ForEver
+          
+        EndIf
+        
+        loadInfo(TF$, entry$, *mod)
+        toList(*mod)
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    
+    ; check mods from mods/ folder (installed)
+    debugger::Add("mods::load() - read installed mods {"+pmods$+"}")
+    dir = ExamineDirectory(#PB_Any, pmods$, "")
+    If dir 
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          Continue
+        EndIf
+        entry$ = DirectoryEntryName(dir)
+        If Not checkID(entry$)
+          Continue
+        EndIf
+        
+        If FindMapElement(*mods(), entry$)
+          *mods()\aux\installed = #True
+        Else
+          ; mod installed but not in list
+          ; add to library
+          debugger::Add("mods::load() - load mod into library: {"+pmods$+entry$+"} -> {"+ptmp$+entry$+".zip"+"}")
+          
+          *mod = init()
+          *mod\aux\file$ = ""
+          *mod\aux\md5$ = ""
+          loadInfo(TF$, entry$, *mod)
+          toList(*mod)
+        
+;           If misc::packDirectory(pmods$ + entry$, ptmp$ + entry$ + ".zip")
+;             queue::add(queue::#QueueActionNew, ptmp$ + entry$ + ".zip")
+;           EndIf
+        EndIf
+        
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+  EndProcedure
+  
+  Procedure convert(*data.queue::dat)
+    If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+      MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
+      ProcedureReturn #False
+    EndIf
+    
+    Protected TF$ = *data\tf$
+    debugger::Add("mods::convert("+TF$+")")
+    
+    Protected file$, NewList mods$(), NewMap files$()
+    Protected i
+    debugger::Add("mods::convert() - load mods.ini")
+    
+    OpenPreferences(misc::Path(TF$ + "/TFMM/") + "mods.ini")
+    If ExaminePreferenceGroups()
+      While NextPreferenceGroup()
+        file$ = ReadPreferenceString("file", "")
+        If file$
+          debugger::Add("mods::convert() - found {"+file$+"}")
+          AddElement(mods$())
+          mods$() = misc::path(TF$ + "TFMM/Mods/") + file$
+        EndIf
+      Wend
+    EndIf
+    ClosePreferences()
+    i = 0
+    If ListSize(mods$()) > 0
+      ; just add everything
+      ForEach mods$()
+        i + 1
+        queue::progressVal(i, ListSize(mods$()))
+        ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
+        new(mods$(), TF$)
+      Next
+      ClearList(mods$())
+    EndIf
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mods.ini")
+    
+    ; delete mod folder
+    DeleteDirectory(misc::path(TF$ + "TFMM/Mods/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    ; delete filetracker files +filetracker.ini
+    OpenPreferences(misc::Path(TF$ + "/TFMM/") + "filetracker.ini")
+    If ExaminePreferenceGroups()
+      While NextPreferenceGroup()
+        If ExaminePreferenceKeys()
+          While NextPreferenceKey()
+            file$ = TF$ + PreferenceKeyName()
+            files$(file$) = PreferenceKeyValue()
+          Wend
+        EndIf
+      Wend
+    EndIf
+    ClosePreferences()
+    i = 0
+    ForEach files$()
+      file$ = MapKey(files$())
+      If MD5FileFingerprint(file$) = files$()
+        i + 1
+        queue::progressVal(i, MapSize(files$()))
+        debugger::Add("mods::convert() - delete {"+file$+"}")
+      DeleteFile(file$, #PB_FileSystem_Force)
+      EndIf
+    Next
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "filetracker.ini")
+    DeleteFile(misc::Path(TF$ + "/TFMM/") + "mod-dependencies.ini")
+    
+    ; delete backup folder
+    DeleteDirectory(misc::path(TF$ + "TFMM/Backup/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure install(*data.queue::dat)
+    debugger::Add("mods::install("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
+    
+    debugger::Add("mods::install() - mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    Protected source$, target$
+    Protected i
+    
+    ; check prequesits
+    If Not *mod
+      debugger::Add("mods::install() - ERROR - cannot find mod in map")
+      ProcedureReturn #False
+    EndIf
+    If *mod\aux\installed
+      debugger::Add("mods::install() - {"+id$+"} already installed")
+      ProcedureReturn #False
+    EndIf
+    
+    ; extract files
+    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + id$ + ".tfmod"
+    target$ = misc::Path(tf$+"/mods/"+id$+"/")
+    
+    If FileSize(target$) = -2
+      debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
+      *mod\aux\installed = #True
+      If IsGadget(library)
+        For i = 0 To CountGadgetItems(library) -1
+          If ListIcon::GetListItemData(library, i) = *mod
+            ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+            Break
+          EndIf
+        Next
+      EndIf
+      ProcedureReturn #True
+    EndIf
+    misc::CreateDirectoryAll(target$)
+    
+    If Not extractZIP(source$, target$)
+      If Not extractRAR(source$, target$)
+        debugger::Add("mods::install() - ERROR - failed to extract files")
+        DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+        ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    ; copy info.lua and images
+    debugger::Add("mods::install() - copy info.lua and images")
+    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/")
+    target$ = misc::Path(tf$+"/mods/"+id$+"/")
+    
+    CopyFile(source$ + "info.lua", target$ + "info.lua")
+    CopyFile(source$ + "strings.lua", target$ + "strings.lua")
+    CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
+    CopyFile(source$ + "main.lua", target$ + "main.lua")
+    CopyFile(source$ + "image_00.tga", target$ + "image_00.tga")
+    ; TODO copy all images
+    
+    ; finish installation
+    debugger::Add("mods::install() - finish installation...")
+    *mod\aux\installed = #True
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+          Break
+        EndIf
+      Next
+    EndIf
+    
+    debugger::Add("mods::install() - finished")
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure remove(*data.queue::dat)
+    debugger::Add("mods::remove("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
+    
+    
+    debugger::Add("mods::remove() - mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    Protected targetDir$
+    Protected i
+    
+    ; TODO alternatively, backup mod
+    If *mod\aux\TFonly
+      ; queue::add(queue::#QueueActionDelete, id$)
+      delete(*data)
+    EndIf
+    
+    ; check prequesits
+    If Not *mod
+      debugger::Add("mods::remove() - ERROR - cannot find mod in map")
+      ProcedureReturn #False
+    EndIf
+    If Not *mod\aux\installed
+      debugger::Add("mods::remove() - ERROR - {"+id$+"} not installed")
+      ProcedureReturn #False
+    EndIf
+    
+    ; delete folder
+    targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    
+    debugger::add("mods::remove() - delete {"+targetDir$+"} and all subfolders")
+    DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    ; finish removal
+    
+    *mod\aux\installed = #False
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::SetListItemImage(library, i, ImageID(images::Images("no")))
+          Break
+        EndIf
+      Next
     EndIf
     
     ProcedureReturn #True
   EndProcedure
   
-  Procedure ActivateThread(*modinfo.mod)
-    debugger::Add("ActivateThread("+Str(*modinfo)+")")
+  Procedure delete(*data.queue::dat) ; delete mod from library
+    debugger::Add("mods::delete("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
     
-    If Not *modinfo
-      InstallInProgress = #False
+    debugger::Add("mods::delete() - mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    Protected targetDir$
+    Protected i
+    
+    ; check prequesits
+    If Not *mod
+      debugger::Add("mods::delete() - ERROR - cannot find mod in map")
       ProcedureReturn #False
     EndIf
-    
-    If *modinfo\active
-      InstallInProgress = #False
-      ProcedureReturn #False
-    EndIf
-    
-    
-    Protected dir, i, CopyFile, isModded, error, count, ok, time
-    Protected NewList Files$(), NewList FileTracker.filetracker()
-    Protected Backup$, File$, Mod$, tmpDir$, extension$, ReqMod$, ReqVer$
-    Protected *tmpinfo.mod
-    Protected NewMap strings$()
-    
-    With *modinfo
-      Mod$ = misc::Path(TF$ + "TFMM/Mods") + \file$
-      tmpDir$ = misc::Path(TF$ + "TFMM/mod_tmp")
-      
-      debugger::Add("ActivateThread() - id={"+\id$+"} name={"+\name$+"} file={"+\file$+"}")
-      
-      ; --------------------------------------------------------------------------------------------------
-      ; check dependencies
-      
-      debugger::Add("ActivateThread() - ##### checking dependencies #####")
-      SetGadgetText(GadgetModText, l("management", "dependencies"))
-      
-      ForEach \dependencies$()
-        debugger::Add("ActivateThread() - check dependency {"+MapKey(\dependencies$())+"}")
-        ReqMod$ = MapKey(\dependencies$())
-        ReqVer$ = \dependencies$()
-        If ReqVer$ = "0" Or ReqVer$ = "any"
-          ReqVer$ = ""
-        EndIf
-        ok = #False
-        
-        ; search for required mod in list of installed mods
-        count = CountGadgetItems(ListInstalled)
-        For i = 0 To count-1
-          *tmpinfo.mod = ListIcon::GetListItemData(ListInstalled, i)
-          If *tmpinfo\active
-            If *tmpinfo\name$ = ReqMod$ Or *tmpinfo\id$ = ReqMod$ ; TODO ID check as only option? - other option? - think about...
-              If ReqVer$ = "" Or *tmpinfo\version$ = ReqVer$ Or *tmpinfo\version$ >= ReqVer$
-                debugger::Add("ActivateThread() - dependency match found :)")
-                ok = #True
-                Break
-              EndIf
-            EndIf
-          EndIf
-        Next
-        If Not ok
-          debugger::Add("ActivateThread() - no match found for dependency - abort activation")
-          ModProgressAnswer = #AnswerNone
-          If ReqVer$
-            ReqVer$ = "v" + ReqVer$ + ""
-          EndIf
-          
-          ClearMap(strings$())
-          strings$("name") = ReqMod$
-          strings$("version") = ReqVer$
-          SetGadgetText(GadgetModText, locale::getEx("management", "requires", strings$()))
-          HideGadget(GadgetModOk, #False)
-          While ModProgressAnswer = #AnswerNone
-            Delay(10)
-          Wend
-          ; task clean up procedure
-          AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-          ProcedureReturn #False
-        EndIf
-      Next
-      
-      ; --------------------------------------------------------------------------------------------------
-      ; start installation
-      
-      debugger::Add("ActivateThread() - ##### loading modification #####")
-      time = ElapsedMilliseconds()
-      SetGadgetText(GadgetModText, l("management", "loading"))
-      ; clean temporary directory
-      debugger::Add("ActivateThread() - create temporary directoy {"+tmpDir$+"}")
-      DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
-      misc::CreateDirectoryAll(tmpDir$)                                            ; create temp dir
-      debugger::Add("ActivateThread() - uncompress into temporary folder")
-      If FileSize(tmpDir$) <> -2
-        debugger::Add("ActivateThread() - failed to create temporary directory")
-        ; error with tmpDir$
-        ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, l("management", "error_tmpdir"))
-        HideGadget(GadgetModOk, #False)
-        While ModProgressAnswer = #AnswerNone
-          Delay(10)
-        Wend
-        ; task clean up procedure
-        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
+    If *mod\aux\installed
+      debugger::Add("mods::delete() - ERROR - mod is still installed, remove first")
+      If Not remove(*data)
         ProcedureReturn #False
       EndIf
-      
-      error = #False 
-      extension$ = LCase(GetExtensionPart(Mod$))
-      debugger::Add("ActivateThread() - check extension {"+extension$+"} and choose extractor")
-      If extension$ = "zip"
-        If Not ExtractModZip(Mod$, tmpDir$)
-          error = #True
-        EndIf
-      ElseIf extension$ = "rar"
-        If Not ExtractModRar(Mod$, tmpDir$)
-          error = #True
-        EndIf
-      Else ; unknown extension
-        debugger::Add("ActivateThread() - no extractor for {"+extension$+"}")
-        error = #True
-      EndIf
-      
-      If error
-        ; error opening archive
-        debugger::Add("ActivateThread() - error extracting modification")
-        DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
-        ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, l("management", "error_open"))
-        HideGadget(GadgetModOk, #False)
-        While ModProgressAnswer = #AnswerNone
-          Delay(10)
-        Wend
-        ; task clean up procedure
-        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-        ProcedureReturn #False
-      EndIf
-      
-      
-      ; mod should now be extracted to temporary directory tmpDir$
-      debugger::Add("ActivateThread() - reading modification content into file list")
-      ClearList(files$())
-      If Not ActivateThread_ReadFiles(tmpDir$, files$()) ; add all files from tmpDir to files$()
-        ; error opening tmpDir$
-        DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)  ; delete temp dir
-        ModProgressAnswer = #AnswerNone
-        SetGadgetText(GadgetModText, l("management", "error_reading"))
-        HideGadget(GadgetModOk, #False)
-        While ModProgressAnswer = #AnswerNone
-          Delay(10)
-        Wend
-        ; task clean up procedure
-        AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-        ProcedureReturn #False
-      EndIf
-      
-      debugger::Add("ActivateThread() - found "+Str(ListSize(files$()))+" files for activation")
-      debugger::Add("ActivateThread() - loaded modification in "+Str(ElapsedMilliseconds()-time)+"ms")
-      
-      Backup$ = misc::Path(TF$ + "TFMM/Backup/")
-      debugger::Add("ActivateThread() - backup folder for vanilla game files {"+Backup$+"}")
-      misc::CreateDirectoryAll(Backup$)
-      
-      
-      ; --------------------------------------------------------------------------------------------------
-      ; load filetracker list
-      debugger::Add("ActivateThread() - ##### load filetracker #####")
-      time = ElapsedMilliseconds()
-      ClearList(FileTracker())
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-      ExaminePreferenceGroups()
-      While NextPreferenceGroup()
-        PreferenceGroup(PreferenceGroupName())
-        ExaminePreferenceKeys()
-        While NextPreferenceKey()
-          AddElement(FileTracker())
-          FileTracker()\file\file$ = PreferenceKeyName()
-          FileTracker()\file\md5$ = PreferenceKeyValue()
-          FileTracker()\mod$ = PreferenceGroupName()
-        Wend
-      Wend
-      ClosePreferences()
-      debugger::Add("ActivateThread() - filetracker found "+Str(ListSize(FileTracker()))+" files in "+Str(ElapsedMilliseconds()-time)+"ms")
-      
-      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
-      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(files$()))
-      SetGadgetState(GadgetModProgress, 0)
-      HideGadget(GadgetModProgress, #False)
-      i = 0
-      ModProgressAnswer = #AnswerNone
-      
-      ; --------------------------------------------------------------------------------------------------
-      ; process all files
-      debugger::Add("ActivateThread() - ##### process files #####")
-      time = ElapsedMilliseconds()
-      ForEach Files$()
-        Delay(0) ; let the CPU breath
-        File$ = Files$()
-        File$ = misc::Path(GetPathPart(File$)) + GetFilePart(File$)
-        File$ = RemoveString(File$, tmpDir$) ; File$ contains only the relative path of mod
-        
-        ClearMap(strings$())
-        strings$("file") = GetFilePart(File$)
-        SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
-        
-        ; normal case: copy the modificated file to game directoy
-        CopyFile = #True
-        isModded = #False
-        
-        ; check filetracker for any other mods that may have modified this file before
-        ForEach FileTracker()
-          ; compare files from filetracker with files from new mod
-          
-          If LCase(FileTracker()\file\file$) = LCase(File$) ; check also other cases (for case insensitive filesystems - all mods should be case sensitive but should work with insensitive environments like windows)
-            debugger::Add("ActivateThread() - found conflict match in filetracker {"+File$+"}")
-            ; file found in list of already installed files
-            CopyFile = #False
-            isModded = #True
-            
-            If MD5FileFingerprint(TF$ + File$) = MD5FileFingerprint(Files$())
-              debugger::Add("ActivateThread() - installed file is identical to new file")
-              ; check if md5 of already installed modded file is identical to new modded file
-              ; if file has same md5 -> save to overwrite (since it is already the same file)
-              If ModProgressAnswer <> #AnswerYesAll And ModProgressAnswer <> #AnswerNoAll
-                ; choose anser only if user has not already selected a "to all" answer
-                ; yes all -> file is copied anyway
-                ; no all -> no file is copied (respect users answer in this case)
-                ; file is added to filetracker in any case
-                ModProgressAnswer = #AnswerYes
-              EndIf
-            EndIf
-            
-            ; ask user if file should be overwritten
-            If ModProgressAnswer = #AnswerNone
-              ; only ask again if user has not selected "yes/no to all" before or md5 match 
-              ClearMap(strings$())
-              strings$("file") = GetFilePart(FileTracker()\file\file$)
-              strings$("name") = FileTracker()\mod$
-              SetGadgetText(GadgetModText, locale::getEx("management", "overwrite", strings$()))
-              HideGadget(GadgetModYes, #False)
-              HideGadget(GadgetModNo, #False)
-              HideGadget(GadgetModYesAll, #False)
-              HideGadget(GadgetModNoAll, #False)
-              While ModProgressAnswer = #AnswerNone
-                Delay(10)
-              Wend
-              ClearMap(strings$())
-              strings$("file") = GetFilePart(File$)
-              SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
-              HideGadget(GadgetModYes, #True)
-              HideGadget(GadgetModNo, #True)
-              HideGadget(GadgetModYesAll, #True)
-              HideGadget(GadgetModNoAll, #True)
-            EndIf
-            
-            Select ModProgressAnswer
-              Case #AnswerNo
-                CopyFile = #False
-                ModProgressAnswer = #AnswerNone
-              Case #AnswerYes
-                CopyFile = #True
-                ModProgressAnswer = #AnswerNone
-              Case #AnswerYesAll
-                CopyFile = #True
-                ; do not reset answer!
-              Case #AnswerNoAll
-                CopyFile = #False
-                ; do not reset answer!
-            EndSelect
-            
-            ; filetracker will list the file as modified by multiple mods! (may result in multiple entries for single file)
-            ; leave multiple entries for logging purpose and information during deactivation
-            Break ; foreach loop can be broke after one entry is found in filetracker
-            ; this also works with automatic overwrite in case of MD5 match since only the currently installed file is checked
-          EndIf
-        Next
-        
-        ; --------------------------------------------------------------------------------------------------
-        ; copy file
-        
-        If CopyFile ; install (copy) new modification file
-          ; backup original file if any
-          ; only backup vanilla files, DO NOT BACKUP MODDED FILES!
-          If Not isModded
-            If FileSize(TF$ + File$) >= 0
-              ; file already exists in Game Folder -> backup this file
-              If FileSize(Backup$ + File$) = -1
-                ; no backup of this file present! -> create new backup
-                misc::CreateDirectoryAll(GetPathPart(Backup$ + File$))
-                RenameFile(TF$ + File$, Backup$ + File$)  ; move file
-              EndIf
-            EndIf
-          EndIf
-          
-          ; make sure that the target directory exists (in case of newly added files / direcotries)
-          misc::CreateDirectoryAll(GetPathPart(TF$ + File$))
-          ; move the file from the temporary directory to the game directory
-          
-          DeleteFile(TF$ + File$)
-          If RenameFile(Files$(), TF$ + File$)
-            debugger::Add("ActivateThread() - copy file {"+File$+"}")
-          Else
-            debugger::Add("ActivateThread() - ERROR: failed to move file: {("+Files$()+"} -> {"+TF$+File$+"}")
-          EndIf
-        EndIf
-        
-        ; --------------------------------------------------------------------------------------------------
-        ; Add to filetracker -> Even if file is NOT copied, it is still required by the modification -> add in any case!
-        
-        OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-        PreferenceGroup(\name$) ; TODO : may overwrite entry here (only in case of other errors, since no two mods are allowed to have the same name)
-        ; TODO : change to \id$ (have to update all old entries in order to do this)
-        ; write md5 of _NEW_ file in order to keep track of all files that have been changed by this mod
-        WritePreferenceString(File$, MD5FileFingerprint(TF$ + File$))
-        ClosePreferences()
-        
-        ; --------------------------------------------------------------------------------------------------
-        i = i + 1 ; count files for progress bar
-        SetGadgetState(GadgetModProgress, i)
-      Next
-      debugger::Add("ActivateThread() - processed files in "+Str(ElapsedMilliseconds()-time)+"ms")
-      SetGadgetText(GadgetModText, "")
-      
-      ; --------------------------------------------------------------------------------------------------
-      ; install finished
-      debugger::Add("ActivateThread() - ##### finish activation #####")
-      HideGadget(GadgetModProgress, #True)
-      If Not DeleteDirectory(tmpDir$, "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)  ; delete temp dir
-        debugger::Add("ActivateThread() - ERROR: failed to remove tmpDir$ {"+tmpDir$+"}")
-      EndIf
-      
-      ; activate mod in mod list
-      \active = #True
-      WriteModToIni(*modinfo) ; update mod entry
-      
-      
-      ; task clean up procedure
-      debugger::Add("ActivateThread() - activation finished successfully")
-      AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-      ProcedureReturn #True 
-    EndWith
-  EndProcedure
-  
-  Procedure DeactivateThread(*modinfo.mod)
-    debugger::Add("DeactivateThread("+Str(*modinfo)+")")
-    If Not *modinfo
-      InstallInProgress = #False
-      ProcedureReturn #False
     EndIf
     
-    If Not *modinfo\active
-      InstallInProgress = #False
-      ProcedureReturn #False
-    EndIf
+    ; delete folder
+    targetDir$ = misc::Path(tf$+"/TFMM/library/"+id$+"/")
     
-    Protected File$, md5$, Backup$
-    Protected NewList Files.filetrackerEntry(), NewList Filetracker.filetracker()
-    Protected count, countAll, countReq, i, time
-    Protected *tmpinfo.mod
-    Protected NewMap strings$()
+    debugger::add("mods::delete() - delete {"+targetDir$+"} and all subfolders")
+    DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
-    debugger::Add("DeactivateThread() - id={"+*modinfo\id$+"} name={"+*modinfo\name$+"}")
-    
-    debugger::Add("DeactivateThread() - ##### check dependencies #####")
-    SetGadgetText(GadgetModText, l("management", "dependencies"))
-    count = CountGadgetItems(ListInstalled)
-    For i = 0 To count-1
-      *tmpinfo = ListIcon::GetListItemData(ListInstalled, i)
-      With *tmpinfo
-        If \active
-          ForEach \dependencies$()
-            If MapKey(\dependencies$()) = *modinfo\name$ Or MapKey(\dependencies$()) = *modinfo\id$ ; TODO - ID system!
-              ; this mod is required by another active mod!
-              debugger::Add("DeactivateThread() - ERROR: this mod is required required by id={"+\id$+"} name={"+\name$+"}")
-              ModProgressAnswer = #AnswerNone
-              ClearMap(strings$())
-              strings$("name") = \name$
-              SetGadgetText(GadgetModText, locale::getEx("management", "required", strings$()))
-              HideGadget(GadgetModYes, #False)
-              HideGadget(GadgetModNo, #False)
-              While ModProgressAnswer = #AnswerNone
-                Delay(10)
-              Wend
-              If ModProgressAnswer = #AnswerYes
-                ; queue deactivation of this mod
-                ; continue loop!
-                debugger::Add("DeactivateThread() - queue deactivation {"+\name$+"}")
-                AddToQueue(#QueueActionDeactivate, *tmpinfo)
-                SetGadgetText(GadgetModText, l("management", "dependencies"))
-                HideGadget(GadgetModYes, #True)
-                HideGadget(GadgetModNo, #True)
-              Else
-                ; if user does not want to deactivate this mod -> cancel deactivation
-                debugger::Add("DeactivateThread() - abort deactivation")
-                ; task clean up procedure
-                AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-                ProcedureReturn #False
-              EndIf
-            EndIf
-          Next
-        EndIf 
-      EndWith
-    Next
-    
-    SetGadgetText(GadgetModText, l("management", "loading"))
-    
-    ; read list of files from ini file
-    debugger::Add("DeactivateThread() - ##### load filetracker #####")
-    time = ElapsedMilliseconds()
-    ClearList(FileTracker())
-    ClearList(Files())
-    OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-    ExaminePreferenceGroups()
-    While NextPreferenceGroup()
-      PreferenceGroup(PreferenceGroupName())
-      If PreferenceGroupName() = *modinfo\name$ ; TODO change to ID?
-        ; filetracker of current mod!
-        ; add to "files()" list
-        ExaminePreferenceKeys()
-        While NextPreferenceKey()
-          AddElement(Files())
-          Files()\file$ = PreferenceKeyName()
-          Files()\md5$ = PreferenceKeyValue()
-        Wend
-      Else
-        ; filetracker of other mods!
-        ; add to "filertracker()" list
-        ExaminePreferenceKeys()
-        While NextPreferenceKey()
-          AddElement(FileTracker())
-          FileTracker()\file\file$ = PreferenceKeyName()
-          Filetracker()\file\md5$ = PreferenceKeyValue()
-          FileTracker()\mod$ = PreferenceGroupName()
-        Wend
-      EndIf
-    Wend
-    ClosePreferences()
-    debugger::Add("DeactivateThread() - filetracker: found " + Str(ListSize(FileTracker())) + " files in "+Str(ElapsedMilliseconds()-time)+"ms")
-    
-    debugger::Add("DeactivateThread() - filetracker: filecheck")
-    time = ElapsedMilliseconds()
-    ResetList(Files())
-    countAll = ListSize(Files())
-    countReq = 0
-    ForEach Files()
-      ; check all Files of the mod about to be deactivated
-      Files()\required = #False ; init: assume file is not required by other mods
-      ForEach Filetracker()
-        If LCase(Files()\file$) = LCase(Filetracker()\file\file$) ; TODO case sensitive?
-          ; the same file is required by another mod currently activated
-          Files()\required = #True
-          countReq + 1
+    ; finish deletion
+    If IsGadget(library)
+      For i = 0 To CountGadgetItems(library) -1
+        If ListIcon::GetListItemData(library, i) = *mod
+          ListIcon::RemoveListItem(library, i)
           Break
         EndIf
       Next
-    Next
-    count = countAll - countReq
-    debugger::Add("DeactivateThread() - filetracker: filecheck finished in"+Str(ElapsedMilliseconds()-time)+"ms")
-    debugger::Add("DeactivateThread() - filetracker: "+Str(countReq)+"/"+Str(countAll)+" files are required by other mods")
-    debugger::Add("DeactivateThread() - filetracker: deactivate "+Str(count)+" files")
+    EndIf
+    free(id$)
     
-    ; --------------------------------------------------------------------------------------------------
-    ; start deactivation
-    With *modinfo
-      Backup$ = misc::Path(TF$ + "TFMM/Backup/")
-      debugger::Add("DeactivateThread() - backup folder {"+Backup$+"}")
-      misc::CreateDirectoryAll(Backup$)
-      i = 0
-      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Minimum, 0)
-      SetGadgetAttribute(GadgetModProgress, #PB_ProgressBar_Maximum, ListSize(Files()))
-      HideGadget(GadgetModProgress, #False)
-      
-      
-      debugger::Add("DeactivateThread() - ##### process files #####")
-      time = ElapsedMilliseconds()
-      ForEach Files()
-        If files()\required ; do not touch files required by other mods
-          Continue
-        EndIf
-        
-        File$ = Files()\file$
-        
-        ClearMap(strings$())
-        strings$("file") = GetFilePart(File$)
-        SetGadgetText(GadgetModText, locale::getEx("management", "processing", strings$()))
-        
-        ; delete file
-        debugger::Add("DeactivateThread() - delete file: "+File$)
-        DeleteFile(TF$ + File$,  #PB_FileSystem_Force)
-        
-        ; restore backup if any
-        If FileSize(Backup$ + File$) >= 0
-          debugger::Add("DeactivateThread() - restore backup: "+File$)
-          RenameFile(Backup$ + File$, TF$ + File$)
-        EndIf
-        
-        i = i + 1
-        SetGadgetState(GadgetModProgress, i)
-      Next
-      debugger::Add("DeactivateThread() - processing took "+Str(ElapsedMilliseconds()-time)+"ms")
-      
-      SetGadgetText(GadgetModText, "")
-      HideGadget(GadgetModProgress, #True)
-      
-      debugger::Add("DeactivateThread() - remove mod from filetracker")
-      SetGadgetText(GadgetModText, "Cleanup...")
-      
-      ; update filetracker. All files that are currently altered by this mod have been removed (restored) -> delete all entries from filetracker
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "filetracker.ini")
-      RemovePreferenceGroup(\name$)
-      ClosePreferences()
-      
-      debugger::Add("DeactivateThread() - update modinfo")
-      \active = #False
-      WriteModToIni(*modinfo) ; update mod entry
-      
-    EndWith
-    
-    debugger::Add("DeactivateThread() - deactivation finished successfully!")
-    AddWindowTimer(WindowModProgress, TimerFinishUnInstall, 100)
-    ProcedureReturn #False
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure ShowProgressWindow(*modinfo.mod)
-    Protected NewMap var$()
+  Procedure generateID(*mod.mod, id$ = "")
+    debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
+    Protected author$, name$, version$
     
-    var$("name") = *modinfo\name$
-    var$("id") = *modinfo\id$
-    If *modinfo\active
-      SetWindowTitle(WindowModProgress, locale::getEx("management", "deactivate", var$()))
-    Else
-      SetWindowTitle(WindowModProgress, locale::getEx("management", "activate", var$()))
-    EndIf
-    ; reset all gadgets
-    SetGadgetText(GadgetModText, "loading...")
-    HideGadget(GadgetModYes, #True)
-    HideGadget(GadgetModNo, #True)
-    HideGadget(GadgetModYesAll, #True)
-    HideGadget(GadgetModNoAll, #True)
-    HideGadget(GadgetModProgress, #True)
-    HideGadget(GadgetModOk, #True)
-    HideWindow(WindowModProgress, #False)
-    DisableWindow(WindowMain, #True)
-    SetActiveWindow(WindowModProgress)
-  EndProcedure
-  
-  Procedure RemoveModFromList(*modinfo.mod) ; Deletes entry from ini file and deletes file from mod folder
-    debugger::Add("RemoveModFromList("+Str(*modinfo)+")")
-    Protected i
-    
-    If Not *modinfo
-      ProcedureReturn #False
-    EndIf
-    If *modinfo\active
-      debugger::Add("RemoveModFromList() - ERROR: mod "+Str(*modinfo)+" is still active - cancel uninstall")
-      ProcedureReturn #False
+    If Not *mod
+      ProcedureReturn
     EndIf
     
-    InstallInProgress = #True
+    Static RegExp
+    If Not RegExp
+      RegExp  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
+      ; regexp matches all non alphanum characters including spaces etc.
+    EndIf
     
-    With *modinfo
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "mods.ini")
-      RemovePreferenceGroup(\name$)
-      ClosePreferences()
-      OpenPreferences(misc::Path(TF$ + "TFMM") + "mod-dependencies.ini")
-      RemovePreferenceGroup(\name$)
-      ClosePreferences()
-      
-      debugger::Add("RemoveModFromList() - delete file " + *modinfo\file$)
-      DeleteFile(misc::Path(TF$ + "TFMM/Mods/") + *modinfo\file$, #PB_FileSystem_Force)
-      debugger::Add("RemoveModFromList() - delete dir  " + *modinfo\id$)
-      DeleteDirectory(misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$), "", #PB_FileSystem_Recursive | #PB_FileSystem_Force)
-      
-      For i = 0 To CountGadgetItems(ListInstalled) - 1
-        If *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-          debugger::Add("RemoveModFromList() - remove list item " + Str(i))
-          ListIcon::RemoveListItem(ListInstalled, i)
-          FreeStructure(*modinfo)
-          InstallInProgress = #False
-          debugger::Add("RemoveModFromList() - finished!")
+    With *mod
+      If id$
+        debugger::Add("mods::generateID() - passed through id = {"+id$+"}")
+        ; this id$ is passed through, extracted from subfolder name
+        ; if it is present, check if it is well-defined
+        If checkID(id$)
+          debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
+          \id$ = id$
           ProcedureReturn #True
+        Else
+          debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
         EndIf
-      Next i
+      Else
+        debugger::Add("mods::generateID() - no ID defined - generate new ID")
+      EndIf
+      
+      
+      ; if no id$ was passed through or id was invalid, generate new ID
+      
+      \id$ = LCase(\id$)
+      
+      ; Check if ID already correct
+      If \id$ And checkID(\id$)
+        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined (first)")
+        ProcedureReturn #True
+      EndIf
+      
+      ; Check if ID in old format
+      author$   = StringField(\id$, 1, ".")
+      name$     = StringField(\id$, CountString(\id$, ".")+1, ".")
+      version$  = Str(Abs(Val(StringField(\aux\version$, 1, "."))))
+      \id$ = author$ + "_" + name$ + "_" + version$
+      
+      If \id$ And checkID(\id$)
+        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
+        ProcedureReturn #True
+      EndIf
+      
+      \id$ = ""
+      
+      debugger::Add("mods::generateID() - generate new ID")
+      ; ID = author_mod_version
+      If ListSize(\authors()) > 0
+        LastElement(\authors())
+        author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+      Else
+        author$ = ""
+      EndIf
+      If author$ = ""
+        author$ = "unknownauthor"
+      EndIf
+      name$ = ReplaceRegularExpression(RegExp, LCase(\name$), "") ; remove all non alphanum + make lowercase
+      If name$ = ""
+        name$ = "unknown"
+      EndIf
+      version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
+      
+      \id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
+      
+      If \id$ And checkID(\id$)
+        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
+        ProcedureReturn #True
+      EndIf
     EndWith
     
-    InstallInProgress = #False
-    ProcedureReturn #False 
+    debugger::Add("mods::generateID() - ERROR: No ID generated")
+    ProcedureReturn #False
   EndProcedure
   
-  ; EndModule
-  
-Procedure ExtractModInformation(*modinfo.mod, Path$)
-  debugger::Add("ExtractModInformation("+*modinfo\id$+", "+Path$+")")
-  
-  Protected NewList Files$()
-  Protected File$
-  
-  AddElement(Files$())
-  Files$() = "tfmm.ini"
-  AddElement(Files$())
-  Files$() = "preview.png"
-  AddElement(Files$())
-  Files$() = "readme.txt"
-  AddElement(Files$())
-  Files$() = "header.jpg" ; backwards compatibility
-  
-  File$ = misc::Path(TF$ + "TFMM/Mods/") + *modinfo\file$
-  misc::CreateDirectoryAll(Path$)
-  
-  Select LCase(GetExtensionPart(File$))
-    Case "zip"
-      ExtractFilesZip(File$, Files$(), Path$)
-    Case "rar"
-      ExtractFilesRar(File$, Files$(), Path$)
-    Default
-      debugger::Add("unknown file extension: "+*modinfo\file$)
-  EndSelect
-EndProcedure
-
-Procedure CheckModFileZip(File$)
-  debugger::Add("CheckModFileZip("+File$+")")
-  If OpenPack(0, File$)
-    If ExaminePack(0)
-      While NextPackEntry(0)
-        If FindString(PackEntryName(0), "res/")
-          ClosePack(0)
-          ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
-        EndIf
-      Wend
-    EndIf
-    ClosePack(0)
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
-Procedure CheckModFileRar(File$)
-  debugger::Add("CheckModFileRar("+File$+")")
-  Protected rarheader.unrar::RARHeaderDataEx
-  Protected hRAR
-  Protected Entry$
-  
-  hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
-  If hRAR
-    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS ; read header of file in rar
-      CompilerIf #PB_Compiler_Unicode
-        Entry$ = PeekS(@rarheader\FileNameW)
-      CompilerElse
-        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
-      CompilerEndIf
-      If FindString(Entry$, "res\")
-        unrar::RARCloseArchive(hRAR)
-        ProcedureReturn #True ; found a "res" subfolder, assume this mod is valid
-      EndIf
-      unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
-    Wend
-    unrar::RARCloseArchive(hRAR)
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
-Procedure CheckModFile(File$) ; Check mod for a "res" folder!
-  debugger::Add("CheckModFile("+File$+")")
-  Protected extension$
-  extension$ = LCase(GetExtensionPart(File$))
-  If extension$ = "zip"
-    ProcedureReturn CheckModFileZip(File$)
-  ElseIf extension$ = "rar"
-    ProcedureReturn CheckModFileRar(File$)
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
-
-Procedure ExtractFilesZip(ZIP$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
-  debugger::Add("ExtractFilesZip("+ZIP$+", Files$(), "+dir$+")")
-  debugger::Add("ExtractFilesZip() - search for:")
-  ForEach Files$()
-    debugger::Add(Files$())
-  Next
-  
-  Protected zip, Entry$
-  dir$ = misc::Path(dir$)
-  
-  zip = OpenPack(#PB_Any, ZIP$, #PB_PackerPlugin_Zip)
-  If zip
-    If ExaminePack(zip)
-      While NextPackEntry(zip)
-        Entry$ = PackEntryName(zip)
-        
-        If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-          debugger::Add("ExtractFilesZip() - skip "+Entry$)
-          Continue
-        EndIf
-        
-        ForEach Files$()
-          If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
-            debugger::Add("ExtractFilesZip() - UncompressPackFile("+dir$ + Files$()+")")
-            UncompressPackFile(zip, dir$ + Files$())
-            DeleteElement(Files$()) ; if file is extracted, delete from list
-            Break ; ForEach
-          EndIf
-        Next
-      Wend
-    EndIf
-    ClosePack(zip)
-  Else
-    debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
-  EndIf
-EndProcedure
-
-Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
-  debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
-  debugger::Add("ExtractFilesRar() - search for:")
-  ForEach Files$()
-    debugger::Add(Files$())
-  Next
-  
-  Protected rarheader.unrar::RARHeaderDataEx
-  Protected hRAR, hit
-  Protected Entry$
-  dir$ = misc::Path(dir$)
-  
-  hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
-  If hRAR
-    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
-      CompilerIf #PB_Compiler_Unicode
-        Entry$ = PeekS(@rarheader\FileNameW)
-      CompilerElse
-        Entry$ = PeekS(@rarheader\FileName, #PB_Ascii)
-      CompilerEndIf
+  Procedure generateLUA(*mod.mod)
+    Protected lua$
+    
+    ; severity = "NONE", "WARNING", "CRITICAL"
+    ; author role = "CREATOR", "CO_CREATOR", "TESTER", "BASED_ON", "OTHER"
+    
+    With *mod
+      Select LCase(\severityAdd$)
+        Case "none"
+          \severityAdd$ = "NONE"
+        Case "warning"
+          \severityAdd$ = "WARNING"
+        Case "critical"
+          \severityAdd$ = "CRITICAL"
+        Default
+          \severityAdd$ = "NONE"
+      EndSelect
+      Select LCase(\severityRemove$)
+        Case "none"
+          \severityRemove$ = "NONE"
+        Case "warning"
+          \severityRemove$ = "WARNING"
+        Case "critical"
+          \severityRemove$ = "CRITICAL"
+        Default
+          \severityRemove$ = "WARNING"
+      EndSelect
       
-      ; filter out Mac OS X bullshit
-      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        debugger::Add("ExtractFilesRar() - skip "+Entry$)
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
-        Continue
-      EndIf
-      
-      hit = #False
-      ForEach Files$()
-        If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
-          debugger::Add("ExtractFilesRar() - RARProcessFile("+dir$ + Files$()+")")
-          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
-          DeleteElement(Files$()) ; if file is extracted, delete from list
-          hit = #True
-          Break ; ForEach
-        EndIf
+      lua$ = "function data()" + #CRLF$ +
+             "return {" + #CRLF$
+      lua$ + "  minorVersion = "+Str(\minorVersion)+"," + #CRLF$
+      lua$ + "  severityAdd = "+#DQUOTE$+misc::luaEscape(\severityAdd$)+#DQUOTE$+"," + #CRLF$
+      lua$ + "  severityRemove = "+#DQUOTE$+misc::luaEscape(\severityRemove$)+#DQUOTE$+"," + #CRLF$
+      lua$ + "  name = _("+#DQUOTE$+misc::luaEscape(\name$)+#DQUOTE$+")," + #CRLF$
+      lua$ + "  description = _("+#DQUOTE$+" "+#DQUOTE$+")," + #CRLF$
+      lua$ + "  authors = {" + #CRLF$
+      ForEach \authors()
+        lua$ +  "    {" + #CRLF$ +
+                "      name = "+#DQUOTE$+""+misc::luaEscape(\authors()\name$)+""+#DQUOTE$+"," + #CRLF$ +
+                "      role = "+#DQUOTE$+""+misc::luaEscape(\authors()\role$)+""+#DQUOTE$+"," + #CRLF$ +
+                "      text = "+#DQUOTE$+""+#DQUOTE$+"," + #CRLF$ +
+                "      steamProfile = "+#DQUOTE$+""+#DQUOTE$+"," + #CRLF$ +
+                "      tfnetId = "+Str(\authors()\tfnetId)+"," + #CRLF$ +
+                "    }," + #CRLF$
       Next
-      
-      If Not hit
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
-      EndIf
-      
-    Wend
-    unrar::RARCloseArchive(hRAR)
-  Else
-    debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
-
-
-Procedure GetModInfo(File$, *modinfo.mod)
-  Protected tmpDir$, extension$, author$, tfnet_author_id$
-  Protected count.i, i.i
-  extension$ = LCase(GetExtensionPart(File$))
-  tmpDir$ = GetTemporaryDirectory()
-  
-  With *modinfo
-    \file$ = GetFilePart(File$)
-    \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
-    ClearList(\author())
-    \version$ = ""
-    \size = FileSize(File$)
-    \md5$ = MD5FileFingerprint(File$)
-    \active = 0
-    
-    ; read info from TFMM.ini in mod if any
-    DeleteFile(tmpDir$ + "tfmm.ini", #PB_FileSystem_Force) ; clean old tfmm.ini if exists
-                                                           ; TODO Check If tfmm.ini is deleted?
-    
-    Protected NewList Files$()
-    AddElement(Files$())
-    Files$() = "tfmm.ini"
-    If extension$ = "zip"
-      ExtractFilesZip(File$, Files$(), tmpDir$)
-    ElseIf extension$ = "rar"
-      ExtractFilesRar(File$, Files$(), tmpDir$)
-    EndIf
-    ClearList(Files$())
-    
-    OpenPreferences(tmpDir$ + "tfmm.ini")
-    ; Read required TFMM version
-    If ReadPreferenceInteger("tfmm", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-      MessageRequester("Newer version of TFMM required", "Please update TFMM in order to have full functionality!" + #CRLF$ + "Select 'File' -> 'Update' to check for newer versions.")
-    EndIf
-    
-    \id$ = ReadPreferenceString("id", "") ; ID will be checked after reading name & author
-    \name$ = ReadPreferenceString("name", \name$)
-    \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
-    \version$ = ReadPreferenceString("version", \version$)
-    author$ = ReadPreferenceString("author", "")
-    author$ = ReplaceString(author$, "/", ",")
-    \category$ = ReadPreferenceString("category", "")
-    \categoryDisplay$ = l("category",\category$)
-    
-    ; read online category
-    PreferenceGroup("online")
-    tfnet_author_id$ = ReadPreferenceString("tfnet_author_id", "")
-    \tfnet_mod_id = ReadPreferenceInteger("tfnet_mod_id", 0) ; http://www.train-fever.net/filebase/index.php/Entry/xxx
-    
-    ; create author list
-    count  = CountString(author$, ",") + 1
-    For i = 1 To count
-      AddElement(\author())
-      \author()\name$ = Trim(StringField(author$, i, ","))
-      \author()\tfnet_id = Val(Trim(StringField(tfnet_author_id$, i, ",")))
-    Next i
-    \authors$ = ""
-    If ListSize(\author()) > 0
-      ResetList(\author())
-      ForEach \author()
-        If \authors$ <> ""
-          \authors$ + ", "
-        EndIf
-        \authors$ + \author()\name$
+      lua$ + "  }," + #CRLF$
+      lua$ + "  tags = {"
+      ForEach \tags$()
+        lua$ + #DQUOTE$+misc::luaEscape(\tags$())+#DQUOTE$+", "
       Next
-    EndIf
+      lua$ + "}," + #CRLF$
+      lua$ + "  tfnetId = "+Str(\tfnetId)+"," + #CRLF$
+      lua$ + "  minGameVersion = "+Str(\minGameVersion)+"," + #CRLF$
+      lua$ + "  dependencies = {"
+      ForEach \dependencies$()
+        lua$ + #DQUOTE$+\dependencies$()+#DQUOTE$+", "
+      Next
+      lua$ + "}," + #CRLF$
+      lua$ + "  url = "+#DQUOTE$+misc::luaEscape(\url$)+#DQUOTE$+"," + #CRLF$
+      lua$ + "}" + #CRLF$ +
+           "end"
+    EndWith
     
-    ValidateID(*modinfo)
-    
-    ; read dependencies from tfmm.ini
-    If PreferenceGroup("dependencies")
-      debugger::Add("dependencies found:")
-      If ExaminePreferenceKeys()
-        While NextPreferenceKey()
-          debugger::Add(PreferenceKeyName() + " = " + PreferenceKeyValue())
-          \dependencies$(PreferenceKeyName()) = PreferenceKeyValue()
-        Wend
-      EndIf 
-    Else
-      debugger::Add("No dependencies")
-      ClearMap(\dependencies$())
-    EndIf
-    ClosePreferences()
-    
-    DeleteFile(tmpDir$ + "tfmm.ini")
-    
-  EndWith
+    *mod\aux\lua$ = lua$
+    ProcedureReturn #True
+  EndProcedure
   
-  ProcedureReturn #True
-EndProcedure
-
-Procedure AddModToList(File$) ; Read File$ from any location, extract mod into mod-directory, add info, this procedure calls WriteModToList()
-  debugger::Add("AddModToList("+File$+")")
-  Protected *modinfo.mod, *tmp.mod
-  Protected FileTarget$, tmp$, active$
-  Protected count, i
-  Protected sameName.b, sameHash.b, sameID.b
-  
-  If Not CheckModFile(File$)
-    debugger::Add("CheckModFile("+File$+") failed")
-    MessageRequester("Error", "Selected file is not a valid Train Fever modification or may not be compatible with TFMM")
-    ProcedureReturn #False
-  EndIf
-  
-  *modinfo = AllocateStructure(mod)
-  debugger::Add("new *modinfo created @"+Str(*modinfo))
-  If Not GetModInfo(File$, *modinfo)
-    debugger::Add("failed to retrieve *modinfo")
-    ProcedureReturn #False
-  EndIf
-    
-  ; check for existing mods with same name / ID!
-  For i = 0 To CountGadgetItems(ListInstalled) - 1
-    sameName = #False
-    sameHash = #False
-    sameID  = #False
-    
-    *tmp = ListIcon::GetListItemData(ListInstalled, i)
-    If *tmp\id$ = *modinfo\id$
-      debugger::Add("ID check found match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
-      sameName = #True
-    EndIf
-    If LCase(*tmp\name$) = LCase(*modinfo\name$)
-      debugger::Add("Name check foudn match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
-      sameName = #True
-    EndIf
-    If *tmp\md5$ = *modinfo\md5$
-      debugger::Add("MD5 check found match!: *tmp = "+Str(*tmp)+", modinfo ="+Str(*modinfo)+"")
-      sameHash = #True
-    EndIf
-    
-    If sameHash ; same hash indicates a duplicate - do not care about name or ID!
-      debugger::Add("same hash indicates a duplicate - do not care about name or ID! - abort installation")
-      If *tmp\active
-        MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed and activated.", #PB_MessageRequester_Ok)
-      Else
-        If MessageRequester("Error installing '"+*modinfo\name$+"'", "The modification '"+*tmp\name$+"' is already installed."+#CRLF$+"Do you want To activate it now?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-          AddToQueue(#QueueActionActivate, *tmp)
-        EndIf
-      EndIf
-      FreeStructure(*modinfo)
-      ProcedureReturn #True
-    EndIf
-    
-    If (sameName Or sameID) And Not sameHash ; a mod with the same name is installed, but it is not identical (maybe a new version?)
-      tmp$ = "Match with already installed modification found:"+#CRLF$+
-             "Current modification:"+#CRLF$+
-             #TAB$+"ID: "+*tmp\id$+#CRLF$+
-             #TAB$+"Name: "+*tmp\name$+#CRLF$+
-             #TAB$+"Version: "+*tmp\version$+#CRLF$+
-             #TAB$+"Author: "+*tmp\authors$+#CRLF$+
-             #TAB$+"Size: "+misc::Bytes(*tmp\size)+#CRLF$+
-             "New modification:"+#CRLF$+
-             #TAB$+"ID: "+*modinfo\id$+#CRLF$+
-             #TAB$+"Name: "+*modinfo\name$+#CRLF$+
-             #TAB$+"Version: "+*modinfo\version$+#CRLF$+
-             #TAB$+"Author: "+*modinfo\authors$+#CRLF$+
-             #TAB$+"Size: "+misc::Bytes(*modinfo\size)+#CRLF$+
-             "Do you want to replace the old modification with the new one?"
-      If MessageRequester("Error", tmp$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-        ; user does not want to replace
-        debugger::Add("User does not want to replace old mod with new mod. Free new mod: "+Str(*modinfo))
-        FreeStructure(*modinfo)
-        ProcedureReturn #False
-      EndIf
-      ; user wants to replace mod -> deactivate and uninstall old mod
-      
-      If *tmp\active
-        AddToQueue(#QueueActionDeactivate, *tmp)
-      EndIf
-      AddToQueue(#QueueActionUninstall, *tmp)
-      
-      ; after old mod is uninstalled: shedule installation of new mod again!
-      ; TODO make a more efficient way of this process!
-      AddToQueue(#QueueActionNew, 0, File$)
-      FreeStructure(*modinfo)
-      ProcedureReturn #False
-    EndIf
-  Next ; loop though installed mods
-  
-  ; when reaching this point, the mod can be installed!
-  misc::CreateDirectoryAll(TF$ + "TFMM/Mods/")
-  
-  ; user wants to install this mod! Therefore, find a possible file name!
-  i = 0
-  FileTarget$ = *modinfo\id$ + "." + GetExtensionPart(File$)
-  While FileSize(misc::Path(TF$ + "TFMM/Mods/") + FileTarget$) > 0
-    ; try to find a filename which does not exist
-    i = i + 1
-    FileTarget$ = *modinfo\id$ + "_" + Str(i) + "." + GetExtensionPart(File$)
-  Wend
-  
-  ; import file to mod folder
-  If Not CopyFile(File$, misc::Path(TF$ + "TFMM/Mods/") + FileTarget$)
-    ; Copy error
-    FreeStructure(*modinfo)
-    ProcedureReturn #False 
-  EndIf
-  
-  *modinfo\file$ = FileTarget$
-  
-  ; extract images etc
-  ExtractModInformation(*modinfo, misc::Path(TF$ + "TFMM/Mods/" + *modinfo\id$))
-  WriteModToIni(*modinfo)
-  
-  count = CountGadgetItems(ListInstalled)
-  With *modinfo
-    ListIcon::AddListItem(ListInstalled, count, \name$ + Chr(10) + \authors$ + Chr(10) + \categoryDisplay$ + Chr(10) + \version$)
-    ListIcon::SetListItemData(ListInstalled, count, *modinfo)
-    If \active
-      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("yes")))
-    Else
-      ListIcon::SetListItemImage(ListInstalled, count, ImageID(images::Images("no")))
-    EndIf
-  EndWith
-  
-  AddToQueue(#QueueActionActivate, *modinfo)
-EndProcedure
-
-Procedure ExportModListHTML(all, File$)
-  Protected file, i
-  Protected *modinfo.mod
-  Protected author$
-  
-  file = CreateFile(#PB_Any, File$)
-  If file
-    WriteStringN(file, "<!DOCTYPE html>", #PB_UTF8)
-    WriteString(file, "<html>", #PB_UTF8)
-    WriteString(file, "<head><meta charset='utf-8' /><meta name='Author' content='TFMM' /><title>TFMM Modification List Export</title><style>", #PB_UTF8)
-    WriteString(file, "h1 {color: #fff; text-align: center; width: 100%; margin: 5px 0px; padding: 10px; background: #831555} "+
-                      "table {width: 60%; min-width: 640px; background: #fff; padding: 0px; margin: 5px auto; border-collapse: collapse; border-spacing: 0px; border: 1px solid; border-color: RGBA(0, 0, 0, .2); box-shadow: 3px 3px 3px RGBA(0, 0, 0, .2); } "+
-                      "td { padding: 5px; text-align: left; vertical-align: middle; border: none; } "+
-                      "th { padding: 5px; text-align: center; vertical-align: moddle; border: none; font-weight: bold; font-size: 1.1em; border: none;background: #413e39; color: #fff } "+
-                      "tr {border: none;} "+
-                      "table tr:Not(:last-child) { border-style: solid; border-width: 0px 0px 1px 0px; border-color: RGBA(0, 0, 0, .2); } "+
-                      "table > tr:first-child > th { } "+
-                      "table tr:nth-child(even) td, table tr:nth-child(even) th { background: RGBA(0, 0, 0, .04); } "+
-                      "table tr:hover td { background: RGBA(0, 0, 0, .06) !important; } "+
-                      "footer { width: 100%; margin: 20px 0px; padding: 5px; border-top: 1px solid #413e39; text-align: right; font-size: small; color: rgba(65,62,57,.5); transition: color .5s ease-in-out } "+
-                      "footer:hover { color: #413e39; } "+
-                      "footer article { width: 60%; min-width: 640px; margin: 0px auto; padding: 0px; } "+
-                      "a { color: inherit; } "+
-                      "a:hover { color: #831555; } "+
-                      "", #PB_UTF8)
-    WriteString(file, "</style></head>", #PB_UTF8)
-    WriteString(file, "<body><h1>", #PB_UTF8)
-    If all
-      WriteString(file, "List of Modifications", #PB_UTF8)
-    Else
-      WriteString(file, "List of Activated Modifications", #PB_UTF8)
-    EndIf
-    WriteString(file, "</h1><table><tr><th>Modification</th><th>Version</th><th>Author</th></tr>", #PB_UTF8)
-    
-    For i = 0 To CountGadgetItems(ListInstalled) - 1
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      With *modinfo
-        If all Or \active
-          author$ = ""
-          ForEach \author()
-            If author$ <> ""
-              author$ + ", "
-            EndIf
-            author$ + \author()\name$
-          Next
-          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \version$ + "</td><td>" + author$ + "</td></tr>", #PB_UTF8)
-        EndIf
-      EndWith
-      
-    Next i
-    WriteString(file, "</table>", #PB_UTF8)
-    WriteString(file, "<footer><article><a href='http://goo.gl/utB3xn'>TFMM</a> &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='http://www.alexandernaehring.eu/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
-    
-    WriteString(file, "</body></html>", #PB_UTF8)
-    CloseFile(file)
-    
-    misc::openLink(File$)
-  EndIf
-EndProcedure
-
-Procedure ExportModListTXT(all, File$)
-  Protected file, i
-  Protected *modinfo.mod
-  Protected author$
-  
-  WriteStringN(file, "Mod" + Chr(9) + "Version" + Chr(9) + "Author", #PB_UTF8)
-               
-  file = CreateFile(#PB_Any, File$)
-  If file
-    For i = 0 To CountGadgetItems(ListInstalled) - 1
-      *modinfo = ListIcon::GetListItemData(ListInstalled, i)
-      With *modinfo
-        If all Or \active
-          author$ = ""
-          ForEach \author()
-            If author$ <> ""
-              author$ + ", "
-            EndIf
-            author$ + \author()\name$
-          Next
-          WriteStringN(file, \name$ + Chr(9) + \version$ + Chr(9) + author$, #PB_UTF8)
-        EndIf
-      EndWith
-      
-    Next i    
-    CloseFile(file)
-    
-    misc::openLink(File$)
-  EndIf
-EndProcedure
-
-Procedure ExportModList(all = #False)
-  debugger::Add("Export Mod List")
-  Protected File$, Extension$
-  Protected ok = #False
-  
-  File$ = SaveFileRequester("Export Mod List", "mods.html", "HTML|*.html|TEXT|*.txt", 0)
-  Extension$ = LCase(GetExtensionPart(File$))
-  If Extension$ = "txt" Or Extension$ = "html"
-    If FileSize(File$) > 0
-      If MessageRequester("Export Mod List", "Do you want to overwrite the existing file?", #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        ok = #True
-      EndIf
-    Else
-      ok = #True
-    EndIf
-  EndIf
-  
-  If ok
-    Select LCase(GetExtensionPart(File$))
-      Case "html"
-        ExportModListHTML(all, File$)
-      Case "txt"
-        ExportModListTXT(all, File$)
-    EndSelect
-  EndIf
-EndProcedure
+EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 447
-; FirstLine = 92
-; Folding = CQBIC+
+; CursorPosition = 768
+; FirstLine = 103
+; Folding = RIgRAg
 ; EnableUnicode
 ; EnableXP

@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.6." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.8." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 #DEBUG = #True
 
 Enumeration
@@ -23,10 +23,7 @@ XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
-
-CompilerIf #PB_Compiler_OS = #PB_OS_MacOS
-  MessageRequester("TFMM for Mac OS", "TFMM for Mac OS is still in Beta. Please use with caution!")
-CompilerEndIf
+XIncludeFile "module_conversion.pbi"
 
 Procedure exit(dummy)
   Protected i.i
@@ -44,7 +41,7 @@ Procedure exit(dummy)
   EndIf
   PreferenceGroup("columns")
   For i = 0 To 5
-    WritePreferenceInteger(Str(i), GetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, i))
+    WritePreferenceInteger(Str(i), GetGadgetItemAttribute(Library, #PB_Any, #PB_Explorer_ColumnWidth, i))
   Next
   ClosePreferences()
   
@@ -59,7 +56,7 @@ Procedure init()
   debugger::Add("init()")
   If Not UseZipPacker()
     debugger::Add("ERROR: UseZipPacker()")
-    MessageRequester("Error", "Could not initialize ZIP decompression.")
+    MessageRequester("Error", "Could not initialize ZIP.")
     End
   EndIf
   If Not InitNetwork()
@@ -78,6 +75,11 @@ Procedure init()
   If Not UseJPEGImageDecoder()
     debugger::Add("ERROR: UseJPEGImageDecoder()")
     MessageRequester("Error", "Could not initialize JPEG Decoder.")
+    End
+  EndIf
+  If Not UseTGAImageDecoder()
+    debugger::Add("ERROR: UseTGAImageDecoder()")
+    MessageRequester("Error", "Could not initialize TGA Decoder.")
     End
   EndIf
   
@@ -111,19 +113,19 @@ Procedure init()
                  ReadPreferenceInteger("width", #PB_Ignore),
                  ReadPreferenceInteger("height", #PB_Ignore))
     PreferenceGroup("")
+    ; reload column sizing
+    Protected i.i
+    PreferenceGroup("columns")
+    For i = 0 To 5
+      If ReadPreferenceInteger(Str(i), 0)
+        SetGadgetItemAttribute(Library, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        ; Sorting
+        ListIcon::SetColumnFlag(Library, i, ListIcon::#String) 
+      EndIf
+    Next
+    PreferenceGroup("")
   EndIf
   
-  ; reload column sizing
-  Protected i.i
-  PreferenceGroup("columns")
-  For i = 0 To 5
-    If ReadPreferenceInteger(Str(i), 0)
-      SetGadgetItemAttribute(ListInstalled, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
-      ; Sorting
-      ListIcon::SetColumnFlag(ListInstalled, i, ListIcon::#String) 
-    EndIf
-  Next
-  PreferenceGroup("")
   
   ; update
   If ReadPreferenceInteger("update", 0)
@@ -139,7 +141,15 @@ Procedure init()
     MenuItemSettings(0)
     GadgetButtonAutodetect(0)
   EndIf
-  LoadModList()
+  
+  
+  If TF$ <> ""
+    queue::add(queue::#QueueActionLoad, TF$)
+    
+    If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
+      queue::add(queue::#QueueActionConvert, TF$)
+    EndIf
+  EndIf
   
   debugger::Add("init complete")
 EndProcedure
@@ -174,12 +184,12 @@ Repeat
       EndIf
       If Event = #PB_Event_Menu
         Select EventMenu()
-          Case #MenuItem_Activate
-            GadgetButtonActivate(#PB_EventType_LeftClick)
-          Case #MenuItem_Deactivate
-            GadgetButtonDeactivate(#PB_EventType_LeftClick)
-          Case #MenuItem_Uninstall
-            GadgetButtonUninstall(#PB_EventType_LeftClick)
+          Case #MenuItem_Install
+            GadgetButtonInstall(#PB_EventType_LeftClick)
+          Case #MenuItem_Remove
+            GadgetButtonRemove(#PB_EventType_LeftClick)
+          Case #MenuItem_Delete
+            GadgetButtonDelete(#PB_EventType_LeftClick)
           Case #MenuItem_Information
             GadgetButtonInformation(#PB_EventType_LeftClick)
         EndSelect
@@ -189,7 +199,7 @@ Repeat
         GadgetCloseSettings(0)
       EndIf
     Case WindowModProgress
-      If Not WindowModProgress_Events(Event)
+      If Not WindowProgress_Events(Event)
         ; user wants to close progress window -> no action, just wait for progress to finish
       EndIf
     Case WindowModInformation
@@ -211,8 +221,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 116
-; FirstLine = 67
-; Folding = 9
+; CursorPosition = 147
+; FirstLine = 120
+; Folding = -
 ; EnableUnicode
 ; EnableXP
