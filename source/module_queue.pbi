@@ -4,6 +4,9 @@ DeclareModule queue
   EnableExplicit
   
   Enumeration
+    #QueueActionLoad
+    #QueueActionConvert
+    
     #QueueActionNew
     #QueueActionDelete
     
@@ -41,9 +44,6 @@ Module queue
     If val$ = ""
       ProcedureReturn #False
     EndIf
-    If action <> #QueueActionNew And action <> #QueueActionDelete And action <> #QueueActionInstall And action <> #QueueActionRemove
-      ProcedureReturn #False
-    EndIf
     
     LockMutex(mQueue)
     LastElement(queue())
@@ -69,6 +69,7 @@ Module queue
     If TF$ And Not *thread
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
+        ; pop first element
         FirstElement(queue())
         element = queue()
         DeleteElement(queue(),1)
@@ -104,6 +105,22 @@ Module queue
               *thread = CreateThread(mods::@delete(), dat)
             EndIf
             
+          Case #QueueActionLoad
+            debugger::Add("updateQueue() - #QueueActionLoad")
+            If element\val$
+              dat\id$ = element\val$
+              dat\tf$ = TF$
+              *thread = CreateThread(mods::@load(), dat)
+            EndIf
+            
+          Case #QueueActionConvert
+            debugger::Add("updateQueue() - #QueueActionConvert")
+            If element\val$
+              dat\id$ = element\val$
+              dat\tf$ = TF$
+              *thread = CreateThread(mods::@convert(), dat)
+            EndIf
+            
         EndSelect
       EndIf
     EndIf
@@ -112,28 +129,11 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-;   Procedure busy(busy = -1)
-;     Static m_busy, f_busy
-;     If Not m_busy
-;       m_busy = CreateMutex()
-;     EndIf
-;     
-;     Protected ret
-;     LockMutex(m_busy)
-;     If busy <> -1
-;       f_busy = busy
-;     EndIf
-;     ret = f_busy
-;     UnlockMutex(n_busy)
-;     ProcedureReturn ret
-;   EndProcedure
-  
-  
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 103
-; FirstLine = 68
-; Folding = -
+; CursorPosition = 118
+; FirstLine = 72
+; Folding = 8
 ; EnableUnicode
 ; EnableXP

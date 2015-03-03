@@ -143,12 +143,11 @@ Procedure init()
   EndIf
   
   If TF$ <> ""
-    mods::load(TF$)
+    ; conversion::convert(TF$)
+    queue::add(queue::#QueueActionConvert, TF$)
     
-    ; one time conversion to new mod system
-    conversion::convert(TF$)
-    
-    ; load list of new mods
+    ; mods::load(TF$)
+    queue::add(queue::#QueueActionLoad, TF$)
   EndIf
   
   debugger::Add("init complete")
@@ -221,8 +220,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 186
-; FirstLine = 175
+; CursorPosition = 147
+; FirstLine = 115
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

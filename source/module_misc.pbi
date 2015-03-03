@@ -21,6 +21,7 @@ DeclareModule misc
   Declare HexStrToFile(hex$, file$)
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
+  Declare packDirectory(dir$, file$)
 EndDeclareModule
 
 Module misc
@@ -294,10 +295,63 @@ Module misc
     ProcedureReturn #True
   EndProcedure
   
+  Procedure addDirToPack(pack.i, dir$, root$ = "")
+    Protected relative$, dir.i, entry$
+    dir$ = Path(dir$)
+    If root$ = ""
+      root$ = GetPathPart(Left(dir$,Len(dir$)-1))
+    EndIf
+    root$ = Path(root$)
+    relative$ = Mid(dir$, Len(root$)+1)
+    
+;     debugger::Add("addDirToPack("+Str(pack)+", "+dir$+", "+root$+")")
+    
+    dir = ExamineDirectory(#PB_Any, dir$, "")
+    If Not IsDirectory(dir)
+      ProcedureReturn #False
+    EndIf
+    While NextDirectoryEntry(dir)
+      entry$ = DirectoryEntryName(dir)
+      Select DirectoryEntryType(dir)
+        Case #PB_DirectoryEntry_File
+          debugger::Add("misc::addDirToPack() - addPackFile {"+relative$ + entry$+"}")
+          AddPackFile(pack, dir$ + entry$, relative$ + entry$)
+        Case #PB_DirectoryEntry_Directory
+          If entry$ = "." Or entry$ = ".."
+            Continue
+          EndIf
+          If Not addDirToPack(pack, dir$+entry$, root$)
+            ProcedureReturn #False
+          EndIf
+      EndSelect
+    Wend
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure packDirectory(dir$, file$)
+    debugger::Add("packDirectory("+dir$+", "+file$+")")
+    Protected.i pack, result
+    
+    DeleteFile(file$)
+    pack = CreatePack(#PB_Any, file$, #PB_PackerPlugin_Zip)
+    If Not pack
+      ProcedureReturn #False
+    EndIf
+    
+    result = addDirToPack(pack, dir$)
+    ClosePack(pack)
+    
+    If Not result
+      DeleteFile(file$)
+    EndIf
+    ProcedureReturn result
+  EndProcedure
+
+  
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 283
-; FirstLine = 9
+; CursorPosition = 316
+; FirstLine = 42
 ; Folding = PKA5
 ; EnableUnicode
 ; EnableXP

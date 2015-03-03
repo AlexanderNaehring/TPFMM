@@ -76,7 +76,7 @@ delete1       = Soll '{name}' gelöscht werden?
 delete2       = Sollen {count} Modifikationen gelöscht werden?
 
 conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
-conflict_id   = Konflikt bei der Installation von '{new_name}':\nEs existiert bereits eine Modifikation mit der ID '{id}': {old_name} {old_version}\nSoll {old_name} {old_version} durch {new_name} {new_version} ersetzt werden?
+conflict_id   = Konflikt bei der Installation von '{new_name}':\nEs existiert bereits eine Modifikation mit der ID '{id}': '{old_name} v{old_version}'\nSoll '{old_name} v{old_version}' durch '{new_name} v{new_version}' ersetzt werden?
 
 select_mod    = Wähle Modifikation aus
 files_archive = Datei Archive

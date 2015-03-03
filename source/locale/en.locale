@@ -76,7 +76,7 @@ delete1       = Do you want to permanently delete '{name}'?
 delete2       = Do you want to permanently delete {count} modifications?
 
 conflict_hash = Modification '{name}' is already installed and added to Train Fever.
-conflict_id   = Conflict while installing {new_name}:\nA mod with id '{id}' already exists: {old_name} {old_version}\nShould {old_name} {old_version} be replaced by {new_name} {new_version}?
+conflict_id   = Conflict while installing '{new_name}':\nA mod with id '{id}' already exists: '{old_name} v{old_version}'\nShould '{old_name} v{old_version}' be replaced by '{new_name} v{new_version}'?
 
 select_mod    = Select new modification to add
 files_archive = Archive files

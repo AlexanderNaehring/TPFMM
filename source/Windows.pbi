@@ -216,113 +216,103 @@ Procedure updateGUI()
     EndIf
   Next
   
-;   If InstallInProgress
-;     DisableGadget(GadgetInstall, #True)
-;     DisableGadget(GadgetRemove, #True)
-;     DisableGadget(GadgetDelete, #True)
-;     DisableGadget(GadgetButtonInformation, #True)
-;     DisableMenuItem(MenuLibrary, #MenuItem_Add, #True)
-;     DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
-;     DisableMenuItem(MenuLibrary, #MenuItem_delete, #True)
-;   Else
-    ; no install in progress
-    SelectedMod =  GetGadgetState(Library)
-    If SelectedMod = -1 ; if nothing is selected -> disable buttons
-      DisableGadget(GadgetInstall, #True)
+  SelectedMod =  GetGadgetState(Library)
+  If SelectedMod = -1 ; if nothing is selected -> disable buttons
+    DisableGadget(GadgetInstall, #True)
+    DisableGadget(GadgetRemove, #True)
+    DisableGadget(GadgetDelete, #True)
+    DisableGadget(GadgetButtonInformation, #True)
+    DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
+    DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
+    DisableMenuItem(MenuLibrary, #MenuItem_delete, #True)
+    DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
+  Else
+    DisableGadget(GadgetDelete, #False) ; delete is always possible!
+    DisableMenuItem(MenuLibrary, #MenuItem_delete, #False)
+    If selectedActive > 0 ; if at least one of the mods is active
+      DisableGadget(GadgetRemove, #False)
+      DisableMenuItem(MenuLibrary, #MenuItem_Remove, #False)
+    Else  ; if no mod is active 
       DisableGadget(GadgetRemove, #True)
-      DisableGadget(GadgetDelete, #True)
-      DisableGadget(GadgetButtonInformation, #True)
-      DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
-      DisableMenuItem(MenuLibrary, #MenuItem_delete, #True)
-      DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
-    Else
-      DisableGadget(GadgetDelete, #False) ; delete is always possible!
-      DisableMenuItem(MenuLibrary, #MenuItem_delete, #False)
-      If selectedActive > 0 ; if at least one of the mods is active
-        DisableGadget(GadgetRemove, #False)
-        DisableMenuItem(MenuLibrary, #MenuItem_Remove, #False)
-      Else  ; if no mod is active 
-        DisableGadget(GadgetRemove, #True)
-        DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
-      EndIf
-      If selectedInactive > 0 ; if at least one of the mods is not active
-        DisableGadget(GadgetInstall, #False)
-        DisableMenuItem(MenuLibrary, #MenuItem_Install, #False)
-      Else ; if none of the selected mods is inactive
-        DisableGadget(GadgetInstall, #True)  ; disable activate button
-        DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
-      EndIf
-      
-      If selectedActive + selectedInactive > 1
-        DisableGadget(GadgetButtonInformation, #True)
-        DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
-      Else
-        DisableGadget(GadgetButtonInformation, #False)
-        DisableMenuItem(MenuLibrary, #MenuItem_Information, #False)
-      EndIf
-      
-      If selectedActive + selectedInactive > 1
-        SetGadgetText(GadgetDelete, l("main","delete_pl"))
-        SetMenuItemText(MenuLibrary, #MenuItem_delete, l("main","delete_pl"))
-      Else
-        SetGadgetText(Gadgetdelete, l("main","delete"))
-        SetMenuItemText(MenuLibrary, #MenuItem_delete, l("main","delete"))
-      EndIf
-      If selectedActive > 1
-        SetGadgetText(GadgetRemove, l("main","remove_pl"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Remove, l("main","remove_pl"))
-      Else
-        SetGadgetText(GadgetRemove, l("main","remove"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Remove, l("main","remove"))
-      EndIf
-      If selectedInactive > 1
-        SetGadgetText(GadgetInstall, l("main","install_pl"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Install, l("main","install_pl"))
-      Else
-        SetGadgetText(GadgetInstall, l("main","install"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Install, l("main","install"))
-      EndIf
+    EndIf
+    If selectedInactive > 0 ; if at least one of the mods is not active
+      DisableGadget(GadgetInstall, #False)
+      DisableMenuItem(MenuLibrary, #MenuItem_Install, #False)
+    Else ; if none of the selected mods is inactive
+      DisableGadget(GadgetInstall, #True)  ; disable activate button
+      DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
     EndIf
     
-    If selectedActive + selectedInactive = 1
-      ; one mod selected
-      ; display image
-      *mod = ListIcon::GetListItemData(Library, SelectedMod)
-      If Not IsImage(PreviewImages(*mod\id$)) ; if image is not yet loaded
-        Protected im.i, image$
-        image$ = misc::Path(TF$ + "TFMM/library/" + *mod\id$) + "image_00.tga"
-        If FileSize(image$) > 0
-          im = LoadImage(#PB_Any, image$)
-        EndIf
-        ; if load was successfull
+    If selectedActive + selectedInactive > 1
+      DisableGadget(GadgetButtonInformation, #True)
+      DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
+    Else
+      DisableGadget(GadgetButtonInformation, #False)
+      DisableMenuItem(MenuLibrary, #MenuItem_Information, #False)
+    EndIf
+    
+    If selectedActive + selectedInactive > 1
+      SetGadgetText(GadgetDelete, l("main","delete_pl"))
+      SetMenuItemText(MenuLibrary, #MenuItem_delete, l("main","delete_pl"))
+    Else
+      SetGadgetText(Gadgetdelete, l("main","delete"))
+      SetMenuItemText(MenuLibrary, #MenuItem_delete, l("main","delete"))
+    EndIf
+    If selectedActive > 1
+      SetGadgetText(GadgetRemove, l("main","remove_pl"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Remove, l("main","remove_pl"))
+    Else
+      SetGadgetText(GadgetRemove, l("main","remove"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Remove, l("main","remove"))
+    EndIf
+    If selectedInactive > 1
+      SetGadgetText(GadgetInstall, l("main","install_pl"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Install, l("main","install_pl"))
+    Else
+      SetGadgetText(GadgetInstall, l("main","install"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Install, l("main","install"))
+    EndIf
+  EndIf
+  
+  If selectedActive + selectedInactive = 1
+    ; one mod selected
+    ; display image
+    *mod = ListIcon::GetListItemData(Library, SelectedMod)
+    If Not IsImage(PreviewImages(*mod\id$)) ; if image is not yet loaded
+      Protected im.i, image$
+      image$ = misc::Path(TF$ + "TFMM/library/" + *mod\id$) + "image_00.tga"
+      If FileSize(image$) > 0
+        im = LoadImage(#PB_Any, image$)
+      EndIf
+      ; if load was successfull
+      If IsImage(im)
+        im = misc::ResizeCenterImage(im, GadgetWidth(ImageGadgetLogo), GadgetHeight(ImageGadgetLogo))
         If IsImage(im)
-          im = misc::ResizeCenterImage(im, GadgetWidth(ImageGadgetLogo), GadgetHeight(ImageGadgetLogo))
-          If IsImage(im)
-            PreviewImages(*mod\id$) = im
-          EndIf
+          PreviewImages(*mod\id$) = im
         EndIf
       EndIf
-      ; if image is leaded now
-      If IsImage(PreviewImages(*mod\id$))
-        ; display image
-        If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*mod\id$))
-          debugger::Add("ImageLogo: Display custom image")
-          SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*mod\id$)))
-        EndIf
-      Else
-        ; else: display normal logo
-        If GetGadgetState(ImageGadgetLogo) <> ImageID(images::Images("logo"))
-          debugger::Add("ImageLogo: Display tf|net logo instead of custom image")
-          SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
-        EndIf
+    EndIf
+    ; if image is leaded now
+    If IsImage(PreviewImages(*mod\id$))
+      ; display image
+      If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*mod\id$))
+        debugger::Add("ImageLogo: Display custom image")
+        SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*mod\id$)))
       EndIf
     Else
+      ; else: display normal logo
       If GetGadgetState(ImageGadgetLogo) <> ImageID(images::Images("logo"))
-        debugger::Add("ImageLogo: Display tf|net logo")
+        debugger::Add("ImageLogo: Display tf|net logo instead of custom image")
         SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
       EndIf
     EndIf
+  Else
+    If GetGadgetState(ImageGadgetLogo) <> ImageID(images::Images("logo"))
+      debugger::Add("ImageLogo: Display tf|net logo")
+      SetGadgetState(ImageGadgetLogo, ImageID(images::Images("logo")))
+    EndIf
+  EndIf
 EndProcedure
 
 
@@ -585,11 +575,11 @@ Procedure GadgetButtonRemove(event)
     If count = 1
       ClearMap(strings$())
       strings$("name") = *last\name$
-      result = MessageRequester(l("main","deactivate"), locale::getEx("management", "deactivate1", strings$()), #PB_MessageRequester_YesNo)
+      result = MessageRequester(l("main","remove"), locale::getEx("management", "remove1", strings$()), #PB_MessageRequester_YesNo)
     Else
       ClearMap(strings$())
       strings$("count") = Str(count)
-      result = MessageRequester(l("main","deactivate_pl"), locale::getEx("management", "deactivate2", strings$()), #PB_MessageRequester_YesNo)
+      result = MessageRequester(l("main","remove_pl"), locale::getEx("management", "remove2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -881,8 +871,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 550
-; FirstLine = 332
-; Folding = FwGAEAAA9
+; CursorPosition = 583
+; FirstLine = 118
+; Folding = FgAAIAAA9
 ; EnableUnicode
 ; EnableXP

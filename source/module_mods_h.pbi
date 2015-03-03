@@ -44,7 +44,8 @@
   
   Declare init() ; allocate structure, return *mod
   Declare free(id$) ; free *mod structure
-  Declare load(TF$)
+  Declare load(*data)
+  Declare convert(*data)
   
   Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
@@ -60,8 +61,8 @@
 EndDeclareModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 55
-; FirstLine = 14
+; CursorPosition = 47
+; FirstLine = 11
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

@@ -27,19 +27,34 @@ Module mods
   Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
     Protected entry$
+    If FileSize(File$) <= 0
+      debugger::Add("mods::checkModFileZip() - ERROR - {"+File$+"} not found")
+      ProcedureReturn "false"
+    EndIf
+    
     If OpenPack(0, File$, #PB_PackerPlugin_Zip)
       If ExaminePack(0)
         While NextPackEntry(0)
           entry$ = PackEntryName(0)
-          If FindString(entry$, "res/")
-            ; found a "res" subfolder, assume this mod is valid 
+          entry$ = misc::Path(GetPathPart(entry$), "/")+GetFilePart(entry$)
+          debugger::Add("mods::checkModFileZip() - {"+entry$+"}")
+          If FindString(entry$, "res/") ; found a "res" subfolder, assume this mod is valid 
             ClosePack(0)
-            entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2))
+            entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2)) ; entry = folder name (id)
+            debugger::Add("mods::checkModFileZip() - found res/ - return {"+entry$+"}")
+            ProcedureReturn entry$
+          EndIf
+          If GetFilePart(entry$) =  "info.lua" ; found info.lua, asume mod is valid
+            ClosePack(0)
+            entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry = folder name (id)
+            debugger::Add("mods::checkModFileZip() - found info.lua - return {"+entry$+"}")
             ProcedureReturn entry$
           EndIf
         Wend
       EndIf
       ClosePack(0)
+    Else
+      debugger::Add("mods::checkModFileZip() - ERROR - cannot open pack {"+File$+"}")
     EndIf
     ProcedureReturn "false"
   EndProcedure
@@ -58,10 +73,18 @@ Module mods
         CompilerElse
           Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
         CompilerEndIf
+        
+        debugger::Add("mods::checkModFileRar() - {"+entry$+"}")
         If FindString(Entry$, "res\")
-          unrar::RARCloseArchive(hRAR)
-          ; found a "res" subfolder, assume this mod is valid
-          entry$ = GetFilePart(Left(entry$, FindString(entry$, "res\")-2))
+          unrar::RARCloseArchive(hRAR) ; found a "res" subfolder, assume this mod is valid
+          entry$ = GetFilePart(Left(entry$, FindString(entry$, "res\")-2)) ; entry$ = parent folder = id
+          debugger::Add("mods::checkModFileRar() - found res\ - return {"+entry$+"}")
+          ProcedureReturn entry$ ; entry$ = id, can be empty!
+        EndIf
+        If GetFilePart(Entry$) =  "info.lua"
+          unrar::RARCloseArchive(hRAR) ; found info.lua subfolder, assume this mod is valid
+          entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry$ = parent folder = id
+          debugger::Add("mods::checkModFileRar() - found info.lua - return {"+entry$+"}")
           ProcedureReturn entry$ ; entry$ = id, can be empty!
         EndIf
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
@@ -131,14 +154,14 @@ Module mods
     
     If ExaminePack(zip)
       While NextPackEntry(zip)
-        Entry$ = PackEntryName(zip)
-        
+        entry$ = PackEntryName(zip)
         If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
           Continue
         EndIf
         
+        entry$ = GetFilePart(entry$)
         ForEach Files$()
-          If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "/" + LCase(Files$())
+          If LCase(Entry$) = LCase(Files$())
             UncompressPackFile(zip, dir$ + Files$())
             DeleteElement(Files$()) ; if file is extracted, delete from list
             Break ; ForEach
@@ -182,7 +205,8 @@ Module mods
       
       hit = #False
       ForEach Files$()
-        If LCase(Entry$) = LCase(Files$()) Or LCase(Right(Entry$, Len(Files$())+1)) = "\" + LCase(Files$())
+        entry$ = GetFilePart(entry$)
+        If LCase(entry$) = LCase(Files$())
           unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
           DeleteElement(Files$()) ; if file is extracted, delete from list
           hit = #True
@@ -238,6 +262,34 @@ Module mods
     EndWith
     ClosePreferences()
     
+    ; Post Processing
+    Protected count.i, i.i
+    With *mod
+      \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
+      \majorVersion = Val(StringField(\aux\version$, 1, "."))
+      \minorVersion = Val(StringField(\aux\version$, 2, "."))
+      If \aux\authors$
+        \aux\authors$ = ReplaceString(\aux\authors$, "/", ",")
+        count  = CountString(\aux\authors$, ",") + 1
+        For i = 1 To count
+          AddElement(\authors())
+          \authors()\name$ = Trim(StringField(\aux\authors$, i, ","))
+          If i = 1 : \authors()\role$ = "CREATOR"
+          Else : \authors()\role$ = "CO_CREATOR"
+          EndIf
+          \authors()\tfnetId = Val(Trim(StringField(\aux\tfnet_author_id$, i, ",")))
+        Next i
+      EndIf
+      If \aux\tags$
+        \aux\tags$ = ReplaceString(\aux\tags$, "/", ",")
+        count = CountString(\aux\tags$, ",") + 1
+        For i = 1 To count
+          AddElement(\tags$())
+          \tags$() = Trim(StringField(\aux\tags$, i, ","))
+        Next i
+      EndIf
+    EndWith
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -275,7 +327,6 @@ Module mods
     string$ = "(.+?)"
     string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
     string$ = "(_\(("+string$+")\))|("+string$+")"
-        
     
     file = ReadFile(#PB_Any, file$)
     If Not file
@@ -562,29 +613,6 @@ Module mods
       parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
     EndIf
     
-    Protected deb$
-    ForEach *mod\authors()
-      debugger::Add("mods::parseInfoLUA() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
-    Next
-    debugger::Add("mods::parseInfoLUA() - minorVersion: "+Str(*mod\minorVersion))
-    debugger::Add("mods::parseInfoLUA() - name: "+*mod\name$)
-    debugger::Add("mods::parseInfoLUA() - severityAdd: "+*mod\severityAdd$)
-    debugger::Add("mods::parseInfoLUA() - severityRemove: "+*mod\severityRemove$)
-    debugger::Add("mods::parseInfoLUA() - description: "+*mod\description$)
-    debugger::Add("mods::parseInfoLUA() - tfnetId: "+Str(*mod\tfnetId))
-    debugger::Add("mods::parseInfoLUA() - minGameVersion: "+Str(*mod\minGameVersion))
-    debugger::Add("mods::parseInfoLUA() - url: "+*mod\url$)
-    deb$ = "mods::parseInfoLUA() - tags: "
-    ForEach *mod\tags$()
-      deb$ + *mod\tags$()+", "
-    Next
-    debugger::Add(deb$)
-    deb$ = "mods::parseInfoLUA() - dependencies: "
-    ForEach *mod\dependencies$()
-      deb$ + *mod\dependencies$()+", "
-    Next
-    debugger::Add(deb$)
-    
     ProcedureReturn #True
   EndProcedure
   
@@ -626,9 +654,34 @@ Module mods
   
   ; TODO : extract & load all necesarry information at each startup!
   
+  Procedure debugInfo(*mod.mod)
+    Protected deb$
+    debugger::Add("mods::debugInfo() - id: "+*mod\id$)
+    debugger::Add("mods::debugInfo() - name: "+*mod\name$)
+    ForEach *mod\authors()
+      debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
+    Next
+    debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
+    debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
+    debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
+    debugger::Add("mods::debugInfo() - description: "+*mod\description$)
+    debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
+    debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
+    debugger::Add("mods::debugInfo() - url: "+*mod\url$)
+    deb$ = "mods::debugInfo() - tags: "
+    ForEach *mod\tags$()
+      deb$ + *mod\tags$()+", "
+    Next
+    debugger::Add(deb$)
+    deb$ = "mods::debugInfo() - dependencies: "
+    ForEach *mod\dependencies$()
+      deb$ + *mod\dependencies$()+", "
+    Next
+    debugger::Add(deb$)
+  EndProcedure
+  
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
     debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
-    
     Protected tmpDir$ = GetTemporaryDirectory()
     
     ; clean info
@@ -642,57 +695,30 @@ Module mods
     EndWith
     
     ; extract some files
-    DeleteFile(tmpDir$ + "tfmm.ini", #PB_FileSystem_Force)
-    DeleteFile(tmpDir$ + "info.lua", #PB_FileSystem_Force)
-    DeleteFile(tmpDir$ + "strings.lua", #PB_FileSystem_Force)
     Protected NewList files$()
     AddElement(files$()) : files$() = "tfmm.ini"
     AddElement(files$()) : files$() = "info.lua"
     AddElement(files$()) : files$() = "strings.lua"
+    
+    ForEach files$()
+      DeleteFile(tmpDir$ + files$(), #PB_FileSystem_Force)
+    Next
+    
     If Not ExtractFilesZip(file$, files$(), tmpDir$)
       If Not ExtractFilesRar(file$, files$(), tmpDir$)
         debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
       EndIf
     EndIf
     
-    Protected author$, tfnet_author_id$, tags$
-    Protected count.i, i.i
-    
     ; read tfmm.ini
     parseTFMMini(tmpDir$ + "tfmm.ini", *mod)
     DeleteFile(tmpDir$ + "tfmm.ini")
-    
-    ; post processing for tfmm.ini
-    With *mod
-      \name$ = ReplaceString(ReplaceString(\name$, "[", "("), "]", ")")
-      \majorVersion = Val(StringField(\aux\version$, 1, "."))
-      \minorVersion = Val(StringField(\aux\version$, 2, "."))
-      If author$
-        author$ = ReplaceString(author$, "/", ",")
-        count  = CountString(author$, ",") + 1
-        For i = 1 To count
-          AddElement(\authors())
-          \authors()\name$ = Trim(StringField(author$, i, ","))
-          If i = 1 : \authors()\role$ = "CREATOR"
-          Else : \authors()\role$ = "CO_CREATOR"
-          EndIf
-          \authors()\tfnetId = Val(Trim(StringField(tfnet_author_id$, i, ",")))
-        Next i
-      EndIf
-      If tags$
-        tags$ = ReplaceString(tags$, "/", ",")
-        count = CountString(tags$, ",") + 1
-        For i = 1 To count
-          AddElement(\tags$())
-          \tags$() = Trim(StringField(tags$, i, "/"))
-        Next i
-      EndIf
-    EndWith
+    debugInfo(*mod)
     
     ; read info.lua
     parseInfoLUA(tmpDir$ + "info.lua", *mod)
     DeleteFile(tmpDir$ + "info.lua")
-    
+    debugInfo(*mod)
     
     If Not generateID(*mod, id$)
       ProcedureReturn #False
@@ -761,9 +787,10 @@ Module mods
         Continue
       EndIf
       
+      file$ = PackEntryName(zip)
+      file$ = misc::Path(GetPathPart(file$),"/")+GetFilePart(file$)
       If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
         If FindString(PackEntryName(zip), "res/") ; only extract files which are located in subfoldres of res/
-          file$ = PackEntryName(zip)
           file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
           ; adjust path delimiters to OS
           file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
@@ -822,7 +849,6 @@ Module mods
   
     ProcedureReturn #True
   EndProcedure
-  
   
   ;PUBLIC
   
@@ -943,9 +969,11 @@ Module mods
       FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
-    ; copy file to library
     
-    Protected newfile$ = dir$+GetFilePart(file$, #PB_FileSystem_NoExtension)+".tfmod"
+    ; copy file to library
+;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
+    Protected newfile$ = dir$ + id$ + ".tfmod"
+    debugger::Add("mods::addMod() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
     
     If Not CopyFile(file$, newfile$)
       debugger::Add("mods::addMod() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
@@ -953,12 +981,15 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    
     ; extract files
     Protected NewList files$()
     ClearList(files$())
     AddElement(files$()) : files$() = "info.lua"
     AddElement(files$()) : files$() = "strings.lua"
+    AddElement(files$()) : files$() = "main.lua"
+    AddElement(files$()) : files$() = "filesystem.lua"
+    ; TODO check if these important files needs to be re-extracted ?!
+    
     AddElement(files$()) : files$() = "header.jpg"
     AddElement(files$()) : files$() = "preview.png"
     AddElement(files$()) : files$() = "image_00.tga"
@@ -979,10 +1010,9 @@ Module mods
     
     
     ; images
+    debugger::Add("mosd::new() - convert images")
     Protected im, image$, i
     image$ = dir$ + "header.jpg"
-    Debug "---------------------------------"
-    Debug image$
     If FileSize(image$) > 0
       im = LoadImage(#PB_Any, image$)
       If IsImage(im)
@@ -1024,15 +1054,20 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure load(TF$) ; load all mods in internal modding folder and installed to TF
+  Procedure load(*data.queue::dat) ; TF$) ; load all mods in internal modding folder and installed to TF
+    Protected TF$ = *data\tf$
     debugger::Add("mods::load("+TF$+")")
-    Protected dir$, dir
-    Protected entry$
+    Protected pmods$, plib$, ptmp$, entry$
+    Protected pmodsentry$, plibentry$, image$
+    Protected dir, i
     Protected *mod.mod
     
-    dir$ = misc::Path(TF$ + "/TFMM/library/")
-    debugger::Add("mods::load() - read library {"+dir$+"}")
-    dir = ExamineDirectory(#PB_Any, dir$, "")
+    plib$   = misc::Path(TF$ + "/TFMM/library/")
+    pmods$  = misc::Path(TF$ + "/mods/")
+    ptmp$   = GetTemporaryDirectory()
+    
+    debugger::Add("mods::load() - read library {"+plib$+"}")
+    dir = ExamineDirectory(#PB_Any, plib$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -1043,24 +1078,44 @@ Module mods
           Continue
         EndIf
         debugger::Add("mods::load() - found {"+entry$+"} in library")
+        ; id$ = entry$
+        
+        plibentry$  = misc::Path(plib$ + entry$ + "/")
+        pmodsentry$ = misc::Path(pmods$ + entry$ + "/")
         
         *mod = init()
-        loadInfo(TF$, entry$, *mod)
-        *mod\aux\file$ = misc::Path(TF$ + "/TFMM/library/" + entry$ + "/") + entry$ + ".tfmod"
+        *mod\aux\file$ = plibentry$ + entry$ + ".tfmod"
         *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
-        If FileSize(misc::Path(TF$ + "/mods/" + entry$ + "/")) = -2
+        If FileSize(misc::Path(pmods$ + entry$ + "/")) = -2
+          ; TODO re-import mod if it was changed manually or with another manager! (version check?)
+          
           *mod\aux\installed = #True
+          debugger::Add("mods::load() - update info of {"+entry$+"} from mod directory")
+          ; copy info.lua from TF/mods/ to TFMM/library to have current information available
+          CopyFile(pmodsentry$ + "info.lua", plibentry$ + "info.lua")
+          CopyFile(pmodsentry$ + "strings.lua", plibentry$ + "strings.lua")
+          i = 0
+          Repeat
+            image$ = "image_" + RSet(Str(i), 2, "0")
+            If FileSize(pmodsentry$ + image$) <= 0
+              Break
+            EndIf
+            DeleteFile(plibentry$ + image$)
+            CopyFile(pmodsentry$ + image$, plibentry$ + image$)
+            i + 1
+          ForEver
+          
         EndIf
+        loadInfo(TF$, entry$, *mod)
         toList(*mod)
       Wend
       FinishDirectory(dir)
     EndIf
     
     
-    ; TODO -> CHECK FOR MODS THAT ARE NOT ALREADY IN LIBRARY
-    dir$ = misc::Path(TF$ + "/mods/")
-    debugger::Add("mods::load() - read installed mods {"+dir$+"}")
-    dir = ExamineDirectory(#PB_Any, dir$, "")
+    ; check mods from mods/ folder (installed)
+    debugger::Add("mods::load() - read installed mods {"+pmods$+"}")
+    dir = ExamineDirectory(#PB_Any, pmods$, "")
     If dir 
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -1070,19 +1125,45 @@ Module mods
         If Not checkID(entry$)
           Continue
         EndIf
-        debugger::Add("mods::load() - found {"+entry$+"} installed")
         
         If FindMapElement(*mods(), entry$)
           *mods()\aux\installed = #True
         Else
           ; mod installed but not in list
-          ; TODO -> add to library
+          ; add to library
+          debugger::Add("mods::load() - load mod into library: {"+pmods$+entry$+"} -> {"+ptmp$+entry$+".zip"+"}")
+          If misc::packDirectory(pmods$ + entry$, ptmp$ + entry$ + ".zip")
+            queue::add(queue::#QueueActionNew, ptmp$ + entry$ + ".zip")
+          EndIf
         EndIf
         
       Wend
       FinishDirectory(dir)
     EndIf
     
+  EndProcedure
+  
+  Procedure convert(*data.queue::dat)
+    Protected TF$ = *data\tf$
+    debugger::Add("mods::convert("+TF$+")")
+    
+    Protected file$, NewList files$()
+    debugger::Add("mods::convert() - load mods.ini")
+    
+    OpenPreferences(misc::Path(TF$ + "/TFMM/") + "mods.ini")
+    If ExaminePreferenceGroups()
+      While NextPreferenceGroup()
+        file$ = ReadPreferenceString("file", "")
+        If file$
+          debugger::Add("mods::convert() - found {"+file$+"}")
+          AddElement(files$())
+          files$() = file$
+        EndIf
+      Wend
+    EndIf
+    ClosePreferences()
+    
+    ; just add everything
   EndProcedure
   
   Procedure install(*data.queue::dat)
@@ -1094,7 +1175,7 @@ Module mods
     debugger::Add("mods::install() - mod {"+id$+"}")
     
     Protected *mod.mod = *mods(id$)
-    Protected sourceFile$, targetDir$
+    Protected source$, target$
     Protected i
     
     ; check prequesits
@@ -1103,29 +1184,51 @@ Module mods
       ProcedureReturn #False
     EndIf
     If *mod\aux\installed
-      debugger::Add("mods::install() - ERROR - {"+id$+"} already installed")
+      debugger::Add("mods::install() - {"+id$+"} already installed")
       ProcedureReturn #False
     EndIf
     
     ; extract files
-    sourceFile$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + id$ + ".tfmod"
-    targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + id$ + ".tfmod"
+    target$ = misc::Path(tf$+"/mods/"+id$+"/")
     
-    If FileSize(targetDir$) = -2
-      debugger::Add("mods::install() - ERROR - {"+targetDir$+"} already exists")
-      ProcedureReturn #False
+    If FileSize(target$) = -2
+      debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
+      *mod\aux\installed = #True
+      If IsGadget(library)
+        For i = 0 To CountGadgetItems(library) -1
+          If ListIcon::GetListItemData(library, i) = *mod
+            ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+            Break
+          EndIf
+        Next
+      EndIf
+      ProcedureReturn #True
     EndIf
-    misc::CreateDirectoryAll(targetDir$)
+    misc::CreateDirectoryAll(target$)
     
-    If Not extractZIP(sourceFile$, targetDir$)
-      If Not extractRAR(sourceFile$, targetDir$)
+    If Not extractZIP(source$, target$)
+      If Not extractRAR(source$, target$)
         debugger::Add("mods::install() - ERROR - failed to extract files")
+        DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         ProcedureReturn #False
       EndIf
     EndIf
     
-    ; finish installation
+    ; copy info.lua and images
+    debugger::Add("mods::install() - copy info.lua and images")
+    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/")
+    target$ = misc::Path(tf$+"/mods/"+id$+"/")
     
+    CopyFile(source$ + "info.lua", target$ + "info.lua")
+    CopyFile(source$ + "strings.lua", target$ + "strings.lua")
+    CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
+    CopyFile(source$ + "main.lua", target$ + "main.lua")
+    CopyFile(source$ + "image_00.tga", target$ + "image_00.tga")
+    ; TODO copy all images
+    
+    ; finish installation
+    debugger::Add("mods::install() - finish installation...")
     *mod\aux\installed = #True
     If IsGadget(library)
       For i = 0 To CountGadgetItems(library) -1
@@ -1136,6 +1239,7 @@ Module mods
       Next
     EndIf
     
+    debugger::Add("mods::install() - finished")
     ProcedureReturn #True
   EndProcedure
   
@@ -1226,6 +1330,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
@@ -1236,7 +1341,7 @@ Module mods
     
     Static RegExp
     If Not RegExp
-      RegExp  = CreateRegularExpression(#PB_Any, "^[a-z0-9]*$") ; non-alphanumeric characters
+      RegExp  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
       ; regexp matches all non alphanum characters including spaces etc.
     EndIf
     
@@ -1258,7 +1363,6 @@ Module mods
       
       
       ; if no id$ was passed through or id was invalid, generate new ID
-      
       
       \id$ = LCase(\id$)
       
@@ -1283,8 +1387,12 @@ Module mods
       
       debugger::Add("mods::generateID() - generate new ID")
       ; ID = author_mod_version
-      LastElement(\authors())
-      author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+      If ListSize(\authors()) > 0
+        LastElement(\authors())
+        author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+      Else
+        author$ = ""
+      EndIf
       If author$ = ""
         author$ = "unknownauthor"
       EndIf
@@ -1295,7 +1403,6 @@ Module mods
       version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
       
       \id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
-      
       
       If \id$ And checkID(\id$)
         debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
@@ -1356,8 +1463,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1193
-; FirstLine = 61
-; Folding = RIAIA6
+; CursorPosition = 75
+; FirstLine = 14
+; Folding = ZIAQAg
 ; EnableUnicode
 ; EnableXP

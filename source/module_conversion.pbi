@@ -1,12 +1,8 @@
-﻿XIncludeFile "module_misc.pbi"
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_mods.pbi"
-
+﻿
 DeclareModule conversion
-  EnableExplicit
   
-  Declare convert(TF$)
 EndDeclareModule
+
 
 Module conversion
   EnableExplicit
@@ -159,8 +155,7 @@ Module conversion
   
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 92
-; FirstLine = 82
+; CursorPosition = 4
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
