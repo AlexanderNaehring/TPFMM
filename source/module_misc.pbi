@@ -325,6 +325,7 @@ Module misc
           EndIf
       EndSelect
     Wend
+    FinishDirectory(dir)
     ProcedureReturn #True
   EndProcedure
   
@@ -339,6 +340,7 @@ Module misc
     EndIf
     
     result = addDirToPack(pack, dir$)
+    debugger::Add("packDirectory() - close")
     ClosePack(pack)
     
     If Not result
@@ -350,8 +352,8 @@ Module misc
   
 EndModule
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 316
-; FirstLine = 42
+; CursorPosition = 327
+; FirstLine = 45
 ; Folding = PKA5
 ; EnableUnicode
 ; EnableXP

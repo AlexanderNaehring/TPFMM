@@ -538,7 +538,7 @@ Procedure GadgetButtonInstall(event)
     Else
       ClearMap(strings$())
       strings$("count") = Str(count)
-      result = MessageRequester(l("main","install_pl"), locale::getEx("management", "isntall2", strings$()), #PB_MessageRequester_YesNo)
+      result = MessageRequester(l("main","install_pl"), locale::getEx("management", "install2", strings$()), #PB_MessageRequester_YesNo)
     EndIf
     
     If result = #PB_MessageRequester_Yes
@@ -871,8 +871,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 583
+; CursorPosition = 540
 ; FirstLine = 118
-; Folding = FgAAIAAA9
+; Folding = FgAAMAAA9
 ; EnableUnicode
 ; EnableXP

@@ -10,6 +10,7 @@
     file$
     md5$
     installed.i
+    TFonly.i
     lua$
   EndStructure
   
@@ -61,8 +62,7 @@
 EndDeclareModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 47
-; FirstLine = 11
+; CursorPosition = 12
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

@@ -27,6 +27,7 @@ Module mods
   Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
     debugger::Add("mods::CheckModFileZip("+File$+")")
     Protected entry$, pack
+    
     If FileSize(File$) <= 0
       debugger::Add("mods::checkModFileZip() - ERROR - {"+File$+"} not found")
       ProcedureReturn "false"
@@ -735,14 +736,30 @@ Module mods
   EndProcedure
   
   Procedure loadInfo(TF$, id$, *mod.mod)
-    debugger::Add("loadInfo("+TF$+", "+id$+", "+Str(*mod.mod)+")")
+    debugger::Add("mods::loadInfo("+TF$+", "+id$+", "+Str(*mod.mod)+")")
     
     If TF$ = ""
       ProcedureReturn #False
     EndIf
     
+    Protected fileLib$, fileMods$
+    
+    fileLib$ = misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua"
+    fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
+    
     *mod\id$ = id$
-    parseInfoLUA(misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua", *mod)
+    *mod\aux\installed = #True
+    *mod\aux\TFonly = #True 
+    
+    If FileSize(fileMods$) > 0
+      parseInfoLUA(fileMods$, *mod)
+    ElseIf FileSize(fileLib$) > 0
+      parseInfoLUA(fileLib$, *mod)
+    Else
+      debugger::Add("mods::loadInfo() - ")
+      ProcedureReturn #False
+    EndIf
+    
     infoPP(*mod)
     
     ProcedureReturn #True
@@ -1092,6 +1109,8 @@ Module mods
         *mod = init()
         *mod\aux\file$ = plibentry$ + entry$ + ".tfmod"
         *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
+        
+        ; check if installed
         If FileSize(misc::Path(pmods$ + entry$ + "/")) = -2
           ; TODO re-import mod if it was changed manually or with another manager! (version check?)
           
@@ -1112,6 +1131,7 @@ Module mods
           ForEver
           
         EndIf
+        
         loadInfo(TF$, entry$, *mod)
         toList(*mod)
       Wend
@@ -1138,9 +1158,16 @@ Module mods
           ; mod installed but not in list
           ; add to library
           debugger::Add("mods::load() - load mod into library: {"+pmods$+entry$+"} -> {"+ptmp$+entry$+".zip"+"}")
-          If misc::packDirectory(pmods$ + entry$, ptmp$ + entry$ + ".zip")
-            queue::add(queue::#QueueActionNew, ptmp$ + entry$ + ".zip")
-          EndIf
+          
+          *mod = init()
+          *mod\aux\file$ = ""
+          *mod\aux\md5$ = ""
+          loadInfo(TF$, entry$, *mod)
+          toList(*mod)
+        
+;           If misc::packDirectory(pmods$ + entry$, ptmp$ + entry$ + ".zip")
+;             queue::add(queue::#QueueActionNew, ptmp$ + entry$ + ".zip")
+;           EndIf
         EndIf
         
       Wend
@@ -1266,11 +1293,17 @@ Module mods
     id$ = *data\id$
     tf$ = *data\tf$
     
+    
     debugger::Add("mods::remove() - mod {"+id$+"}")
     
     Protected *mod.mod = *mods(id$)
     Protected targetDir$
     Protected i
+    
+    ; TODO alternatively, backup mod
+    If *mod\aux\TFonly
+      queue::add(queue::#QueueActionDelete, id$)
+    EndIf
     
     ; check prequesits
     If Not *mod
@@ -1500,8 +1533,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1155
-; FirstLine = 37
-; Folding = RIAQgg
+; CursorPosition = 1306
+; FirstLine = 65
+; Folding = RIAQAi
 ; EnableUnicode
 ; EnableXP

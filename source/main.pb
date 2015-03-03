@@ -56,7 +56,7 @@ Procedure init()
   debugger::Add("init()")
   If Not UseZipPacker()
     debugger::Add("ERROR: UseZipPacker()")
-    MessageRequester("Error", "Could not initialize ZIP decompression.")
+    MessageRequester("Error", "Could not initialize ZIP.")
     End
   EndIf
   If Not InitNetwork()
@@ -220,8 +220,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 147
-; FirstLine = 115
+; CursorPosition = 58
+; FirstLine = 46
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
