@@ -733,6 +733,92 @@ Module mods
     EndIf
   EndProcedure
   
+  Procedure extractZIP(file$, path$)
+    debugger::Add("mods::extractZIP() "+File$)
+    Protected zip, error
+    
+    zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+    If Not zip
+      debugger::Add("mods::extractZIP() - ERROR - failed to open {"+file$+"}")
+      ProcedureReturn #False 
+    EndIf
+    
+    If Not ExaminePack(zip)
+      debugger::Add("mods::ExtractModZip() - ERROR - failed to examining pack")
+      ProcedureReturn #False
+    EndIf
+    
+    path$ = misc::Path(path$)
+    
+    While NextPackEntry(zip)
+      ; filter out Mac OS X bullshit
+      If FindString(PackEntryName(zip), "__MACOSX") Or FindString(PackEntryName(zip), ".DS_Store") Or Left(GetFilePart(PackEntryName(zip)), 2) = "._"
+        Continue
+      EndIf
+      
+      If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
+        If FindString(PackEntryName(zip), "res/") ; only extract files which are located in subfoldres of res/
+          file$ = PackEntryName(zip)
+          file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
+          ; adjust path delimiters to OS
+          file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
+          misc::CreateDirectoryAll(GetPathPart(path$ + file$))
+          If UncompressPackFile(zip, path$ + file$, PackEntryName(zip)) = 0
+            debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
+          EndIf
+        EndIf
+      EndIf
+    Wend
+    
+    ClosePack(zip)
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure extractRAR(file$, path$)
+    debugger::Add("mods::extractRAR("+file$+", "+path$+")")
+    
+    Protected rarheader.unrar::RARHeaderDataEx
+    Protected hRAR
+    Protected Entry$
+    
+    hRAR = unrar::OpenRar(file$, unrar::#RAR_OM_EXTRACT)
+    If Not hRAR
+      debugger::Add("mods::extractRAR() - ERROR - failed to open {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
+      CompilerIf #PB_Compiler_Unicode
+        Entry$ = PeekS(@rarheader\FileNameW)
+      CompilerElse
+        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
+      CompilerEndIf
+      
+      ; filter out Mac OS X bullshit
+      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        Continue
+      EndIf
+      
+      If FindString(entry$, "res\") ; only extract files to list which are located in subfoldres of res
+        entry$ = Mid(entry$, FindString(entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
+        entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
+  
+        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+          debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
+        EndIf
+      Else
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
+      EndIf
+      
+    Wend
+    unrar::RARCloseArchive(hRAR)
+  
+    ProcedureReturn #True
+  EndProcedure
+  
+  
   ;PUBLIC
   
   Procedure changed()
@@ -988,13 +1074,42 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure InstallThread(*id)
-    debugger::Add("InstallThread("+Str(*id)+")")
-    Protected id$
-    id$ = PeekS(*id)
-    FreeMemory(*id)
+  Procedure InstallThread(*data.queue::dat)
+    debugger::Add("mods::InstallThread("+Str(*data)+")")
+    Protected TF$, id$
+    id$ = *data\id$
+    tf$ = *data\tf$
     
-    debugger::Add("InstallThread() - install mod {"+id$+"}")
+    debugger::Add("mods::InstallThread() - install mod {"+id$+"}")
+    
+    Protected *mod.mod = *mods(id$)
+    
+    If Not *mod
+      debugger::Add("mods::InstallThread() - ERROR - cannot find mod in map")
+      ProcedureReturn #False
+    EndIf
+    If *mod\aux\installed
+      debugger::Add("mods::InstallThread() - ERROR - {"+id$+"} already installed")
+      ProcedureReturn #False
+    EndIf
+    
+    Protected sourceFile$, targetDir$
+    
+    sourceFile$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + id$ + ".tfmod"
+    targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    
+    If FileSize(targetDir$) = -2
+      debugger::Add("mods::InstallThread() - ERROR - {"+targetDir$+"} already exists")
+      ProcedureReturn #False
+    EndIf
+    misc::CreateDirectoryAll(targetDir$)
+    
+    If Not extractZIP(sourceFile$, targetDir$)
+      If Not extractRAR(sourceFile$, targetDir$)
+        debugger::Add("mods::InstallThread() - ERROR - failed to extract files")
+        ProcedureReturn #False
+      EndIf
+    EndIf
     
   EndProcedure
   
@@ -1136,8 +1251,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 734
-; FirstLine = 73
-; Folding = RIIAC-
+; CursorPosition = 1112
+; FirstLine = 106
+; Folding = RIIIQ5
 ; EnableUnicode
 ; EnableXP

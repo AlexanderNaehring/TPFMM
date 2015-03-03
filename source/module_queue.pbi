@@ -11,8 +11,15 @@ DeclareModule queue
     #QueueActionRemove
   EndEnumeration
   
+  Structure dat
+    tf$
+    id$
+  EndStructure
+  
   Declare add(action, val$)
   Declare update(TF$)
+  
+;   Declare busy(busy = -1)
   
 EndDeclareModule
 
@@ -23,16 +30,14 @@ Module queue
     val$
   EndStructure
   
-  Global MutexQueue.i, InstallInProgress.i
+  Global mQueue.i
   Global NewList queue.queue()
+  
+  debugger::Add("updateQueue() - MutexQueue = CreateMutex()")
+  mQueue = CreateMutex()
   
   Procedure add(action, val$)
     debugger::Add("queue::add("+Str(action)+", "+val$+")")
-    If Not MutexQueue
-      debugger::Add("queue::add() - MutexQueue created")
-      MutexQueue = CreateMutex()
-    EndIf
-    
     If val$ = ""
       ProcedureReturn #False
     EndIf
@@ -40,54 +45,49 @@ Module queue
       ProcedureReturn #False
     EndIf
     
-    LockMutex(MutexQueue)
+    LockMutex(mQueue)
     LastElement(queue())
     AddElement(queue())
     queue()\action = action
     queue()\val$ = val$
-    UnlockMutex(MutexQueue)
+    UnlockMutex(mQueue)
     
     ProcedureReturn #True
   EndProcedure
   
   Procedure update(TF$)
-    Protected element.queue, *buffer
-    Protected text$, author$
+    Protected element.queue
+    Static *thread, dat.dat
     
-    If Not MutexQueue
-      debugger::Add("updateQueue() - MutexQueue = CreateMutex()")
-      MutexQueue = CreateMutex()
+    LockMutex(mQueue) ; lock even bevore InstallInProgress is checked!
+    If *thread
+      If Not IsThread(*thread) ; thread finished
+        *thread = #False
+      EndIf
     EndIf
     
-    
-    LockMutex(MutexQueue) ; lock even bevore InstallInProgress is checked!
-    If TF$
+    If TF$ And Not *thread
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
         FirstElement(queue())
         element = queue()
         DeleteElement(queue(),1)
         
-        If element\val$
-          *buffer = AllocateMemory((Len(element\val$)+1) * SizeOf(Character))
-          PokeS(*buffer, element\val$)
-        Else
-          ProcedureReturn #False
-        EndIf
-        
         Select element\action
           Case #QueueActionInstall
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
-              InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-              CreateThread(mods::@InstallThread(), *buffer)
+              dat\id$ = element\val$
+              dat\tf$ = TF$
+              *thread = CreateThread(mods::@InstallThread(), dat)
             EndIf
             
           Case #QueueActionRemove
             debugger::Add("updateQueue() - #QueueActionRemove")
             If element\val$
-              InstallInProgress = #True ; set true bevore creating thread! -> otherwise may check for next queue entry before this is set!
-              CreateThread(mods::@RemoveThread(), *buffer)
+              dat\id$ = element\val$
+              dat\tf$ = TF$
+              *thread = CreateThread(mods::@RemoveThread(), dat)
             EndIf
             
           Case #QueueActionNew
@@ -103,19 +103,34 @@ Module queue
             EndIf
             
         EndSelect
-        
       EndIf
     EndIf
     
-    UnlockMutex(MutexQueue) ; unlock at the very end
+    UnlockMutex(mQueue) ; unlock at the very end
     ProcedureReturn #True
   EndProcedure
-    
+  
+;   Procedure busy(busy = -1)
+;     Static m_busy, f_busy
+;     If Not m_busy
+;       m_busy = CreateMutex()
+;     EndIf
+;     
+;     Protected ret
+;     LockMutex(m_busy)
+;     If busy <> -1
+;       f_busy = busy
+;     EndIf
+;     ret = f_busy
+;     UnlockMutex(n_busy)
+;     ProcedureReturn ret
+;   EndProcedure
+  
+  
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 73
-; FirstLine = 48
+; CursorPosition = 16
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
