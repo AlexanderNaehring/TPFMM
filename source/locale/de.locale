@@ -140,6 +140,6 @@ convert     = Konvertiere Modifikationen
 
 [conversion]
 title       = Konvertierung
-start       = TFMM hat Modifikationen gefunden, die mit dem alten Mod-System aktiviert wurden.\nSeit dem 27. Februar 2015 benutzt Train Fever ein neues Modding System. Alle Modifikationen sollten in das neue Format umgewandelt werden. Dadurch erkennt Train Fever die Modifikationen und diese können dann im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt automatisiert in das neue Format umgewandelt werden?
-finish      = Die Umwandlung ist abgeschlossen.\nEs wird DRINGEND empfohlen, den Train Fever Installationsordner manuell zu säubern.\nLösche hierzu den "res/" Ordner im Train Fever Verzeichnis und führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch. Hilfe dazu findest Du auf train-fever.net.
-legacy      = Diese Version von TFMM unterstützt nur noch das neue Modding System.\nDas alte System wird von TFMM-Legacy weiterhin unterstützt.
+start       = TFMM hat Modifikationen gefunden, die mit dem alten Mod-System aktiviert wurden.\nSeit dem 27. Februar 2015 benutzt Train Fever ein neues Modding System.\nAlle Modifikationen sollten in das neue Format umgewandelt werden. ßnDadurch erkennt Train Fever die Modifikationen und diese können dann im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt automatisiert in das neue Format umgewandelt werden?
+finish      = Die Umwandlung ist abgeschlossen.\nEs wird DRINGEND empfohlen, den Train Fever Installationsordner manuell zu säubern.\nLösche hierzu den "res/" Ordner im Train Fever Verzeichnis\nund führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch.\nHilfe dazu findest Du auf train-fever.net.
+legacy      = Diese Version von TFMM unterstützt nur noch das neue Modding System.\nUm das alte Modding System zu nutzen, muss eine alte Version von TFMM verwendet werden.

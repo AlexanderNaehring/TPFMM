@@ -1193,11 +1193,6 @@ Module mods
   EndProcedure
   
   Procedure convert(*data.queue::dat)
-    If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-      MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
-      ProcedureReturn #False
-    EndIf
-    
     Protected TF$ = *data\tf$
     debugger::Add("mods::convert("+TF$+")")
     
@@ -1262,7 +1257,7 @@ Module mods
     ; delete backup folder
     DeleteDirectory(misc::path(TF$ + "TFMM/Backup/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
-    MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
+    ; TODO move message requester out of thread!
     ProcedureReturn #True
   EndProcedure
   
@@ -1590,8 +1585,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 768
-; FirstLine = 103
-; Folding = RIgRAg
+; CursorPosition = 1259
+; FirstLine = 104
+; Folding = RIAQgg
 ; EnableUnicode
 ; EnableXP

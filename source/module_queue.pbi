@@ -90,13 +90,17 @@ Module queue
   
   Procedure update(TF$)
     Protected element.queue
-    Static *thread, dat.dat
+    Static *thread, dat.dat, conversion.i
     
     LockMutex(mQueue) ; lock even bevore InstallInProgress is checked!
     If *thread
       If Not IsThread(*thread) ; thread finished
         *thread = #False
         progressShow(#False)
+        If conversion
+          conversion = #False
+          MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
+        EndIf
       EndIf
     EndIf
     
@@ -158,11 +162,16 @@ Module queue
           Case #QueueActionConvert
             debugger::Add("updateQueue() - #QueueActionConvert")
             If element\val$
-              dat\id$ = element\val$
-              dat\tf$ = TF$
-              *thread = CreateThread(mods::@convert(), dat)
-              progressText(locale::l("progress","convert"))
-              progressShow()
+              If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
+                MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
+              Else
+                dat\id$ = element\val$
+                dat\tf$ = TF$
+                *thread = CreateThread(mods::@convert(), dat)
+                conversion = #True
+                progressText(locale::l("progress","convert"))
+                progressShow()
+              EndIf
             EndIf
             
         EndSelect
@@ -176,8 +185,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 27
-; FirstLine = 11
+; CursorPosition = 171
+; FirstLine = 96
 ; Folding = D+
 ; EnableUnicode
 ; EnableXP

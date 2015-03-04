@@ -144,8 +144,10 @@ Procedure init()
   
   
   If TF$ <> ""
+    ; load library
     queue::add(queue::#QueueActionLoad, TF$)
     
+    ; check for old TFMM configuration, trigger conversion if found
     If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
       queue::add(queue::#QueueActionConvert, TF$)
     EndIf
@@ -221,7 +223,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 147
+; CursorPosition = 150
 ; FirstLine = 120
 ; Folding = -
 ; EnableUnicode

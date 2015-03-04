@@ -140,6 +140,6 @@ convert     = Convert modifications
 
 [conversion]
 title       = Conversion
-start       = TFMM found modifications installed using the old technique.\nStarting of February 27, 2015, Train Fever has native modding support. All modifications have to be converted to the new format. This enabled Train Fever to recognise installed modifications and the player to manage modification for each save game individually.\n\nDo you want to convert all activated modification now?
-finish      = Conversion of modifications is finished.\nIt is HIGHLY RECOMMENDED to manually clean you Train Fever installation by deleting the "res" folder in your Train Fever directory and afterwards verify the game cache via Steam.\nPlease do this now. If you need help with this, visit train-fever.net for further instructions.
-legacy      = Please use TFMM 0.7 for legacy mode.
+start       = TFMM found modifications installed using the old technique.\nStarting of February 27, 2015, Train Fever has native modding support.\nAll modifications have to be converted to the new format.\nThis enabled Train Fever to recognise installed modifications and the player to manage modification for each save game individually.\n\nDo you want to convert all activated modification now?
+finish      = Conversion of modifications is finished.\nIt is HIGHLY RECOMMENDED to manually clean you Train Fever installation by deleting the "res" folder in your Train Fever directory\nand afterwards verify the game cache via Steam.\nPlease do this now.\nIf you need help with this, visit train-fever.net for further instructions.
+legacy      = Please use a previous version of TFMM to manage mods using the deprecated technique.
