@@ -29,7 +29,7 @@ Procedure exit(dummy)
   Protected i.i
   HideWindow(WindowMain, #True)
   
-  FreeModList()
+  mods::freeAll()
   
   OpenPreferences("TFMM.ini")
   If ReadPreferenceInteger("windowlocation", #False)
@@ -166,8 +166,6 @@ Repeat
         TimerSettingsGadgets()
       Case TimerMainGadgets
         TimerMain()
-      Case TimerFinishUnInstall
-        FinishDeActivate()
       Case TimerUpdate
         TimerUpdate()
     EndSelect
@@ -223,8 +221,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 150
-; FirstLine = 120
+; CursorPosition = 202
+; FirstLine = 175
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

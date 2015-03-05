@@ -29,7 +29,7 @@ EndEnumeration
 
 Global GadgetModNo, GadgetModNoAll, GadgetModOK, GadgetModProgress, GadgetModText, GadgetModYes, GadgetModYesAll
 Global WindowMain, WindowModProgress
-Global TimerFinishUnInstall, TimerUpdate
+Global TimerUpdate
 Global Library
 
 Global ModProgressAnswer = #AnswerNone
@@ -67,41 +67,15 @@ Procedure checkTFPath(Dir$)
   ProcedureReturn #False
 EndProcedure
 
-
-Procedure ShowProgressWindow(*mod.mods::mod)
-  
-EndProcedure
-
-Procedure ActivateThread(*dummy)
-  
-EndProcedure
-
-Procedure DeactivateThread(*dummy)
-  
-EndProcedure
-
-Procedure RemoveModFromList(*mod.mods::mod)
-  
-EndProcedure
-
 Procedure ExportModList(dummy=0)
   
 EndProcedure
-
-Procedure FreeModList()
-  
-EndProcedure
-
-Procedure FinishDeActivate()
-  
-EndProcedure
-
 
 
 
 ;} --------------------------------------------------------------------------------
 
-Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerFinishUnInstall = 102, TimerUpdate = 103
+Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerUpdate = 103
 
 Global NewMap PreviewImages.i()
 
@@ -513,8 +487,8 @@ Procedure GadgetSaveSettings(event)
     End
   EndIf
   
-  FreeModList()
-  ;LoadModList()
+  mods::freeAll()
+  queue::add(queue::#QueueActionLoad, TF$)
   GadgetCloseSettings(event)
 EndProcedure
 
@@ -874,8 +848,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 178
-; FirstLine = 113
-; Folding = FwAAMAAA9
+; CursorPosition = 79
+; FirstLine = 33
+; Folding = lAACAAA9
 ; EnableUnicode
 ; EnableXP

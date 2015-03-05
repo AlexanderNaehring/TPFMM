@@ -378,7 +378,9 @@ Module mods
     If *mod\name$
       regexp = CreateRegularExpression(#PB_Any, *mod\name$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
       If IsRegularExpression(regexp)
-        *mod\name$ = parseLUAstring(regexp, lua$)
+        If MatchRegularExpression(regexp, lua$)
+          *mod\name$ = parseLUAstring(regexp, lua$)
+        EndIf
         FreeRegularExpression(regexp)
       EndIf
     EndIf
@@ -386,8 +388,9 @@ Module mods
     If *mod\description$
       regexp = CreateRegularExpression(#PB_Any, *mod\description$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
       If IsRegularExpression(regexp)
-        *mod\description$ = parseLUAstring(regexp, lua$)
-        FreeRegularExpression(regexp)
+        If MatchRegularExpression(regexp, lua$)
+          *mod\description$ = parseLUAstring(regexp, lua$)
+        EndIf
       EndIf
     EndIf
     
@@ -608,11 +611,11 @@ Module mods
       EndIf
     EndIf
     
-    
     ; last step: open strings.lua if present and replace strings
     If FileSize(GetPathPart(file$)+"strings.lua") > 0
-      parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
-      parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
+      If Not parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
+        parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+      EndIf
     EndIf
     
     ProcedureReturn #True
@@ -921,6 +924,16 @@ Module mods
     
     debugger::Add("mods::freeMod() - ERROR: could not find mod {"+id$+"} in List")
     ProcedureReturn #False
+  EndProcedure
+  
+  Procedure freeAll()
+    debugger::Add("mods::freeAll()")
+    ForEach *mods()
+      mods::free(*mods()\id$)
+    Next
+    If IsGadget(library)
+      ListIcon::ClearListItems(library)
+    EndIf
   EndProcedure
   
   Procedure new(file$, TF$) ; add new mod from any location to list of mods and initiate install
@@ -1585,8 +1598,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1259
-; FirstLine = 104
-; Folding = RIAQgg
+; CursorPosition = 935
+; FirstLine = 37
+; Folding = RIAQIA-
 ; EnableUnicode
 ; EnableXP

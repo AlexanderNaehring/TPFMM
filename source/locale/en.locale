@@ -127,6 +127,10 @@ town        = Town Building
 depot       = Depot
 signal      = Signal
 waypoint    = Waypoint
+towns       = Town names
+streets     = Street names
+cost        = Costs
+sandbox     = Sandbox
 other       = Other Modifications
 
 [progress]

@@ -45,6 +45,7 @@
   
   Declare init() ; allocate structure, return *mod
   Declare free(id$) ; free *mod structure
+  Declare freeAll()
   Declare load(*data)
   Declare convert(*data)
   
@@ -62,7 +63,8 @@
 EndDeclareModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 12
+; CursorPosition = 47
+; FirstLine = 16
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
