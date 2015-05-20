@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-05-20 19:58" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-05-20 20:28" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -37,7 +37,7 @@
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="3469e2b99c9aebd1ac6dbfa24f7c1997"/>
+      <fingerprint md5="47daa3319fce66363f55b0116c14ac17"/>
     </file>
     <file name="source\module_mods_h.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -45,7 +45,7 @@
     </file>
     <file name="source\module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="484fba486a5e90d28dda79bb48305e03"/>
+      <fingerprint md5="7b5e57f58a3ca89704d6395390f9bb18"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -69,7 +69,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="fc26b64b78089837a78f1ebd7c67ae0f"/>
+      <fingerprint md5="f4690408db6eacacea4fa55bed1eac45"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -84,8 +84,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1717"/>
-      <buildcount enable="1" value="120"/>
+      <compilecount enable="1" value="1725"/>
+      <buildcount enable="1" value="121"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
