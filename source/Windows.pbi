@@ -848,8 +848,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 79
-; FirstLine = 33
-; Folding = lAACAAA9
+; CursorPosition = 493
+; FirstLine = 93
+; Folding = lAAAAAA9
 ; EnableUnicode
 ; EnableXP

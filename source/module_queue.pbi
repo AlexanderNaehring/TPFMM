@@ -41,7 +41,7 @@ Module queue
   Global NewList queue.queue()
   Global progressW, progressG, progressT
   
-  debugger::Add("updateQueue() - MutexQueue = CreateMutex()")
+  debugger::Add("queue::mQueue = CreateMutex()")
   mQueue = CreateMutex()
   
   Procedure progressRegister(window, gadgetP, gadgetT)
@@ -57,6 +57,8 @@ Module queue
   EndProcedure
   
   Procedure progressVal(val, max=-1)
+    debugger::Add("queue::progressVal("+Str(val)+","+Str(max)+")")
+    
     If IsWindow(progressW) And IsGadget(progressG)
       If max <> -1
         SetGadgetAttribute(progressG, #PB_ProgressBar_Minimum, 0)
@@ -185,8 +187,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 171
-; FirstLine = 96
-; Folding = D+
+; CursorPosition = 43
+; FirstLine = 18
+; Folding = T+
 ; EnableUnicode
 ; EnableXP

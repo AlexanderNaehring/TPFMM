@@ -1111,14 +1111,18 @@ Module mods
     debugger::Add("mods::load("+TF$+")")
     Protected pmods$, plib$, ptmp$, entry$
     Protected pmodsentry$, plibentry$, image$
-    Protected dir, i
+    Protected dir, i, k, count
     Protected *mod.mod
+    Protected NewList entries$()
     
     plib$   = misc::Path(TF$ + "/TFMM/library/")
     pmods$  = misc::Path(TF$ + "/mods/")
     ptmp$   = GetTemporaryDirectory()
     
+    ; Load mods from TFMM library
     debugger::Add("mods::load() - read library {"+plib$+"}")
+    ClearList(entries$())
+    k = 0
     dir = ExamineDirectory(#PB_Any, plib$, "")
     If dir
       While NextDirectoryEntry(dir)
@@ -1126,10 +1130,27 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
+        debugger::Add("mods::load() - found {"+entry$+"} in library")
+        AddElement(entries$())
+        entries$() = entry$
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    count = ListSize(entries$())
+    If count > 0
+      queue::progressVal(0, count*2) ; max = 50%
+      
+      ForEach entries$()
+        queue::progressVal(k) 
+        k + 1
+        
+        entry$ = entries$()
+        
         If Not checkID(entry$)
           Continue
         EndIf
-        debugger::Add("mods::load() - found {"+entry$+"} in library")
+        
         ; id$ = entry$
         
         plibentry$  = misc::Path(plib$ + entry$ + "/")
@@ -1163,13 +1184,13 @@ Module mods
         
         loadInfo(TF$, entry$, *mod)
         toList(*mod)
-      Wend
-      FinishDirectory(dir)
+      Next
     EndIf
     
-    
-    ; check mods from mods/ folder (installed)
+    ; check installed mods from mods/ folder
     debugger::Add("mods::load() - read installed mods {"+pmods$+"}")
+    ClearList(entries$())
+    k = 0
     dir = ExamineDirectory(#PB_Any, pmods$, "")
     If dir 
       While NextDirectoryEntry(dir)
@@ -1177,11 +1198,24 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
+        AddElement(entries$())
+        entries$() = entry$
+      Wend
+    EndIf
+    
+    count = ListSize(entries$())
+    If count > 0
+      queue::progressVal(count, count*2) ; start at 50%
+      ForEach entries$()
+        entry$ = entries$()
+        queue::progressVal(count + k)
+        k + 1
+        
         If Not checkID(entry$)
           Continue
         EndIf
         
-        If FindMapElement(*mods(), entry$)
+        If FindMapElement(*mods(), entry$) ; also selects this element if found
           *mods()\aux\installed = #True
         Else
           ; mod installed but not in list
@@ -1199,7 +1233,7 @@ Module mods
 ;           EndIf
         EndIf
         
-      Wend
+      Next
       FinishDirectory(dir)
     EndIf
     
@@ -1598,8 +1632,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 935
-; FirstLine = 37
-; Folding = RIAQIA-
+; CursorPosition = 1143
+; FirstLine = 126
+; Folding = RIAQgA-
 ; EnableUnicode
 ; EnableXP
