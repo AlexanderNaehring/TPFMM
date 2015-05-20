@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-04-23 21:09" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-05-20 19:58" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -29,7 +29,7 @@
     </file>
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="49e6480aba03d662430025efd05a2bee"/>
+      <fingerprint md5="a23b6f5738371887402dc209c68badc1"/>
     </file>
     <file name="source\module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -84,8 +84,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1715"/>
-      <buildcount enable="1" value="119"/>
+      <compilecount enable="1" value="1717"/>
+      <buildcount enable="1" value="120"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>

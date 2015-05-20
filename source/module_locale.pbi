@@ -157,7 +157,7 @@ Module locale
       If out$ = ""
         debugger::Add("locale:: failed to load fallback for '"+key$+"'")
         out$ = "<"+key$+">"
-        If group$ = "category"
+        If group$ = "category" Or group$ = "tags"
           out$ = string$
         EndIf
       EndIf
@@ -235,8 +235,8 @@ Module locale
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 217
-; FirstLine = 48
-; Folding = PQ-
+; CursorPosition = 159
+; FirstLine = 18
+; Folding = PE-
 ; EnableUnicode
 ; EnableXP
