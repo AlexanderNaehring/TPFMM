@@ -101,7 +101,7 @@ Declare ResizeUpdate()
 ; INIT
 
 Procedure InitWindows()
-  debugger::Add("init windows")
+  debugger::Add("windows::initWindows()")
   
   ; Open Windows
   OpenWindowMain()
@@ -356,7 +356,7 @@ Procedure TimerUpdate()
 EndProcedure
 
 Procedure checkUpdate(auto.i)
-  debugger::Add("checkUpdate")
+  debugger::Add("checkUpdate()")
   Protected URL$, OS$
   
   DeleteFile("tfmm-update.ini")
@@ -848,8 +848,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 493
-; FirstLine = 93
-; Folding = lAAAAAA9
+; CursorPosition = 358
+; FirstLine = 116
+; Folding = 2gAAAAA9
 ; EnableUnicode
 ; EnableXP

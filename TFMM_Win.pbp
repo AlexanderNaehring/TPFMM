@@ -8,20 +8,20 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-05-20 20:28" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-05-20 23:39" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="591a9842f2693ff83d679034fa205abf"/>
+      <fingerprint md5="eb5c9b9cf8ed4871a2639a5784738d04"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="cc7348e6a768e2364a50beaa50520c7c"/>
     </file>
     <file name="source\module_images.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="cf8dac76b63c59adeb9960b9b0ad960b"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="7729b047eae7751c0b349008d8900348"/>
     </file>
     <file name="source\module_ListIcon.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -69,7 +69,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="f4690408db6eacacea4fa55bed1eac45"/>
+      <fingerprint md5="a0865ab5a66cfb86c66da65207b4a810"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>

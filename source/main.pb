@@ -52,8 +52,14 @@ Procedure init()
   If #DEBUG
     debugger::SetLogFile("tfmm-output.txt")
   EndIf
+  ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    misc::CreateDirectoryAll(misc::path(GetHomeDirectory()+"/.tfmm"))
+    SetCurrentDirectory(misc::path(GetHomeDirectory()+"/.tfmm"))
+  CompilerEndIf
   debugger::DeleteLogFile()
-  debugger::Add("init()")
+  
+  debugger::Add("init() - load plugins")
   If Not UseZipPacker()
     debugger::Add("ERROR: UseZipPacker()")
     MessageRequester("Error", "Could not initialize ZIP.")
@@ -83,25 +89,19 @@ Procedure init()
     End
   EndIf
   
-  ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
-  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
-    debugger::Add("CurrentDirectory = {"+GetCurrentDirectory()+"}")
-    misc::CreateDirectoryAll(misc::path(GetHomeDirectory()+"/.tfmm"))
-    SetCurrentDirectory(misc::path(GetHomeDirectory()+"/.tfmm"))
-    debugger::Add("CurrentDirectory = {"+GetCurrentDirectory()+"}")
-  CompilerEndIf
   
   images::LoadImages()
   
+  
+  debugger::Add("init() - read locale")
   OpenPreferences("TFMM.ini")
   locale::use(ReadPreferenceString("locale","en"))
   ClosePreferences()
   
   InitWindows() ; open and initialize windows
   
-  debugger::Add("load settings")
+  debugger::Add("init() - load settings")
   OpenPreferences("TFMM.ini")
-  
   TF$ = ReadPreferenceString("path", "")
   
   ; Window Location
@@ -128,6 +128,7 @@ Procedure init()
   
   
   ; update
+  debugger::Add("init() - start updater")
   If ReadPreferenceInteger("update", 0)
     CreateThread(@checkUpdate(), 1)
   EndIf
@@ -221,8 +222,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 202
-; FirstLine = 175
-; Folding = -
+; CursorPosition = 60
+; FirstLine = 27
+; Folding = +
 ; EnableUnicode
 ; EnableXP
