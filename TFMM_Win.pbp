@@ -8,31 +8,31 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-05-20 23:39" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-07-09 22:55" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="eb5c9b9cf8ed4871a2639a5784738d04"/>
+      <fingerprint md5="4ea4a218dcf528afb79b3d345cecc0fd"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="cc7348e6a768e2364a50beaa50520c7c"/>
     </file>
     <file name="source\module_images.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="7729b047eae7751c0b349008d8900348"/>
     </file>
     <file name="source\module_ListIcon.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="364ef2c0826af952021507d31f11cfcc"/>
     </file>
     <file name="source\module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="a23b6f5738371887402dc209c68badc1"/>
     </file>
     <file name="source\module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="2cd6a9d9326716505bfdf72687dc183e"/>
     </file>
     <file name="source\module_mods.pbi">
@@ -40,12 +40,12 @@
       <fingerprint md5="47daa3319fce66363f55b0116c14ac17"/>
     </file>
     <file name="source\module_mods_h.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="95d794fc6a85a488bd7acbb18b47738e"/>
     </file>
     <file name="source\module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="7b5e57f58a3ca89704d6395390f9bb18"/>
+      <fingerprint md5="015a0bc3e190611120b9a1b7c86e3942"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -69,7 +69,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="a0865ab5a66cfb86c66da65207b4a810"/>
+      <fingerprint md5="4eb31df96ca57f00fcd8f8a720134eac"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -81,10 +81,11 @@
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\win32\TFMM.exe"/>
       <compiler version="PureBasic 5.30 (Windows - x86)"/>
+      <commandline value="-debug -testmode"/>
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1725"/>
+      <compilecount enable="1" value="1734"/>
       <buildcount enable="1" value="121"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

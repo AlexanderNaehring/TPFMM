@@ -39,6 +39,10 @@ Procedure checkTFPath(Dir$)
   If Dir$
     If FileSize(Dir$) = -2
       Dir$ = misc::Path(Dir$)
+      If _TESTMODE
+        ; in testmode, do not check for TrainFever executable
+        ProcedureReturn #True
+      EndIf
       CompilerIf #PB_Compiler_OS = #PB_OS_Windows
         If FileSize(Dir$ + "TrainFever.exe") > 1
           ; TrainFever.exe is located in this path!
@@ -79,7 +83,6 @@ Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerUpdate = 103
 
 Global NewMap PreviewImages.i()
 
-
 Structure authorGadget
   display.i
   changeName.i
@@ -113,7 +116,6 @@ Procedure InitWindows()
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeUpdate(), WindowMain)
   
-  
   ; Init OS specific tools (list icon gadget)
   CompilerIf #PB_Compiler_OS = #PB_OS_Windows
     UseModule ListIcon
@@ -128,6 +130,11 @@ Procedure InitWindows()
     CompilerCase #PB_OS_MacOS
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for MacOS")
   CompilerEndSelect
+  
+  ; indicate testmode in window title
+  If _TESTMODE
+    SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " (Test Mode Enabled)")
+  EndIf
   
   ; load images
   ResizeImage(images::Images("headermain"), GadgetWidth(ImageGadgetHeader), GadgetHeight(ImageGadgetHeader), #PB_Image_Raw)
@@ -848,8 +855,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 358
-; FirstLine = 116
-; Folding = 2gAAAAA9
+; CursorPosition = 116
+; FirstLine = 66
+; Folding = 2AAAAAA9
 ; EnableUnicode
 ; EnableXP

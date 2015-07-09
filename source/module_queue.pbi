@@ -26,8 +26,6 @@ DeclareModule queue
   Declare progressText(string$)
   Declare progressVal(val, max=-1)
   
-;   Declare busy(busy = -1)
-  
 EndDeclareModule
 
 Module queue
@@ -40,14 +38,15 @@ Module queue
   Global mQueue.i
   Global NewList queue.queue()
   Global progressW, progressG, progressT
+  Global *thread
   
   debugger::Add("queue::mQueue = CreateMutex()")
   mQueue = CreateMutex()
   
   Procedure progressRegister(window, gadgetP, gadgetT)
     progressW = window
-    progressG = gadgetP
-    progressT = gadgetT
+    progressG = gadgetP ; progress gadget
+    progressT = gadgetT ; text gadget
   EndProcedure
   
   Procedure progressShow(show = #True)
@@ -74,7 +73,7 @@ Module queue
     EndIf
   EndProcedure
   
-  Procedure add(action, val$)
+  Procedure add(action, val$) ; add new task to queue
     debugger::Add("queue::add("+Str(action)+", "+val$+")")
     If val$ = ""
       ProcedureReturn #False
@@ -90,11 +89,11 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-  Procedure update(TF$)
+  Procedure update(TF$) ; periodically called by main window / main loop
     Protected element.queue
-    Static *thread, dat.dat, conversion.i
+    Static dat.dat, conversion.i
     
-    LockMutex(mQueue) ; lock even bevore InstallInProgress is checked!
+    LockMutex(mQueue) ; lock before InstallInProgress is checked!
     If *thread
       If Not IsThread(*thread) ; thread finished
         *thread = #False
@@ -187,8 +186,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 43
-; FirstLine = 18
-; Folding = T+
+; CursorPosition = 91
+; FirstLine = 41
+; Folding = D+
 ; EnableUnicode
 ; EnableXP

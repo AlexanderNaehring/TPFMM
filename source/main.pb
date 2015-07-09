@@ -1,7 +1,8 @@
 ﻿EnableExplicit
 
 #VERSION$ = "Version 0.8." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
-#DEBUG = #True
+Global _DEBUG = #False
+Global _TESTMODE = #False
 
 Enumeration
   #UpdateNew
@@ -49,7 +50,22 @@ Procedure exit(dummy)
 EndProcedure
 
 Procedure init()
-  If #DEBUG
+  Protected i
+  ; program parameter
+  For i = 0 To CountProgramParameters() - 1
+    Select LCase(ProgramParameter(i)) 
+      Case "-debug"
+        Debug "parameter: enable debug mode"
+        _DEBUG = #True
+      Case "-testmode"
+        Debug "parameter: enable testing mode"
+        _TESTMODE = #True
+      Default
+        Debug "parameter: " + ProgramParameter(i)
+    EndSelect
+  Next
+  
+  If _DEBUG
     debugger::SetLogFile("tfmm-output.txt")
   EndIf
   ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
@@ -114,7 +130,6 @@ Procedure init()
                  ReadPreferenceInteger("height", #PB_Ignore))
     PreferenceGroup("")
     ; reload column sizing
-    Protected i.i
     PreferenceGroup("columns")
     For i = 0 To 5
       If ReadPreferenceInteger(Str(i), 0)
@@ -222,8 +237,7 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 60
-; FirstLine = 27
+; CursorPosition = 62
 ; Folding = +
 ; EnableUnicode
 ; EnableXP
