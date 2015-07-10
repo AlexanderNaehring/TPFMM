@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-07-09 22:55" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-07-10 16:41" user="naeh_al" host="KN-000026"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -28,8 +28,8 @@
       <fingerprint md5="364ef2c0826af952021507d31f11cfcc"/>
     </file>
     <file name="source\module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="a23b6f5738371887402dc209c68badc1"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="b80cdc717fec352b09a19f45577d8ef5"/>
     </file>
     <file name="source\module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -65,7 +65,7 @@
     </file>
     <file name="source\WindowModProgress.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="7c5df2217609266c6215f60ee2cb05f3"/>
+      <fingerprint md5="d33cea8a8f812b00057970afe4af3b73"/>
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -80,12 +80,12 @@
     <target name="win32" enabled="1" default="1">
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\win32\TFMM.exe"/>
-      <compiler version="PureBasic 5.30 (Windows - x86)"/>
+      <compiler version="PureBasic 5.31 (Windows - x86)"/>
       <commandline value="-debug -testmode"/>
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\tf.ico</icon>
-      <compilecount enable="1" value="1734"/>
+      <compilecount enable="1" value="1741"/>
       <buildcount enable="1" value="121"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

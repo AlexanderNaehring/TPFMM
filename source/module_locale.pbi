@@ -192,7 +192,7 @@ Module locale
     OpenPreferences(path$ + locale$ + ".locale")
     flag$ = ReadPreferenceString("flag", "")
     If flag$ = ""
-      debugger::Add("locale::getFlag() - no hex found")
+      debugger::Add("locale::getFlag() - no hex found in locale file")
       If FileSize(path$ + locale$ + ".png")
         flag$ = misc::FileToHexStr(path$ + locale$ + ".png")
 ;         DeleteFile(path$ + locale$ + ".png")
@@ -200,7 +200,7 @@ Module locale
 ;         WritePreferenceString("flag", flag$)
       EndIf
     Else
-      DeleteFile(path$ + locale$ + ".png")
+;       DeleteFile(path$ + locale$ + ".png")
     EndIf
     ClosePreferences()
     
@@ -234,9 +234,9 @@ Module locale
   EndDataSection
 EndModule
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 159
-; FirstLine = 18
-; Folding = PE-
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 194
+; FirstLine = 30
+; Folding = PQ-
 ; EnableUnicode
 ; EnableXP

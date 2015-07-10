@@ -1,4 +1,4 @@
-; Form Designer for Purebasic - 5.30
+; Form Designer for Purebasic - 5.31
 ; Warning: this file uses a strict syntax, if you edit it, make sure to respect the Form Designer limitation or it won't be opened again.
 
 ;
@@ -14,7 +14,7 @@ Global GadgetProgressText, GadgetProgress
 
 Procedure OpenWindowProgress(x = 0, y = 0, width = 400, height = 70)
   WindowProgress = OpenWindow(#PB_Any, x, y, width, height, l("progress","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_Tool | #PB_Window_WindowCentered, WindowID(WindowMain))
-  GadgetProgressText = TextGadget(#PB_Any, -10, 10, 410, 25, "", #PB_Text_Center)
+  GadgetProgressText = TextGadget(#PB_Any, 0, 10, 400, 25, "", #PB_Text_Center)
   GadgetProgress = ProgressBarGadget(#PB_Any, -10, 40, 410, 30, 0, 100, #PB_ProgressBar_Smooth)
 EndProcedure
 
