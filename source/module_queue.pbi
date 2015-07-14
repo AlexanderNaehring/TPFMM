@@ -93,7 +93,7 @@ Module queue
     Protected element.queue
     Static dat.dat, conversion.i
     
-    LockMutex(mQueue) ; lock before InstallInProgress is checked!
+    LockMutex(mQueue)
     If *thread
       If Not IsThread(*thread) ; thread finished
         *thread = #False
@@ -179,15 +179,15 @@ Module queue
       EndIf
     EndIf
     
-    UnlockMutex(mQueue) ; unlock at the very end
+    UnlockMutex(mQueue)
     ProcedureReturn #True
   EndProcedure
   
 EndModule
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 91
-; FirstLine = 41
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 179
+; FirstLine = 91
 ; Folding = D+
 ; EnableUnicode
 ; EnableXP

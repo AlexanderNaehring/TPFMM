@@ -116,15 +116,11 @@ Procedure InitWindows()
   AddWindowTimer(WindowMain, TimerMainGadgets, 100)
   BindEvent(#PB_Event_SizeWindow, @ResizeUpdate(), WindowMain)
   
-  ; Init OS specific tools (list icon gadget)
-  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-    UseModule ListIcon
-    DefineListCallback(Library, #Edit)
-    UnuseModule ListIcon
-  CompilerEndIf
+  ; OS specific
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Windows")
+      ListIcon::DefineListCallback(Library, #Edit)
     CompilerCase #PB_OS_Linux
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Linux")
     CompilerCase #PB_OS_MacOS
@@ -854,9 +850,9 @@ Procedure GadgetInformationLinkTFNET(event)
   misc::openLink(link$)
 EndProcedure
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 116
-; FirstLine = 66
-; Folding = 2AAAAAA9
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 122
+; FirstLine = 75
+; Folding = VAAAAAA+
 ; EnableUnicode
 ; EnableXP
