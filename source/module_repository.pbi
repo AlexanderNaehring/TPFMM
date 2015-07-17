@@ -28,7 +28,7 @@ Module repository
   
   Procedure updateRepository()
     Protected repo$
-    repo$ = "http://update.alexandernaehring.eu/tfmm/mods.php"
+    repo$ = "http://update.tfmm.xanos.eu/repository.php"
     If ReceiveHTTPFile(repo$, "repository.json")
       ProcedureReturn #True
     EndIf
@@ -53,11 +53,18 @@ Module repository
   EndProcedure
 EndModule
 
+CompilerIf #PB_Compiler_IsMainFile
 
-repository::updateRepository()
-repository::loadRepository()
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 50
+  repository::updateRepository()
+  repository::loadRepository()
+  
+  
+  
+CompilerEndIf
+
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 60
+; FirstLine = 7
 ; Folding = -
 ; EnableUnicode
 ; EnableThread
