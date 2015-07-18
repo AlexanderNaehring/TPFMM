@@ -2,19 +2,59 @@
 DeclareModule repository
   EnableExplicit
   
+  Structure repo_info
+    name$
+    description$
+    maintainer$
+    url$
+    info_url$
+    changed.i
+  EndStructure
+  
+  Structure repo_link
+    url$
+    changed.i
+  EndStructure
+  
+  ; main (root level) repository
+  Structure repo_main
+    repository.repo_info
+    locale.repo_link
+    mods.repo_link
+  EndStructure
+  
   Structure files
     file_id.i
-    file_name$
+    filename$
+    downloads.i
+    link$
   EndStructure
   
   Structure mods
     mod_id.i
-    mod_name$
-    mod_version$
+    name$
     author_id.i
     author_name$
+    thumbnail$
+    views.i
+    downloads.i
+    likes.i
+    created.i
+    changed.i
+    category.i
+    version$
+    state$
+    link$
     List files.files()
   EndStructure
+  
+  ; repository for mods
+  Structure repo_mods
+    repo_info.repo_info
+    mod_base_url$
+    Map mods.mods()
+  EndStructure
+  
   
   Declare updateRepository()
   Declare loadRepository()
@@ -22,40 +62,65 @@ DeclareModule repository
 EndDeclareModule
 
 Module repository
-  
-  Global NewMap mods.mods()
   InitNetwork()
+  
+  Global NewList mods.mods()
+  Global repo_mods.repo_mods
+  
   
   Procedure updateRepository()
     Protected repo$
-    repo$ = "http://update.tfmm.xanos.eu/repository.php"
+    repo$ = "http://repo.tfmm.xanos.eu/mods/"
     If ReceiveHTTPFile(repo$, "repository.json")
+      Debug "ok"
       ProcedureReturn #True
     EndIf
+    Debug "error"
     ProcedureReturn #False
   EndProcedure
   
   Procedure loadRepository()
-    Protected json, value
+    Protected json, value, mods
     
     json = LoadJSON(#PB_Any, "repository.json")
     If Not json
+      Debug "Could not load JSON"
       ProcedureReturn #False
     EndIf
     
     value = JSONValue(json)
-    ExtractJSONMap(value, mods())
+    ; value is an object
+    If JSONType(value) <> #PB_JSON_Object 
+      Debug "Mod Repository should be of type JSON Object"
+      ProcedureReturn #False
+    EndIf
+    
+    mods = GetJSONMember(value, "mods")
+    
+    If JSONType(mods) <> #PB_JSON_Array
+      Debug "Error Mods should be of type JSON Array"
+      ProcedureReturn #False
+    EndIf
+    ExtractJSONList(mods, mods())
+    
+    Debug Str(ListSize(mods())) + " Mods"
     
     ForEach mods()
-      mods()\mod_id = Val(MapKey(mods()))
+      Debug mods()\name$
     Next
+    
+    
     
   EndProcedure
 EndModule
 
 CompilerIf #PB_Compiler_IsMainFile
-
+  Debug "start"
+  
+  Debug "update Repo"
   repository::updateRepository()
+  
+  Debug "load Repo"
   repository::loadRepository()
   
   
@@ -63,8 +128,8 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 60
-; FirstLine = 7
+; CursorPosition = 98
+; FirstLine = 73
 ; Folding = -
 ; EnableUnicode
 ; EnableThread
