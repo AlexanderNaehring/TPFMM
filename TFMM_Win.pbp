@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-07-18 19:39" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-07-21 14:26" user="naeh_al" host="KN-000026"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -16,7 +16,7 @@
       <fingerprint md5="4ea4a218dcf528afb79b3d345cecc0fd"/>
     </file>
     <file name="source\module_debugger.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
       <fingerprint md5="cc7348e6a768e2364a50beaa50520c7c"/>
     </file>
     <file name="source\module_images.pbi">
@@ -68,7 +68,7 @@
       <fingerprint md5="d33cea8a8f812b00057970afe4af3b73"/>
     </file>
     <file name="source\Windows.pbi">
-      <config load="1" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
       <fingerprint md5="88d7af03e17cccb65b2a7dc48adad3cf"/>
     </file>
     <file name="source\WindowSettings.pbf">
