@@ -61,13 +61,22 @@ DeclareModule repository
   Declare loadRepository(url$)
   Declare loadRepositoryList()
   
+  Global NewMap repo_mods.repo_mods()
 EndDeclareModule
 
 Module repository
   Global NewList repositories$()
-  Global NewMap repo_mods.repo_mods()
   
   CreateDirectory("repositories") ; subdirectory used for all repositoyry related files
+  
+  If FileSize("repositories/repositories.list") <= 0
+    Define file
+    file = CreateFile(#PB_Any, "repositories/repositories.list")
+    If file
+      WriteStringN(file, "http://repo.tfmm.xanos.eu/")
+      CloseFile(file)
+    EndIf
+  EndIf
   
   If Not InitNetwork()
     debugger::add("repository::init() - ERROR initializing network")
@@ -79,7 +88,6 @@ Module repository
   Procedure.s getRepoFileName(url$)
     ProcedureReturn "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
   EndProcedure
-  
   
   Procedure updateRepository(url$)
     debugger::add("repository::updateRepository("+url$+")")
@@ -100,7 +108,8 @@ Module repository
   Procedure loadRepositoryMods(url$)
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods("+file$+")")
+    debugger::add("repository::loadRepositoryMods("+url$+")")
+    debugger::add("repository::loadRepositoryMods() - filename: {"+file$+"}")
     
     Protected json, value, mods
     
@@ -139,7 +148,8 @@ Module repository
   Procedure loadRepositoryLocale(url$)
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryLocale("+file$+")")
+    debugger::add("repository::loadRepositoryLocale("+url$+")")
+    debugger::add("repository::loadRepositoryLocale() - filename: {"+file$+"}")
     
     Protected json, value
     
@@ -208,7 +218,7 @@ Module repository
     debugger::add("repository::loadRepository() |----")
     debugger::add("repository::loadRepository() | Mods Repository URL: "+repo_main\mods\url$)
     debugger::add("repository::loadRepository() | Locale Repository URL: "+repo_main\locale\url$)
-    debugger::add("repository::loadRepository() |---- ")
+    debugger::add("repository::loadRepository() |----")
     
     If repo_main\mods\url$
       debugger::add("repository::loadRepository() - load mods repository...")
@@ -264,20 +274,55 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
-  
 EndModule
 
 CompilerIf #PB_Compiler_IsMainFile
+  Define text$
+  
+  debugger::setlogfile("output.log")
   
   repository::loadRepositoryList()
   
+  If OpenWindow(0, 0, 0, 640, 360, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
+    ListIconGadget(0, 0, 0, 640, 360, "ID", 40, #PB_ListIcon_FullRowSelect)
+    AddGadgetColumn(0, 1, "Mod Name", 180)
+    AddGadgetColumn(0, 2, "Version", 80)
+    AddGadgetColumn(0, 3, "Author", 80)
+    AddGadgetColumn(0, 4, "Downloads", 60)
+    AddGadgetColumn(0, 5, "Likes", 40)
+    AddGadgetColumn(0, 6, "State", 80)
+    AddGadgetColumn(0, 7, "Files", 40)
+                    
+    ForEach repository::repo_mods()
+      ForEach repository::repo_mods()\mods()
+        text$ = Str(repository::repo_mods()\mods()\mod_id) + #LF$ +
+                repository::repo_mods()\mods()\name$ + #LF$ +
+                repository::repo_mods()\mods()\version$ + #LF$ +
+                repository::repo_mods()\mods()\author_name$ + #LF$ +
+                repository::repo_mods()\mods()\downloads + #LF$ +
+                repository::repo_mods()\mods()\likes + #LF$ +
+                repository::repo_mods()\mods()\state$ + #LF$ +
+                Str(ListSize(repository::repo_mods()\mods()\files()))
+        AddGadgetItem(0, -1, text$)
+      Next
+    Next
+    
+    
+    
+    Repeat
+      
+    Until WaitWindowEvent() = #PB_Event_CloseWindow
+  EndIf
+  
 CompilerEndIf
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 77
-; FirstLine = 50
-; Folding = H9
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 72
+; FirstLine = 46
+; Folding = T+
 ; EnableUnicode
 ; EnableThread
 ; EnableXP
 ; EnableUser
+; Executable = repository_test.exe
+; Compiler = PureBasic 5.31 (Windows - x86)
