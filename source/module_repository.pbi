@@ -16,6 +16,7 @@ DeclareModule repository
   Structure repo_link
     url$
     changed.i
+    age.i
   EndStructure
   
   ; main (root level) repository
@@ -54,19 +55,19 @@ DeclareModule repository
   Structure repo_mods
     repo_info.repo_info
     mod_base_url$
-    Map mods.mods()
+    List mods.mods()
   EndStructure
   
-  
   Declare loadRepository(url$)
+  Declare loadRepositoryList()
   
 EndDeclareModule
 
 Module repository
-  Global NewList mods.mods()
-  Global repo_mods.repo_mods
+  Global NewList repositories$()
+  Global NewMap repo_mods.repo_mods()
   
-  CreateDirectory("repositories")
+  CreateDirectory("repositories") ; subdirectory used for all repositoyry related files
   
   If Not InitNetwork()
     debugger::add("repository::init() - ERROR initializing network")
@@ -75,13 +76,16 @@ Module repository
   
   ; Private
   
+  Procedure.s getRepoFileName(url$)
+    ProcedureReturn "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+  EndProcedure
+  
+  
   Procedure updateRepository(url$)
     debugger::add("repository::updateRepository("+url$+")")
+    Protected file$, time
     
-    Protected file$
-    Protected time
-    
-    file$ = "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+    file$ = getRepoFileName(url$)
     
     time = ElapsedMilliseconds()
     If ReceiveHTTPFile(url$, file$)
@@ -95,12 +99,13 @@ Module repository
   
   Procedure loadRepositoryMods(url$)
     Protected file$ ; parameter: URL -> calculate local filename from url
-    file$ = "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+    file$ = getRepoFileName(url$)
+    debugger::add("repository::loadRepositoryMods("+file$+")")
     
     Protected json, value, mods
     
     If FileSize(file$) < 0
-      debugger::add("repository::loadRepositoryMods() - repository file not present, load from server...")
+      debugger::add("repository::loadRepositoryMods() - repository file not present, load from server")
       updateRepository(url$)
     EndIf
     
@@ -112,26 +117,50 @@ Module repository
     EndIf
     
     value = JSONValue(json)
+    If JSONType(value) <> #PB_JSON_Object 
+      debugger::add("repository::loadRepositoryMods() - ERROR: Mods Repository should be of type JSON Object")
+      ProcedureReturn #False
+    EndIf
+    
+    ExtractJSONStructure(value, repo_mods(url$), repo_mods)
+    
+;     mods = GetJSONMember(value, "mods")
+;     
+;     If JSONType(mods) <> #PB_JSON_Array
+;       debugger::add("repository::loadRepositoryMods() - ERROR: Mods should be of type JSON Array")
+;       ProcedureReturn #False
+;     EndIf
+;     ExtractJSONList(mods, mods())
+    
+    debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
+    
+  EndProcedure
+  
+  Procedure loadRepositoryLocale(url$)
+    Protected file$ ; parameter: URL -> calculate local filename from url
+    file$ = getRepoFileName(url$)
+    debugger::add("repository::loadRepositoryLocale("+file$+")")
+    
+    Protected json, value
+    
+    If FileSize(file$) < 0
+      debugger::add("repository::loadRepositoryLocale() - repository file not present, load from server")
+      updateRepository(url$)
+    EndIf
+    
+    
+    json = LoadJSON(#PB_Any, file$)
+    If Not json
+      debugger::add("repository::loadRepositoryLocale() - ERROR: Could not load JSON")
+      ProcedureReturn #False
+    EndIf
+    
+    value = JSONValue(json)
     ; value is an object
     If JSONType(value) <> #PB_JSON_Object 
-      debugger::add("repository::loadRepositoryMods() - ERROR: Mod Repository should be of type JSON Object")
+      debugger::add("repository::loadRepositoryLocale() - ERROR: Locale Repository should be of type JSON Object")
       ProcedureReturn #False
     EndIf
-    
-    mods = GetJSONMember(value, "mods")
-    
-    If JSONType(mods) <> #PB_JSON_Array
-      debugger::add("repository::loadModRepositoryMods() - ERROR: Mods should be of type JSON Array")
-      ProcedureReturn #False
-    EndIf
-    ExtractJSONList(mods, mods())
-    
-    debugger::add("repository::loadModRepositoryMods() - Found " + Str(ListSize(mods())) + " Mods")
-    
-    ForEach mods()
-;       Debug mods()\name$
-      
-    Next
     
   EndProcedure
   
@@ -140,11 +169,13 @@ Module repository
   
   Procedure loadRepository(url$)
     Protected file$ ; parameter: URL -> calculate local filename from url
-    file$ = "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
-    debugger::add("repository::loadMainRepository("+url$+") -> {"+file$+"}")
+    file$ = getRepoFileName(url$)
+    debugger::add("repository::loadRepository("+url$+")")
+    debugger::add("repository::loadRepository() - filename: {"+file$+"}")
     
     Protected repo_main.repo_main
     Protected json, value
+    Protected age
     
     ; TODO check when to load new file from server!
     ; currently: relead from server every time
@@ -152,60 +183,100 @@ Module repository
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("ERROR opening main repository: "+JSONErrorMessage())
+      debugger::add("repository::loadRepository() - ERROR opening main repository: "+JSONErrorMessage())
       ProcedureReturn #False
     EndIf
     
     value = JSONValue(json)
     If JSONType(value) <> #PB_JSON_Object
-      debugger::add("Main Repository should be of type JSON Object")
+      debugger::add("repository::loadRepository() - Main Repository should be of type JSON Object")
       ProcedureReturn #False
     EndIf
     
     ExtractJSONStructure(value, repo_main, repo_main) ; no return value
     
     If repo_main\repository\name$ = ""
-      debugger::add("Basic information missing (name) -> Skip repository")
+      debugger::add("repository::loadRepository() - Basic information missing (name) -> Skip repository")
       ProcedureReturn #False
     EndIf
     
-    debugger::add("repository::loadMainRepository() |---- Main Repository Info:")
-    debugger::add("repository::loadMainRepository() | Name: "+repo_main\repository\name$)
-    debugger::add("repository::loadMainRepository() | Description: "+repo_main\repository\description$)
-    debugger::add("repository::loadMainRepository() | Maintainer: "+repo_main\repository\maintainer$)
-    debugger::add("repository::loadMainRepository() | URL: "+repo_main\repository\url$)
-    debugger::add("repository::loadMainRepository() |----")
-    debugger::add("repository::loadMainRepository() | Mods Repository URL: "+repo_main\mods\url$)
-    debugger::add("repository::loadMainRepository() | Locale Repository URL: "+repo_main\locale\url$)
-    debugger::add("repository::loadMainRepository() |---- ")
+    debugger::add("repository::loadRepository() |---- Main Repository Info:")
+    debugger::add("repository::loadRepository() | Name: "+repo_main\repository\name$)
+    debugger::add("repository::loadRepository() | Description: "+repo_main\repository\description$)
+    debugger::add("repository::loadRepository() | Maintainer: "+repo_main\repository\maintainer$)
+    debugger::add("repository::loadRepository() | URL: "+repo_main\repository\url$)
+    debugger::add("repository::loadRepository() |----")
+    debugger::add("repository::loadRepository() | Mods Repository URL: "+repo_main\mods\url$)
+    debugger::add("repository::loadRepository() | Locale Repository URL: "+repo_main\locale\url$)
+    debugger::add("repository::loadRepository() |---- ")
     
     If repo_main\mods\url$
-      debugger::add("repository::loadMainRepository() - Found Mods Repository :-)")
-      
-      ; check last changed time 
-      ; TODO: how to update last changed time on server? time only changes when document is retrieved...
-      
+      debugger::add("repository::loadRepository() - load mods repository...")
+      age = Date() - GetFileDate(getRepoFileName(repo_main\mods\url$), #PB_Date_Modified)
+      debugger::add("repository::loadRepository() - local mods repo age: "+Str(age)+", remote mods repo age: "+Str(repo_main\mods\age)+"")
+      If age > repo_main\mods\age
+        debugger::add("repository::loadRepository() - download new version")
+        updateRepository(repo_main\mods\url$)
+      EndIf
+      ; Load mods from repository file
       loadRepositoryMods(repo_main\mods\url$)
     EndIf
     
     If repo_main\locale\url$
-      debugger::add("repository::loadMainRepository() - Found Locale Repository :-)")
-      
-      
+      debugger::add("repository::loadRepository() - load locale repository...")
+      age = Date() - GetFileDate(getRepoFileName(repo_main\locale\url$), #PB_Date_Modified)
+      debugger::add("repository::loadRepository() - local locale repo age: "+Str(age)+", remote locale repo age: "+Str(repo_main\locale\age)+"")
+      If age > repo_main\locale\age
+        debugger::add("repository::loadRepository() - download new version")
+        updateRepository(repo_main\locale\url$)
+      EndIf
+      ; Load locale files from repository file
+      loadRepositoryLocale(repo_main\locale\url$)
     EndIf
     
   EndProcedure
   
+  Procedure loadRepositoryList()
+    debugger::add("repository::loadRepositoryList()")
+    Protected file, time
+    
+    time = ElapsedMilliseconds()
+    
+    ClearList(repositories$())
+    file = ReadFile(#PB_Any, "repositories/repositories.list", #PB_File_SharedRead)
+    If file
+      While Not Eof(file)
+        AddElement(repositories$())
+        repositories$() = ReadString(file)
+      Wend
+      CloseFile(file)
+    EndIf
+    
+    If ListSize(repositories$())
+      ForEach repositories$()
+        repository::loadRepository(repositories$())
+      Next
+      
+      debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
+      ProcedureReturn #True
+    EndIf
+    
+    ProcedureReturn #False
+  EndProcedure
+  
+  
 EndModule
 
 CompilerIf #PB_Compiler_IsMainFile
-  repository::loadRepository("http://repo.tfmm.xanos.eu/")
+  
+  repository::loadRepositoryList()
+  
 CompilerEndIf
 
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 185
-; FirstLine = 127
-; Folding = 8-
+; IDE Options = PureBasic 5.30 (Windows - x64)
+; CursorPosition = 77
+; FirstLine = 50
+; Folding = H9
 ; EnableUnicode
 ; EnableThread
 ; EnableXP

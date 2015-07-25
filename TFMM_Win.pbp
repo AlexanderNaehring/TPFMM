@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-07-21 14:26" user="naeh_al" host="KN-000026"/>
+    <lastopen date="2015-07-25 15:05" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
