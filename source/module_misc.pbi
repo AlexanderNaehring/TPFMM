@@ -8,6 +8,19 @@ EndMacro
 DeclareModule misc
   EnableExplicit
   
+  Macro StopWindowUpdate(_winID_)
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        SendMessage_(_winID_,#WM_SETREDRAW,0,0)
+    CompilerEndIf
+  EndMacro
+  Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        SendMessage_(_winID_,#WM_SETREDRAW,1,0)
+        InvalidateRect_(_winID_,0,_redrawBackground_)
+        UpdateWindow_(_winID_)
+    CompilerEndIf
+  EndMacro
+  
   Declare.s Path(path$, delimiter$ = "")
   Declare.s Bytes(bytes.d)
   Declare VersionCheck(current$, required$)
@@ -351,9 +364,8 @@ Module misc
 
   
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 327
-; FirstLine = 45
-; Folding = PKA5
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 9
+; Folding = -oAg-
 ; EnableUnicode
 ; EnableXP

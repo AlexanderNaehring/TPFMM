@@ -1,5 +1,6 @@
 ﻿
 XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_misc.pbi"
 
 DeclareModule repository
   EnableExplicit
@@ -60,6 +61,7 @@ DeclareModule repository
   
   Declare loadRepository(url$)
   Declare loadRepositoryList()
+  Declare searchMod(search$, gadget)
   
   Global NewMap repo_mods.repo_mods()
 EndDeclareModule
@@ -69,6 +71,7 @@ Module repository
   
   CreateDirectory("repositories") ; subdirectory used for all repositoyry related files
   
+  ; Create repository list file if not existing and add basic repository
   If FileSize("repositories/repositories.list") <= 0
     Define file
     file = CreateFile(#PB_Any, "repositories/repositories.list")
@@ -274,17 +277,69 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
+  Procedure searchMod(search$, gadget)
+    ; debugger::add("repository::searchMod("+search$+")")
+    Protected text$, ok, count, i, k, str$
+    
+    misc::StopWindowUpdate(WindowID(0))
+    HideGadget(gadget, 0)
+    ClearGadgetItems(gadget)
+    
+    count = CountString(search$, " ") + 1
+    
+    ForEach repo_mods()
+      ForEach repo_mods()\mods()
+        With repo_mods()\mods()
+          ok = 0 ; reset ok for every mod entry
+          If search$ = ""
+            ok = 1
+          Else
+            For k = 1 To count
+              str$ = Trim(StringField(search$, k, " "))
+              If str$
+                If FindString(\author_name$, str$, 1, #PB_String_NoCase)
+                  ok + 1
+                ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
+                  ok + 1
+                EndIf
+              Else
+                ok + 1 ; empty search string is just ignored (ok)
+              EndIf
+            Next
+          EndIf
+          If ok = count
+            text$ = Str(\mod_id) + #LF$ +
+                    \name$ + #LF$ +
+                    \version$ + #LF$ +
+                    \author_name$ + #LF$ +
+                    \downloads + #LF$ +
+                    \likes + #LF$ +
+                    \state$ + #LF$ +
+                    Str(ListSize(\files()))
+            AddGadgetItem(0, i, text$)
+            SetGadgetItemData(gadget, i, repo_mods()\mods())
+            i + 1
+          EndIf
+        EndWith
+      Next
+    Next
+    
+    HideGadget(gadget, 0)
+    misc::ContinueWindowUpdate(WindowID(0))
+    
+  EndProcedure
+  
 EndModule
 
 CompilerIf #PB_Compiler_IsMainFile
-  Define text$
+  Define text$, event
   
   debugger::setlogfile("output.log")
   
   repository::loadRepositoryList()
   
-  If OpenWindow(0, 0, 0, 640, 360, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 0, 640, 360, "ID", 40, #PB_ListIcon_FullRowSelect)
+  If OpenWindow(0, 0, 0, 640, 640, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
+    ListIconGadget(0, 0, 30, 640, 610, "ID", 40, #PB_ListIcon_FullRowSelect)
     AddGadgetColumn(0, 1, "Mod Name", 180)
     AddGadgetColumn(0, 2, "Version", 80)
     AddGadgetColumn(0, 3, "Author", 80)
@@ -292,7 +347,10 @@ CompilerIf #PB_Compiler_IsMainFile
     AddGadgetColumn(0, 5, "Likes", 40)
     AddGadgetColumn(0, 6, "State", 80)
     AddGadgetColumn(0, 7, "Files", 40)
-                    
+    
+    StringGadget(1, 410, 5, 200, 20, "")
+    ButtonGadget(2, 615, 5, 20, 20, "X")
+    
     ForEach repository::repo_mods()
       ForEach repository::repo_mods()\mods()
         text$ = Str(repository::repo_mods()\mods()\mod_id) + #LF$ +
@@ -307,18 +365,34 @@ CompilerIf #PB_Compiler_IsMainFile
       Next
     Next
     
-    
-    
+    text$ = ""
     Repeat
-      
-    Until WaitWindowEvent() = #PB_Event_CloseWindow
+      event = WaitWindowEvent()
+      Select event
+        Case #PB_Event_CloseWindow
+          Break
+        Case #PB_Event_Gadget
+          Select EventGadget()
+            Case 2
+              SetGadgetText(1, "")
+          EndSelect
+      EndSelect
+      If GetGadgetText(1) <> text$
+        text$ = GetGadgetText(1)
+        SendMessage_(WindowID(0),#WM_SETREDRAW,0,0)
+        repository::searchMod(text$, 0)
+        SendMessage_(WindowID(0),#WM_SETREDRAW,1,0)
+        InvalidateRect_(WindowID(0),0,0)
+        UpdateWindow_(WindowID(0))
+      EndIf
+    ForEver 
   EndIf
   
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 72
-; FirstLine = 46
+; CursorPosition = 297
+; FirstLine = 166
 ; Folding = T+
 ; EnableUnicode
 ; EnableThread
