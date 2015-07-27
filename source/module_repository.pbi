@@ -7,6 +7,7 @@ DeclareModule repository
   
   Structure repo_info
     name$
+    guid$
     description$
     maintainer$
     url$
@@ -45,7 +46,7 @@ DeclareModule repository
     likes.i
     created.i
     changed.i
-    category.i
+    List tags$()
     version$
     state$
     link$
@@ -292,7 +293,7 @@ Module repository
   
   Procedure searchMod(search$, gadget)
     ; debugger::add("repository::searchMod("+search$+")")
-    Protected text$, ok, count, i, k, str$
+    Protected text$, ok, count, i, k, str$, tags$
     
     misc::StopWindowUpdate(WindowID(0))
     HideGadget(gadget, 0)
@@ -308,12 +309,19 @@ Module repository
             ok = 1
           Else
             For k = 1 To count
+              ; TODO -> use additional variable so that maximum one incrememnt for ok for each "1 to count" iteration
               str$ = Trim(StringField(search$, k, " "))
               If str$
                 If FindString(\author_name$, str$, 1, #PB_String_NoCase)
                   ok + 1
                 ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
                   ok + 1
+                Else
+                  ForEach \tags$()
+                    If FindString(\tags$(), str$, 1, #PB_String_NoCase)
+                      ok + 1 ; possible error source (multiple ok per iteration)
+                    EndIf
+                  Next
                 EndIf
               Else
                 ok + 1 ; empty search string is just ignored (ok)
@@ -321,12 +329,20 @@ Module repository
             Next
           EndIf
           If ok = count
+            tags$ = ""
+            ForEach \tags$()
+              tags$ + \tags$() + ", "
+            Next
+            If Len(tags$) > 2
+              tags$ = Left(tags$, Len(tags$) - 2)
+            EndIf
             text$ = \name$ + #LF$ +
                     \version$ + #LF$ +
                     \author_name$ + #LF$ +
                     \state$ + #LF$ +
-                    \downloads + #LF$ +
-                    \likes
+                    tags$ + #LF$ +
+                    Str(\downloads) + #LF$ +
+                    Str(\likes)
             AddGadgetItem(0, i, text$)
             SetGadgetItemData(gadget, i, repo_mods()\mods())
             i + 1
@@ -349,18 +365,20 @@ CompilerIf #PB_Compiler_IsMainFile
   
   repository::loadRepositoryList()
   
-  If OpenWindow(0, 0, 0, 640, 640, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 640, 610, "Mod Name", 260, #PB_ListIcon_FullRowSelect)
-    AddGadgetColumn(0, 2, "Version", 80)
-    AddGadgetColumn(0, 3, "Author", 100)
-    AddGadgetColumn(0, 6, "State", 60)
-    AddGadgetColumn(0, 4, "Downloads", 60)
-    AddGadgetColumn(0, 5, "Likes", 40)
+  If OpenWindow(0, 0, 0, 800, 600, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
+    ListIconGadget(0, 0, 30, 800, 570, "Mod Name", 240, #PB_ListIcon_FullRowSelect)
+    AddGadgetColumn(0, 1, "Version", 60)
+    AddGadgetColumn(0, 2, "Author", 100)
+    AddGadgetColumn(0, 3, "State", 60)
+    AddGadgetColumn(0, 4, "Tags", 200)
+    AddGadgetColumn(0, 5, "Downloads", 60)
+    AddGadgetColumn(0, 6, "Likes", 40)
     
-    StringGadget(1, 410, 5, 200, 20, "")
-    ButtonGadget(2, 615, 5, 20, 20, "X")
+    TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
+    StringGadget(1, 570, 5, 200, 20, "")
+    ButtonGadget(2, 775, 5, 20, 20, "X")
     
-    repository::searchMod("", 0)
+    repository::searchMod("", 0) ; initially fill list
     
     Repeat
       event = WaitWindowEvent()
@@ -369,7 +387,7 @@ CompilerIf #PB_Compiler_IsMainFile
           Break
         Case #PB_Event_Gadget
           Select EventGadget()
-            Case 2
+            Case 2 ; push "x" button
               SetGadgetText(1, "")
           EndSelect
       EndSelect
@@ -387,8 +405,8 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 356
-; FirstLine = 197
+; CursorPosition = 389
+; FirstLine = 211
 ; Folding = T9
 ; EnableUnicode
 ; EnableThread
