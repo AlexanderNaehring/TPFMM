@@ -293,7 +293,7 @@ Module repository
   
   Procedure searchMod(search$, gadget)
     ; debugger::add("repository::searchMod("+search$+")")
-    Protected text$, ok, count, i, k, str$, tags$
+    Protected text$, mod_ok, tmp_ok, count, i, k, str$, tags$
     
     misc::StopWindowUpdate(WindowID(0))
     HideGadget(gadget, 0)
@@ -304,31 +304,36 @@ Module repository
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         With repo_mods()\mods()
-          ok = 0 ; reset ok for every mod entry
+          mod_ok = 0 ; reset ok for every mod entry
           If search$ = ""
-            ok = 1
+            mod_ok = 1
+            count = 1
           Else
             For k = 1 To count
-              ; TODO -> use additional variable so that maximum one incrememnt for ok for each "1 to count" iteration
+              tmp_ok = 0
               str$ = Trim(StringField(search$, k, " "))
               If str$
                 If FindString(\author_name$, str$, 1, #PB_String_NoCase)
-                  ok + 1
+                  tmp_ok = 1
                 ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
-                  ok + 1
+                  tmp_ok = 1
                 Else
                   ForEach \tags$()
                     If FindString(\tags$(), str$, 1, #PB_String_NoCase)
-                      ok + 1 ; possible error source (multiple ok per iteration)
+                      tmp_ok = 1
                     EndIf
                   Next
                 EndIf
               Else
-                ok + 1 ; empty search string is just ignored (ok)
+                tmp_ok = 1 ; empty search string is just ignored (ok)
+              EndIf
+              
+              If tmp_ok
+                mod_ok + 1 ; increase "ok-counter"
               EndIf
             Next
           EndIf
-          If ok = count
+          If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
             tags$ = ""
             ForEach \tags$()
               tags$ + \tags$() + ", "
@@ -405,8 +410,8 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 389
-; FirstLine = 211
+; CursorPosition = 312
+; FirstLine = 155
 ; Folding = T9
 ; EnableUnicode
 ; EnableThread
