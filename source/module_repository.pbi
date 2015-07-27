@@ -56,6 +56,8 @@ DeclareModule repository
   Structure repo_mods
     repo_info.repo_info
     mod_base_url$
+    file_base_url$
+    thumbnail_base_url$
     List mods.mods()
   EndStructure
   
@@ -136,13 +138,24 @@ Module repository
     
     ExtractJSONStructure(value, repo_mods(url$), repo_mods)
     
-;     mods = GetJSONMember(value, "mods")
-;     
-;     If JSONType(mods) <> #PB_JSON_Array
-;       debugger::add("repository::loadRepositoryMods() - ERROR: Mods should be of type JSON Array")
-;       ProcedureReturn #False
-;     EndIf
-;     ExtractJSONList(mods, mods())
+    If ListSize(repo_mods(url$)\mods())
+      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mods\changed), TypeOf(mods\changed))
+    EndIf
+    
+    ; postprocess some structure fields
+    With repo_mods(url$)\mods()
+      ForEach repo_mods(url$)\mods()
+        If repo_mods(url$)\mod_base_url$
+          \link$ = repo_mods(url$)\mod_base_url$ + \link$
+        EndIf
+        If repo_mods(url$)\thumbnail_base_url$
+          \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
+        EndIf
+        ForEach \files()
+          \files()\link$ = repo_mods(url$)\file_base_url$ + \files()\link$
+        Next
+      Next
+    EndWith
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
     
@@ -308,14 +321,12 @@ Module repository
             Next
           EndIf
           If ok = count
-            text$ = Str(\mod_id) + #LF$ +
-                    \name$ + #LF$ +
+            text$ = \name$ + #LF$ +
                     \version$ + #LF$ +
                     \author_name$ + #LF$ +
-                    \downloads + #LF$ +
-                    \likes + #LF$ +
                     \state$ + #LF$ +
-                    Str(ListSize(\files()))
+                    \downloads + #LF$ +
+                    \likes
             AddGadgetItem(0, i, text$)
             SetGadgetItemData(gadget, i, repo_mods()\mods())
             i + 1
@@ -339,33 +350,18 @@ CompilerIf #PB_Compiler_IsMainFile
   repository::loadRepositoryList()
   
   If OpenWindow(0, 0, 0, 640, 640, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 640, 610, "ID", 40, #PB_ListIcon_FullRowSelect)
-    AddGadgetColumn(0, 1, "Mod Name", 180)
+    ListIconGadget(0, 0, 30, 640, 610, "Mod Name", 260, #PB_ListIcon_FullRowSelect)
     AddGadgetColumn(0, 2, "Version", 80)
-    AddGadgetColumn(0, 3, "Author", 80)
+    AddGadgetColumn(0, 3, "Author", 100)
+    AddGadgetColumn(0, 6, "State", 60)
     AddGadgetColumn(0, 4, "Downloads", 60)
     AddGadgetColumn(0, 5, "Likes", 40)
-    AddGadgetColumn(0, 6, "State", 80)
-    AddGadgetColumn(0, 7, "Files", 40)
     
     StringGadget(1, 410, 5, 200, 20, "")
     ButtonGadget(2, 615, 5, 20, 20, "X")
     
-    ForEach repository::repo_mods()
-      ForEach repository::repo_mods()\mods()
-        text$ = Str(repository::repo_mods()\mods()\mod_id) + #LF$ +
-                repository::repo_mods()\mods()\name$ + #LF$ +
-                repository::repo_mods()\mods()\version$ + #LF$ +
-                repository::repo_mods()\mods()\author_name$ + #LF$ +
-                repository::repo_mods()\mods()\downloads + #LF$ +
-                repository::repo_mods()\mods()\likes + #LF$ +
-                repository::repo_mods()\mods()\state$ + #LF$ +
-                Str(ListSize(repository::repo_mods()\mods()\files()))
-        AddGadgetItem(0, -1, text$)
-      Next
-    Next
+    repository::searchMod("", 0)
     
-    text$ = ""
     Repeat
       event = WaitWindowEvent()
       Select event
@@ -391,9 +387,9 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 297
-; FirstLine = 166
-; Folding = T+
+; CursorPosition = 356
+; FirstLine = 197
+; Folding = T9
 ; EnableUnicode
 ; EnableThread
 ; EnableXP

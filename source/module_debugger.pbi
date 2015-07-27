@@ -13,7 +13,6 @@ Module debugger
     LogFile$ = file$
   EndProcedure
   Procedure DeleteLogFile()
-    Debug "delete debug log file"
     DeleteFile(LogFile$, #PB_FileSystem_Force)
   EndProcedure
   Procedure Add(str$)
@@ -28,8 +27,7 @@ Module debugger
     EndIf
   EndProcedure
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 21
+; IDE Options = PureBasic 5.31 (Windows - x64)
 ; Folding = -
 ; EnableUnicode
 ; EnableXP
