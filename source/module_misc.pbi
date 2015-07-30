@@ -265,6 +265,7 @@ Module misc
     file = CreateFile(#PB_Any, file$)
     If Not file
       debugger::Add("misc::encodeTGA() - ERROR - failed to create {"+file$+"}")
+      StopDrawing()
       ProcedureReturn #False
     EndIf
     
@@ -365,7 +366,8 @@ Module misc
   
 EndModule
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 9
-; Folding = -oAg-
+; CursorPosition = 267
+; FirstLine = 60
+; Folding = -oAw-
 ; EnableUnicode
 ; EnableXP
