@@ -2,15 +2,15 @@
   EnableExplicit
   
   Structure aux
-    version$
-    authors$
-    tfnet_author_id$
-    tags$
+    version$ ; version as string
+    authors$ ; authors as string
+    tfnet_author_id$ ; author id's on tf|net as string
+    tags$ ; tags as string
     
-    file$
-    md5$
-    installed.i
-    TFonly.i
+    file$ ; filename
+    md5$ ; md5 of file
+    installed.i ; true, if mod is currently installed
+    TFonly.i ; if only in tf mods directory, but not in TFMM library
     lua$
   EndStructure
   
@@ -23,7 +23,7 @@
   EndStructure
   
   Structure mod
-    id$
+    tf_id$
     minorVersion.i
     majorVersion.i
     severityAdd$
@@ -37,7 +37,7 @@
     List dependencies$()
     url$
     
-    aux.aux
+    aux.aux ; auxiliary information
   EndStructure
   
   Declare changed() ; report changed to mod map (new mods, changed status, etc)
@@ -58,13 +58,11 @@
   Declare install(*data)  ; add mod to TF
   Declare remove(*data)   ; remove mod from TF
   
-  
-  
 EndDeclareModule
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 47
-; FirstLine = 16
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 12
+; FirstLine = 3
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

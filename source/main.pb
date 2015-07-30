@@ -1,6 +1,6 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.8." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
+#VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 Global _DEBUG = #False
 Global _TESTMODE = #False
 
@@ -61,7 +61,7 @@ Procedure init()
         Debug "parameter: enable testing mode"
         _TESTMODE = #True
       Default
-        Debug "parameter: " + ProgramParameter(i)
+        Debug "unknown parameter: " + ProgramParameter(i)
     EndSelect
   Next
   
@@ -236,8 +236,9 @@ Repeat
   EndSelect
 ForEver
 End
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 62
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 63
+; FirstLine = 2
 ; Folding = +
 ; EnableUnicode
 ; EnableXP

@@ -4,15 +4,27 @@ XIncludeFile "module_unrar.pbi"
 ; XIncludeFile "module_parseLUA.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
+XIncludeFile "module_luaParser.pbi"
 
 XIncludeFile "module_mods_h.pbi"
 
 Module mods
+  
+  Enumeration
+    #system_old ; old modding system
+    #system_new ; new modding system
+  EndEnumeration
+  
   Global NewMap *mods.mod()
   Global changed.i ; report variable if mod states have changed
   Global library.i ; library gadget
   
-  ;PRIVATE
+  ;----------------------------------------------------------------------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
+  ;--------------------------------------------------- PRIVATE ----------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
+  
   
   Procedure checkID(id$)
     debugger::Add("mods::checkID("+id$+")")
@@ -24,14 +36,9 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-  Procedure.s checkModFileZip(File$) ; check for res/ , return ID If found
+  Procedure.s checkModFileZip(File$) ; check for res/ or info.lua
     debugger::Add("mods::CheckModFileZip("+File$+")")
     Protected entry$, pack
-    
-    If FileSize(File$) <= 0
-      debugger::Add("mods::checkModFileZip() - ERROR - {"+File$+"} not found")
-      ProcedureReturn "false"
-    EndIf
     
     pack = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
     If pack
@@ -43,13 +50,13 @@ Module mods
           If FindString(entry$, "res/") ; found a "res" subfolder, assume this mod is valid 
             ClosePack(pack)
             entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2)) ; entry = folder name (id)
-            debugger::Add("mods::checkModFileZip() - found res/ - return {"+entry$+"}")
+            debugger::Add("mods::checkModFileZip() - found res/")
             ProcedureReturn entry$
           EndIf
           If GetFilePart(entry$) =  "info.lua" ; found info.lua, asume mod is valid
             ClosePack(pack)
             entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry = folder name (id)
-            debugger::Add("mods::checkModFileZip() - found info.lua - return {"+entry$+"}")
+            debugger::Add("mods::checkModFileZip() - found info.lua")
             ProcedureReturn entry$
           EndIf
         Wend
@@ -61,11 +68,11 @@ Module mods
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFileRar(File$) ; check for res/ , return ID if found
+  Procedure.s checkModFileRar(File$) ; check for res/ or info.lua
     debugger::Add("mods::CheckModFileRar("+File$+")")
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
-    Protected Entry$
+    Protected entry$
     
     hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
     If hRAR
@@ -80,14 +87,14 @@ Module mods
         If FindString(Entry$, "res\")
           unrar::RARCloseArchive(hRAR) ; found a "res" subfolder, assume this mod is valid
           entry$ = GetFilePart(Left(entry$, FindString(entry$, "res\")-2)) ; entry$ = parent folder = id
-          debugger::Add("mods::checkModFileRar() - found res\ - return {"+entry$+"}")
-          ProcedureReturn entry$ ; entry$ = id, can be empty!
+          debugger::Add("mods::checkModFileRar() - found res\")
+          ProcedureReturn entry$
         EndIf
         If GetFilePart(Entry$) =  "info.lua"
           unrar::RARCloseArchive(hRAR) ; found info.lua subfolder, assume this mod is valid
           entry$ = GetFilePart(Left(entry$, FindString(entry$, "info.lua")-2)) ; entry$ = parent folder = id
-          debugger::Add("mods::checkModFileRar() - found info.lua - return {"+entry$+"}")
-          ProcedureReturn entry$ ; entry$ = id, can be empty!
+          debugger::Add("mods::checkModFileRar() - found info.lua")
+          ProcedureReturn entry$
         EndIf
         unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
       Wend
@@ -96,29 +103,40 @@ Module mods
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFile(File$) ; Check mod for a "res" folder! -> Return ID if found
+  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file
     debugger::Add("mods::CheckModFile("+File$+")")
     Protected extension$, ret$
     
     extension$ = LCase(GetExtensionPart(File$))
     
+    If FileSize(File$) <= 0
+      debugger::Add("mods::checkModFile() - ERROR - {"+File$+"} not found")
+      ProcedureReturn "false"
+    EndIf
+    
     ret$ = checkModFileZip(File$)
-    If ret$ <> "false" ; either contains ID or is empty if res folder is found
-      ProcedureReturn ret$
+    If ret$ = "false"
+      ret$ = checkModFileRar(File$)
+      If ret$ = "false"
+        ProcedureReturn "false"
+      EndIf
     EndIf
     
-    ret$ = checkModFileRar(File$)
-    If ret$ <> "false" ; either contains ID or is empty if res folder is found
-      ProcedureReturn ret$
-    EndIf
+;     Select PeekI(*system)
+;       Case #system_old
+;         debugger::Add("mods::checkModFile() - old modding system deteced")
+;         Break
+;       Case #system_new
+;         debugger::Add("mods::checkModFile() - new modding system deteced")
+;     EndSelect
     
-    ProcedureReturn "false"
+    ProcedureReturn ret$
   EndProcedure
   
   Procedure cleanModInfo(*mod.mod)
     debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
     With *mod
-      \id$ = ""
+      \tf_id$ = ""
       \aux\version$ = ""
       \majorVersion = 0
       \minorVersion = 0
@@ -235,7 +253,7 @@ Module mods
     OpenPreferences(file$)
     With *mod
       
-      \id$ = ReadPreferenceString("id", "")
+      \tf_id$ = ReadPreferenceString("id", "")
       \aux\version$ = ReadPreferenceString("version","0")
       \name$ = ReadPreferenceString("name", \name$)
       \aux\authors$ = ReadPreferenceString("author", "")
@@ -295,330 +313,8 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure.s parseLUAstring(regexp, lua$)
-    Protected s$, r$, i.i
-    ExamineRegularExpression(regexp, lua$)
-    If NextRegularExpressionMatch(regexp)
-      For i = 1 To CountRegularExpressionGroups(regexp)
-        s$ = RegularExpressionGroup(regexp, i)
-        If s$
-          r$ = s$
-        EndIf
-      Next
-    EndIf
-    ProcedureReturn r$
-  EndProcedure
-  
-  Procedure.d parseLUAnumber(regexp, lua$)
-    Protected s$, r.d
-    ExamineRegularExpression(regexp, lua$)
-    If NextRegularExpressionMatch(regexp)
-      s$ = RegularExpressionGroup(regexp, CountRegularExpressionGroups(regexp)-1)
-      r = ValD(s$)
-    EndIf
-    
-    ProcedureReturn r
-  EndProcedure
-  
-  Procedure parseLUAlocale(file$, locale$, *mod.mod, Map reg_val())
-    debugger::Add("parseLUAlocale("+file$+", "+locale$+", "+Str(*mod)+")")
-    Protected file.i, lua$
-    Protected string$
-    
-    ; TODO use parser module and global string, regexp, etc...
-    string$ = "(.+?)"
-    string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
-    string$ = "(_\(("+string$+")\))|("+string$+")"
-    
-    file = ReadFile(#PB_Any, file$)
-    If Not file
-      debugger::Add("parseLUAlocale() - ERROR - could not read {"+file$+"}")
-      ProcedureReturn #False
-    EndIf
-    
-    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
-    CloseFile(file)
-    
-    ; remove comments
-    lua$ = ReplaceRegularExpression(reg_val("comments1"), lua$, "")
-    lua$ = ReplaceRegularExpression(reg_val("comments2"), lua$, "")
-    
-    ; try matching string to "function data() return { ... } end" and extract return value
-    ExamineRegularExpression(reg_val("data"), lua$)
-    If Not NextRegularExpressionMatch(reg_val("data")) ; only expect one match -> read onlyfirst match
-      debugger::Add("parseLUAlocale() - ERROR - could not match reg_data")
-      ProcedureReturn #False 
-    EndIf
-    
-    lua$ = Trim(RegularExpressionGroup(reg_val("data"), 1)) ; read only group defined in regexp which should contain definition
-    If lua$ = ""
-      debugger::Add("parseLUAlocale() - ERROR - no data found")
-      ProcedureReturn #False
-    EndIf
-    
-    Protected reg_locale
-    reg_locale = CreateRegularExpression(#PB_Any, locale$ + "\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-    
-    If Not IsRegularExpression(reg_locale)
-      debugger::Add("parseLUAlocale() - ERROR - could not initialize regexp for {"+locale$+"}")
-      ProcedureReturn #False
-    EndIf
-    
-    ExamineRegularExpression(reg_locale, lua$)
-    If Not NextRegularExpressionMatch(reg_locale) ; only expect one match -> read onlyfirst match
-      debugger::Add("parseLUAlocale() - ERROR - cannot find a match for locale {"+locale$+"}")
-      ProcedureReturn #False 
-    EndIf
-    lua$ = Trim(RegularExpressionGroup(reg_locale, 1))
-    
-    
-    Protected regexp
-    ; TODO escape characters?
-    ; replace string for name
-    If *mod\name$
-      regexp = CreateRegularExpression(#PB_Any, *mod\name$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      If IsRegularExpression(regexp)
-        If MatchRegularExpression(regexp, lua$)
-          *mod\name$ = parseLUAstring(regexp, lua$)
-        EndIf
-        FreeRegularExpression(regexp)
-      EndIf
-    EndIf
-    ; replace string for description
-    If *mod\description$
-      regexp = CreateRegularExpression(#PB_Any, *mod\description$+"\s*=\s*("+string$+")", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      If IsRegularExpression(regexp)
-        If MatchRegularExpression(regexp, lua$)
-          *mod\description$ = parseLUAstring(regexp, lua$)
-        EndIf
-      EndIf
-    EndIf
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure parseInfoLUA(file$, *mod.mod) ; parse info from lua file$ and save to *mod
-    debugger::Add("mods::parseInfoLUA("+file$+", "+Str(*mod.mod)+")")
-    
-    Protected file.i, lua$, i.i
-    Static NewMap reg_val()
-    Static number$, string$, severity$
-;     Static whitespace$, number$, statement$, statements$, variable$, string$, exstring$
-    
-    If FileSize(file$) <= 0
-      debugger::Add("mods::parseInfoLUA() - ERROR: file {"+file$+"} not found or empty")
-      ProcedureReturn #False
-    EndIf
-    
-    file = ReadFile(#PB_Any, file$)
-    If Not file
-      debugger::Add("mods::parseInfoLUA() - ERROR: cannot read file {"+file$+"}!")
-      ProcedureReturn #False
-    EndIf
-    
-    lua$ = ReadString(file, #PB_File_IgnoreEOL|#PB_UTF8)
-    CloseFile(file)
-    
-    ; SCANNER
-    ; init regular expressions
-    If Not reg_val("data")
-      debugger::Add("mods::parseInfoLUA() - generate regexp")
-      number$ = "([+-]?(\d+\.?\d*|\.\d+))"
-      string$ = "(.+?)"
-;       string$ = "(\[\["+string$+"\]\])|('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")"
-      string$ = "('"+string$+"')|("+#DQUOTE$+string$+#DQUOTE$+")" ; no multiline strings!
-      string$ = "(_\(("+string$+")\))|("+string$+")"
-      
-      ; extract return data
-      reg_val("data")             = CreateRegularExpression(#PB_Any, "function\s+Data\s*\(\s*\)\s*Return\s*\{\s*(.*?)\s*\}\s*End", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
-     ; remove all comments: one line comment -- , multi line comment --[[ ... ]] and multiple levels: --[===[ --[[ ]] ]===]
-      reg_val("comments1")        = CreateRegularExpression(#PB_Any, "(--\[(=*)\[.*?\]\2\])", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
-      reg_val("comments2")        = CreateRegularExpression(#PB_Any, "(--(.*?)$)", #PB_RegularExpression_NoCase|#PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll|#PB_RegularExpression_MultiLine)
-       ; values
-      reg_val("minorVersion")     = CreateRegularExpression(#PB_Any, "minorVersion\s*=\s*("+number$+")") ; , #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("severityAdd")      = CreateRegularExpression(#PB_Any, "severityAdd\s*=\s*("+string$+")")
-      reg_val("severityRemove")   = CreateRegularExpression(#PB_Any, "severityRemove\s*=\s*("+string$+")")
-      reg_val("name")             = CreateRegularExpression(#PB_Any, "name\s*=\s*("+string$+")")
-      reg_val("role")             = CreateRegularExpression(#PB_Any, "role\s*=\s*("+string$+")")
-      reg_val("text")             = CreateRegularExpression(#PB_Any, "text\s*=\s*("+string$+")")
-      reg_val("steamProfile")     = CreateRegularExpression(#PB_Any, "steamProfile\s*=\s*("+string$+")")
-      reg_val("description")      = CreateRegularExpression(#PB_Any, "description\s*=\s*("+string$+")")
-      reg_val("authors")          = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{(\s*(\{.*?\}\s*,*\s*)*?\s*)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("authors2")         = CreateRegularExpression(#PB_Any, "authors\s*=\s*\{\s*(.*?)\s*\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("author")           = CreateRegularExpression(#PB_Any, "\{.*?\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("tags")             = CreateRegularExpression(#PB_Any, "tags\s*=\s*\{(.*?)\}", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("string")           = CreateRegularExpression(#PB_Any, string$)
-      reg_val("tfnetId")          = CreateRegularExpression(#PB_Any, "tfnetId\s*=\s*("+number$+")")
-      reg_val("minGameVersion")   = CreateRegularExpression(#PB_Any, "minGameVersion\s*=\s*("+number$+")")
-      reg_val("dependencies")     = CreateRegularExpression(#PB_Any, "dependencies\s*=\s*(\{(.*?)\})", #PB_RegularExpression_AnyNewLine|#PB_RegularExpression_DotAll)
-      reg_val("url")              = CreateRegularExpression(#PB_Any, "url\s*=\s*("+string$+")")
-      
-      ForEach reg_val()
-        If Not IsRegularExpression(reg_val())
-          debugger::Add("mods::parseInfoLUA() - ERROR - regexp {"+MapKey(reg_val())+"} not initialized")
-          ProcedureReturn #False
-        EndIf
-      Next
-    EndIf
-    
-    ; remove comments
-    lua$ = ReplaceRegularExpression(reg_val("comments1"), lua$, "")
-    lua$ = ReplaceRegularExpression(reg_val("comments2"), lua$, "")
-    
-    ; try matching string to "function data() return { ... } end" and extract return value
-    ExamineRegularExpression(reg_val("data"), lua$)
-    If Not NextRegularExpressionMatch(reg_val()) ; only expect one match -> read onlyfirst match
-      debugger::Add("mods::parseInfoLUA() - ERROR: no match found (reg_data)")
-      ProcedureReturn #False 
-    EndIf
-    
-    lua$ = Trim(RegularExpressionGroup(reg_val(), 1)) ; read only group defined in regexp which should contain definition
-    If lua$ = ""
-      debugger::Add("mods::parseInfoLUA() - ERROR: empty data (reg_data -> group 1)")
-      ProcedureReturn #False 
-    EndIf
-    
-    ; brute force parsing (bad and unsexy) :(
-    ; first: all tables (author, tags, dependencies
-    Protected authors$, author$, s$, s.d, tmp.i, tmp$
-    
-    ; extract authors
-    ExamineRegularExpression(reg_val("authors"), lua$)
-    If NextRegularExpressionMatch(reg_val())
-      authors$ = RegularExpressionGroup(reg_val(), 1)
-    Else
-      ExamineRegularExpression(reg_val("authors2"), lua$)
-      If NextRegularExpressionMatch(reg_val())
-        authors$ = RegularExpressionGroup(reg_val(), 1)
-      EndIf
-    EndIf
-    ;remove authors from parsing string (in order to not interfere with other "name" and "tfnetId"
-    lua$ = ReplaceRegularExpression(reg_val(), lua$, "")
-    
-    ; authors
-    ExamineRegularExpression(reg_val("author"), authors$)
-    tmp = #False
-    While NextRegularExpressionMatch(reg_val("author"))
-      author$ = RegularExpressionMatchString(reg_val("author"))
-      If author$
-        If Not tmp  ; if a new author is found -> one time clean possible old list
-          ClearList(*mod\authors())
-          tmp = #True
-        EndIf
-        AddElement(*mod\authors())
-        ; name:
-        s$ = parseLUAstring(reg_val("name"), author$)
-        If s$
-          *mod\authors()\name$ = s$
-        EndIf
-        s$ = parseLUAstring(reg_val("role"), author$)
-        If s$
-          *mod\authors()\role$ = s$
-        EndIf
-        s$ = parseLUAstring(reg_val("text"), author$)
-        If s$
-          *mod\authors()\text$ = s$
-        EndIf
-        s$ = parseLUAstring(reg_val("steamProfile"), author$)
-        If s$
-          *mod\authors()\steamProfile$ = s$
-        EndIf
-        s = parseLUAnumber(reg_val("tfnetId"), author$)
-        If s
-          *mod\authors()\tfnetId = s
-        EndIf
-      EndIf
-    Wend
-    
-    ; name
-    s$ = parseLUAstring(reg_val("name"), lua$)
-    If s$
-      *mod\name$ = s$
-    EndIf
-    s$ = parseLUAstring(reg_val("severityAdd"), lua$)
-    If s$
-      *mod\severityAdd$ = s$
-    EndIf
-    s$ = parseLUAstring(reg_val("severityRemove"), lua$)
-    If s$
-      *mod\severityRemove$ = s$
-    EndIf
-    s$ = parseLUAstring(reg_val("description"), lua$)
-    If s$
-      *mod\description$ = s$
-    EndIf
-    s$ = parseLUAstring(reg_val("url"), lua$)
-    If s$
-      *mod\url$ = s$
-    EndIf
-    
-    s = parseLUAnumber(reg_val("minorVersion"), lua$)
-    If s
-      *mod\minorVersion = s
-    EndIf
-    s = parseLUAnumber(reg_val("tfnetId"), lua$)
-    If s
-      *mod\tfnetId = s
-    EndIf
-    s = parseLUAnumber(reg_val("minGameVersion"), lua$)
-    If s
-      *mod\minGameVersion = s
-    EndIf
-    
-    ; tags = {"vehicle", "bus", },
-    ExamineRegularExpression(reg_val("tags"), lua$)
-    If NextRegularExpressionMatch(reg_val())
-      tmp$ = RegularExpressionGroup(reg_val(), 1)
-      If tmp$
-        ExamineRegularExpression(reg_val("string"), tmp$)
-        tmp = #False
-        While NextRegularExpressionMatch(reg_val())
-          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
-            ClearList(*mod\tags$())
-            tmp = #True
-          EndIf
-          AddElement(*mod\tags$())
-          For i = 1 To CountRegularExpressionGroups(reg_val())
-            s$ = RegularExpressionGroup(reg_val(), i)
-            If s$:
-              *mod\tags$() = s$
-            EndIf
-          Next
-        Wend
-      EndIf
-    EndIf
-    
-    ; dependencies = {"mod_1", "mod_2", },
-    ExamineRegularExpression(reg_val("dependencies"), lua$)
-    If NextRegularExpressionMatch(reg_val())
-      tmp$ = RegularExpressionGroup(reg_val(), 1)
-      If tmp$
-        ExamineRegularExpression(reg_val("string"), tmp$)
-        tmp = #False
-        While NextRegularExpressionMatch(reg_val())
-          If Not tmp  ; if a new tag is found -> one time clean possible old list from tfmm.ini
-            ClearList(*mod\dependencies$())
-            tmp = #True
-          EndIf
-          AddElement(*mod\dependencies$())
-          For i = 1 To CountRegularExpressionGroups(reg_val())
-            s$ = RegularExpressionGroup(reg_val(), i)
-            If s$:
-              *mod\dependencies$() = s$
-            EndIf
-          Next
-        Wend
-      EndIf
-    EndIf
-    
-    ; last step: open strings.lua if present and replace strings
-    If FileSize(GetPathPart(file$)+"strings.lua") > 0
-      If Not parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
-        parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
-      EndIf
-    EndIf
-    
-    ProcedureReturn #True
+  Procedure parseInfoLUA(file$, *mod.mod)
+    ProcedureReturn luaParser::parseInfoLUA(file$, *mod)
   EndProcedure
   
   Procedure infoPP(*mod.mod)    ; post processing
@@ -636,7 +332,7 @@ Module mods
     
     ; version
     With *mod
-      \majorVersion = Val(StringField(*mod\id$, CountString(*mod\id$, "_")+1, "_"))
+      \majorVersion = Val(StringField(*mod\tf_id$, CountString(*mod\tf_id$, "_")+1, "_"))
       If \aux\version$ And Not \minorVersion
         \minorVersion = Val(StringField(\aux\version$, 2, "."))
       EndIf
@@ -661,7 +357,7 @@ Module mods
   
   Procedure debugInfo(*mod.mod)
     Protected deb$
-    debugger::Add("mods::debugInfo() - id: "+*mod\id$)
+    debugger::Add("mods::debugInfo() - tf_id: "+*mod\tf_id$)
     debugger::Add("mods::debugInfo() - name: "+*mod\name$)
     ForEach *mod\authors()
       debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
@@ -750,7 +446,7 @@ Module mods
     fileLib$ = misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua"
     fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
     
-    *mod\id$ = id$
+    *mod\tf_id$ = id$
     
     Protected sizeLib, sizeMods
     sizeLib = FileSize(fileLib$)
@@ -784,12 +480,13 @@ Module mods
   Procedure toList(*mod.mod)
     debugger::Add("mods::toList("+Str(*mod)+")")
     Protected count.i
-    If FindMapElement(*mods(), *mod\id$)
-      *mods(*mod\id$) = *mod
+    If FindMapElement(*mods(), *mod\tf_id$)
       ; *mod already in list
       debugger::Add("mods::toList() - ERROR - mod already in list")
+      ; TODO decide what to do here...
+      *mods(*mod\tf_id$) = *mod
     Else
-      *mods(*mod\id$) = *mod
+      *mods(*mod\tf_id$) = *mod
       If IsGadget(library)
         count = CountGadgetItems(library)
         With *mod
@@ -892,7 +589,11 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  ;PUBLIC
+  ;----------------------------------------------------------------------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
+  ;---------------------------------------------------- PUBLIC ----------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
+  ;----------------------------------------------------------------------------------------------------------------
   
   Procedure changed()
     Protected ret = changed
@@ -929,7 +630,7 @@ Module mods
   Procedure freeAll()
     debugger::Add("mods::freeAll()")
     ForEach *mods()
-      mods::free(*mods()\id$)
+      mods::free(*mods()\tf_id$)
     Next
     If IsGadget(library)
       ListIcon::ClearListItems(library)
@@ -962,7 +663,7 @@ Module mods
     ForEach *mods()
       If *mods()\aux\md5$ = *mod\aux\md5$ And *mod\aux\md5$
         debugger::Add("mods::addMod() - MD5 check found match!")
-        id$ = *mods()\id$
+        id$ = *mods()\tf_id$
         sameHash = #True
         Break
       EndIf
@@ -983,16 +684,16 @@ Module mods
       ProcedureReturn #True
     EndIf
     
-    If FindMapElement(*mods(),  *mod\id$)
+    If FindMapElement(*mods(),  *mod\tf_id$)
       debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
-      id$ = *mod\id$
+      id$ = *mod\tf_id$
       sameID = #True
     EndIf
     
     If sameID
       Protected NewMap strings$()
       ClearMap(strings$())
-      strings$("id") = *mod\id$
+      strings$("id") = *mod\tf_id$
       strings$("old_name") = *mods(id$)\name$
       strings$("old_version") = *mods(id$)\aux\version$
       strings$("new_name") = *mod\name$
@@ -1003,16 +704,16 @@ Module mods
         ProcedureReturn #True
       Else
         ; user wants to replace
-        queue::add(queue::#QueueActionRemove, *mod\id$) ; remove from TF is present
-        queue::add(queue::#QueueActionDelete, *mod\id$) ; delete from library
+        queue::add(queue::#QueueActionRemove, *mod\tf_id$) ; remove from TF if present
+        queue::add(queue::#QueueActionDelete, *mod\tf_id$) ; delete from library
         queue::add(queue::#QueueActionNew, file$) ; re-schedule this mod
         FreeStructure(*mod)
         ProcedureReturn #True
       EndIf
     EndIf
     
-    ; fourth step: move mod to internal TFMM mod folder and extract all recognised info files
-    id$ = *mod\id$
+    ; fourth step: copy mod to internal TFMM mod folder and extract all recognised information files
+    id$ = *mod\tf_id$
     Protected dir$ = misc::Path(TF$+"/TFMM/library/"+id$)
     debugger::Add("mods::addMod() - add mod to library: {"+dir$+"}")
     ; create library entry (subdir)
@@ -1023,7 +724,8 @@ Module mods
     EndIf
     
     ; copy file to library
-;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
+    ;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
+    ; TODO - decide to change filename and extension or leave it as original
     Protected newfile$ = dir$ + id$ + ".tfmod"
     debugger::Add("mods::addMod() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
     
@@ -1059,7 +761,6 @@ Module mods
         CloseFile(file)
       EndIf
     EndIf
-    
     
     ; images
     debugger::Add("mosd::new() - convert images")
@@ -1500,7 +1201,7 @@ Module mods
         ; if it is present, check if it is well-defined
         If checkID(id$)
           debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
-          \id$ = id$
+          \tf_id$ = id$
           ProcedureReturn #True
         Else
           debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
@@ -1512,26 +1213,26 @@ Module mods
       
       ; if no id$ was passed through or id was invalid, generate new ID
       
-      \id$ = LCase(\id$)
+      \tf_id$ = LCase(\tf_id$)
       
       ; Check if ID already correct
-      If \id$ And checkID(\id$)
-        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined (first)")
+      If \tf_id$ And checkID(\tf_id$)
+        debugger::Add("mods::generateID() - ID {"+\tf_id$+"} is well defined (from structure)")
         ProcedureReturn #True
       EndIf
       
       ; Check if ID in old format
-      author$   = StringField(\id$, 1, ".")
-      name$     = StringField(\id$, CountString(\id$, ".")+1, ".")
+      author$   = StringField(\tf_id$, 1, ".")
+      name$     = StringField(\tf_id$, CountString(\tf_id$, ".")+1, ".")
       version$  = Str(Abs(Val(StringField(\aux\version$, 1, "."))))
-      \id$ = author$ + "_" + name$ + "_" + version$
+      \tf_id$ = author$ + "_" + name$ + "_" + version$
       
-      If \id$ And checkID(\id$)
-        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
+      If \tf_id$ And checkID(\tf_id$)
+        debugger::Add("mods::generateID() - ID {"+\tf_id$+"} is well defined (converted from old TFMM-id)")
         ProcedureReturn #True
       EndIf
       
-      \id$ = ""
+      \tf_id$ = ""
       
       debugger::Add("mods::generateID() - generate new ID")
       ; ID = author_mod_version
@@ -1550,10 +1251,10 @@ Module mods
       EndIf
       version$ = Str(Val(StringField(\aux\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
       
-      \id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
+      \tf_id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
       
-      If \id$ And checkID(\id$)
-        debugger::Add("mods::generateID() - ID {"+\id$+"} is well defined")
+      If \tf_id$ And checkID(\tf_id$)
+        debugger::Add("mods::generateID() - ID {"+\tf_id$+"} is well defined (generated by TFMM)")
         ProcedureReturn #True
       EndIf
     EndWith
@@ -1631,9 +1332,9 @@ Module mods
   
 EndModule
 
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 1143
-; FirstLine = 126
-; Folding = RIAQgA-
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 1256
+; FirstLine = 431
+; Folding = RIASH7
 ; EnableUnicode
 ; EnableXP

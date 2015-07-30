@@ -75,8 +75,6 @@ Procedure ExportModList(dummy=0)
   
 EndProcedure
 
-
-
 ;} --------------------------------------------------------------------------------
 
 Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerUpdate = 103
@@ -120,7 +118,7 @@ Procedure InitWindows()
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Windows")
-      ListIcon::DefineListCallback(Library, #Edit)
+      ListIcon::DefineListCallback(Library, ListIcon::#Edit)
     CompilerCase #PB_OS_Linux
       SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " for Linux")
     CompilerCase #PB_OS_MacOS
@@ -259,9 +257,9 @@ Procedure updateGUI()
     ; one mod selected
     ; display image
     *mod = ListIcon::GetListItemData(Library, SelectedMod)
-    If Not IsImage(PreviewImages(*mod\id$)) ; if image is not yet loaded
+    If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
       Protected im.i, image$
-      image$ = misc::Path(TF$ + "TFMM/library/" + *mod\id$) + "image_00.tga"
+      image$ = misc::Path(TF$ + "TFMM/library/" + *mod\tf_id$) + "image_00.tga"
       If FileSize(image$) > 0
         im = LoadImage(#PB_Any, image$)
       EndIf
@@ -269,16 +267,16 @@ Procedure updateGUI()
       If IsImage(im)
         im = misc::ResizeCenterImage(im, GadgetWidth(ImageGadgetLogo), GadgetHeight(ImageGadgetLogo))
         If IsImage(im)
-          PreviewImages(*mod\id$) = im
+          PreviewImages(*mod\tf_id$) = im
         EndIf
       EndIf
     EndIf
     ; if image is leaded now
-    If IsImage(PreviewImages(*mod\id$))
+    If IsImage(PreviewImages(*mod\tf_id$))
       ; display image
-      If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*mod\id$))
+      If GetGadgetState(ImageGadgetLogo) <> ImageID(PreviewImages(*mod\tf_id$))
         debugger::Add("ImageLogo: Display custom image")
-        SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*mod\id$)))
+        SetGadgetState(ImageGadgetLogo, ImageID(PreviewImages(*mod\tf_id$)))
       EndIf
     Else
       ; else: display normal logo
@@ -410,9 +408,8 @@ EndProcedure
 Procedure MenuItemLicense(event)
   MessageRequester("License",
                    "Train Fever Mod Manager (" + #VERSION$ + ")" + #CRLF$ +
-                   
-                   "© 2014 Alexander Nähring / Xanos" + #CRLF$ +
-                   "Distribution: www.train-fever.net" + #CRLF$ +
+                   "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                   "Distributed on http://tfmm.xanos.eu/" + #CRLF$ +
                    #CRLF$ +
                    "unrar © Alexander L. Roshal")
 EndProcedure
@@ -526,7 +523,7 @@ Procedure GadgetButtonInstall(event)
         If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(Library, i)
           If Not *mod\aux\installed
-            queue::add(queue::#QueueActionInstall, *mod\id$)
+            queue::add(queue::#QueueActionInstall, *mod\tf_id$)
           EndIf
         EndIf
       Next i
@@ -568,7 +565,7 @@ Procedure GadgetButtonRemove(event)
           *mod = ListIcon::GetListItemData(Library, i)
           With *mod
             If \aux\installed
-              queue::add(queue::#QueueActionRemove, *mod\id$)
+              queue::add(queue::#QueueActionRemove, *mod\tf_id$)
             EndIf
           EndWith
         EndIf
@@ -606,9 +603,9 @@ Procedure GadgetButtonDelete(event)
         If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(Library, i)
           If *mod\aux\installed
-            queue::add(queue::#QueueActionRemove, *mod\id$)
+            queue::add(queue::#QueueActionRemove, *mod\tf_id$)
           EndIf
-          queue::add(queue::#QueueActionDelete, *mod\id$)
+          queue::add(queue::#QueueActionDelete, *mod\tf_id$)
         EndIf
       Next i
     EndIf
@@ -851,8 +848,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 122
-; FirstLine = 75
-; Folding = VAAAAAA+
+; CursorPosition = 411
+; FirstLine = 66
+; Folding = FACAAAA+
 ; EnableUnicode
 ; EnableXP
