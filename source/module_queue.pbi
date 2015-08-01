@@ -56,7 +56,7 @@ Module queue
   EndProcedure
   
   Procedure progressVal(val, max=-1)
-    debugger::Add("queue::progressVal("+Str(val)+","+Str(max)+")")
+    ;debugger::Add("queue::progressVal("+Str(val)+","+Str(max)+")")
     
     If IsWindow(progressW) And IsGadget(progressG)
       If max <> -1
@@ -186,8 +186,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 179
-; FirstLine = 91
-; Folding = D+
+; CursorPosition = 58
+; FirstLine = 4
+; Folding = T9
 ; EnableUnicode
 ; EnableXP

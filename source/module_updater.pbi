@@ -63,11 +63,9 @@ Module updater
     
     gadgets("warning")  = TextGadget(#PB_Any, 5, 190, 220, 20, "Testing versions may have bugs", #PB_Text_Center); |#PB_Text_Border
     SetGadgetColor(gadgets("warning"), #PB_Gadget_FrontColor, #Red)
-;     If LoadFont(0, "", 14, #PB_Font_Bold|#PB_Font_HighQuality)
-;       SetGadgetFont(gadgets("warning"), FontID(0))
-;     EndIf
     gadgets("download") = ButtonGadget(#PB_Any, 230, 185, 125, 25, locale::l("updater", "download"), #PB_Button_Default)
     DisableGadget(gadgets("download"), #True)
+    
     ProcedureReturn window
   EndProcedure
   
@@ -137,6 +135,7 @@ Module updater
     EndIf
     
     If FindMapElement(channel(), "stable")
+      debugger::add("updater::checkUpdate() - current: "+Str(#PB_Editor_CompileCount)+", remote: "+Str(channel("testing")\build))
       If channel("stable")\build > #PB_Editor_CompileCount
         ; newer stable version found > show update window
         HideWindow(window, #False)
@@ -191,11 +190,9 @@ Module updater
       Case #PB_Event_SizeWindow
         
       Case #PB_Event_CloseWindow
-        If parentWindow <> -1
-          DisableWindow(parentWindow, #False)
-        EndIf
         HideWindow(window, #True)
         If parentWindow <> -1
+          DisableWindow(parentWindow, #False)
           SetActiveWindow(parentWindow)
         EndIf
         
@@ -209,7 +206,15 @@ Module updater
           Case gadgets("check")
             CreateThread(updater::@checkUpdate(), 1)
           Case gadgets("channel")
-            updater::updateWindow()      
+            updater::updateWindow()    
+          Case gadgets("download")
+            ; http://www.train-fever.net/filebase/index.php/Entry/5-Train-Fever-Beta-Mod-Manager/
+            misc::openLink("http://goo.gl/utB3xn")
+            HideWindow(window, #True)
+            If parentWindow <> -1
+              DisableWindow(parentWindow, #False)
+              SetActiveWindow(parentWindow)
+            EndIf
         EndSelect
     EndSelect
   ProcedureReturn #True
@@ -241,8 +246,9 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 14
-; Folding = D+
+; CursorPosition = 137
+; FirstLine = 79
+; Folding = L+
 ; EnableUnicode
 ; EnableThread
 ; EnableXP
