@@ -10,6 +10,7 @@ DeclareModule updater
       #OS$ = "win"
     CompilerCase #PB_OS_Linux
       #OS$ = "lin"
+      #Red = 200
     CompilerCase #PB_OS_MacOS
       #OS$ = "mac"
   CompilerEndSelect
@@ -35,7 +36,7 @@ EndDeclareModule
 Module updater
   Global NewMap gadgets()
   Global NewMap channel.channel()
-  Global parentWindow
+  Global parentWindow, showWindow = 500
   InitNetwork()
   
   Procedure createWindow(parent = -1)
@@ -138,18 +139,14 @@ Module updater
       debugger::add("updater::checkUpdate() - current: "+Str(#PB_Editor_CompileCount)+", remote: "+Str(channel("testing")\build))
       If channel("stable")\build > #PB_Editor_CompileCount
         ; newer stable version found > show update window
-        HideWindow(window, #False)
-        If parentWindow <> -1
-          DisableWindow(parentWindow, #True)
-        EndIf
+        ; Linux: cannot unhide window from thread
+        ; Workaround: add timer and handle timer in main thread
+        AddWindowTimer(window, showWindow, 10)
       EndIf
     EndIf
     If Not auto
       ; manual update request, display window
-      HideWindow(window, #False)
-      If parentWindow <> -1
-        DisableWindow(parentWindow, #True)
-      EndIf
+      AddWindowTimer(window, showWindow, 10)
     EndIf
   EndProcedure
   
@@ -188,6 +185,13 @@ Module updater
   Procedure windowEvents(event)
     Select event
       Case #PB_Event_SizeWindow
+        
+      Case #PB_Event_Timer
+        RemoveWindowTimer(window, showWindow)
+        HideWindow(window, #False, #PB_Window_NoActivate)
+        If parentWindow <> -1
+          DisableWindow(parentWindow, #True)
+        EndIf
         
       Case #PB_Event_CloseWindow
         HideWindow(window, #True)
@@ -244,11 +248,10 @@ CompilerIf #PB_Compiler_IsMainFile
   EndIf
   
 CompilerEndIf
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 137
-; FirstLine = 79
-; Folding = L+
+; IDE Options = PureBasic 5.31 (Linux - x64)
+; CursorPosition = 147
+; FirstLine = 136
+; Folding = v+
 ; EnableUnicode
 ; EnableThread
 ; EnableXP
