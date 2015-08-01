@@ -65,6 +65,25 @@ update  = Eine neue Version von TFMM ist verfügbar.\nSoll die Homepage geöffne
 current = Keine Aktualisierung notwendig.
 failed  = Fehler bei der Abfrage.
 
+[updater]
+title         = Aktualisiere TFMM
+channel       = Veröffentlichungskanal
+check         = Prüfe auf neue Version
+download      = Herunterladen
+checking      = Prüfe auf neue Version...
+retrieved     = Versionsinformationen empfangen
+errorchannel  = Fehler: Kein Kanal gefunden
+errorjson     = JSON Fehler
+warningtesting  = Testversionen können Fehler enthalten
+current       = Aktuelle Version
+information   = Versionsinformationen
+version       = Version:
+filename      = Dateiname:
+date          = Veröffentlichugnsdatum:
+newversion    = Neue Version verfügbar
+nonewversion  = Keine neue Version verfügbar
+errordownload = Fehler bei der Abfrage
+
 [management]
 install       = Füge '{name}' zu Train Fever hinzu
 install1      = Soll '{name}' zu Train Fever hinzugefügt werden?

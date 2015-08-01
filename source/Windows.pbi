@@ -7,6 +7,7 @@ XIncludeFile "module_images.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
+XIncludeFile "module_updater.pbi"
 XIncludeFile "WindowMain.pbf"
 XIncludeFile "WindowSettings.pbf"
 XIncludeFile "WindowModProgress.pbf"
@@ -15,7 +16,6 @@ XIncludeFile "WindowModInformation.pbf"
 ;{ -------------------------------------------------------------------------------- TEMPORARY
 
 Global UpdateResult
-
 
 Enumeration
   #AnswerNone
@@ -77,7 +77,7 @@ EndProcedure
 
 ;} --------------------------------------------------------------------------------
 
-Global TimerSettingsGadgets = 100, TimerMainGadgets = 101, TimerUpdate = 103
+Global TimerSettingsGadgets = 100, TimerMainGadgets = 101
 
 Global NewMap PreviewImages.i()
 
@@ -108,6 +108,7 @@ Procedure InitWindows()
   OpenWindowMain()
   OpenWindowSettings()
   OpenWindowProgress()
+  updater::createWindow(WindowMain)
   
   ; Set window boundaries, timers, events
   WindowBounds(WindowMain, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -341,59 +342,6 @@ Procedure TimerSettingsGadgets()
   EndIf
 EndProcedure
 
-Procedure TimerUpdate()
-  ; Linux Workaround: Can only open MessageRequester from Main Loop (not from update thread)
-  RemoveWindowTimer(WindowMain, TimerUpdate)
-  Select UpdateResult
-    Case #UpdateNew
-      If MessageRequester(l("update","title"), l("update","update"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
-      EndIf
-    Case #UpdateCurrent
-      MessageRequester(l("update","title"), l("update","current"))
-    Case #UpdateFailed
-      MessageRequester(l("update","title"), l("update","failed"))
-  EndSelect
-EndProcedure
-
-Procedure checkUpdate(auto.i)
-  debugger::Add("checkUpdate()")
-  Protected URL$, OS$
-  
-  DeleteFile("tfmm-update.ini")
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      OS$ = "win"
-    CompilerCase #PB_OS_Linux
-      OS$ = "lin"
-    CompilerCase #PB_OS_MacOS
-      OS$ = "mac"
-  CompilerEndSelect
-  URL$ = URLEncoder("http://update.alexandernaehring.eu/tfmm/?build="+Str(#PB_Editor_CompileCount)+"&os="+OS$+"&auto="+Str(auto))
-  debugger::Add(URL$)
-  If ReceiveHTTPFile(URL$, "tfmm-update.ini")
-    OpenPreferences("tfmm-update.ini")
-    If ReadPreferenceInteger("version", #PB_Editor_CompileCount) > #PB_Editor_CompileCount
-      debugger::Add("Update: new version available")
-      UpdateResult = #UpdateNew
-      AddWindowTimer(WindowMain, TimerUpdate, 100)
-    Else
-      debugger::Add("Update: no new version")
-      If Not auto
-        UpdateResult = #UpdateCurrent
-        AddWindowTimer(WindowMain, TimerUpdate, 100)
-      EndIf
-    EndIf
-    ClosePreferences()
-    DeleteFile("tfmm-update.ini")
-  Else
-    debugger::Add("ERROR: failed to download ini")
-    If Not auto
-      UpdateResult = #UpdateFailed
-      AddWindowTimer(WindowMain, TimerUpdate, 100)
-    EndIf
-  EndIf
-EndProcedure
 
 ; MENU
 
@@ -402,16 +350,24 @@ Procedure MenuItemHomepage(event)
 EndProcedure
 
 Procedure MenuItemUpdate(event)
-  CreateThread(@checkUpdate(), 0)
+  CreateThread(updater::@checkUpdate(), 0)
 EndProcedure
 
 Procedure MenuItemLicense(event)
-  MessageRequester("License",
-                   "Train Fever Mod Manager (" + #VERSION$ + ")" + #CRLF$ +
-                   "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
-                   "Distributed on http://tfmm.xanos.eu/" + #CRLF$ +
-                   #CRLF$ +
-                   "unrar © Alexander L. Roshal")
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+    MessageRequester("License",
+                     "Train Fever Mod Manager" + #CRLF$ +
+                     updater::#VERSION$ + #CRLF$ +
+                     "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                     "Distributed on http://tfmm.xanos.eu/" +  #CRLF$ +
+                     "unrar © Alexander L. Roshal")
+  CompilerElse
+    MessageRequester("License",
+                     "Train Fever Mod Manager" + #CRLF$ +
+                     updater::#VERSION$ + #CRLF$ +
+                     "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                     "Distributed on http://tfmm.xanos.eu/")
+  CompilerEndIf
 EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
@@ -848,8 +804,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 411
-; FirstLine = 66
-; Folding = FACAAAA+
+; CursorPosition = 350
+; FirstLine = 128
+; Folding = VABAAAA-
 ; EnableUnicode
 ; EnableXP

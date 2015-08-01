@@ -65,6 +65,25 @@ update  = A new version of TFMM is available.\nDo you want to access the downloa
 current = You already have the newest version of TFMM.
 failed  = Failed to retrieve version info from server.
 
+[updater]
+title         = Update TFMM
+channel       = Release Channel
+check         = Check for new version
+download      = Download
+checking      = Checking for new version...
+retrieved     = Retrieved version information
+errorchannel  = Error: No release channels found
+errorjson     = Error parsing json
+warningtesting  = Testing version may have bugs
+current       = Current Version
+information   = Version Information
+version       = Version:
+filename      = Filename:
+date          = Release Date:
+newversion    = New version available
+nonewversion  = No new version available
+errordownload = Failed to retrieve info from server
+
 [management]
 install       = Add '{name}' to Train Fever
 install1      = Do you want to add '{name}' to Train Fever?

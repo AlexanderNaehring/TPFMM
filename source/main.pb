@@ -1,6 +1,5 @@
 ﻿EnableExplicit
 
-#VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount
 Global _DEBUG = #False
 Global _TESTMODE = #False
 
@@ -14,7 +13,6 @@ Global Event
 Global TF$, Ready
 
 Declare checkTFPath(Dir$)
-Declare checkUpdate(auto.i)
 Declare AddModToList(File$)
 
 XIncludeFile "Windows.pbi"
@@ -145,7 +143,7 @@ Procedure init()
   ; update
   debugger::Add("init() - start updater")
   If ReadPreferenceInteger("update", 0)
-    CreateThread(@checkUpdate(), 1)
+    CreateThread(updater::@checkUpdate(), 1)
   EndIf
   
   ClosePreferences()
@@ -182,8 +180,6 @@ Repeat
         TimerSettingsGadgets()
       Case TimerMainGadgets
         TimerMain()
-      Case TimerUpdate
-        TimerUpdate()
     EndSelect
   EndIf
   
@@ -233,12 +229,14 @@ Repeat
           GadgetButtonInformationClose(#PB_EventType_LeftClick)
         EndIf
       EndIf
+    Case updater::window
+      updater::windowEvents(Event)
   EndSelect
 ForEver
 End
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 63
-; FirstLine = 2
+; CursorPosition = 232
+; FirstLine = 158
 ; Folding = +
 ; EnableUnicode
 ; EnableXP
