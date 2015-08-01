@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,16 +8,16 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-07-25 15:05" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-08-01 14:09" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="4ea4a218dcf528afb79b3d345cecc0fd"/>
+      <fingerprint md5="2fc4cbfefcfe0f68c2490530f915a6db"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="cc7348e6a768e2364a50beaa50520c7c"/>
+      <fingerprint md5="e67c2e3bb3640c833ed7840b2f1fea8f"/>
     </file>
     <file name="source\module_images.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -33,15 +33,15 @@
     </file>
     <file name="source\module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="2cd6a9d9326716505bfdf72687dc183e"/>
+      <fingerprint md5="f03c6f90f0de9b3d00dd2e24b47785c8"/>
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="47daa3319fce66363f55b0116c14ac17"/>
+      <fingerprint md5="650013727caa999f9a674cdc4302e4d9"/>
     </file>
     <file name="source\module_mods_h.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="95d794fc6a85a488bd7acbb18b47738e"/>
+      <fingerprint md5="d3281b8df934fab282161efd452138b3"/>
     </file>
     <file name="source\module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
@@ -55,13 +55,17 @@
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
       <fingerprint md5="5c1439f7815e349fe40d37a309b97ac4"/>
     </file>
+    <file name="source\module_updater.pbi">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="f3931b8225d16ad799cc6c2866a59508"/>
+    </file>
     <file name="source\WindowMain.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="f17f6086e16e05eea369b05f15bdac34"/>
+      <fingerprint md5="98cafc9f43411a2dc82580964f4fbc9c"/>
     </file>
     <file name="source\WindowModInformation.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="6dc1467a812fcd1ce5327e7dd0a63601"/>
+      <fingerprint md5="1d8c334d9fc3feb1fd9859d647f31577"/>
     </file>
     <file name="source\WindowModProgress.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -69,7 +73,7 @@
     </file>
     <file name="source\Windows.pbi">
       <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="88d7af03e17cccb65b2a7dc48adad3cf"/>
+      <fingerprint md5="a3d31350a31872bb9f1688f812e32c67"/>
     </file>
     <file name="source\WindowSettings.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
@@ -85,8 +89,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="1744"/>
-      <buildcount enable="1" value="123"/>
+      <compilecount enable="1" value="1913"/>
+      <buildcount enable="1" value="125"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
