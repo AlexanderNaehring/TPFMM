@@ -1,7 +1,14 @@
 ﻿EnableExplicit
 
-Global _DEBUG = #False
-Global _TESTMODE = #False
+DeclareModule glob
+  Global _DEBUG = #False
+  Global _TESTMODE = #False
+  Global TF$
+  Global ready
+EndDeclareModule
+Module glob
+  
+EndModule
 
 Enumeration
   #UpdateNew
@@ -10,9 +17,7 @@ Enumeration
 EndEnumeration
 
 Global Event
-Global TF$, Ready
 
-Declare checkTFPath(Dir$)
 Declare AddModToList(File$)
 
 XIncludeFile "Windows.pbi"
@@ -54,16 +59,16 @@ Procedure init()
     Select LCase(ProgramParameter(i)) 
       Case "-debug"
         Debug "parameter: enable debug mode"
-        _DEBUG = #True
+        glob::_DEBUG = #True
       Case "-testmode"
         Debug "parameter: enable testing mode"
-        _TESTMODE = #True
+        glob::_TESTMODE = #True
       Default
         Debug "unknown parameter: " + ProgramParameter(i)
     EndSelect
   Next
   
-  If _DEBUG
+  If glob::_DEBUG
     debugger::SetLogFile("tfmm-output.txt")
   EndIf
   ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
@@ -116,7 +121,7 @@ Procedure init()
   
   debugger::Add("init() - load settings")
   OpenPreferences("TFMM.ini")
-  TF$ = ReadPreferenceString("path", "")
+  glob::TF$ = ReadPreferenceString("path", "")
   
   ; Window Location
   If ReadPreferenceInteger("windowlocation", #False)
@@ -148,22 +153,19 @@ Procedure init()
   
   ClosePreferences()
   
-  SetGadgetText(GadgetPath, TF$)
-  
-  If TF$ = ""
+  If glob::TF$ = ""
     ; no path specified upon program start -> open settings dialog
-    MenuItemSettings(0)
-    GadgetButtonAutodetect(0)
+    windowSettings::show()
   EndIf
   
   
-  If TF$ <> ""
+  If glob::TF$ <> ""
     ; load library
-    queue::add(queue::#QueueActionLoad, TF$)
+    queue::add(queue::#QueueActionLoad, glob::TF$)
     
     ; check for old TFMM configuration, trigger conversion if found
-    If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
-      queue::add(queue::#QueueActionConvert, TF$)
+    If FileSize(misc::Path(glob::TF$ + "/TFMM/") + "mods.ini") >= 0
+      queue::add(queue::#QueueActionConvert, glob::TF$)
     EndIf
   EndIf
   
@@ -176,8 +178,6 @@ Repeat
   Event = WaitWindowEvent(100)
   If Event = #PB_Event_Timer
     Select EventTimer()
-      Case TimerSettingsGadgets
-        TimerSettingsGadgets()
       Case TimerMainGadgets
         TimerMain()
     EndSelect
@@ -206,10 +206,9 @@ Repeat
             GadgetButtonInformation(#PB_EventType_LeftClick)
         EndSelect
       EndIf
-    Case WindowSettings
-      If Not WindowSettings_Events(Event)
-        GadgetCloseSettings(0)
-      EndIf
+    Case windowSettings::window
+      windowSettings::events(Event)
+      
     Case WindowModProgress
       If Not WindowProgress_Events(Event)
         ; user wants to close progress window -> no action, just wait for progress to finish
@@ -235,8 +234,8 @@ Repeat
 ForEver
 End
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 232
-; FirstLine = 158
-; Folding = +
+; CursorPosition = 166
+; FirstLine = 151
+; Folding = -
 ; EnableUnicode
 ; EnableXP

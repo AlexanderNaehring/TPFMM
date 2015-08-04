@@ -35,6 +35,8 @@ DeclareModule misc
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
   Declare packDirectory(dir$, file$)
+  Declare checkTFPath(Dir$)
+  
 EndDeclareModule
 
 Module misc
@@ -363,11 +365,45 @@ Module misc
     ProcedureReturn result
   EndProcedure
 
+  Procedure checkTFPath(Dir$)
+    If Dir$
+      If FileSize(Dir$) = -2
+        Dir$ = Path(Dir$)
+        If glob::_TESTMODE
+          ; in testmode, do not check for TrainFever executable
+          ProcedureReturn #True
+        EndIf
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          If FileSize(Dir$ + "TrainFever.exe") > 1
+            ; TrainFever.exe is located in this path!
+            ; seems to be valid
+            
+            ; check if able to write to path
+            If CreateFile(0, Dir$ + "TFMM.tmp")
+              CloseFile(0)
+              DeleteFile(Dir$ + "TFMM.tmp")
+              ProcedureReturn #True
+            EndIf
+            ProcedureReturn -1
+          EndIf
+        CompilerElse
+          If FileSize(Dir$ + "TrainFever") > 1
+            If CreateFile(0, Dir$ + "TFMM.tmp")
+              CloseFile(0)
+              DeleteFile(Dir$ + "TFMM.tmp")
+              ProcedureReturn #True
+            EndIf
+            ProcedureReturn -1
+          EndIf
+        CompilerEndIf
+      EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
   
 EndModule
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 267
-; FirstLine = 60
-; Folding = -oAw-
+; CursorPosition = 38
+; Folding = -oAA+
 ; EnableUnicode
 ; EnableXP

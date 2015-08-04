@@ -34,50 +34,13 @@ Global Library
 
 Global ModProgressAnswer = #AnswerNone
 
-
-Procedure checkTFPath(Dir$)
-  If Dir$
-    If FileSize(Dir$) = -2
-      Dir$ = misc::Path(Dir$)
-      If _TESTMODE
-        ; in testmode, do not check for TrainFever executable
-        ProcedureReturn #True
-      EndIf
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        If FileSize(Dir$ + "TrainFever.exe") > 1
-          ; TrainFever.exe is located in this path!
-          ; seems to be valid
-          
-          ; check if able to write to path
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
-          EndIf
-          ProcedureReturn -1
-        EndIf
-      CompilerElse
-        If FileSize(Dir$ + "TrainFever") > 1
-          If CreateFile(0, Dir$ + "TFMM.tmp")
-            CloseFile(0)
-            DeleteFile(Dir$ + "TFMM.tmp")
-            ProcedureReturn #True
-          EndIf
-          ProcedureReturn -1
-        EndIf
-      CompilerEndIf
-    EndIf
-  EndIf
-  ProcedureReturn #False
-EndProcedure
-
 Procedure ExportModList(dummy=0)
   
 EndProcedure
 
 ;} --------------------------------------------------------------------------------
 
-Global TimerSettingsGadgets = 100, TimerMainGadgets = 101
+Global TimerMainGadgets = 101
 
 Global NewMap PreviewImages.i()
 
@@ -106,7 +69,7 @@ Procedure InitWindows()
   
   ; Open Windows
   OpenWindowMain()
-  OpenWindowSettings()
+  WindowSettings::open(WindowMain)
   OpenWindowProgress()
   updater::createWindow(WindowMain)
   
@@ -127,7 +90,7 @@ Procedure InitWindows()
   CompilerEndSelect
   
   ; indicate testmode in window title
-  If _TESTMODE
+  If glob::_TESTMODE
     SetWindowTitle(WindowMain, GetWindowTitle(WindowMain) + " (Test Mode Enabled)")
   EndIf
   
@@ -260,7 +223,7 @@ Procedure updateGUI()
     *mod = ListIcon::GetListItemData(Library, SelectedMod)
     If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
       Protected im.i, image$
-      image$ = misc::Path(TF$ + "TFMM/library/" + *mod\tf_id$) + "image_00.tga"
+      image$ = misc::Path(glob::TF$ + "TFMM/library/" + *mod\tf_id$) + "image_00.tga"
       If FileSize(image$) > 0
         im = LoadImage(#PB_Any, image$)
       EndIf
@@ -298,48 +261,17 @@ EndProcedure
 Procedure TimerMain()
   Static LastDir$ = ""
   
-  If LastDir$ <> TF$
-    LastDir$ = TF$
-    If checkTFPath(TF$) <> #True
-      Ready = #False  ; flag for mod management
+  If LastDir$ <> glob::TF$
+    LastDir$ = glob::TF$
+    If misc::checkTFPath(glob::TF$) <> #True
+      glob::ready = #False  ; flag for mod management
       MenuItemSettings(0)
     EndIf
   EndIf
   
   updateGUI()
-  queue::update(TF$)
+  queue::update(glob::TF$)
   
-EndProcedure
-
-Procedure TimerSettingsGadgets()
-  ; check gadgets etc
-  Protected ret
-  Static LastDir$
-  
-  If LastDir$ <> GetGadgetText(GadgetPath)
-    LastDir$ = GetGadgetText(GadgetPath)
-    
-    If FileSize(LastDir$) = -2
-      DisableGadget(GadgetOpenPath, #False)
-    Else
-      DisableGadget(GadgetOpenPath, #True)
-    EndIf
-    
-    ret = checkTFPath(LastDir$)
-    If ret = #True
-      SetGadgetText(GadgetRights, l("settings","success"))
-      SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
-      DisableGadget(GadgetSaveSettings, #False)
-    Else
-      SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(255,0,0))
-      DisableGadget(GadgetSaveSettings, #True)
-      If ret = -1
-        SetGadgetText(GadgetRights, l("settings","failed"))
-      Else
-        SetGadgetText(GadgetRights, l("settings","not_found"))
-      EndIf
-    EndIf
-  EndIf
 EndProcedure
 
 
@@ -372,20 +304,8 @@ EndProcedure
 
 Procedure MenuItemSettings(event) ; open settings window
   Protected locale$
-  OpenPreferences("TFMM.ini")
-  SetGadgetText(GadgetPath, ReadPreferenceString("path", TF$))
-  SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
-  SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
-  locale$ = ReadPreferenceString("locale", "en")
-  ClosePreferences()
   
-  Protected NewMap locale$(), count.i = 0
-  locale::listAvailable(GadgetSettingsLocale, locale$)
-  
-  AddWindowTimer(WindowSettings, TimerSettingsGadgets, 100)
-  HideWindow(WindowSettings, #False, #PB_Window_WindowCentered)
-  DisableWindow(WindowMain, #True)
-  SetActiveWindow(WindowSettings)
+  windowSettings::show()
 EndProcedure
 
 Procedure MenuItemExportAll(event)
@@ -397,56 +317,6 @@ Procedure MenuItemExportActivated(event)
 EndProcedure
 
 ; GADGETS
-
-Procedure GadgetCloseSettings(event) ; close settings window and apply settings
-  RemoveWindowTimer(WindowSettings, TimerSettingsGadgets)
-  HideWindow(WindowSettings, #True)
-  DisableWindow(WindowMain, #False)
-  SetActiveWindow(WindowMain)
-  
-  If checkTFPath(TF$) <> #True
-    ready = #False
-    exit(0)
-  EndIf
-  
-EndProcedure
-
-Procedure GadgetSaveSettings(event)
-  Protected Dir$, locale$, restart.i = #False
-  Dir$ = GetGadgetText(GadgetPath)
-  Dir$ = misc::Path(Dir$)
-  
-  TF$ = Dir$ ; store in global variable
-  
-  locale$ = StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<") ; extract string between < and >
-  If locale$ = ""
-    locale$ = "en"
-  EndIf
-  
-  
-  OpenPreferences("TFMM.ini")
-  WritePreferenceString("path", TF$)
-  WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
-  If Not GetGadgetState(GadgetSettingsWindowLocation)
-    RemovePreferenceGroup("window")
-  EndIf
-  WritePreferenceInteger("update", GetGadgetState(GadgetSettingsAutomaticUpdate))
-  If locale$ <> ReadPreferenceString("locale", "en")
-    restart = #True
-  EndIf
-  WritePreferenceString("locale", locale$)
-  ClosePreferences()
-  
-  If restart
-    MessageRequester("Restart TFMM", "TFMM will now restart to display the selected locale")
-    RunProgram(ProgramFilename())
-    End
-  EndIf
-  
-  mods::freeAll()
-  queue::add(queue::#QueueActionLoad, TF$)
-  GadgetCloseSettings(event)
-EndProcedure
 
 Procedure GadgetButtonInstall(event)
   debugger::Add("GadgetButtonInstall")
@@ -570,7 +440,7 @@ EndProcedure
 
 Procedure GadgetNewMod(event)
   Protected file$
-  If FileSize(TF$) <> -2
+  If FileSize(glob::TF$) <> -2
     ProcedureReturn #False
   EndIf
   file$ = OpenFileRequester(l("management","select_mod"), "", l("management","files_archive")+"|*.zip;*.rar|"+l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
@@ -631,40 +501,6 @@ Procedure GadgetImageMain(event)
       GadgetButtonTrainFeverNet(event)
     EndIf
   EndIf
-EndProcedure
-
-Procedure GadgetButtonBrowse(event)
-  Protected Dir$
-  Dir$ = GetGadgetText(GadgetPath)
-  Dir$ = PathRequester("Train Fever installation path", Dir$)
-  If Dir$
-    SetGadgetText(GadgetPath, Dir$)
-  EndIf
-EndProcedure
-
-Procedure GadgetButtonAutodetect(event)
-  Protected Dir$
-  
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows 
-      Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
-      If Not FileSize(Dir$) = -2 ; -2 = directory
-        Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
-      EndIf
-    CompilerCase #PB_OS_Linux
-      Dir$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
-    CompilerCase #PB_OS_MacOS
-      Dir$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Train Fever/")
-  CompilerEndSelect
-  
-  If Dir$
-    SetGadgetText(GadgetPath, Dir$)  
-  EndIf
-  
-EndProcedure
-
-Procedure GadgetButtonOpenPath(event)
-  misc::openLink(GetGadgetText(GadgetPath))
 EndProcedure
 
 Procedure HandleDroppedFiles(Files$)
@@ -804,7 +640,8 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 11
-; Folding = VABAAAA-
+; CursorPosition = 442
+; FirstLine = 295
+; Folding = 2YQAAw
 ; EnableUnicode
 ; EnableXP
