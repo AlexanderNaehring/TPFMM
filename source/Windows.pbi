@@ -9,7 +9,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_updater.pbi"
 XIncludeFile "WindowMain.pbf"
-XIncludeFile "WindowSettings.pbf"
+XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "WindowModProgress.pbf"
 XIncludeFile "WindowModInformation.pbf"
 
@@ -804,8 +804,7 @@ Procedure GadgetInformationLinkTFNET(event)
 EndProcedure
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 350
-; FirstLine = 128
+; CursorPosition = 11
 ; Folding = VABAAAA-
 ; EnableUnicode
 ; EnableXP

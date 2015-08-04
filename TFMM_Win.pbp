@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-01 20:06" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-08-04 12:05" user="naeh_al" host="KN-000026"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -56,8 +56,8 @@
       <fingerprint md5="5c1439f7815e349fe40d37a309b97ac4"/>
     </file>
     <file name="source\module_updater.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="a7c7d72fe446293e4c6bfdf4f130bd52"/>
+      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
+      <fingerprint md5="f7b000dba83c60ab5783e1b3ba609f5a"/>
     </file>
     <file name="source\WindowMain.pbf">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
