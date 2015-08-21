@@ -838,7 +838,9 @@ Module mods
     
     count = ListSize(entries$())
     If count > 0
-      queue::progressVal(0, count*2) ; max = 50%
+      ; TODO change text to "load library"
+      queue::progressText(locale::l("progress","load"))
+      queue::progressVal(0, count) ; max = 50%
       
       ForEach entries$()
         queue::progressVal(k) 
@@ -849,8 +851,6 @@ Module mods
         If Not checkID(entry$)
           Continue
         EndIf
-        
-        ; id$ = entry$
         
         plibentry$  = misc::Path(plib$ + entry$ + "/")
         pmodsentry$ = misc::Path(pmods$ + entry$ + "/")
@@ -904,10 +904,12 @@ Module mods
     
     count = ListSize(entries$())
     If count > 0
-      queue::progressVal(count, count*2) ; start at 50%
+      ; TODO change text to "load installed mods"
+      queue::progressText(locale::l("progress","load"))
+      queue::progressVal(0, count)
       ForEach entries$()
         entry$ = entries$()
-        queue::progressVal(count + k)
+        queue::progressVal(k)
         k + 1
         
         If Not checkID(entry$)
@@ -1337,8 +1339,8 @@ Module mods
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 20
-; FirstLine = 15
-; Folding = RIACA5
+; CursorPosition = 885
+; FirstLine = 104
+; Folding = RIACE5
 ; EnableUnicode
 ; EnableXP

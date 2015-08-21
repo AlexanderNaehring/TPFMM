@@ -151,7 +151,7 @@ Module queue
             If element\val$
               dat\id$ = element\val$
               *thread = CreateThread(mods::@load(), dat)
-              progressText(locale::l("progress","load"))
+              progressText("") ; text will be set in function
               progressShow()
             EndIf
             
@@ -180,6 +180,8 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; Folding = T9
+; CursorPosition = 153
+; FirstLine = 96
+; Folding = T+
 ; EnableUnicode
 ; EnableXP
