@@ -1,12 +1,12 @@
-﻿Macro Min(a,b)
-  (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
-EndMacro
-Macro Max(a,b)
-  (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
-EndMacro
-
-DeclareModule misc
+﻿DeclareModule misc
   EnableExplicit
+  
+  Macro Min(a,b)
+    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
+  EndMacro
+  Macro Max(a,b)
+   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  EndMacro
   
   Macro StopWindowUpdate(_winID_)
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -40,12 +40,6 @@ DeclareModule misc
 EndDeclareModule
 
 Module misc
-  Macro Min(a,b)
-    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
-  EndMacro
-  Macro Max(a,b)
-   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
-  EndMacro
  
   Procedure.s Path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
@@ -369,7 +363,7 @@ Module misc
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
-        If glob::_TESTMODE
+        If main::_TESTMODE
           ; in testmode, do not check for TrainFever executable
           ProcedureReturn #True
         EndIf
@@ -403,7 +397,6 @@ Module misc
   
 EndModule
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 38
-; Folding = -oAA+
+; Folding = -KAg-
 ; EnableUnicode
 ; EnableXP

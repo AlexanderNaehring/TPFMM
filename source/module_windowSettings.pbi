@@ -1,16 +1,19 @@
-XIncludeFile "module_misc.pbi"
-XIncludeFile "module_locale.pbi"
-
 DeclareModule windowSettings
   EnableExplicit
   
   Global window
   
-  Declare open(parentWindow)
+  Declare create(parentWindow)
   Declare show()
   Declare events(event)
   
 EndDeclareModule
+
+XIncludeFile "module_misc.pbi"
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_registry.pbi"
+XIncludeFile "module_queue.pbi"
+
 
 Module windowSettings
   
@@ -38,8 +41,8 @@ Module windowSettings
     DisableWindow(parentW, #False)
     SetActiveWindow(parentW)
     
-    If misc::checkTFPath(glob::TF$) <> #True
-      glob::ready = #False
+    If misc::checkTFPath(main::TF$) <> #True
+      main::ready = #False
       End
       ; TODO  - call exit routine (not available currently)
       ; exit()
@@ -86,7 +89,7 @@ Module windowSettings
     Dir$ = GetGadgetText(GadgetPath)
     Dir$ = misc::Path(Dir$)
     
-    glob::TF$ = Dir$ ; store in global variable
+    main::TF$ = Dir$ ; store in global variable
     
     locale$ = StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
@@ -95,7 +98,7 @@ Module windowSettings
     
     
     OpenPreferences("TFMM.ini")
-    WritePreferenceString("path", glob::TF$)
+    WritePreferenceString("path", main::TF$)
     WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
     If Not GetGadgetState(GadgetSettingsWindowLocation)
       RemovePreferenceGroup("window")
@@ -114,7 +117,7 @@ Module windowSettings
     EndIf
     
     mods::freeAll()
-    queue::add(queue::#QueueActionLoad, glob::TF$)
+    queue::add(queue::#QueueActionLoad, main::TF$)
     GadgetCloseSettings(event)
   EndProcedure
   
@@ -154,7 +157,7 @@ Module windowSettings
   ;----------------------------------------------------------------------------
   
   
-  Procedure open(parentWindow)
+  Procedure create(parentWindow)
     parentW = parentWindow
     window = OpenWindow(#PB_Any, #PB_Ignore, #PB_Ignore, 580, 240, locale::l("settings","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_WindowCentered, WindowID(parentWindow))
     GadgetPath = StringGadget(#PB_Any, 20, 70, 430, 25, "[Train Fever Path]")
@@ -184,7 +187,7 @@ Module windowSettings
     Protected locale$
     
     OpenPreferences("TFMM.ini")
-    SetGadgetText(GadgetPath, ReadPreferenceString("path", glob::TF$))
+    SetGadgetText(GadgetPath, ReadPreferenceString("path", main::TF$))
     SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
     SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
     locale$ = ReadPreferenceString("locale", "en")
@@ -242,8 +245,7 @@ Module windowSettings
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 218
-; FirstLine = 156
-; Folding = L+-
+; CursorPosition = 14
+; Folding = T7-
 ; EnableUnicode
 ; EnableXP

@@ -1,5 +1,5 @@
 ﻿XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_mods_h.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 DeclareModule luaParser
   EnableExplicit
@@ -341,8 +341,7 @@ Module luaParser
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 116
-; FirstLine = 71
+; CursorPosition = 1
 ; Folding = z-
 ; EnableUnicode
 ; EnableXP

@@ -5,12 +5,13 @@ DeclareModule updater
   EnableExplicit
   
   #VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount + " (Testing)"
+  
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       #OS$ = "win"
     CompilerCase #PB_OS_Linux
       #OS$ = "lin"
-      #Red = 200
+      #Red = 200 ; color constants not defined in PB for Linux
     CompilerCase #PB_OS_MacOS
       #OS$ = "mac"
   CompilerEndSelect
@@ -25,7 +26,7 @@ DeclareModule updater
   Global window
   Global NewMap gadgets()
   
-  Declare createWindow(parent = -1)
+  Declare create(parent = -1)
   Declare checkUpdate(auto)
   Declare updateWindow()
   Declare windowEvents(event)
@@ -39,7 +40,7 @@ Module updater
   Global parentWindow, showWindow = 500
   InitNetwork()
   
-  Procedure createWindow(parent = -1)
+  Procedure create(parent = -1)
     parentWindow = parent
     If parent = -1
       window = OpenWindow(#PB_Any, 0, 0, 360, 215, locale::l("updater","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_ScreenCentered)
@@ -248,9 +249,8 @@ CompilerIf #PB_Compiler_IsMainFile
   EndIf
   
 CompilerEndIf
-; IDE Options = PureBasic 5.31 (Linux - x64)
-; CursorPosition = 147
-; FirstLine = 136
+; IDE Options = PureBasic 5.31 (Windows - x64)
+; CursorPosition = 17
 ; Folding = v+
 ; EnableUnicode
 ; EnableThread

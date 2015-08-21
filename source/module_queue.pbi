@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_mods_h.pbi"
+﻿XIncludeFile "module_mods.h.pbi"
 
 DeclareModule queue
   EnableExplicit
@@ -186,8 +186,6 @@ Module queue
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 58
-; FirstLine = 4
 ; Folding = T9
 ; EnableUnicode
 ; EnableXP

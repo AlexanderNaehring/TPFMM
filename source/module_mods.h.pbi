@@ -58,11 +58,12 @@
   Declare install(*data)  ; add mod to TF
   Declare remove(*data)   ; remove mod from TF
   
+  Declare exportList(all=#False)
 EndDeclareModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 12
-; FirstLine = 3
+; CursorPosition = 60
+; FirstLine = 11
 ; Folding = -
 ; EnableUnicode
 ; EnableXP

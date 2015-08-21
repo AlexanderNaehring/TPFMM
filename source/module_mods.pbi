@@ -6,7 +6,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
 
-XIncludeFile "module_mods_h.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 Module mods
   
@@ -1329,11 +1329,15 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure exportList(all=#False)
+    
+  EndProcedure
+  
 EndModule
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 590
-; FirstLine = 37
+; CursorPosition = 20
+; FirstLine = 15
 ; Folding = RIACA5
 ; EnableUnicode
 ; EnableXP
