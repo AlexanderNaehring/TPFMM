@@ -44,3 +44,4 @@ bin/win32/locale/
 bin/lin64/locale/
 bin/mac32/locale/
 *.json
+*project.cfg

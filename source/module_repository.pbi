@@ -459,14 +459,3 @@ CompilerIf #PB_Compiler_IsMainFile
   EndIf
   
 CompilerEndIf
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 156
-; FirstLine = 99
-; Folding = Jx-
-; EnableUnicode
-; EnableThread
-; EnableXP
-; EnableUser
-; Executable = repository_test.exe
-; Compiler = PureBasic 5.31 (Windows - x86)

@@ -339,9 +339,3 @@ Module luaParser
   
   
 EndModule
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 1
-; Folding = z-
-; EnableUnicode
-; EnableXP

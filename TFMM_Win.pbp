@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-21 11:19" user="Alexander" host="PC"/>
+    <lastopen date="2015-08-21 15:32" user="Alexander" host="PC"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -33,14 +33,13 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_mods.h.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="++"/>
-      <fingerprint md5="c353ac8f68c0c9d4116108f69828d53c"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_mods.pbi">
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_queue.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -52,19 +51,16 @@
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_windowInformation.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="f7bb7363f1cb4c2edcf913f902c243d1"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowMain.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="18e547b32d383974ca27f2eb372b5cfe"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_windowProgress.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="++"/>
-      <fingerprint md5="47c1148ee0a4a8a5b1079c4b1d518228"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
   </section>
   <section name="targets">
@@ -76,7 +72,7 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="1939"/>
+      <compilecount enable="1" value="1945"/>
       <buildcount enable="1" value="126"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

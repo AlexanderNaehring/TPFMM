@@ -684,9 +684,3 @@ CompilerIf #PB_Compiler_IsMainFile
   EndIf
   
 CompilerEndIf
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 447
-; FirstLine = 143
-; Folding = j-AAqAg-+
-; EnableUnicode
-; EnableXP

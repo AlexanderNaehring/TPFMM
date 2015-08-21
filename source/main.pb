@@ -204,8 +204,3 @@ EndModule
 main::init()
 main::loop()
 End
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 26
-; Folding = P-
-; EnableUnicode
-; EnableXP

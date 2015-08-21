@@ -179,9 +179,4 @@ Module queue
   
 EndModule
 
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 153
-; FirstLine = 96
-; Folding = T+
-; EnableUnicode
 ; EnableXP

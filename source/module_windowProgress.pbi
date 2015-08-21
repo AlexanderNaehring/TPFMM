@@ -87,8 +87,5 @@ Module windowProgress
   EndProcedure
   
 EndModule
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 11
-; Folding = H5
-; EnableUnicode
+
 ; EnableXP

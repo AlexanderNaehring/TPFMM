@@ -231,8 +231,3 @@ Module windowInformation
   EndProcedure
   
 EndModule
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 15
-; Folding = Dw
-; EnableUnicode
-; EnableXP

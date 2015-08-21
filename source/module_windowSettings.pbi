@@ -243,9 +243,3 @@ Module windowSettings
   
 
 EndModule
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 14
-; Folding = T7-
-; EnableUnicode
-; EnableXP

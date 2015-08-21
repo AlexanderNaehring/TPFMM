@@ -396,7 +396,3 @@ Module misc
   EndProcedure
   
 EndModule
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; Folding = -KAg-
-; EnableUnicode
-; EnableXP

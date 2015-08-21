@@ -664,9 +664,3 @@ Module windowMain
   EndProcedure
   
 EndModule
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 28
-; Folding = XKAA+
-; EnableUnicode
-; EnableXP
