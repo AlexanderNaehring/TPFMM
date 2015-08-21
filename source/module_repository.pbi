@@ -43,10 +43,10 @@ DeclareModule repository
     file_id.i
     filename$
     downloads.i
-    link$
+    url$
   EndStructure
   
-  Structure mods
+  Structure mod
     mod_id.i
     name$
     author_id.i
@@ -60,7 +60,7 @@ DeclareModule repository
     List tags$()
     version$
     state$
-    link$
+    url$
     List files.files()
   EndStructure
   
@@ -70,7 +70,7 @@ DeclareModule repository
     mod_base_url$
     file_base_url$
     thumbnail_base_url$
-    List mods.mods()
+    List mods.mod()
   EndStructure
   
   Declare loadRepository(url$)
@@ -138,9 +138,33 @@ Module repository
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
-      ProcedureReturn #False
+      ; TODO use encryption speficied in global repository info instead of "try and error"
+      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON - try to decrypt")
+;       ProcedureReturn #False
+      Protected size, file, *in, *out
+      size = FileSize(file$)
+      file = ReadFile(#PB_Any, file$)
+      If Not file
+        debugger::add("repository::loadRepositoryMods() - ERROR: cannot read file")
+        ProcedureReturn #False
+      EndIf
+      *in  = AllocateMemory(size)
+      *out = AllocateMemory(size)
+      ReadData(file, *in, size)
+      CloseFile(file)
+      AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
+      DataSection
+        key_aes_1:  ; key hidden!
+        Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+        Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+      EndDataSection
+      json = CatchJSON(#PB_Any, *out, size)
+      If Not json
+        debugger::add("repository::loadRepositoryMods() - ERROR: could not parse decrypted JSON")
+        ProcedureReturn #False
+      EndIf
     EndIf
+    
     
     value = JSONValue(json)
     If JSONType(value) <> #PB_JSON_Object 
@@ -154,21 +178,21 @@ Module repository
     
     ; Sort list for last modification time
     If ListSize(repo_mods(url$)\mods())
-      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mods\changed), TypeOf(mods\changed))
+      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mod\changed), TypeOf(mod\changed))
     EndIf
     
     ; postprocess some structure fields
     With repo_mods(url$)\mods()
       ForEach repo_mods(url$)\mods()
         If repo_mods(url$)\mod_base_url$
-          \link$ = repo_mods(url$)\mod_base_url$ + \link$
+          \url$ = repo_mods(url$)\mod_base_url$ + \url$
         EndIf
         If repo_mods(url$)\thumbnail_base_url$
           \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
         EndIf
         If repo_mods(url$)\file_base_url$
           ForEach \files()
-            \files()\link$ = repo_mods(url$)\file_base_url$ + \files()\link$
+            \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
           Next
         EndIf
       Next
@@ -410,6 +434,21 @@ CompilerIf #PB_Compiler_IsMainFile
           Select EventGadget()
             Case 2 ; push "x" button
               SetGadgetText(1, "")
+            Case 0 ; click on list
+              If EventType() = #PB_EventType_LeftDoubleClick
+                Define *mod.repository::mod
+                Define selected
+                selected = GetGadgetState(0)
+                If selected <> -1
+                  *mod = GetGadgetItemData(0, selected)
+                  If *mod
+                    Debug "double click on " + *mod\name$
+                    Debug "url = " + *mod\url$
+                    RunProgram(*mod\url$)
+                  EndIf
+                EndIf
+                
+              EndIf
           EndSelect
       EndSelect
       If GetGadgetText(1) <> text$
@@ -422,9 +461,9 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 90
-; FirstLine = 43
-; Folding = Jh-
+; CursorPosition = 156
+; FirstLine = 99
+; Folding = Jx-
 ; EnableUnicode
 ; EnableThread
 ; EnableXP
