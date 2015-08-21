@@ -1,9 +1,20 @@
-﻿
-XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_misc.pbi"
+﻿XIncludeFile "module_debugger.pbi"
 
 DeclareModule repository
   EnableExplicit
+  
+  Macro StopWindowUpdate(_winID_)
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      SendMessage_(_winID_,#WM_SETREDRAW,0,0)
+    CompilerEndIf
+  EndMacro
+  Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      SendMessage_(_winID_,#WM_SETREDRAW,1,0)
+      InvalidateRect_(_winID_,0,_redrawBackground_)
+      UpdateWindow_(_winID_)
+    CompilerEndIf
+  EndMacro
   
   Structure repo_info
     name$
@@ -64,20 +75,20 @@ DeclareModule repository
   
   Declare loadRepository(url$)
   Declare loadRepositoryList()
-  Declare searchMod(search$, gadget)
+  Declare filterMods(search$, window = -1, gadget = -1)
   
   Global NewMap repo_mods.repo_mods()
 EndDeclareModule
 
 Module repository
   Global NewList repositories$()
-  
-  CreateDirectory("repositories") ; subdirectory used for all repositoyry related files
+  #DIRECTORY = "repositories"
+  CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
   
   ; Create repository list file if not existing and add basic repository
-  If FileSize("repositories/repositories.list") <= 0
+  If FileSize(#DIRECTORY+"/repositories.List") <= 0
     Define file
-    file = CreateFile(#PB_Any, "repositories/repositories.list")
+    file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
       WriteStringN(file, "http://repo.tfmm.xanos.eu/")
       CloseFile(file)
@@ -92,7 +103,7 @@ Module repository
   ; Private
   
   Procedure.s getRepoFileName(url$)
-    ProcedureReturn "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+    ProcedureReturn #DIRECTORY + "/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
   EndProcedure
   
   Procedure updateRepository(url$)
@@ -103,10 +114,10 @@ Module repository
     
     time = ElapsedMilliseconds()
     If ReceiveHTTPFile(url$, file$)
-      debugger::add("repository::updateRepository() - Download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
+      debugger::add("repository::updateRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
       ProcedureReturn #True
     EndIf
-    debugger::add("repository::updateRepository() - ERROR downloading repository")
+    debugger::add("repository::updateRepository() - ERROR: failed to download repository")
     ProcedureReturn #False
     
   EndProcedure
@@ -127,18 +138,21 @@ Module repository
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("repository::loadRepositoryMods() - ERROR: Could not load JSON")
+      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
       ProcedureReturn #False
     EndIf
     
     value = JSONValue(json)
     If JSONType(value) <> #PB_JSON_Object 
-      debugger::add("repository::loadRepositoryMods() - ERROR: Mods Repository should be of type JSON Object")
+      debugger::add("repository::loadRepositoryMods() - ERROR: mods repository should be of type JSON object")
       ProcedureReturn #False
     EndIf
     
+    ; load JSON into memory:
+    ; repository information and complete list of mods
     ExtractJSONStructure(value, repo_mods(url$), repo_mods)
     
+    ; Sort list for last modification time
     If ListSize(repo_mods(url$)\mods())
       SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mods\changed), TypeOf(mods\changed))
     EndIf
@@ -152,9 +166,11 @@ Module repository
         If repo_mods(url$)\thumbnail_base_url$
           \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
         EndIf
-        ForEach \files()
-          \files()\link$ = repo_mods(url$)\file_base_url$ + \files()\link$
-        Next
+        If repo_mods(url$)\file_base_url$
+          ForEach \files()
+            \files()\link$ = repo_mods(url$)\file_base_url$ + \files()\link$
+          Next
+        EndIf
       Next
     EndWith
     
@@ -291,11 +307,11 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
-  Procedure searchMod(search$, gadget)
-    ; debugger::add("repository::searchMod("+search$+")")
+  Procedure filterMods(search$, window = -1, gadget = -1)
+    ; debugger::add("repository::filterMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, i, k, str$, tags$
     
-    misc::StopWindowUpdate(WindowID(0))
+    StopWindowUpdate(WindowID(0))
     HideGadget(gadget, 0)
     ClearGadgetItems(gadget)
     
@@ -357,7 +373,7 @@ Module repository
     Next
     
     HideGadget(gadget, 0)
-    misc::ContinueWindowUpdate(WindowID(0))
+    ContinueWindowUpdate(WindowID(0))
     
   EndProcedure
   
@@ -383,7 +399,7 @@ CompilerIf #PB_Compiler_IsMainFile
     StringGadget(1, 570, 5, 200, 20, "")
     ButtonGadget(2, 775, 5, 20, 20, "X")
     
-    repository::searchMod("", 0) ; initially fill list
+    repository::filterMods("", 0 ,0) ; initially fill list
     
     Repeat
       event = WaitWindowEvent()
@@ -398,11 +414,7 @@ CompilerIf #PB_Compiler_IsMainFile
       EndSelect
       If GetGadgetText(1) <> text$
         text$ = GetGadgetText(1)
-        SendMessage_(WindowID(0),#WM_SETREDRAW,0,0)
-        repository::searchMod(text$, 0)
-        SendMessage_(WindowID(0),#WM_SETREDRAW,1,0)
-        InvalidateRect_(WindowID(0),0,0)
-        UpdateWindow_(WindowID(0))
+        repository::filterMods(text$, 0, 0)
       EndIf
     ForEver 
   EndIf
@@ -410,9 +422,9 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 312
-; FirstLine = 155
-; Folding = T9
+; CursorPosition = 90
+; FirstLine = 43
+; Folding = Jh-
 ; EnableUnicode
 ; EnableThread
 ; EnableXP
