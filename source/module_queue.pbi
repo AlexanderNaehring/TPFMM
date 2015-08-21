@@ -15,12 +15,11 @@ DeclareModule queue
   EndEnumeration
   
   Structure dat
-    tf$
     id$
   EndStructure
   
   Declare add(action, val$)
-  Declare update(TF$)
+  Declare update()
   
   Declare progressRegister(window, gadgetP, gadgetT)
   Declare progressText(string$)
@@ -89,7 +88,7 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-  Procedure update(TF$) ; periodically called by main window / main loop
+  Procedure update() ; periodically called by main window / main loop
     Protected element.queue
     Static dat.dat, conversion.i
     
@@ -105,7 +104,7 @@ Module queue
       EndIf
     EndIf
     
-    If TF$ And Not *thread
+    If main::TF$ And Not *thread
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
         ; pop first element
@@ -118,7 +117,6 @@ Module queue
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
@@ -128,7 +126,6 @@ Module queue
             debugger::Add("updateQueue() - #QueueActionRemove")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@remove(), dat)
               progressText(locale::l("progress","remove"))
               progressShow()
@@ -137,14 +134,13 @@ Module queue
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
             If element\val$
-              mods::new(element\val$, TF$)
+              mods::new(element\val$)
             EndIf
             
           Case #QueueActionDelete
             debugger::Add("updateQueue() - #QueueActionDelete")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@delete(), dat)
               progressText(locale::l("progress","delete"))
               progressShow()
@@ -154,7 +150,6 @@ Module queue
             debugger::Add("updateQueue() - #QueueActionLoad")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@load(), dat)
               progressText(locale::l("progress","load"))
               progressShow()
@@ -167,7 +162,6 @@ Module queue
                 MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
               Else
                 dat\id$ = element\val$
-                dat\tf$ = TF$
                 *thread = CreateThread(mods::@convert(), dat)
                 conversion = #True
                 progressText(locale::l("progress","convert"))

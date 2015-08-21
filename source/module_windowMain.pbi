@@ -240,7 +240,7 @@ Module windowMain
     EndIf
     
     updateGUI()
-    queue::update(main::TF$)
+    queue::update()
     
   EndProcedure
   

@@ -52,7 +52,7 @@
   Declare generateID(*mod.mod, id$ = "")
   Declare generateLUA(*mod.mod)
   
-  Declare new(file$, TF$) ; read mod pack from any location, extract info
+  Declare new(file$)      ; read mod pack from any location, extract info
   Declare delete(*data)   ; delete mod from library
   
   Declare install(*data)  ; add mod to TF

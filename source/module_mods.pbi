@@ -633,9 +633,10 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure new(file$, TF$) ; add new mod from any location to list of mods and initiate install
-    debugger::Add("mods::addMod("+file$+", "+TF$+")")
+  Procedure new(file$) ; add new mod from any location to list of mods and initiate install
+    debugger::Add("mods::addMod("+file$+")")
     Protected *mod.mod, id$
+    Protected TF$ = main::TF$
     
     ; first step: check mod
     id$ = CheckModFile(file$)
@@ -804,7 +805,7 @@ Module mods
   EndProcedure
   
   Procedure load(*data.queue::dat) ; TF$) ; load all mods in internal modding folder and installed to TF
-    Protected TF$ = *data\tf$
+    Protected TF$ = main::TF$
     debugger::Add("mods::load("+TF$+")")
     
     Protected pmods$, plib$, ptmp$, entry$
@@ -938,7 +939,7 @@ Module mods
   EndProcedure
   
   Procedure convert(*data.queue::dat)
-    Protected TF$ = *data\tf$
+    Protected TF$ = main::TF$
     debugger::Add("mods::convert("+TF$+")")
     
     Protected file$, NewList mods$(), NewMap files$()
@@ -964,7 +965,7 @@ Module mods
         i + 1
         queue::progressVal(i, ListSize(mods$()))
         ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
-        new(mods$(), TF$)
+        new(mods$())
       Next
       ClearList(mods$())
     EndIf
@@ -1012,7 +1013,7 @@ Module mods
     debugger::Add("mods::install("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    tf$ = main::TF$
     
     debugger::Add("mods::install() - mod {"+id$+"}")
     
@@ -1089,7 +1090,7 @@ Module mods
     debugger::Add("mods::remove("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    TF$ = main::TF$
     
     
     debugger::Add("mods::remove() - mod {"+id$+"}")
@@ -1139,7 +1140,7 @@ Module mods
     debugger::Add("mods::delete("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    TF$ = main::TF$
     
     debugger::Add("mods::delete() - mod {"+id$+"}")
     
