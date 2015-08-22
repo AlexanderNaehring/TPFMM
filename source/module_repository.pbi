@@ -74,14 +74,10 @@ DeclareModule repository
     List mods.mod()
   EndStructure
   
-  ; column identifier
-  Enumeration
-    #COLUMN_INTEGER
-    #COLUMN_STRING
-  EndEnumeration
+  ; public column identifier
   Structure column
-    offset.i
-    type.i
+    name$
+    width.i
   EndStructure
   
   Declare loadRepository(url$)
@@ -95,9 +91,18 @@ DeclareModule repository
 EndDeclareModule
 
 Module repository
+  Enumeration ; column data type
+    #COL_INT
+    #COL_STR
+  EndEnumeration
+  Structure column_info Extends column
+    offset.i
+    type.i
+  EndStructure
+  
   Global NewList repositories$()
   Global _windowID, _gadgetID
-  Global Dim _columns.column(0)
+  Global Dim _columns.column_info(0)
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -370,13 +375,117 @@ Module repository
   EndProcedure
   
   Procedure registerGadget(gadget, Array columns.column(1))
+    debugger::add("repository::loadRepositoryList(" + gadget + ")")
+    Protected col
+    
+    ; set new gadget ID
     _gadgetID = gadget
     If Not IsGadget(_gadgetID)
+      ; if new id is not valid, return false
       _gadgetID = #False
+      ProcedureReturn #False
     EndIf
     
-    CopyArray(columns(), _columns())
+    ; clear gadget item list
+    ClearGadgetItems(_gadgetID)
     
+    ; clear columns
+    For col = 0 To 100 ; no native way to get column count
+      RemoveGadgetColumn(_gadgetID, col)
+    Next
+    
+    ; create _columns array
+    debugger::add("repository::loadRepositoryList() - generate _columns")
+    FreeArray(_columns())
+    Dim _columns(ArraySize(columns()))
+    ; in PureBasic, Dim Array(10) created array with 11 elements (0 to 10)
+    ; ArraySize() returns the same size that is used with Dim
+    ; therefore, real size of array is one more than returned by ArraySize()
+    For col = 0 To ArraySize(columns())
+      ; user can specify which columns to display
+      ; internal array will save offset for reading value from memory
+      ; as well as other information about column used for display
+      ; TODO use locale to get translation of column header
+      With _columns(col)
+        ; save name and type depending on offset
+        Select columns(col)\name$ ;{
+          Case "mod_id"
+            \offset = OffsetOf(mod\mod_id)
+            \name$ = "Mod ID"
+            \type = #COL_INT
+          Case "name"
+            \offset = OffsetOf(mod\name$)
+            \name$ = "Mod Name"
+            \type = #COL_STR
+          Case "author_id"
+            \offset = OffsetOf(mod\author_id)
+            \name$ = "Author ID"
+            \type = #COL_INT
+          Case "author_name"
+            \offset = OffsetOf(mod\author_name$)
+            \name$ = "Author"
+            \type = #COL_STR
+          Case "thumbnail"
+            Continue
+            \offset = OffsetOf(mod\thumbnail$)
+            \name$ = "Thumbnail"
+            \type = #COL_STR
+          Case "views"
+            \offset = OffsetOf(mod\views)
+            \name$ = "Views"
+            \type = #COL_INT
+          Case "downloads"
+            \offset = OffsetOf(mod\downloads)
+            \name$ = "Downloads"
+            \type = #COL_INT
+          Case "likes"
+            \offset = OffsetOf(mod\likes)
+            \name$ = "Likes"
+            \type = #COL_INT
+          Case "created"
+            Continue
+            \offset = OffsetOf(mod\created)
+            \name$ = "Created"
+            \type = #COL_INT
+          Case "changed"
+            Continue
+            \offset = OffsetOf(mod\changed)
+            \name$ = "Last Modified"
+            \type = #COL_INT
+          Case "tags" ; list
+            Continue
+          Case "tags_string"
+            \offset = OffsetOf(mod\tags_string$)
+            \name$ = "Tags"
+            \type = #COL_STR
+          Case "version"
+            \offset = OffsetOf(mod\version$)
+            \name$ = "Version"
+            \type = #COL_STR
+          Case "state"
+            \offset = OffsetOf(mod\state$)
+            \name$ = "State"
+            \type = #COL_STR
+          Case "url"
+            \offset = OffsetOf(mod\url$)
+            \name$ = "URL"
+            \type = #COL_STR
+          Case "files" ; list
+            Continue
+          Default
+            Continue
+        EndSelect ;}
+        \width = columns(col)\width
+        debugger::add("repository::loadRepositoryList() - new column: {" + \name$ + "} of width {" + \width + "}")
+      EndWith
+    Next
+    
+    ; initialize new columns to gadget
+    For col = 0 To ArraySize(_columns())
+      AddGadgetColumn(_gadgetID, col, _columns(col)\name$, _columns(col)\width)
+    Next
+    
+    ; return
     ProcedureReturn _gadgetID
   EndProcedure
   
@@ -434,9 +543,9 @@ Module repository
             For col = 0 To ArraySize(_columns())
               *address = *base_address + _columns(col)\offset
               Select _columns(col)\type
-                Case #COLUMN_INTEGER
+                Case #COL_INT
                   text$ + Str(PeekI(*address))
-                Case #COLUMN_STRING
+                Case #COL_STR
                   *address = PeekI(*address)
                   If *address
                     text$ + PeekS(*address)
@@ -470,32 +579,38 @@ CompilerIf #PB_Compiler_IsMainFile
   repository::loadRepositoryList()
   
   If OpenWindow(0, 0, 0, 800, 600, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 800, 570, "Mod Name", 240, #PB_ListIcon_FullRowSelect)
-    AddGadgetColumn(0, 1, "Version", 60)
-    AddGadgetColumn(0, 2, "Author", 100)
-    AddGadgetColumn(0, 3, "State", 60)
-    AddGadgetColumn(0, 4, "Tags", 200)
-    AddGadgetColumn(0, 5, "Downloads", 60)
-    AddGadgetColumn(0, 6, "Likes", 40)
+    ListIconGadget(0, 0, 30, 800, 570, "", 0, #PB_ListIcon_FullRowSelect)
     
-    Define Dim columns.repository::column(6)
-    columns(0)\offset = OffsetOf(repository::mod\name$)
-    columns(0)\type   = repository::#COLUMN_STRING
-    columns(1)\offset = OffsetOf(repository::mod\version$)
-    columns(1)\type   = repository::#COLUMN_STRING
-    columns(2)\offset = OffsetOf(repository::mod\author_name$)
-    columns(2)\type   = repository::#COLUMN_STRING
-    columns(3)\offset = OffsetOf(repository::mod\state$)
-    columns(3)\type   = repository::#COLUMN_STRING
-    columns(4)\offset = OffsetOf(repository::mod\tags_string$)
-    columns(4)\type   = repository::#COLUMN_STRING
-    columns(5)\offset = OffsetOf(repository::mod\downloads)
-    columns(5)\type   = repository::#COLUMN_INTEGER
-    columns(6)\offset = OffsetOf(repository::mod\likes)
-    columns(6)\type   = repository::#COLUMN_INTEGER
+    Define Dim columns.repository::column(0)
+    
+    ; load column definition
+    Define *json, *value, json$
+    *json = LoadJSON(#PB_Any, "columns.json")
+    If Not *json
+      json$ = ReplaceString("[{'width':240,'name':'name'},"+
+                            "{'width':60,'name':'version'},"+
+                            "{'width':100,'name':'author_name'},"+
+                            "{'width':60,'name':'state'},"+
+                            "{'width':200,'name':'tags_string'},"+
+                            "{'width':60,'name':'downloads'},"+
+                            "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
+      *json = ParseJSON(#PB_Any, json$)
+      If Not *json
+        Debug "Error loading json"
+        End
+      EndIf
+    EndIf
+    ExtractJSONArray(JSONValue(*json), columns())
+    FreeJSON(*json)
+    
     repository::registerWindow(0)
     repository::registerGadget(0, columns())
     
+    ; save current configuration to json file
+    *json = CreateJSON(#PB_Any)
+    InsertJSONArray(JSONValue(*json), columns())
+    SaveJSON(*json, "columns.json", #PB_JSON_PrettyPrint)
+    FreeJSON(*json)
     
     TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
     StringGadget(1, 570, 5, 200, 20, "")
