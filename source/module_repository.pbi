@@ -58,6 +58,7 @@ DeclareModule repository
     created.i
     changed.i
     List tags$()
+    tags_string$
     version$
     state$
     url$
@@ -73,15 +74,31 @@ DeclareModule repository
     List mods.mod()
   EndStructure
   
+  ; column identifier
+  Enumeration
+    #COLUMN_INTEGER
+    #COLUMN_STRING
+  EndEnumeration
+  Structure column
+    offset.i
+    type.i
+  EndStructure
+  
   Declare loadRepository(url$)
   Declare loadRepositoryList()
-  Declare filterMods(search$, window = -1, gadget = -1)
+  
+  Declare registerWindow(windowID)
+  Declare registerGadget(gadgetID, Array columns.column(1))
+  Declare filterMods(search$)
   
   Global NewMap repo_mods.repo_mods()
 EndDeclareModule
 
 Module repository
   Global NewList repositories$()
+  Global _windowID, _gadgetID
+  Global Dim _columns.column(0)
+  
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
   
@@ -184,16 +201,29 @@ Module repository
     ; postprocess some structure fields
     With repo_mods(url$)\mods()
       ForEach repo_mods(url$)\mods()
+        ; add base url to mod url
         If repo_mods(url$)\mod_base_url$
           \url$ = repo_mods(url$)\mod_base_url$ + \url$
         EndIf
+        ; add base url to mod thumbnail
         If repo_mods(url$)\thumbnail_base_url$
           \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
         EndIf
+        ; add base url to all files
         If repo_mods(url$)\file_base_url$
           ForEach \files()
             \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
           Next
+        EndIf
+        ; aggregate tag list to string
+        \tags_string$ = ""
+        ForEach \tags$()
+          ; TODO add localization here (translate tags)
+          \tags_string$ + \tags$() + ", "
+        Next
+        If Len(\tags_string$) >= 2
+          ; cut of ', ' from end of string
+          \tags_string$ = Left(\tags_string$, Len(\tags_string$) - 2)
         EndIf
       Next
     EndWith
@@ -331,19 +361,44 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
-  Procedure filterMods(search$, window = -1, gadget = -1)
-    ; debugger::add("repository::filterMods("+search$+")")
-    Protected text$, mod_ok, tmp_ok, count, i, k, str$, tags$
+  Procedure registerWindow(window)
+    _windowID = window
+    If Not IsWindow(_windowID)
+      _windowID = #False
+    EndIf
+    ProcedureReturn _windowID
+  EndProcedure
+  
+  Procedure registerGadget(gadget, Array columns.column(1))
+    _gadgetID = gadget
+    If Not IsGadget(_gadgetID)
+      _gadgetID = #False
+    EndIf
     
-    StopWindowUpdate(WindowID(0))
-    HideGadget(gadget, 0)
-    ClearGadgetItems(gadget)
+    CopyArray(columns(), _columns())
+    
+    ProcedureReturn _gadgetID
+  EndProcedure
+  
+  Procedure filterMods(search$)
+    ; debugger::add("repository::filterMods("+search$+")")
+    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address, *address
+    
+    If Not IsWindow(_windowID) Or Not IsGadget(_gadgetID)
+      debugger::add("repository::filterMods() - ERROR: window or gadget not valid")
+      ProcedureReturn #False
+    EndIf
+    
+    StopWindowUpdate(WindowID(_windowID))
+    HideGadget(_gadgetID, 0)
+    ClearGadgetItems(_gadgetID)
     
     count = CountString(search$, " ") + 1
     
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         With repo_mods()\mods()
+          *base_address = repo_mods()\mods()
           mod_ok = 0 ; reset ok for every mod entry
           If search$ = ""
             mod_ok = 1
@@ -374,30 +429,34 @@ Module repository
             Next
           EndIf
           If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-            tags$ = ""
-            ForEach \tags$()
-              tags$ + \tags$() + ", "
+            text$ = ""
+            ; generate text based on specified columns
+            For col = 0 To ArraySize(_columns())
+              *address = *base_address + _columns(col)\offset
+              Select _columns(col)\type
+                Case #COLUMN_INTEGER
+                  text$ + Str(PeekI(*address))
+                Case #COLUMN_STRING
+                  *address = PeekI(*address)
+                  If *address
+                    text$ + PeekS(*address)
+                  EndIf
+              EndSelect
+              If col < ArraySize(_columns())
+                text$ + #LF$
+              EndIf
             Next
-            If Len(tags$) > 2
-              tags$ = Left(tags$, Len(tags$) - 2)
-            EndIf
-            text$ = \name$ + #LF$ +
-                    \version$ + #LF$ +
-                    \author_name$ + #LF$ +
-                    \state$ + #LF$ +
-                    tags$ + #LF$ +
-                    Str(\downloads) + #LF$ +
-                    Str(\likes)
-            AddGadgetItem(0, i, text$)
-            SetGadgetItemData(gadget, i, repo_mods()\mods())
-            i + 1
+            
+            AddGadgetItem(_gadgetID, item, text$)
+            SetGadgetItemData(_gadgetID, item, repo_mods()\mods())
+            item + 1
           EndIf
         EndWith
       Next
     Next
     
-    HideGadget(gadget, 0)
-    ContinueWindowUpdate(WindowID(0))
+    HideGadget(_gadgetID, 0)
+    ContinueWindowUpdate(WindowID(_windowID))
     
   EndProcedure
   
@@ -419,11 +478,30 @@ CompilerIf #PB_Compiler_IsMainFile
     AddGadgetColumn(0, 5, "Downloads", 60)
     AddGadgetColumn(0, 6, "Likes", 40)
     
+    Define Dim columns.repository::column(6)
+    columns(0)\offset = OffsetOf(repository::mod\name$)
+    columns(0)\type   = repository::#COLUMN_STRING
+    columns(1)\offset = OffsetOf(repository::mod\version$)
+    columns(1)\type   = repository::#COLUMN_STRING
+    columns(2)\offset = OffsetOf(repository::mod\author_name$)
+    columns(2)\type   = repository::#COLUMN_STRING
+    columns(3)\offset = OffsetOf(repository::mod\state$)
+    columns(3)\type   = repository::#COLUMN_STRING
+    columns(4)\offset = OffsetOf(repository::mod\tags_string$)
+    columns(4)\type   = repository::#COLUMN_STRING
+    columns(5)\offset = OffsetOf(repository::mod\downloads)
+    columns(5)\type   = repository::#COLUMN_INTEGER
+    columns(6)\offset = OffsetOf(repository::mod\likes)
+    columns(6)\type   = repository::#COLUMN_INTEGER
+    repository::registerWindow(0)
+    repository::registerGadget(0, columns())
+    
+    
     TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
     StringGadget(1, 570, 5, 200, 20, "")
     ButtonGadget(2, 775, 5, 20, 20, "X")
     
-    repository::filterMods("", 0 ,0) ; initially fill list
+    repository::filterMods("") ; initially fill list
     
     Repeat
       event = WaitWindowEvent()
@@ -453,7 +531,7 @@ CompilerIf #PB_Compiler_IsMainFile
       EndSelect
       If GetGadgetText(1) <> text$
         text$ = GetGadgetText(1)
-        repository::filterMods(text$, 0, 0)
+        repository::filterMods(text$)
       EndIf
     ForEver 
   EndIf
