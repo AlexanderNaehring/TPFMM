@@ -330,7 +330,9 @@ Module luaParser
     ; last step: open strings.lua if present and replace strings
     If FileSize(GetPathPart(file$)+"strings.lua") > 0
       If Not parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
-        parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+        If locale::getCurrentLocale() <> "en"
+          parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+        EndIf
       EndIf
     EndIf
     
