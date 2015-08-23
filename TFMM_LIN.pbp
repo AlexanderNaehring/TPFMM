@@ -6,89 +6,91 @@
     <comment>Train Fever Mod Manager</comment>
   </section>
   <section name="data">
-    <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
+    <explorer view="/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-01 22:06" user="alexander" host="mint"/>
+    <lastopen date="2015-08-23 12:26" user="alexander" host="mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
-      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="65d17d9592e8672249ddbb8c99cc9b6b"/>
+      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source/module_debugger.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="19fdb08391fed438436ede78ccb3a2a1"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_images.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="144aba5d780d3e20fd98267c8dd49b05"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_ListIcon.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="c2a5a4cb4a5f6f406e7396dc9db54683"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="3c3db12ba510d0107d78df30a6036a1c"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_luaParser.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="8df77285620c334691bd6951858bee79"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_mods.h.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_mods.pbi">
-      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="6403228fb2fae74cbf735565520b2978"/>
-    </file>
-    <file name="source/module_mods_h.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="7d8b2bba89d0ed48e9045db947fceaa5"/>
+      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source/module_queue.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="269346b83373373f9452d2e5f0fa946d"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_registry.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="ab68911421b85e3598d16ed93c55df41"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_unrar.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="5af77c6ebe3b41eb3366b5d0a990407f"/>
-    </file>
-    <file name="source/WindowMain.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="cb95df4d8ca3717a78d6b46d53321f4c"/>
-    </file>
-    <file name="source/WindowModInformation.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="32915d6159e2659c5c254f2cc79f4e4f"/>
-    </file>
-    <file name="source/WindowModProgress.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="b08184a856974ef1e4f693f9bff8c975"/>
-    </file>
-    <file name="source/Windows.pbi">
-      <config load="1" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="b2c2f7c0449e4976fec70a88c882696e"/>
-    </file>
-    <file name="source/WindowSettings.pbf">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+-"/>
-      <fingerprint md5="0c401e32c847f1cd47a000a058182d66"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_updater.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="4bd112568c9012797936545b3fa62662"/>
+      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+    </file>
+    <file name="source/module_windowInformation.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_windowMain.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+    </file>
+    <file name="source/module_windowProgress.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_windowSettings.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
   </section>
   <section name="targets">
-    <target name="lin" enabled="1" default="1">
-      <inputfile value="source/main.pb"/>
-      <outputfile value="bin/lin64/TFMM"/>
-      <executable value="bin/lin64/TFMM"/>
-      <options unicode="1" thread="1" debug="1"/>
-      <compilecount enable="1" value="1928"/>
+    <target name="lin64" enabled="1" default="1">
+      <inputfile value="source\main.pb"/>
+      <outputfile value="bin\win32\TFMM.exe"/>
+      <compiler version="PureBasic 5.31 (Linux - x64)"/>
+      <commandline value="-debug -testmode"/>
+      <executable value="bin/win32/TFMM.exe"/>
+      <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
+      <icon enable="1">source\TFMM.ico</icon>
+      <compilecount enable="1" value="1945"/>
       <buildcount enable="1" value="126"/>
       <execonstant enable="1"/>
+      <versioninfo enable="1">
+        <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field3 value="Train Fever Mod Manager"/>
+        <field4 value="%BUILDCOUNT"/>
+        <field5 value="%COMPILECOUNT"/>
+        <field7 value="TFMM"/>
+        <field8 value="%EXECUTABLE"/>
+        <field9 value="Alexander Nähring"/>
+        <field16 value="VFT_APP"/>
+        <field17 value="0409 English (United States)"/>
+        <field18 value="Homepage"/>
+        <field19 value="Support"/>
+        <field21 value="www.alexandernaehring.eu"/>
+        <field22 value="www.train-fever.net"/>
+      </versioninfo>
     </target>
   </section>
 </project>
