@@ -142,7 +142,12 @@ Module updater
     EndIf
     
     If channel(LCase(#CHANNEL))\build > #PB_Editor_CompileCount Or channel("stable")\build > #PB_Editor_CompileCount
-      ; newer stable version found > show update window
+      If channel(LCase(#CHANNEL))\build > #PB_Editor_CompileCount 
+        SetGadgetText(gadgets("channel"), #CHANNEL)
+      ElseIf channel("stable")\build > #PB_Editor_CompileCount
+        SetGadgetText(gadgets("channel"), "Stable")
+      EndIf
+      ; newer version from current or stable channel found > show update window
       ; Linux: cannot unhide window from thread
       ; Workaround: add timer and handle timer in main thread
       AddWindowTimer(window, showWindow, 10)
