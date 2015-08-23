@@ -823,17 +823,15 @@ Module mods
         CopyStructure(mods_json(), *mod, mod)
         *mods(MapKey(mods_json())) = *mod
       Next
-      debugger::Add("mods::load() - loaded "+MapSize(mods_json())+" mods from mods.json")
+      debugger::Add("mods::loadList() - loaded "+MapSize(mods_json())+" mods from mods.json")
       FreeMap(mods_json())
     EndIf
     
-    
     ; *mods() map now contains all mods that where known to TFMM at last program exit
-    
     ; check for new mods and check if mod info has changed since last parsing of info.lua
     
     ; scan Train Fever/mods/ and TFMM/library folders
-    debugger::Add("mods::load() - scan mods folder {"+pMods$+"}")
+    debugger::Add("mods::loadList() - scan mods folder {"+pMods$+"}")
     ClearMap(mod_scanner())
     dir = ExamineDirectory(#PB_Any, pMods$, "")
     If dir
@@ -848,7 +846,7 @@ Module mods
       Wend
       FinishDirectory(dir)
     EndIf
-    debugger::Add("mods::load() - scan library folder {"+pLib$+"}")
+    debugger::Add("mods::loadList() - scan library folder {"+pLib$+"}")
     dir = ExamineDirectory(#PB_Any, pLib$, "")
     If dir
       While NextDirectoryEntry(dir)
@@ -863,11 +861,20 @@ Module mods
       FinishDirectory(dir)
     EndIf
     
+    ; check if a mod is in json file, that does not exist in one of the folders
+    ; TODO - currently, only "new modding system" is used
+    ; TODO - with "old" system, installed mods do not have to be in "mods/" folder
+    ForEach *mods()
+      If Not FindMapElement(mod_scanner(), MapKey(*mods()))
+        debugger::add("mods::loadList() - WARNING: {"+MapKey(*mods())+"} in json but not in folders")
+        free(MapKey(*mods()))
+      EndIf
+    Next
     
     ; Load installed modifications from Train Fever/mods/ folder
     count = MapSize(mod_scanner())
     n = 0
-    debugger::Add("mods::load() - found "+MapSize(mod_scanner())+" mods in folders")
+    debugger::Add("mods::loadList() - found "+MapSize(mod_scanner())+" mods in folders")
     If count > 0
       queue::progressVal(0, count)
       
@@ -913,7 +920,7 @@ Module mods
             infoPP(*mod) ; IMPORTANT
             
             If *mod\name$ = ""
-              Debug "CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!"
+              debugger::add("mods::loadList() - CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
             EndIf
           EndIf
           
@@ -939,8 +946,8 @@ Module mods
         EndIf
         
         If *mod\name$ = ""
-          Debug "CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!"
-          End 
+          debugger::add("CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
+          MessageRequester("CRITICAL ERROR in mods::loadList()", "Possible critical error occured,"+#LF$+"please contact the programmer!")
         EndIf
       Next
     EndIf
