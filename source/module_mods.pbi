@@ -126,14 +126,6 @@ Module mods
       EndIf
     EndIf
     
-;     Select PeekI(*system)
-;       Case #system_old
-;         debugger::Add("mods::checkModFile() - old modding system deteced")
-;         Break
-;       Case #system_new
-;         debugger::Add("mods::checkModFile() - new modding system deteced")
-;     EndSelect
-    
     ProcedureReturn ret$
   EndProcedure
   
@@ -361,6 +353,18 @@ Module mods
       Next
     EndWith
     
+    ; if name or author not available
+    With *mod
+      If \aux\authors$ = ""
+        \aux\authors$ = StringField(*mod\tf_id$, 1, "_")
+        AddElement(\authors())
+        \authors()\name$ = \aux\authors$
+      EndIf
+      If \name$ = ""
+        \name$ = StringField(*mod\tf_id$, 2, "_")
+      EndIf
+    EndWith
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -375,30 +379,6 @@ Module mods
     FreeJSON(json)
     debugger::add("mods::debugInfo(): "+json$)
     ProcedureReturn #True
-    
-;     Protected deb$
-;     debugger::Add("mods::debugInfo() - tf_id: "+*mod\tf_id$)
-;     debugger::Add("mods::debugInfo() - name: "+*mod\name$)
-;     ForEach *mod\authors()
-;       debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
-;     Next
-;     debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
-;     debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
-;     debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
-;     debugger::Add("mods::debugInfo() - description: "+*mod\description$)
-;     debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
-;     debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
-;     debugger::Add("mods::debugInfo() - url: "+*mod\url$)
-;     deb$ = "mods::debugInfo() - tags: "
-;     ForEach *mod\tags$()
-;       deb$ + *mod\tags$()+", "
-;     Next
-;     debugger::Add(deb$)
-;     deb$ = "mods::debugInfo() - dependencies: "
-;     ForEach *mod\dependencies$()
-;       deb$ + *mod\dependencies$()+", "
-;     Next
-;     debugger::Add(deb$)
   EndProcedure
   
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
@@ -456,12 +436,10 @@ Module mods
   
   Procedure toList(*mod.mod) ; add *mod to map and to list gadget | if mod is overwritten, please make sure that old gadget entry is deleted beforehand!
     Protected count.i, id$ = *mod\tf_id$
-    
-    debugger::Add("mods::toList("+id$+")")
+;     debugger::Add("mods::toList("+id$+")")
     
     If id$ = ""
-      debugger::add("mods::toList() - ERROR: no id$ specified! CRITICAL")
-      End
+      debugger::add("mods::toList() - CRITICAL ERROR: no id$ specified!")
       ProcedureReturn #False
     EndIf
     
@@ -942,12 +920,13 @@ Module mods
           EndIf
           
           *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
-;           *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+          If *mod\aux\archiveMD5$ = ""
+            *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+          EndIf
         EndIf
         
         If *mod\name$ = ""
-          debugger::add("CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
-          MessageRequester("CRITICAL ERROR in mods::loadList()", "Possible critical error occured,"+#LF$+"please contact the programmer!")
+          debugger::add("mods::loadList() - CRITICAL ERROR: no name for mod {"+id$+"}")
         EndIf
       Next
     EndIf
