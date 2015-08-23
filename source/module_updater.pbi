@@ -14,7 +14,8 @@ DeclareModule updater
       #OS$ = "lin"
       #Red = 200 ; color constants not defined in PB for Linux
     CompilerCase #PB_OS_MacOS
-      #OS$ = "mac"
+      #OS$ = "osx"
+      #Red = 200
   CompilerEndSelect
   
   Structure channel
@@ -93,7 +94,7 @@ Module updater
         *value = JSONValue(json)
         If JSONType(*value) = #PB_JSON_Object
           *value = GetJSONMember(*value, #OS$)
-          If JSONType(*value) = #PB_JSON_Object
+          If *value And JSONType(*value) = #PB_JSON_Object
             ExtractJSONMap(*value, channel())
             ; if channels are found
             If MapSize(channel())
