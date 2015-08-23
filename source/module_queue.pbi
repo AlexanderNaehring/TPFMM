@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_mods_h.pbi"
+﻿XIncludeFile "module_mods.h.pbi"
 
 DeclareModule queue
   EnableExplicit
@@ -15,12 +15,11 @@ DeclareModule queue
   EndEnumeration
   
   Structure dat
-    tf$
     id$
   EndStructure
   
-  Declare add(action, val$)
-  Declare update(TF$)
+  Declare add(action, val$ = "")
+  Declare update()
   
   Declare progressRegister(window, gadgetP, gadgetT)
   Declare progressText(string$)
@@ -73,11 +72,8 @@ Module queue
     EndIf
   EndProcedure
   
-  Procedure add(action, val$) ; add new task to queue
+  Procedure add(action, val$ = "") ; add new task to queue
     debugger::Add("queue::add("+Str(action)+", "+val$+")")
-    If val$ = ""
-      ProcedureReturn #False
-    EndIf
     
     LockMutex(mQueue)
     LastElement(queue())
@@ -89,7 +85,7 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-  Procedure update(TF$) ; periodically called by main window / main loop
+  Procedure update() ; periodically called by main window / main loop
     Protected element.queue
     Static dat.dat, conversion.i
     
@@ -105,7 +101,7 @@ Module queue
       EndIf
     EndIf
     
-    If TF$ And Not *thread
+    If main::TF$ And Not *thread
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
         ; pop first element
@@ -118,7 +114,6 @@ Module queue
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
@@ -128,7 +123,6 @@ Module queue
             debugger::Add("updateQueue() - #QueueActionRemove")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@remove(), dat)
               progressText(locale::l("progress","remove"))
               progressShow()
@@ -137,14 +131,13 @@ Module queue
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
             If element\val$
-              mods::new(element\val$, TF$)
+              mods::new(element\val$)
             EndIf
             
           Case #QueueActionDelete
             debugger::Add("updateQueue() - #QueueActionDelete")
             If element\val$
               dat\id$ = element\val$
-              dat\tf$ = TF$
               *thread = CreateThread(mods::@delete(), dat)
               progressText(locale::l("progress","delete"))
               progressShow()
@@ -152,13 +145,10 @@ Module queue
             
           Case #QueueActionLoad
             debugger::Add("updateQueue() - #QueueActionLoad")
-            If element\val$
-              dat\id$ = element\val$
-              dat\tf$ = TF$
-              *thread = CreateThread(mods::@load(), dat)
-              progressText(locale::l("progress","load"))
-              progressShow()
-            EndIf
+            *thread = CreateThread(mods::@loadList(), #Null)
+            progressText("") ; text will be set in function
+            progressVal(0, 1)
+            progressShow()
             
           Case #QueueActionConvert
             debugger::Add("updateQueue() - #QueueActionConvert")
@@ -167,7 +157,6 @@ Module queue
                 MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
               Else
                 dat\id$ = element\val$
-                dat\tf$ = TF$
                 *thread = CreateThread(mods::@convert(), dat)
                 conversion = #True
                 progressText(locale::l("progress","convert"))
@@ -185,9 +174,4 @@ Module queue
   
 EndModule
 
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 58
-; FirstLine = 4
-; Folding = T9
-; EnableUnicode
 ; EnableXP

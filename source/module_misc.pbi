@@ -1,12 +1,23 @@
-﻿Macro Min(a,b)
-  (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
-EndMacro
-Macro Max(a,b)
-  (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
-EndMacro
-
-DeclareModule misc
+﻿DeclareModule misc
   EnableExplicit
+  
+  Macro Min(a,b)
+    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
+  EndMacro
+  Macro Max(a,b)
+   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  EndMacro
+  
+  Macro openLink(link)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        RunProgram(link)
+      CompilerCase #PB_OS_Linux
+        RunProgram("xdg-open", link, "")
+      CompilerCase #PB_OS_MacOS
+        RunProgram("open", link, "")
+    CompilerEndSelect
+  EndMacro
   
   Macro StopWindowUpdate(_winID_)
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
@@ -26,7 +37,6 @@ DeclareModule misc
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
-  Declare openLink(link$)
   Declare ResizeCenterImage(im, width, height)
   Declare HexStrToMem(hex$, *memlen = 0)
   Declare.s MemToHexStr(*mem, memlen.i)
@@ -35,15 +45,11 @@ DeclareModule misc
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
   Declare packDirectory(dir$, file$)
+  Declare checkTFPath(Dir$)
+  
 EndDeclareModule
 
 Module misc
-  Macro Min(a,b)
-    (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
-  EndMacro
-  Macro Max(a,b)
-   (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
-  EndMacro
  
   Procedure.s Path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
@@ -140,17 +146,6 @@ Module misc
       ProcedureReturn #True
     EndIf
     ProcedureReturn #False
-  EndProcedure
-  
-  Procedure openLink(link$)
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        RunProgram(link$)
-      CompilerCase #PB_OS_Linux
-        RunProgram("xdg-open", link$, "")
-      CompilerCase #PB_OS_MacOS
-        RunProgram("open", link$, "")
-    CompilerEndSelect
   EndProcedure
   
   Procedure ResizeCenterImage(im, width, height)
@@ -363,11 +358,40 @@ Module misc
     ProcedureReturn result
   EndProcedure
 
+  Procedure checkTFPath(Dir$)
+    If Dir$
+      If FileSize(Dir$) = -2
+        Dir$ = Path(Dir$)
+        If main::_TESTMODE
+          ; in testmode, do not check for TrainFever executable
+          ProcedureReturn #True
+        EndIf
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          If FileSize(Dir$ + "TrainFever.exe") > 1
+            ; TrainFever.exe is located in this path!
+            ; seems to be valid
+            
+            ; check if able to write to path
+            If CreateFile(0, Dir$ + "TFMM.tmp")
+              CloseFile(0)
+              DeleteFile(Dir$ + "TFMM.tmp")
+              ProcedureReturn #True
+            EndIf
+            ProcedureReturn -1
+          EndIf
+        CompilerElse
+          If FileSize(Dir$ + "TrainFever") > 1
+            If CreateFile(0, Dir$ + "TFMM.tmp")
+              CloseFile(0)
+              DeleteFile(Dir$ + "TFMM.tmp")
+              ProcedureReturn #True
+            EndIf
+            ProcedureReturn -1
+          EndIf
+        CompilerEndIf
+      EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
   
 EndModule
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 267
-; FirstLine = 60
-; Folding = -oAw-
-; EnableUnicode
-; EnableXP

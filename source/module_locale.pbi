@@ -233,10 +233,3 @@ Module locale
     DataLocaleGermanEnd:
   EndDataSection
 EndModule
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 194
-; FirstLine = 30
-; Folding = PQ-
-; EnableUnicode
-; EnableXP

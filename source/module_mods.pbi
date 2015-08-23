@@ -6,7 +6,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
 
-XIncludeFile "module_mods_h.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 Module mods
   
@@ -14,6 +14,12 @@ Module mods
     #system_old ; old modding system
     #system_new ; new modding system
   EndEnumeration
+  
+  Structure mod_scanner
+    folderMods.b
+    folderLibrary.b
+  EndStructure
+  
   
   Global NewMap *mods.mod()
   Global changed.i ; report variable if mod states have changed
@@ -25,7 +31,7 @@ Module mods
   
   
   Procedure checkID(id$)
-    debugger::Add("mods::checkID("+id$+")")
+;     debugger::Add("mods::checkID("+id$+")")
     Static regexp
     If Not IsRegularExpression(regexp)
       regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$")
@@ -149,9 +155,9 @@ Module mods
       ClearList(\dependencies$())
       \url$ = ""
     
-      \aux\file$ = ""
-      \aux\installed = 0
-      \aux\lua$ = ""
+      \aux\archive$ = ""
+      \aux\active = 0
+;       \aux\lua$ = ""
     EndWith
   EndProcedure
   
@@ -265,9 +271,9 @@ Module mods
       \url$ = ReadPreferenceString("url","")
       PreferenceGroup("")
     
-      \aux\file$ = ""
-      \aux\installed = 0
-      \aux\lua$ = ""
+      \aux\archive$ = ""
+      \aux\active = 0
+;       \aux\lua$ = ""
       
       ; read dependencies from tfmm.ini
       PreferenceGroup("dependencies")
@@ -312,11 +318,18 @@ Module mods
   EndProcedure
   
   Procedure parseInfoLUA(file$, *mod.mod)
-    ProcedureReturn luaParser::parseInfoLUA(file$, *mod)
+    Protected ret
+    ret = luaParser::parseInfoLUA(file$, *mod)
+    If ret
+      ; everytime when loading info from lua, save lua date to mod
+      ; then, information only has to be reloaded if info.lua is changed
+      *mod\aux\luaDate = GetFileDate(file$, #PB_Date_Modified)
+    EndIf
+    ProcedureReturn ret
   EndProcedure
   
   Procedure infoPP(*mod.mod)    ; post processing
-    debugger::Add("mods::infoPP("+Str(*mod)+")")
+;     debugger::Add("mods::infoPP("+Str(*mod)+")")
     ; authors
     With *mod
       \aux\authors$ = ""
@@ -354,29 +367,38 @@ Module mods
   ; TODO : extract & load all necesarry information at each startup!
   
   Procedure debugInfo(*mod.mod)
-    Protected deb$
-    debugger::Add("mods::debugInfo() - tf_id: "+*mod\tf_id$)
-    debugger::Add("mods::debugInfo() - name: "+*mod\name$)
-    ForEach *mod\authors()
-      debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
-    Next
-    debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
-    debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
-    debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
-    debugger::Add("mods::debugInfo() - description: "+*mod\description$)
-    debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
-    debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
-    debugger::Add("mods::debugInfo() - url: "+*mod\url$)
-    deb$ = "mods::debugInfo() - tags: "
-    ForEach *mod\tags$()
-      deb$ + *mod\tags$()+", "
-    Next
-    debugger::Add(deb$)
-    deb$ = "mods::debugInfo() - dependencies: "
-    ForEach *mod\dependencies$()
-      deb$ + *mod\dependencies$()+", "
-    Next
-    debugger::Add(deb$)
+    Protected json, json$
+    
+    json = CreateJSON(#PB_Any)
+    InsertJSONStructure(JSONValue(json), *mod, mod)
+    json$ = ComposeJSON(json, #PB_JSON_PrettyPrint)
+    FreeJSON(json)
+    debugger::add("mods::debugInfo(): "+json$)
+    ProcedureReturn #True
+    
+;     Protected deb$
+;     debugger::Add("mods::debugInfo() - tf_id: "+*mod\tf_id$)
+;     debugger::Add("mods::debugInfo() - name: "+*mod\name$)
+;     ForEach *mod\authors()
+;       debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
+;     Next
+;     debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
+;     debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
+;     debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
+;     debugger::Add("mods::debugInfo() - description: "+*mod\description$)
+;     debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
+;     debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
+;     debugger::Add("mods::debugInfo() - url: "+*mod\url$)
+;     deb$ = "mods::debugInfo() - tags: "
+;     ForEach *mod\tags$()
+;       deb$ + *mod\tags$()+", "
+;     Next
+;     debugger::Add(deb$)
+;     deb$ = "mods::debugInfo() - dependencies: "
+;     ForEach *mod\dependencies$()
+;       deb$ + *mod\dependencies$()+", "
+;     Next
+;     debugger::Add(deb$)
   EndProcedure
   
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
@@ -388,8 +410,8 @@ Module mods
     
     ; read standard information
     With *mod
-      \aux\file$ = GetFilePart(file$)
-      \aux\md5$ = MD5FileFingerprint(file$)
+      \aux\archive$ = GetFilePart(file$)
+      \aux\archiveMD5$ = MD5FileFingerprint(file$)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -427,76 +449,44 @@ Module mods
     debugInfo(*mod)
     
     ; generate info.lua (in memory)
-    generateLUA(*mod)
+    ; generateLUA(*mod)
     
     ProcedureReturn #True
   EndProcedure
   
-  Procedure loadInfo(TF$, id$, *mod.mod)
-    debugger::Add("mods::loadInfo("+TF$+", "+id$+", "+Str(*mod.mod)+")")
+  Procedure toList(*mod.mod) ; add *mod to map and to list gadget | if mod is overwritten, please make sure that old gadget entry is deleted beforehand!
+    Protected count.i, id$ = *mod\tf_id$
     
-    If TF$ = ""
+    debugger::Add("mods::toList("+id$+")")
+    
+    If id$ = ""
+      debugger::add("mods::toList() - ERROR: no id$ specified! CRITICAL")
+      End
       ProcedureReturn #False
     EndIf
     
-    Protected fileLib$, fileMods$
-    
-    fileLib$ = misc::Path(TF$ + "/TFMM/library/" + id$ + "/") + "info.lua"
-    fileMods$ = misc::Path(TF$ + "/mods/" + id$ + "/") + "info.lua"
-    
-    *mod\tf_id$ = id$
-    
-    Protected sizeLib, sizeMods
-    sizeLib = FileSize(fileLib$)
-    sizeMods = FileSize(fileMods$)
-    
-    If sizeLib >= 0 And sizeMods >= 0 ; in lib and mods -> installed
-      *mod\aux\TFonly = #False
-      *mod\aux\installed = #True
-      parseInfoLUA(fileMods$, *mod) ; parse from install location
-      
-    ElseIf sizeLib >= 0 And sizeMods < 0 ; in lib, not in mods -> not installed
-      *mod\aux\TFonly = #False
-      *mod\aux\installed = #False
-      parseInfoLUA(fileLib$, *mod) ; parse from lib
-      
-    ElseIf sizeLib < 0 And sizeMods >= 0 ; not in lib but in mods -> installed (TFONLY)
-      *mod\aux\TFonly = #True
-      *mod\aux\installed = #True
-      parseInfoLUA(fileMods$, *mod) ; parse from install location
-      
-    Else ; not installed and not in lib -> mod does not exist!
-      debugger::Add("mods::loadInfo() - ERROR - mod not found in lib and mods!")
-      ProcedureReturn #False
-    EndIf
-    
-    infoPP(*mod)
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure toList(*mod.mod)
-    debugger::Add("mods::toList("+Str(*mod)+")")
-    Protected count.i
-    If FindMapElement(*mods(), *mod\tf_id$)
-      ; *mod already in list
-      debugger::Add("mods::toList() - ERROR - mod already in list")
-      ; TODO decide what to do here...
-      *mods(*mod\tf_id$) = *mod
-    Else
-      *mods(*mod\tf_id$) = *mod
-      If IsGadget(library)
-        count = CountGadgetItems(library)
-        With *mod
-          ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
-          ListIcon::SetListItemData(library, count, *mod)
-          If \aux\installed
-            ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
-          Else 
-            ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
-          EndIf
-        EndWith
+    If FindMapElement(*mods(), id$)
+      If *mods() = *mod ; same pointer = identical mod
+        ; do nothing
+      Else ; different mods with same tf_id! -> overwrite old mod
+        debugger::Add("mods::toList() - WARNING: mod {"+*mod\tf_id$+"} already in list -> delete old mod and overwrite with new")
+        FreeStructure(*mods())
+        DeleteMapElement(*mods(), *mod\tf_id$)
       EndIf
+    EndIf
+    
+    *mods(id$) = *mod ; add (or overwrite) mod to/in map
+    If IsGadget(library) ; add newly added mod to list gadget
+      count = CountGadgetItems(library)
+      With *mod
+        ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+        ListIcon::SetListItemData(library, count, *mod)
+        If \aux\active
+          ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+        Else 
+          ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+        EndIf
+      EndWith
     EndIf
   EndProcedure
   
@@ -606,12 +596,12 @@ Module mods
   Procedure init() ; allocate mod structure
     Protected *mod.mod
     *mod = AllocateStructure(mod)
-    debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
+;     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
     ProcedureReturn *mod
   EndProcedure
   
   Procedure free(id$)
-    debugger::Add("mods::freeMod("+id$+")")
+;     debugger::Add("mods::freeMod("+id$+")")
     Protected *mod.mod
     If FindMapElement(*mods(), id$)
       FreeStructure(*mods())
@@ -633,9 +623,10 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure new(file$, TF$) ; add new mod from any location to list of mods and initiate install
-    debugger::Add("mods::addMod("+file$+", "+TF$+")")
+  Procedure new(file$) ; add new mod from any location to list of mods and initiate install
+    debugger::Add("mods::addMod("+file$+")")
     Protected *mod.mod, id$
+    Protected TF$ = main::TF$
     
     ; first step: check mod
     id$ = CheckModFile(file$)
@@ -657,7 +648,7 @@ Module mods
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
-      If *mods()\aux\md5$ = *mod\aux\md5$ And *mod\aux\md5$
+      If *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$ And *mod\aux\archiveMD5$
         debugger::Add("mods::addMod() - MD5 check found match!")
         id$ = *mods()\tf_id$
         sameHash = #True
@@ -669,7 +660,7 @@ Module mods
       Protected NewMap strings$()
       ClearMap(strings$())
       strings$("name") = *mods(id$)\name$
-      If *mods()\aux\installed
+      If *mods()\aux\active
         MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
         debugger::Add("mods::addMod() - cancel new installed, mod already installed")
       Else
@@ -753,7 +744,7 @@ Module mods
     If FileSize(dir$ + "info.lua") <= 0
       file = CreateFile(#PB_Any, dir$ + "info.lua")
       If file
-        WriteString(file, *mod\aux\lua$, #PB_UTF8)
+        WriteString(file, getLUA(*mod), #PB_UTF8)
         CloseFile(file)
       EndIf
     EndIf
@@ -803,142 +794,208 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure load(*data.queue::dat) ; TF$) ; load all mods in internal modding folder and installed to TF
-    Protected TF$ = *data\tf$
-    debugger::Add("mods::load("+TF$+")")
+  Procedure loadList(*dummy) ; TF$) ; load all mods in internal modding folder and installed to TF
+    Protected TF$ = main::TF$
+    debugger::Add("mods::loadList("+TF$+")")
     
-    Protected pmods$, plib$, ptmp$, entry$
-    Protected pmodsentry$, plibentry$, image$
-    Protected dir, i, k, count
-    Protected *mod.mod
-    Protected NewList entries$()
+    Protected pMods$, pTFMM$, pLib$, pTMP$
+    Protected json, NewMap mods_json.mod(), *mod.mod
+    Protected dir, entry$, NewMap mod_scanner.mod_scanner()
+    Protected count, n, id$, modFolder$, luaFile$
     
-    plib$   = misc::Path(TF$ + "/TFMM/library/")
-    pmods$  = misc::Path(TF$ + "/mods/")
-    ptmp$   = GetTemporaryDirectory()
+    pTFMM$  = misc::Path(TF$ + "/TFMM/")
+    pLib$   = misc::Path(TF$ + "/TFMM/library/")
+    pMods$  = misc::Path(TF$ + "/mods/")
+    pTMP$   = GetTemporaryDirectory()
     
-    ; Load mods from TFMM library
-    debugger::Add("mods::load() - read library {"+plib$+"}")
-    ClearList(entries$())
-    k = 0
-    dir = ExamineDirectory(#PB_Any, plib$, "")
+    
+    queue::progressText(locale::l("progress","load"))
+    queue::progressVal(0, 1) ; 0% progress
+    
+    ; load list from json file
+    json = LoadJSON(#PB_Any, pTFMM$ + "mods.json")
+    If json
+      ExtractJSONMap(JSONValue(json), mods_json())
+      FreeJSON(json)
+      
+      ForEach mods_json()
+        *mod = init()
+        CopyStructure(mods_json(), *mod, mod)
+        *mods(MapKey(mods_json())) = *mod
+      Next
+      debugger::Add("mods::loadList() - loaded "+MapSize(mods_json())+" mods from mods.json")
+      FreeMap(mods_json())
+    EndIf
+    
+    ; *mods() map now contains all mods that where known to TFMM at last program exit
+    ; check for new mods and check if mod info has changed since last parsing of info.lua
+    
+    ; scan Train Fever/mods/ and TFMM/library folders
+    debugger::Add("mods::loadList() - scan mods folder {"+pMods$+"}")
+    ClearMap(mod_scanner())
+    dir = ExamineDirectory(#PB_Any, pMods$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        debugger::Add("mods::load() - found {"+entry$+"} in library")
-        AddElement(entries$())
-        entries$() = entry$
+        If checkID(entry$)
+          mod_scanner(entry$)\folderMods = #True
+        EndIf
       Wend
       FinishDirectory(dir)
     EndIf
-    
-    count = ListSize(entries$())
-    If count > 0
-      queue::progressVal(0, count*2) ; max = 50%
-      
-      ForEach entries$()
-        queue::progressVal(k) 
-        k + 1
-        
-        entry$ = entries$()
-        
-        If Not checkID(entry$)
-          Continue
-        EndIf
-        
-        ; id$ = entry$
-        
-        plibentry$  = misc::Path(plib$ + entry$ + "/")
-        pmodsentry$ = misc::Path(pmods$ + entry$ + "/")
-        
-        *mod = init()
-        *mod\aux\file$ = plibentry$ + entry$ + ".tfmod"
-        *mod\aux\md5$ = MD5FileFingerprint(*mod\aux\file$)
-        
-        ; check if installed
-        If FileSize(misc::Path(pmods$ + entry$ + "/")) = -2
-          ; TODO re-import mod if it was changed manually or with another manager! (version check?)
-          
-          *mod\aux\installed = #True
-          debugger::Add("mods::load() - update info of {"+entry$+"} from mod directory")
-          ; copy info.lua from TF/mods/ to TFMM/library to have current information available
-          CopyFile(pmodsentry$ + "info.lua", plibentry$ + "info.lua")
-          CopyFile(pmodsentry$ + "strings.lua", plibentry$ + "strings.lua")
-          i = 0
-          Repeat
-            image$ = "image_" + RSet(Str(i), 2, "0")
-            If FileSize(pmodsentry$ + image$) <= 0
-              Break
-            EndIf
-            DeleteFile(plibentry$ + image$)
-            CopyFile(pmodsentry$ + image$, plibentry$ + image$)
-            i + 1
-          ForEver
-          
-        EndIf
-        
-        loadInfo(TF$, entry$, *mod)
-        toList(*mod)
-      Next
-    EndIf
-    
-    ; check installed mods from mods/ folder
-    debugger::Add("mods::load() - read installed mods {"+pmods$+"}")
-    ClearList(entries$())
-    k = 0
-    dir = ExamineDirectory(#PB_Any, pmods$, "")
-    If dir 
+    debugger::Add("mods::loadList() - scan library folder {"+pLib$+"}")
+    dir = ExamineDirectory(#PB_Any, pLib$, "")
+    If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        AddElement(entries$())
-        entries$() = entry$
+        If checkID(entry$)
+          mod_scanner(entry$)\folderLibrary = #True
+        EndIf
       Wend
-    EndIf
-    
-    count = ListSize(entries$())
-    If count > 0
-      queue::progressVal(count, count*2) ; start at 50%
-      ForEach entries$()
-        entry$ = entries$()
-        queue::progressVal(count + k)
-        k + 1
-        
-        If Not checkID(entry$)
-          Continue
-        EndIf
-        
-        If FindMapElement(*mods(), entry$) ; also selects this element if found
-          *mods()\aux\installed = #True
-        Else
-          ; mod installed but not in list
-          ; add to library
-          debugger::Add("mods::load() - load mod into library: {"+pmods$+entry$+"} -> {"+ptmp$+entry$+".zip"+"}")
-          
-          *mod = init()
-          *mod\aux\file$ = ""
-          *mod\aux\md5$ = ""
-          loadInfo(TF$, entry$, *mod)
-          toList(*mod)
-        
-;           If misc::packDirectory(pmods$ + entry$, ptmp$ + entry$ + ".zip")
-;             queue::add(queue::#QueueActionNew, ptmp$ + entry$ + ".zip")
-;           EndIf
-        EndIf
-        
-      Next
       FinishDirectory(dir)
     EndIf
     
+    ; check if a mod is in json file, that does not exist in one of the folders
+    ; TODO - currently, only "new modding system" is used
+    ; TODO - with "old" system, installed mods do not have to be in "mods/" folder
+    ForEach *mods()
+      If Not FindMapElement(mod_scanner(), MapKey(*mods()))
+        debugger::add("mods::loadList() - WARNING: {"+MapKey(*mods())+"} in json but not in folders")
+        free(MapKey(*mods()))
+      EndIf
+    Next
+    
+    ; Load installed modifications from Train Fever/mods/ folder
+    count = MapSize(mod_scanner())
+    n = 0
+    debugger::Add("mods::loadList() - found "+MapSize(mod_scanner())+" mods in folders")
+    If count > 0
+      queue::progressVal(0, count)
+      
+      ForEach mod_scanner()
+        n + 1 ; update progress bar
+        queue::progressVal(n)
+        
+        id$ = MapKey(mod_scanner())
+        
+        If Not FindMapElement(*mods(), id$)
+          debugger::add("mods::loadList() - Found mod {"+id$+"} in folders, add new mod")
+          ; if not already in map, create new mod and insert into map
+          *mod = init()
+          *mods(id$) = *mod
+        EndIf
+        
+        If Not FindMapElement(*mods(), id$)
+          ; this should never be reached
+          debugger::add("mods::loadList() - ERROR: mod not found in map")
+          Continue
+        EndIf
+        
+        ; set pointer to current element in mod map
+        *mod = *mods(id$)
+        *mod\tf_id$ = id$ ; IMPORTANT
+        
+        ; mark mod as active if found in mods/ folder
+        *mod\aux\active = mod_scanner()\folderMods
+        ; analogue for library
+        *mod\aux\inLibrary = mod_scanner()\folderLibrary
+        
+        ; handle stuff for installed mods
+        If *mod\aux\active
+          modFolder$  = misc::Path(pMods$ + id$ + "/")
+          luaFile$    = modFolder$ + "info.lua"
+          
+          ; check if info.lua was modified and reload info.lua if required
+          If *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified)
+            debugger::add("mods::loadList() - reload info.lua for {"+id$+"}")
+            If Not parseInfoLUA(luaFile$, *mod)
+              debugger::add("mods::loadList() - ERROR: failed to parse info.lua")
+            EndIf
+            infoPP(*mod) ; IMPORTANT
+            
+            If *mod\name$ = ""
+              debugger::add("mods::loadList() - CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
+            EndIf
+          EndIf
+          
+          ; image loading is handled dynamically if mod is selected
+        EndIf
+        
+        ; handle stuff for mods in library
+        If *mod\aux\inLibrary
+          modFolder$  = misc::Path(pLib$ + id$)
+          luaFile$    = modFolder$ + "info.lua"
+          ; info should be stored in mods.json
+          ; if not? -> FIXME
+          
+          If *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified)
+            If Not parseInfoLUA(luaFile$, *mod)
+              debugger::add("mods::loadList() - ERROR: failed to parse info.lua")
+            EndIf
+            infoPP(*mod) ; IMPORTANT
+          EndIf
+          
+          *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
+;           *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+        EndIf
+        
+        If *mod\name$ = ""
+          debugger::add("CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
+          MessageRequester("CRITICAL ERROR in mods::loadList()", "Possible critical error occured,"+#LF$+"please contact the programmer!")
+        EndIf
+      Next
+    EndIf
+    
+    
+    windowMain::stopGUIupdate()
+    debugger::add("mods::loadList() - add all mods to list gadget")
+    ForEach *mods()
+      *mod = *mods()
+      If *mod\tf_id$ = "" Or MapKey(*mods()) = ""
+        debugger::add("mods::loadList() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(*mods())+"} tf_id$={"+*mod\tf_id$+"}")
+        End
+      EndIf
+      toList(*mods())
+    Next
+    windowMain::stopGUIupdate(#False)
+    
+  EndProcedure
+  
+  Procedure saveList()
+    Protected TF$ = main::TF$
+    
+    If TF$ = ""
+      debugger::add("mods::saveList() - ERROR: TF$ not defined")
+      ProcedureReturn #False
+    EndIf
+    
+    Protected NewMap mods_tmp.mod()
+    ForEach *mods()
+      CopyStructure(*mods(), mods_tmp(MapKey(*mods())), mod)
+    Next
+    
+    Protected pTFMM$
+    pTFMM$  = misc::Path(TF$ + "/TFMM/")
+    
+    Protected json
+    json = CreateJSON(#PB_Any)
+    InsertJSONMap(JSONValue(json), mods_tmp())
+    SaveJSON(json, pTFMM$ + "mods.json", #PB_JSON_PrettyPrint)
+    FreeJSON(json)
+    
+    FreeMap(mods_tmp())
+    
+    ProcedureReturn #True
   EndProcedure
   
   Procedure convert(*data.queue::dat)
-    Protected TF$ = *data\tf$
+    Protected TF$ = main::TF$
     debugger::Add("mods::convert("+TF$+")")
     
     Protected file$, NewList mods$(), NewMap files$()
@@ -964,7 +1021,7 @@ Module mods
         i + 1
         queue::progressVal(i, ListSize(mods$()))
         ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
-        new(mods$(), TF$)
+        new(mods$())
       Next
       ClearList(mods$())
     EndIf
@@ -1012,7 +1069,7 @@ Module mods
     debugger::Add("mods::install("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    tf$ = main::TF$
     
     debugger::Add("mods::install() - mod {"+id$+"}")
     
@@ -1025,7 +1082,7 @@ Module mods
       debugger::Add("mods::install() - ERROR - cannot find mod in map")
       ProcedureReturn #False
     EndIf
-    If *mod\aux\installed
+    If *mod\aux\active
       debugger::Add("mods::install() - {"+id$+"} already installed")
       ProcedureReturn #False
     EndIf
@@ -1036,7 +1093,7 @@ Module mods
     
     If FileSize(target$) = -2
       debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
-      *mod\aux\installed = #True
+      *mod\aux\active = #True
       If IsGadget(library)
         For i = 0 To CountGadgetItems(library) -1
           If ListIcon::GetListItemData(library, i) = *mod
@@ -1071,7 +1128,7 @@ Module mods
     
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
-    *mod\aux\installed = #True
+    *mod\aux\active = #True
     If IsGadget(library)
       For i = 0 To CountGadgetItems(library) -1
         If ListIcon::GetListItemData(library, i) = *mod
@@ -1089,7 +1146,7 @@ Module mods
     debugger::Add("mods::remove("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    TF$ = main::TF$
     
     
     debugger::Add("mods::remove() - mod {"+id$+"}")
@@ -1099,7 +1156,7 @@ Module mods
     Protected i
     
     ; TODO alternatively, backup mod
-    If *mod\aux\TFonly
+    If *mod\aux\active And Not *mod\aux\inLibrary
       ; queue::add(queue::#QueueActionDelete, id$)
       delete(*data)
     EndIf
@@ -1109,7 +1166,7 @@ Module mods
       debugger::Add("mods::remove() - ERROR - cannot find mod in map")
       ProcedureReturn #False
     EndIf
-    If Not *mod\aux\installed
+    If Not *mod\aux\active
       debugger::Add("mods::remove() - ERROR - {"+id$+"} not installed")
       ProcedureReturn #False
     EndIf
@@ -1122,7 +1179,7 @@ Module mods
     
     ; finish removal
     
-    *mod\aux\installed = #False
+    *mod\aux\active = #False
     If IsGadget(library)
       For i = 0 To CountGadgetItems(library) -1
         If ListIcon::GetListItemData(library, i) = *mod
@@ -1139,7 +1196,7 @@ Module mods
     debugger::Add("mods::delete("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
-    tf$ = *data\tf$
+    TF$ = main::TF$
     
     debugger::Add("mods::delete() - mod {"+id$+"}")
     
@@ -1152,7 +1209,7 @@ Module mods
       debugger::Add("mods::delete() - ERROR - cannot find mod in map")
       ProcedureReturn #False
     EndIf
-    If *mod\aux\installed
+    If *mod\aux\active
       debugger::Add("mods::delete() - ERROR - mod is still installed, remove first")
       If Not remove(*data)
         ProcedureReturn #False
@@ -1262,7 +1319,7 @@ Module mods
     ProcedureReturn #False
   EndProcedure
   
-  Procedure generateLUA(*mod.mod)
+  Procedure.s getLUA(*mod.mod)
     Protected lua$
     
     ; severity = "NONE", "WARNING", "CRITICAL"
@@ -1325,15 +1382,14 @@ Module mods
            "end"
     EndWith
     
-    *mod\aux\lua$ = lua$
-    ProcedureReturn #True
+;     *mod\aux\lua$ = lua$
+    ProcedureReturn lua$
+  EndProcedure
+  
+  Procedure exportList(all=#False)
+    
   EndProcedure
   
 EndModule
 
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 590
-; FirstLine = 37
-; Folding = RIACA5
-; EnableUnicode
 ; EnableXP

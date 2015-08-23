@@ -42,8 +42,3 @@ Module images
     DataImageLogoEnd:
   EndDataSection
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 4
-; Folding = 6
-; EnableUnicode
-; EnableXP

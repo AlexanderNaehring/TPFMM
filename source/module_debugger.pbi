@@ -27,7 +27,3 @@ Module debugger
     EndIf
   EndProcedure
 EndModule
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; Folding = -
-; EnableUnicode
-; EnableXP

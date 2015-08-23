@@ -38,8 +38,3 @@ Module registry
     CompilerEndIf
   EndProcedure
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 6
-; Folding = -
-; EnableUnicode
-; EnableXP

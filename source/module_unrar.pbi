@@ -177,8 +177,3 @@ Module unrar
     
   CompilerEndIf
 EndModule
-; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 118
-; Folding = 9-
-; EnableUnicode
-; EnableXP

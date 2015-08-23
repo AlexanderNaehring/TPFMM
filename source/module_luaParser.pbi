@@ -1,5 +1,5 @@
 ﻿XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_mods_h.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 DeclareModule luaParser
   EnableExplicit
@@ -330,7 +330,9 @@ Module luaParser
     ; last step: open strings.lua if present and replace strings
     If FileSize(GetPathPart(file$)+"strings.lua") > 0
       If Not parseLUAlocale(GetPathPart(file$)+"strings.lua", locale::getCurrentLocale(), *mod, reg_val())
-        parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+        If locale::getCurrentLocale() <> "en"
+          parseLUAlocale(GetPathPart(file$)+"strings.lua", "en", *mod, reg_val())
+        EndIf
       EndIf
     EndIf
     
@@ -339,10 +341,3 @@ Module luaParser
   
   
 EndModule
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 116
-; FirstLine = 71
-; Folding = z-
-; EnableUnicode
-; EnableXP

@@ -1,9 +1,30 @@
-﻿
-XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_misc.pbi"
+﻿XIncludeFile "module_debugger.pbi"
 
 DeclareModule repository
   EnableExplicit
+  
+  Macro StopWindowUpdate(_winID_)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        SendMessage_(_winID_,#WM_SETREDRAW,0,0)
+      CompilerCase #PB_OS_Linux
+        
+      CompilerCase #PB_OS_MacOS
+        CocoaMessage(0,_winID_,"disableFlushWindow")
+    CompilerEndSelect
+  EndMacro
+  Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        SendMessage_(_winID_,#WM_SETREDRAW,1,0)
+        InvalidateRect_(_winID_,0,_redrawBackground_)
+        UpdateWindow_(_winID_)
+      CompilerCase #PB_OS_Linux
+        
+      CompilerCase #PB_OS_MacOS
+        CocoaMessage(0,_winID_,"enableFlushWindow")
+    CompilerEndSelect
+  EndMacro
   
   Structure repo_info
     name$
@@ -19,6 +40,7 @@ DeclareModule repository
     url$
     changed.i
     age.i
+    enc$
   EndStructure
   
   ; main (root level) repository
@@ -32,10 +54,10 @@ DeclareModule repository
     file_id.i
     filename$
     downloads.i
-    link$
+    url$
   EndStructure
   
-  Structure mods
+  Structure mod
     mod_id.i
     name$
     author_id.i
@@ -47,9 +69,10 @@ DeclareModule repository
     created.i
     changed.i
     List tags$()
+    tags_string$
     version$
     state$
-    link$
+    url$
     List files.files()
   EndStructure
   
@@ -59,25 +82,46 @@ DeclareModule repository
     mod_base_url$
     file_base_url$
     thumbnail_base_url$
-    List mods.mods()
+    List mods.mod()
+  EndStructure
+  
+  ; public column identifier
+  Structure column
+    name$
+    width.i
   EndStructure
   
   Declare loadRepository(url$)
   Declare loadRepositoryList()
-  Declare searchMod(search$, gadget)
+  
+  Declare registerWindow(windowID)
+  Declare registerGadget(gadgetID, Array columns.column(1))
+  Declare filterMods(search$)
   
   Global NewMap repo_mods.repo_mods()
 EndDeclareModule
 
 Module repository
-  Global NewList repositories$()
+  Enumeration ; column data type
+    #COL_INT
+    #COL_STR
+  EndEnumeration
+  Structure column_info Extends column
+    offset.i
+    type.i
+  EndStructure
   
-  CreateDirectory("repositories") ; subdirectory used for all repositoyry related files
+  Global NewList repositories$()
+  Global _windowID, _gadgetID
+  Global Dim _columns.column_info(0)
+  
+  #DIRECTORY = "repositories"
+  CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
   
   ; Create repository list file if not existing and add basic repository
-  If FileSize("repositories/repositories.list") <= 0
+  If FileSize(#DIRECTORY+"/repositories.List") <= 0
     Define file
-    file = CreateFile(#PB_Any, "repositories/repositories.list")
+    file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
       WriteStringN(file, "http://repo.tfmm.xanos.eu/")
       CloseFile(file)
@@ -92,7 +136,7 @@ Module repository
   ; Private
   
   Procedure.s getRepoFileName(url$)
-    ProcedureReturn "repositories/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+    ProcedureReturn #DIRECTORY + "/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
   EndProcedure
   
   Procedure updateRepository(url$)
@@ -103,19 +147,18 @@ Module repository
     
     time = ElapsedMilliseconds()
     If ReceiveHTTPFile(url$, file$)
-      debugger::add("repository::updateRepository() - Download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
+      debugger::add("repository::updateRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
       ProcedureReturn #True
     EndIf
-    debugger::add("repository::updateRepository() - ERROR downloading repository")
+    debugger::add("repository::updateRepository() - ERROR: failed to download repository")
     ProcedureReturn #False
     
   EndProcedure
   
-  Procedure loadRepositoryMods(url$)
+  Procedure loadRepositoryMods(url$, enc$ = "")
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods("+url$+")")
-    debugger::add("repository::loadRepositoryMods() - filename: {"+file$+"}")
+    debugger::add("repository::loadRepositoryMods("+url$+", "+enc$+") - filename: {"+file$+"}")
     
     Protected json, value, mods
     
@@ -124,42 +167,89 @@ Module repository
       updateRepository(url$)
     EndIf
     
+    Select enc$
+      Case "aes"
+        debugger::add("repository::loadRepositoryMods() - using AES decryption")
+        Protected size, file, *in, *out
+        size = FileSize(file$)
+        file = ReadFile(#PB_Any, file$)
+        If Not file
+          debugger::add("repository::loadRepositoryMods() - ERROR: cannot read file")
+          ProcedureReturn #False
+        EndIf
+        
+        *in  = AllocateMemory(size)
+        *out = AllocateMemory(size)
+        ReadData(file, *in, size)
+        CloseFile(file)
+        AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
+        FreeMemory(*in)
+        json = CatchJSON(#PB_Any, *out, size)
+        FreeMemory(*out)
+        DataSection
+          key_aes_1:  ; key hidden!
+          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+        EndDataSection
+        
+      Default
+        json = LoadJSON(#PB_Any, file$)
+    EndSelect
     
-    json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("repository::loadRepositoryMods() - ERROR: Could not load JSON")
+      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
       ProcedureReturn #False
     EndIf
+    
     
     value = JSONValue(json)
     If JSONType(value) <> #PB_JSON_Object 
-      debugger::add("repository::loadRepositoryMods() - ERROR: Mods Repository should be of type JSON Object")
+      debugger::add("repository::loadRepositoryMods() - ERROR: mods repository should be of type JSON object")
       ProcedureReturn #False
     EndIf
     
+    ; load JSON into memory:
+    ; repository information and complete list of mods
     ExtractJSONStructure(value, repo_mods(url$), repo_mods)
     
+    ; Sort list for last modification time
     If ListSize(repo_mods(url$)\mods())
-      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mods\changed), TypeOf(mods\changed))
+      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mod\changed), TypeOf(mod\changed))
     EndIf
     
     ; postprocess some structure fields
     With repo_mods(url$)\mods()
       ForEach repo_mods(url$)\mods()
+        ; add base url to mod url
         If repo_mods(url$)\mod_base_url$
-          \link$ = repo_mods(url$)\mod_base_url$ + \link$
+          \url$ = repo_mods(url$)\mod_base_url$ + \url$
         EndIf
+        ; add base url to mod thumbnail
         If repo_mods(url$)\thumbnail_base_url$
           \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
         EndIf
-        ForEach \files()
-          \files()\link$ = repo_mods(url$)\file_base_url$ + \files()\link$
+        ; add base url to all files
+        If repo_mods(url$)\file_base_url$
+          ForEach \files()
+            \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
+          Next
+        EndIf
+        ; aggregate tag list to string
+        \tags_string$ = ""
+        ForEach \tags$()
+          ; TODO add localization here (translate tags)
+          \tags_string$ + \tags$() + ", "
         Next
+        If Len(\tags_string$) >= 2
+          ; cut of ', ' from end of string
+          \tags_string$ = Left(\tags_string$, Len(\tags_string$) - 2)
+        EndIf
       Next
     EndWith
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
     
+    ProcedureReturn #True
   EndProcedure
   
   Procedure loadRepositoryLocale(url$)
@@ -246,7 +336,7 @@ Module repository
         updateRepository(repo_main\mods\url$)
       EndIf
       ; Load mods from repository file
-      loadRepositoryMods(repo_main\mods\url$)
+      loadRepositoryMods(repo_main\mods\url$, repo_main\mods\enc$)
     EndIf
     
     If repo_main\locale\url$
@@ -291,19 +381,148 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
-  Procedure searchMod(search$, gadget)
-    ; debugger::add("repository::searchMod("+search$+")")
-    Protected text$, mod_ok, tmp_ok, count, i, k, str$, tags$
+  Procedure registerWindow(window)
+    _windowID = window
+    If Not IsWindow(_windowID)
+      _windowID = #False
+    EndIf
+    ProcedureReturn _windowID
+  EndProcedure
+  
+  Procedure registerGadget(gadget, Array columns.column(1))
+    debugger::add("repository::loadRepositoryList(" + gadget + ")")
+    Protected col
     
-    misc::StopWindowUpdate(WindowID(0))
-    HideGadget(gadget, 0)
-    ClearGadgetItems(gadget)
+    ; set new gadget ID
+    _gadgetID = gadget
+    If Not IsGadget(_gadgetID)
+      ; if new id is not valid, return false
+      _gadgetID = #False
+      ProcedureReturn #False
+    EndIf
+    
+    ; clear gadget item list
+    ClearGadgetItems(_gadgetID)
+    
+    ; clear columns
+    For col = 0 To 100 ; no native way to get column count
+      RemoveGadgetColumn(_gadgetID, col)
+    Next
+    
+    ; create _columns array
+    debugger::add("repository::loadRepositoryList() - generate _columns")
+    FreeArray(_columns())
+    Dim _columns(ArraySize(columns()))
+    ; in PureBasic, Dim Array(10) created array with 11 elements (0 to 10)
+    ; ArraySize() returns the same size that is used with Dim
+    ; therefore, real size of array is one more than returned by ArraySize()
+    For col = 0 To ArraySize(columns())
+      ; user can specify which columns to display
+      ; internal array will save offset for reading value from memory
+      ; as well as other information about column used for display
+      ; TODO use locale to get translation of column header
+      With _columns(col)
+        ; save name and type depending on offset
+        Select columns(col)\name$ ;{
+          Case "mod_id"
+            \offset = OffsetOf(mod\mod_id)
+            \name$ = "Mod ID"
+            \type = #COL_INT
+          Case "name"
+            \offset = OffsetOf(mod\name$)
+            \name$ = "Mod Name"
+            \type = #COL_STR
+          Case "author_id"
+            \offset = OffsetOf(mod\author_id)
+            \name$ = "Author ID"
+            \type = #COL_INT
+          Case "author_name"
+            \offset = OffsetOf(mod\author_name$)
+            \name$ = "Author"
+            \type = #COL_STR
+          Case "thumbnail"
+            Continue
+            \offset = OffsetOf(mod\thumbnail$)
+            \name$ = "Thumbnail"
+            \type = #COL_STR
+          Case "views"
+            \offset = OffsetOf(mod\views)
+            \name$ = "Views"
+            \type = #COL_INT
+          Case "downloads"
+            \offset = OffsetOf(mod\downloads)
+            \name$ = "Downloads"
+            \type = #COL_INT
+          Case "likes"
+            \offset = OffsetOf(mod\likes)
+            \name$ = "Likes"
+            \type = #COL_INT
+          Case "created"
+            Continue
+            \offset = OffsetOf(mod\created)
+            \name$ = "Created"
+            \type = #COL_INT
+          Case "changed"
+            Continue
+            \offset = OffsetOf(mod\changed)
+            \name$ = "Last Modified"
+            \type = #COL_INT
+          Case "tags" ; list
+            Continue
+          Case "tags_string"
+            \offset = OffsetOf(mod\tags_string$)
+            \name$ = "Tags"
+            \type = #COL_STR
+          Case "version"
+            \offset = OffsetOf(mod\version$)
+            \name$ = "Version"
+            \type = #COL_STR
+          Case "state"
+            \offset = OffsetOf(mod\state$)
+            \name$ = "State"
+            \type = #COL_STR
+          Case "url"
+            \offset = OffsetOf(mod\url$)
+            \name$ = "URL"
+            \type = #COL_STR
+          Case "files" ; list
+            Continue
+          Default
+            Continue
+        EndSelect ;}
+        \width = columns(col)\width
+        debugger::add("repository::loadRepositoryList() - new column: {" + \name$ + "} of width {" + \width + "}")
+      EndWith
+    Next
+    
+    ; initialize new columns to gadget
+    For col = 0 To ArraySize(_columns())
+      AddGadgetColumn(_gadgetID, col, _columns(col)\name$, _columns(col)\width)
+    Next
+    
+    ; return
+    ProcedureReturn _gadgetID
+  EndProcedure
+  
+  Procedure filterMods(search$)
+    ; debugger::add("repository::filterMods("+search$+")")
+    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address, *address
+    
+    If Not IsWindow(_windowID) Or Not IsGadget(_gadgetID)
+      debugger::add("repository::filterMods() - ERROR: window or gadget not valid")
+      ProcedureReturn #False
+    EndIf
+    
+    StopWindowUpdate(WindowID(_windowID))
+    HideGadget(_gadgetID, 0)
+    ClearGadgetItems(_gadgetID)
     
     count = CountString(search$, " ") + 1
     
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         With repo_mods()\mods()
+          *base_address = repo_mods()\mods()
           mod_ok = 0 ; reset ok for every mod entry
           If search$ = ""
             mod_ok = 1
@@ -334,30 +553,34 @@ Module repository
             Next
           EndIf
           If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-            tags$ = ""
-            ForEach \tags$()
-              tags$ + \tags$() + ", "
+            text$ = ""
+            ; generate text based on specified columns
+            For col = 0 To ArraySize(_columns())
+              *address = *base_address + _columns(col)\offset
+              Select _columns(col)\type
+                Case #COL_INT
+                  text$ + Str(PeekI(*address))
+                Case #COL_STR
+                  *address = PeekI(*address)
+                  If *address
+                    text$ + PeekS(*address)
+                  EndIf
+              EndSelect
+              If col < ArraySize(_columns())
+                text$ + #LF$
+              EndIf
             Next
-            If Len(tags$) > 2
-              tags$ = Left(tags$, Len(tags$) - 2)
-            EndIf
-            text$ = \name$ + #LF$ +
-                    \version$ + #LF$ +
-                    \author_name$ + #LF$ +
-                    \state$ + #LF$ +
-                    tags$ + #LF$ +
-                    Str(\downloads) + #LF$ +
-                    Str(\likes)
-            AddGadgetItem(0, i, text$)
-            SetGadgetItemData(gadget, i, repo_mods()\mods())
-            i + 1
+            
+            AddGadgetItem(_gadgetID, item, text$)
+            SetGadgetItemData(_gadgetID, item, repo_mods()\mods())
+            item + 1
           EndIf
         EndWith
       Next
     Next
     
-    HideGadget(gadget, 0)
-    misc::ContinueWindowUpdate(WindowID(0))
+    HideGadget(_gadgetID, 0)
+    ContinueWindowUpdate(WindowID(_windowID))
     
   EndProcedure
   
@@ -371,19 +594,44 @@ CompilerIf #PB_Compiler_IsMainFile
   repository::loadRepositoryList()
   
   If OpenWindow(0, 0, 0, 800, 600, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 800, 570, "Mod Name", 240, #PB_ListIcon_FullRowSelect)
-    AddGadgetColumn(0, 1, "Version", 60)
-    AddGadgetColumn(0, 2, "Author", 100)
-    AddGadgetColumn(0, 3, "State", 60)
-    AddGadgetColumn(0, 4, "Tags", 200)
-    AddGadgetColumn(0, 5, "Downloads", 60)
-    AddGadgetColumn(0, 6, "Likes", 40)
+    ListIconGadget(0, 0, 30, 800, 570, "", 0, #PB_ListIcon_FullRowSelect)
+    
+    Define Dim columns.repository::column(0)
+    
+    ; load column definition
+    Define *json, *value, json$
+    *json = LoadJSON(#PB_Any, "columns.json")
+    If Not *json
+      json$ = ReplaceString("[{'width':240,'name':'name'},"+
+                            "{'width':60,'name':'version'},"+
+                            "{'width':100,'name':'author_name'},"+
+                            "{'width':60,'name':'state'},"+
+                            "{'width':200,'name':'tags_string'},"+
+                            "{'width':60,'name':'downloads'},"+
+                            "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
+      *json = ParseJSON(#PB_Any, json$)
+      If Not *json
+        Debug "Error loading json"
+        End
+      EndIf
+    EndIf
+    ExtractJSONArray(JSONValue(*json), columns())
+    FreeJSON(*json)
+    
+    repository::registerWindow(0)
+    repository::registerGadget(0, columns())
+    
+    ; save current configuration to json file
+    *json = CreateJSON(#PB_Any)
+    InsertJSONArray(JSONValue(*json), columns())
+    SaveJSON(*json, "columns.json", #PB_JSON_PrettyPrint)
+    FreeJSON(*json)
     
     TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
     StringGadget(1, 570, 5, 200, 20, "")
     ButtonGadget(2, 775, 5, 20, 20, "X")
     
-    repository::searchMod("", 0) ; initially fill list
+    repository::filterMods("") ; initially fill list
     
     Repeat
       event = WaitWindowEvent()
@@ -394,28 +642,27 @@ CompilerIf #PB_Compiler_IsMainFile
           Select EventGadget()
             Case 2 ; push "x" button
               SetGadgetText(1, "")
+            Case 0 ; click on list
+              If EventType() = #PB_EventType_LeftDoubleClick
+                Define *mod.repository::mod
+                Define selected
+                selected = GetGadgetState(0)
+                If selected <> -1
+                  *mod = GetGadgetItemData(0, selected)
+                  If *mod
+                    Debug "double click on " + *mod\name$ + " - url = " + *mod\url$
+                    RunProgram(*mod\url$)
+                    ; TODO use misc::openLink for cross-plattform
+                  EndIf
+                EndIf
+              EndIf
           EndSelect
       EndSelect
       If GetGadgetText(1) <> text$
         text$ = GetGadgetText(1)
-        SendMessage_(WindowID(0),#WM_SETREDRAW,0,0)
-        repository::searchMod(text$, 0)
-        SendMessage_(WindowID(0),#WM_SETREDRAW,1,0)
-        InvalidateRect_(WindowID(0),0,0)
-        UpdateWindow_(WindowID(0))
+        repository::filterMods(text$)
       EndIf
     ForEver 
   EndIf
   
 CompilerEndIf
-
-; IDE Options = PureBasic 5.31 (Windows - x64)
-; CursorPosition = 312
-; FirstLine = 155
-; Folding = T9
-; EnableUnicode
-; EnableThread
-; EnableXP
-; EnableUser
-; Executable = repository_test.exe
-; Compiler = PureBasic 5.31 (Windows - x86)
