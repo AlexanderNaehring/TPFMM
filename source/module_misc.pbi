@@ -8,6 +8,17 @@
    (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
   EndMacro
   
+  Macro openLink(link)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        RunProgram(link)
+      CompilerCase #PB_OS_Linux
+        RunProgram("xdg-open", link, "")
+      CompilerCase #PB_OS_MacOS
+        RunProgram("open", link, "")
+    CompilerEndSelect
+  EndMacro
+  
   Macro StopWindowUpdate(_winID_)
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
         SendMessage_(_winID_,#WM_SETREDRAW,0,0)
@@ -26,7 +37,6 @@
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
-  Declare openLink(link$)
   Declare ResizeCenterImage(im, width, height)
   Declare HexStrToMem(hex$, *memlen = 0)
   Declare.s MemToHexStr(*mem, memlen.i)
@@ -136,17 +146,6 @@ Module misc
       ProcedureReturn #True
     EndIf
     ProcedureReturn #False
-  EndProcedure
-  
-  Procedure openLink(link$)
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        RunProgram(link$)
-      CompilerCase #PB_OS_Linux
-        RunProgram("xdg-open", link$, "")
-      CompilerCase #PB_OS_MacOS
-        RunProgram("open", link$, "")
-    CompilerEndSelect
   EndProcedure
   
   Procedure ResizeCenterImage(im, width, height)
