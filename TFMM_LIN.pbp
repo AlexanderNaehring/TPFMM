@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-23 18:23" user="alexander" host="mint"/>
+    <lastopen date="2015-08-23 19:25" user="alexander" host="mint"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
@@ -72,8 +72,8 @@
       <executable value="bin/lin64/TFMM"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="2069"/>
-      <buildcount enable="1" value="129"/>
+      <compilecount enable="1" value="2076"/>
+      <buildcount enable="1" value="131"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
