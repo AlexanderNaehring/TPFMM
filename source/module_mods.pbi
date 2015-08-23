@@ -969,6 +969,7 @@ Module mods
   
   Procedure saveList()
     Protected TF$ = main::TF$
+    debugger::add("mods::saveList("+TF$+")")
     
     If TF$ = ""
       debugger::add("mods::saveList() - ERROR: TF$ not defined")
