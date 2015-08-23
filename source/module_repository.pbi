@@ -197,7 +197,7 @@ Module repository
     EndSelect
     
     If Not json
-      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON - try to decrypt")
+      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
       ProcedureReturn #False
     EndIf
     
@@ -652,6 +652,7 @@ CompilerIf #PB_Compiler_IsMainFile
                   If *mod
                     Debug "double click on " + *mod\name$ + " - url = " + *mod\url$
                     RunProgram(*mod\url$)
+                    ; TODO use misc::openLink for cross-plattform
                   EndIf
                 EndIf
               EndIf
