@@ -11,6 +11,7 @@
 ; RemoveGadgetItem()   -> RemoveListItem()
 ; ClearGadgetItems()   -> ClearListItems()
 ; SetGadgetItemData()  -> SetListItemData()
+; SetGadgetItemImage() -> SetListItemImage()
 ; SetGadgetItemText()  -> SetListItemText()
 ; AddGadgetColumn()    -> AddListColumn()
 ; RemoveGadgetColumn() -> RemoveListColumn()
@@ -18,6 +19,8 @@
 
 
 DeclareModule ListIcon
+  EnableExplicit
+  
   Enumeration 1
     #Left 
     #Right
@@ -51,37 +54,37 @@ DeclareModule ListIcon
       Declare AutoWidthColumns(GadgetID.i)
       Declare SetFont(GadgetID.i, HeaderFont.i, ListFont.i=#False)
     CompilerCase #PB_OS_Linux
-    ; --- ??? ---  
+      Declare JustifyColumn(GadgetID.i, Column.i, Flag.l=#Center)
+    CompilerCase #PB_OS_MacOS
+      ; ???
   CompilerEndSelect
   Declare DefineSort(GadgetID.i, Norm.l) ; Define German Sort Norm
   Declare SetColumnFlag(GadgetID.i, Column.i, Flags.l)
-  Declare.i AddListItem(GadgetID.i, Position.i, Text.s, UserSort.s="") ; UserSort.s <- #Default
+  Declare.i AddListItem(GadgetID.i, Position.i, Text.s, UserSort.s="", ImageID.i=#False) ; UserSort.s <- #Default
   Declare SetListItemData(GadgetID.i, Position.i, Value.i)
   Declare.i GetListItemData(GadgetID.i, Position.i)
-  Declare AddUserSort(GadgetID.i, Column.i, UserSort.s)              ; Use only after AddListItem() !
+  Declare SetListItemImage(GadgetID.i, Position.i, ImageID.i)
+  Declare AddUserSort(GadgetID.i, Column.i, UserSort.s)                ; Use only after AddListItem() !
   Declare ChangeUserSortColumn(GadgetID.i, Position.i, Column.i, UserSort.s)
   Declare ChangeUserSortDefault(GadgetID.i, Position.i, UserSort.s="")
   Declare SetListItemText(GadgetID.i, Position.i, Text.s , Column.i)
   Declare RemoveListItem(GadgetID.i, Position.i)                     
-  Declare ClearListItems(GadgetID.i)                                 ; Don't use ClearGadgetItems() !
-  Declare AddListColumn(GadgetID.i, Column.i, Titel.s, Width.i)
+  Declare ClearListItems(GadgetID.i)                                   ; Don't use ClearGadgetItems() !
+  Declare AddListColumn(GadgetID.i, Column.i, Titel.s, Width.i, ReFill.l=#True)
   Declare RemoveListColumn(GadgetID.i, Column.i)
   Declare SortListItems(GadgetID.i, SortCol.i, Flags.l=#False)
   Declare MultiSortListItems(GadgetID.i, SortCol1.i, SortCol2.i, SortCol3.i=#PB_Ignore, Flags.l=#False)
   Declare RemoveSortData(GadgetID.i)
-  
-  Declare SetListItemImage(GadgetID.i, Position.i, ImageID.i)
 EndDeclareModule
 
 
 Module ListIcon
-
-EnableExplicit
   
   Structure ListItemStructure
     Position.i
-    ItemData.i
     ImageID.i
+    ItemData.i
+    Checked.l
     Text.s
     Sort.s
     SortInteger.i
@@ -158,7 +161,7 @@ EnableExplicit
             *nmhdr = lParam          ;{ Column NoResize/Hide
             If *nmhdr\hdr\code = #HDN_ITEMCHANGING
               Column = *nmhdr\iItem
-              If ListIcon(GID)\Column(Str(Column)) & #NoResize Or ListIcon(GID)\Column(Str(Column)) & #Hide Or Flags & #NoResize
+              If ListIcon(GID)\Column(Str(Column)) & #NoResize Or Flags & #NoResize Or ListIcon(GID)\Column(Str(Column)) & #Hide
                 Result=#True
               EndIf
             EndIf ;}
@@ -214,6 +217,7 @@ EnableExplicit
                 y = rect\top  + 0
                 width  = rect\right  - rect\left - 1
                 height = rect\bottom - rect\top  - 0
+                If width > 32767 : width = 32767 : EndIf
                 ResizeGadget(*ListEdit\StrgID, x, y, width, height)
                 SetGadgetText(*ListEdit\StrgID, *ListEdit\CellText)
                 HideGadget(*ListEdit\StrgID, 0)
@@ -310,6 +314,44 @@ EnableExplicit
       
     CompilerCase #PB_OS_Linux
       
+      ;{ used for justify ListIcon columns
+      ImportC ""
+        g_object_set_double(*Object, Property.P-ASCII, Value.D, Null) As "g_object_set"
+      EndImport
+      ;}
+      
+      Procedure JustifyColumn(GadgetID.i, Column.i, Flag.l=#Center)
+        ; based on code from Shardik 
+        Protected *CellRenderers, *Column
+        Protected.d AlignmentFactor
+        Protected.i Count, i
+
+        Select Flag
+          Case #Left
+            AlignmentFactor = 0.0
+          Case #Center
+            AlignmentFactor = 0.5
+          Case #Right
+            AlignmentFactor = 1.0
+        EndSelect
+
+        *Column = gtk_tree_view_get_column_(GadgetID(GadgetID), Column)
+        If *Column
+          gtk_tree_view_column_set_alignment_(*Column, AlignmentFactor)
+          *CellRenderers = gtk_tree_view_column_get_cell_renderers_(*Column)
+          If *CellRenderers
+            Count = g_list_length_(*CellRenderers)
+            For i = 0 To Count - 1
+              g_object_set_double(g_list_nth_data_(*CellRenderers, i), "xalign", AlignmentFactor, #Null)
+            Next i         
+            g_list_free_(*CellRenderers)
+          EndIf
+        EndIf
+        
+      EndProcedure
+      
+    CompilerCase #PB_OS_MacOS
+      
       
   CompilerEndSelect
   
@@ -322,9 +364,9 @@ EnableExplicit
   
   ; --- Replaced ListIcon Commands ---
   
-  Procedure.i AddListItem(GadgetID.i, Position.i, Text.s, UserSort.s="")
+  Procedure.i AddListItem(GadgetID.i, Position.i, Text.s, UserSort.s="", ImageID.i=#False)
     Protected *ptr, GID.s = Str(GadgetID)
-    AddGadgetItem(GadgetID, Position, Text)
+    AddGadgetItem(GadgetID, Position, Text, ImageID)
     If Position = -1
       *ptr = AddElement(ListIcon(GID)\Item())
       ListIcon(GID)\Item()\Text = Text
@@ -339,6 +381,7 @@ EnableExplicit
       ListIcon(GID)\Item()\Text = Text
       ListIcon(GID)\Item()\Position = Position
     EndIf
+    ListIcon(GID)\Item()\ImageID = ImageID
     If UserSort : ListIcon(GID)\Item()\UserSort("D") = UserSort : EndIf ; Default UserSort (No Column)
     ProcedureReturn *ptr
   EndProcedure
@@ -352,8 +395,8 @@ EnableExplicit
   
   Procedure ClearListItems(GadgetID.i)
     Protected GID.s = Str(GadgetID)
-    ClearGadgetItems(GadgetID) 
-    ClearList(ListIcon(GID)\Item()) 
+    ClearGadgetItems(GadgetID)
+    ClearList(ListIcon(GID)\Item())
   EndProcedure
   
   Procedure SetListItemData(GadgetID.i, Position.i, Value.i)
@@ -364,11 +407,21 @@ EnableExplicit
   EndProcedure
   
   Procedure.i GetListItemData(GadgetID.i, Position.i)
-    Protected GID.s = Str(GadgetID)
-    If SelectElement(ListIcon(GID)\Item(), Position)
-      ProcedureReturn ListIcon(GID)\Item()\ItemData
+    Protected GID.s = Str(GadgetID), itemData
+    If Not SelectElement(ListIcon(GID)\Item(), Position)
+      Debug "CRITICAL ERROR: Could not select Element "+ Position +" in GetListItemData"
+      ProcedureReturn #False
     EndIf
+    itemData = ListIcon(GID)\Item()\ItemData
+    ProcedureReturn itemData
   EndProcedure
+  
+  Procedure SetListItemImage(GadgetID.i, Position.i, ImageID.i)
+    Protected GID.s = Str(GadgetID)
+    SetGadgetItemImage(GadgetID, Position, ImageID)
+    SelectElement(ListIcon(GID)\Item(), Position)
+    ListIcon(GID)\Item()\ImageID = ImageID
+  EndProcedure  
   
   Procedure SetListItemText(GadgetID.i, Position.i, Text.s, Column.i)
     Protected GID.s = Str(GadgetID), Row.i, col.i, StartPos.i, EndPos.i
@@ -394,10 +447,10 @@ EnableExplicit
     Next
   EndProcedure
   
-  Procedure AddListColumn(GadgetID.i, Column.i, Titel.s, Width.i) ; Add columns afterward
-    Protected GID.s = Str(GadgetID), col.i, ColPos.i = 0
+  Procedure AddListColumn(GadgetID.i, Column.i, Titel.s, Width.i, ReFill.l=#True)
+    Protected GID.s = Str(GadgetID), c.i, col.i, ColPos.i = 0
     AddGadgetColumn(GadgetID, Column, Titel, Width)
-    ClearGadgetItems(GadgetID)
+    If Refill : ClearGadgetItems(GadgetID) : EndIf
     ForEach ListIcon(GID)\Item()
       ColPos = 0
       If Column > 0 ;{  
@@ -412,28 +465,42 @@ EnableExplicit
       Else ; last column
         ListIcon(GID)\Item()\Text + #LF$
       EndIf
-      AddGadgetItem(GadgetID, -1, ListIcon(GID)\Item()\Text)
+      If ReFill : AddGadgetItem(GadgetID, -1, ListIcon(GID)\Item()\Text, ListIcon(GID)\Item()\ImageID) : EndIf
     Next
+    For c = CountGadgetItems(GadgetID)-1 To Column+1 Step -1
+      If ListIcon(GID)\Column(Str(c-1))
+        ListIcon(GID)\Column(Str(c)) = ListIcon(GID)\Column(Str(c-1))
+      EndIf
+    Next
+    ListIcon(GID)\Column(Str(Column)) = #False
   EndProcedure
 
   Procedure RemoveListColumn(GadgetID.i, Column.i)
     Protected GID.s = Str(GadgetID), col.i, StartPos.i, EndPos.i
     RemoveGadgetColumn(GadgetID, Column)
     ForEach ListIcon(GID)\Item()
-      If Column > 0 ;{
+      StartPos = 0
+      If Column > 0 ;{ Column 1 - Last
         For col=1 To Column
           StartPos = FindString(ListIcon(GID)\Item()\Text, #LF$, StartPos+1)
         Next
       EndIf ;}
       EndPos = FindString(ListIcon(GID)\Item()\Text, #LF$, StartPos+1)
       If Column = 0
-        ListIcon(GID)\Item()\Text = Mid(ListIcon(GID)\Item()\Text, EndPos) 
+        ListIcon(GID)\Item()\Text = Mid(ListIcon(GID)\Item()\Text, EndPos+1) 
       ElseIf EndPos
-        ListIcon(GID)\Item()\Text = Left(ListIcon(GID)\Item()\Text, StartPos) + Mid(ListIcon(GID)\Item()\Text, EndPos)
+        ListIcon(GID)\Item()\Text = Left(ListIcon(GID)\Item()\Text, StartPos-1) + Mid(ListIcon(GID)\Item()\Text, EndPos)
       Else ; Last Column
-        ListIcon(GID)\Item()\Text = Left(ListIcon(GID)\Item()\Text, StartPos)
+        ListIcon(GID)\Item()\Text = Left(ListIcon(GID)\Item()\Text, StartPos-1)
       EndIf
     Next
+    ListIcon(GID)\Column(Str(Column)) = #False
+    For col = Column+1 To CountGadgetItems(GadgetID)
+      If ListIcon(GID)\Column(Str(col))
+        ListIcon(GID)\Column(Str(col-1)) = ListIcon(GID)\Column(Str(col))
+      EndIf
+    Next
+    ListIcon(GID)\Column(Str(CountGadgetItems(GadgetID))) = #False
   EndProcedure
   
   ; --- Sort List Commands ---
@@ -562,8 +629,14 @@ EnableExplicit
   Procedure SortListItems(GadgetID.i, SortCol.i, Flags.l=#False)
     ; Flags: #UserSort / #Descending / #Ascending / #CaseSensitive / #CaseInSensitive
     ; SortCol: #Default (if #UserSort)
-    Protected Row.i, GID.s = Str(GadgetID), ColumnFlag = ListIcon(GID)\Column(Str(SortCol))
+    Protected i.i, Row.i, GID.s = Str(GadgetID), ColumnFlag = ListIcon(GID)\Column(Str(SortCol))
     If ListSize(ListIcon(GID)\Item())
+      ; --- Read Checked / GadgetItemData ---
+      For i = 0 To CountGadgetItems(GadgetID)-1
+        ListIcon(GID)\Item()\Checked = GetGadgetItemState(GadgetID, i)
+        ListIcon(GID)\Item()\ItemData = GetListItemData(GadgetID, i)
+      Next
+      ; -------------------------------------
       If ColumnFlag & #Integer   ;{ Sort Integer
         SetSortOrderInteger(GadgetID, Flags, SortCol)
         If Flags & #Descending
@@ -584,7 +657,7 @@ EnableExplicit
           SortStructuredList(ListIcon(GID)\Item(), #PB_Sort_Descending, OffsetOf(ListItemStructure\Sort), TypeOf(ListItemStructure\Sort))
         Else
           SortStructuredList(ListIcon(GID)\Item(), #PB_Sort_Ascending, OffsetOf(ListItemStructure\Sort), TypeOf(ListItemStructure\Sort))
-        EndIf
+        EndIf ;}
       Else                       ;{ Sort String
         If Flags & #UserSort
           SetSortUserOrder(GadgetID, Flags, SortCol)
@@ -597,11 +670,11 @@ EnableExplicit
           SortStructuredList(ListIcon(GID)\Item(), #PB_Sort_Ascending, OffsetOf(ListItemStructure\Sort), TypeOf(ListItemStructure\Sort))
         EndIf ;}
       EndIf
-      ClearGadgetItems(GadgetID)
+      ClearGadgetItems(GadgetID) 
       ForEach ListIcon(GID)\Item()
-        AddGadgetItem(GadgetID, Row, ListIcon(GID)\Item()\Text)
+        AddGadgetItem(GadgetID, Row, ListIcon(GID)\Item()\Text, ListIcon(GID)\Item()\ImageID)
+        SetGadgetItemState(GadgetID, Row, ListIcon(GID)\Item()\Checked)
         SetGadgetItemData(GadgetID, Row, ListIcon(GID)\Item()\ItemData)
-        SetGadgetItemImage(GadgetID, Row, ListIcon(GID)\Item()\ImageID)
         Row + 1
       Next
     EndIf
@@ -624,7 +697,7 @@ EnableExplicit
       EndIf
       ClearGadgetItems(GadgetID) 
       ForEach ListIcon(GID)\Item()
-        AddGadgetItem(GadgetID, Row, ListIcon(GID)\Item()\Text)
+        AddGadgetItem(GadgetID, Row, ListIcon(GID)\Item()\Text, ListIcon(GID)\Item()\ImageID)
         SetGadgetItemData(GadgetID, Row, ListIcon(GID)\Item()\ItemData)
         Row + 1
       Next
@@ -635,19 +708,16 @@ EnableExplicit
     DeleteMapElement(ListIcon(), Str(GadgetID))
   EndProcedure
   
-  Procedure SetListItemImage(GadgetID.i, Position.i, ImageID.i)
-    Protected GID.s = Str(GadgetID)
-    If ImageID
-      SetGadgetItemImage(GadgetID, Position, ImageID)
-      SelectElement(ListIcon(GID)\Item(), Position)
-      ListIcon(GID)\Item()\ImageID = ImageID
-    EndIf
-  EndProcedure
 EndModule
   
 CompilerIf #PB_Compiler_IsMainFile
   #Window = 0
   #List   = 1
+  #Font_Arial10B = 2
+  #Font_Arial9I  = 3
+  
+  LoadFont(#Font_Arial10B,"Arial",10,#PB_Font_Bold)
+  LoadFont(#Font_Arial9I,"Arial",9,#PB_Font_Italic)
   
   If OpenWindow(#Window,0,0,320,250,"Window",#PB_Window_SystemMenu|#PB_Window_ScreenCentered)
     ListIconGadget(#List,10,10,300,230,"Column 0",80,#PB_ListIcon_GridLines)
@@ -664,22 +734,34 @@ CompilerIf #PB_Compiler_IsMainFile
       SetColumnFlag(#List, 1, #NoSort|#NoResize)
       SetColumnFlag(#List, 2, #NoEdit)
       SetColumnFlag(#List, 3, #Float) 
-      SetColumnFlag(#List, 4, #Hide)
+      SetColumnFlag(#List, 4, #Hide) ; Hide Column 4
+      ;If AddListItem(#List, -1, "Ärmel"+#LF$+"Esel"+#LF$+"Öfen")
+      ;  AddUserSort(#List, 0, "A")
+      ;  AddUserSort(#List, 1, "E")
+      ;  AddUserSort(#List, 2, "O")
+      ;EndIf
     UnuseModule ListIcon
     
-    CompilerIf #PB_OS_Windows
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
       UseModule ListIcon
       DefineListCallback(#List, #Edit|#NoResize)
-      JustifyColumn(#List, 1, #Center)
-      JustifyColumn(#List, 3, #Right)
+      SetFont(#List, FontID(#Font_Arial10B), FontID(#Font_Arial9I))
       UnuseModule ListIcon
       Debug ListIcon::CountColumns(#List)
+      ListIcon::JustifyColumn(#List, 1, ListIcon::#Center)
+      ListIcon::JustifyColumn(#List, 3, ListIcon::#Right)
     CompilerEndIf
     
     MessageRequester("ListIcon Test","Sort ListIcon Items")
     ListIcon::SortListItems(#List, 0, ListIcon::#Descending)
-    MessageRequester("ListIcon Test","Remove ListIcon Items")
-    ListIcon::RemoveListItem(#List, 3)
+    ;ListIcon::AutoWidthColumns(#List)
+    ;ListIcon::SortListItems(#List, #Default, #UserSort) ; Default User Sort
+    ;ListIcon::MultiSortListItems(#List, 0, 1, #PB_Ignore)
+    ;ListIcon::SetListItemText(#List, 1, "New Text", 2)
+    MessageRequester("ListIcon Test","Add ListIcon Column")
+    ListIcon::AddListColumn(#List, 1, "New", 40)
+    ;MessageRequester("ListIcon Test","Remove ListIcon Items")
+    ;ListIcon::RemoveListItem(#List, 3)
     Repeat : Until WaitWindowEvent() = #PB_Event_CloseWindow
   EndIf
   
