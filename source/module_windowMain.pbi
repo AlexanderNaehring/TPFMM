@@ -3,7 +3,7 @@ DeclareModule windowMain
   
   Global id
   Global Library ; FIXME make private again
-
+  
   Enumeration FormMenu
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       #PB_Menu_Quit
@@ -20,6 +20,8 @@ DeclareModule windowMain
   
   Declare create()
   Declare events(event)
+  
+  Declare stopGUIupdate(stop = #True)
 EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
@@ -47,6 +49,7 @@ Module windowMain
   
   ; other stuff
   Global NewMap PreviewImages.i()
+  Global _noUpdate
   
   Declare resize()
   Declare updateGUI()
@@ -96,15 +99,14 @@ Module windowMain
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
   EndProcedure
   
-  
-  ;-------------------------------------------------
-  ; TIMER
-  
   Procedure updateGUI()
     Protected SelectedMod, i, selectedActive, selectedInactive, countActive, countInactive
     Protected *mod.mods::mod
     Protected text$, author$
-    Static LastSelect
+    
+    If _noUpdate
+      ProcedureReturn #False
+    EndIf
     
     selectedActive = 0
     selectedInactive = 0
@@ -114,14 +116,14 @@ Module windowMain
       If Not *mod
         Continue
       EndIf
-      If *mod\aux\installed
+      If *mod\aux\active
         countActive + 1
       Else
         countInactive + 1
       EndIf
       If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected
         SelectedMod = i
-        If *mod\aux\installed
+        If *mod\aux\active
           selectedActive + 1
         Else
           selectedInactive + 1
@@ -194,10 +196,19 @@ Module windowMain
       *mod = ListIcon::GetListItemData(Library, SelectedMod)
       If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
         Protected im.i, image$
-        image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "image_00.tga"
-        If FileSize(image$) > 0
-          im = LoadImage(#PB_Any, image$)
+        
+        If *mod\aux\active
+          image$ = misc::Path(main::TF$ + "mods/" + *mod\tf_id$) + "image_00.tga"
+          If FileSize(image$) > 0
+            im = LoadImage(#PB_Any, image$)
+          EndIf
+        ElseIf *mod\aux\inLibrary
+          image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
+          If FileSize(image$) > 0
+            im = LoadImage(#PB_Any, image$)
+          EndIf
         EndIf
+        
         ; if load was successfull
         If IsImage(im)
           im = misc::ResizeCenterImage(im, GadgetWidth(GadgetImageLogo), GadgetHeight(GadgetImageLogo))
@@ -228,6 +239,9 @@ Module windowMain
     EndIf
   EndProcedure
   
+  ;-------------------------------------------------
+  ; TIMER
+  
   Procedure TimerMain()
     Static LastDir$ = ""
     
@@ -239,7 +253,6 @@ Module windowMain
       EndIf
     EndIf
     
-    updateGUI()
     queue::update()
     
   EndProcedure
@@ -309,7 +322,7 @@ Module windowMain
     For i = 0 To CountGadgetItems(Library) - 1
       If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected 
         *mod = ListIcon::GetListItemData(Library, i)
-        If Not *mod\aux\installed
+        If Not *mod\aux\active
           *last = *mod
           count + 1
         EndIf
@@ -330,7 +343,7 @@ Module windowMain
         For i = 0 To CountGadgetItems(Library) - 1
           If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected
             *mod = ListIcon::GetListItemData(Library, i)
-            If Not *mod\aux\installed
+            If Not *mod\aux\active
               queue::add(queue::#QueueActionInstall, *mod\tf_id$)
             EndIf
           EndIf
@@ -349,7 +362,7 @@ Module windowMain
       If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected 
         *mod = ListIcon::GetListItemData(Library, i)
         With *mod
-          If \aux\installed
+          If \aux\active
             *last = *mod
             count + 1
           EndIf
@@ -372,7 +385,7 @@ Module windowMain
           If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected 
             *mod = ListIcon::GetListItemData(Library, i)
             With *mod
-              If \aux\installed
+              If \aux\active
                 queue::add(queue::#QueueActionRemove, *mod\tf_id$)
               EndIf
             EndWith
@@ -410,7 +423,7 @@ Module windowMain
         For i = 0 To CountGadgetItems(Library) - 1
           If GetGadgetItemState(Library, i) & #PB_ListIcon_Selected
             *mod = ListIcon::GetListItemData(Library, i)
-            If *mod\aux\installed
+            If *mod\aux\active
               queue::add(queue::#QueueActionRemove, *mod\tf_id$)
             EndIf
             queue::add(queue::#QueueActionDelete, *mod\tf_id$)
@@ -423,7 +436,9 @@ Module windowMain
   Procedure GadgetLibrary(event)
     Protected *mod.mods::mod
     Protected position
+    
     updateGUI()
+    
     If event = #PB_EventType_LeftDoubleClick
       GadgetButtonInformation(#PB_EventType_LeftClick)
     ElseIf event = #PB_EventType_RightClick
@@ -490,7 +505,6 @@ Module windowMain
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
-  
   
   Procedure create()
     Protected width, height
@@ -598,14 +612,14 @@ Module windowMain
       Case #PB_Event_SizeWindow
         ;resize() ; already bound to window, no handling required
       Case #PB_Event_CloseWindow
-        main::exit(0)
+        main::exit()
   
       Case #PB_Event_Menu
         Select EventMenu()
           Case #PB_Menu_Preferences
             MenuItemSettings(EventMenu())
           Case #PB_Menu_Quit
-            main::exit(EventMenu())
+            main::exit()
           Case #MenuItem_AddMod
             GadgetNewMod(EventMenu())
           Case #MenuItem_ExportListActivated
@@ -631,23 +645,23 @@ Module windowMain
       Case #PB_Event_Gadget
         Select EventGadget()
           Case GadgetNewMod
-            GadgetNewMod(EventType())          
+            GadgetNewMod(EventType())
           Case GadgetHomepage
-            GadgetButtonTrainFeverNetDownloads(EventType())          
+            GadgetButtonTrainFeverNetDownloads(EventType())
           Case GadgetStartGame
-            GadgetButtonStartGame(EventType())          
+            GadgetButtonStartGame(EventType())
           Case GadgetImageLogo
-            GadgetImageMain(EventType())          
+            GadgetImageMain(EventType())
           Case GadgetDelete
-            GadgetButtonDelete(EventType())          
+            GadgetButtonDelete(EventType())
           Case GadgetInstall
-            GadgetButtonInstall(EventType())          
+            GadgetButtonInstall(EventType())
           Case Library
-            GadgetLibrary(EventType())          
+            GadgetLibrary(EventType())
           Case GadgetRemove
-            GadgetButtonRemove(EventType())          
+            GadgetButtonRemove(EventType())
           Case GadgetButtonInformation
-            GadgetButtonInformation(EventType())          
+            GadgetButtonInformation(EventType())
         EndSelect
         
       Case #PB_Event_Timer
@@ -661,6 +675,10 @@ Module windowMain
         
     EndSelect
     ProcedureReturn #True
+  EndProcedure
+  
+  Procedure stopGUIupdate(stop = #True)
+    _noUpdate = stop
   EndProcedure
   
 EndModule

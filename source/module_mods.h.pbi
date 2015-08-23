@@ -2,16 +2,18 @@
   EnableExplicit
   
   Structure aux
-    version$ ; version as string
-    authors$ ; authors as string
-    tfnet_author_id$ ; author id's on tf|net as string
-    tags$ ; tags as string
+    version$          ; version as string
+    authors$          ; authors as string
+    tfnet_author_id$  ; author ids on tf|net as string
+    tags$             ; tags as string
     
-    file$ ; filename
-    md5$ ; md5 of file
-    installed.i ; true, if mod is currently installed
-    TFonly.i ; if only in tf mods directory, but not in TFMM library
-    lua$
+    archive$    ; filename of mod archive (zip/rar/...)
+    archiveMD5$ ; md5 of mod archive
+    active.i    ; true, if mod installed (new or old system)
+    inLibrary.i ; true, if mod is in TFMM library
+    luaDate.i   ; md5 of info.lua (check if it was changed -> relead info)
+    
+;     lua$        ; info.lua as string
   EndStructure
   
   Structure author
@@ -46,11 +48,12 @@
   Declare init() ; allocate structure, return *mod
   Declare free(id$) ; free *mod structure
   Declare freeAll()
-  Declare load(*data)
+  Declare loadList(*dummy)
+  Declare saveList()
   Declare convert(*data)
   
   Declare generateID(*mod.mod, id$ = "")
-  Declare generateLUA(*mod.mod)
+  Declare.s getLUA(*mod.mod)
   
   Declare new(file$)      ; read mod pack from any location, extract info
   Declare delete(*data)   ; delete mod from library

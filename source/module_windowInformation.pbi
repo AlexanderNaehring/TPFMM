@@ -182,7 +182,7 @@ Module windowInformation
         EndIf
       Next
       
-      StatusBarText(0, 0, \aux\file$ + " " + "(" + misc::Bytes(0) + ")")
+      StatusBarText(0, 0, \aux\archive$ + " " + "(" + misc::Bytes(0) + ")")
       
     EndWith
     

@@ -18,7 +18,7 @@ DeclareModule queue
     id$
   EndStructure
   
-  Declare add(action, val$)
+  Declare add(action, val$ = "")
   Declare update()
   
   Declare progressRegister(window, gadgetP, gadgetT)
@@ -72,11 +72,8 @@ Module queue
     EndIf
   EndProcedure
   
-  Procedure add(action, val$) ; add new task to queue
+  Procedure add(action, val$ = "") ; add new task to queue
     debugger::Add("queue::add("+Str(action)+", "+val$+")")
-    If val$ = ""
-      ProcedureReturn #False
-    EndIf
     
     LockMutex(mQueue)
     LastElement(queue())
@@ -148,12 +145,10 @@ Module queue
             
           Case #QueueActionLoad
             debugger::Add("updateQueue() - #QueueActionLoad")
-            If element\val$
-              dat\id$ = element\val$
-              *thread = CreateThread(mods::@load(), dat)
-              progressText("") ; text will be set in function
-              progressShow()
-            EndIf
+            *thread = CreateThread(mods::@loadList(), #Null)
+            progressText("") ; text will be set in function
+            progressVal(0, 1)
+            progressShow()
             
           Case #QueueActionConvert
             debugger::Add("updateQueue() - #QueueActionConvert")

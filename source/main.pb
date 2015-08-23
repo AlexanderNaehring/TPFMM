@@ -9,7 +9,7 @@ DeclareModule main
   Global ready
   
   Declare init()
-  Declare exit(dummy)
+  Declare exit()
   Declare loop()
   
 EndDeclareModule
@@ -20,11 +20,11 @@ XIncludeFile "module_images.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_windowSettings.pbi"
+XIncludeFile "module_windowProgress.pbi"
 XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_updater.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_mods.pbi"
-XIncludeFile "module_windowProgress.pbi"
 
 Module main
   
@@ -144,7 +144,7 @@ Module main
     
     If TF$ <> ""
       ; load library
-      queue::add(queue::#QueueActionLoad, TF$)
+      queue::add(queue::#QueueActionLoad)
       
       ; check for old TFMM configuration, trigger conversion if found
       If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
@@ -155,10 +155,11 @@ Module main
     debugger::Add("init complete")
   EndProcedure
   
-  Procedure exit(dummy)
+  Procedure exit()
     Protected i.i
     HideWindow(windowMain::id, #True)
     
+    mods::saveList()
     mods::freeAll()
     
     OpenPreferences("TFMM.ini")
