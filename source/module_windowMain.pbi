@@ -27,7 +27,7 @@ EndDeclareModule
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowInformation.pbi"
 XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_listIcon.pbi"
+XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_updater.pbi"
 
 Module windowMain
