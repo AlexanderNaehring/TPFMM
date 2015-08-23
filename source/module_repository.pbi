@@ -30,6 +30,7 @@ DeclareModule repository
     url$
     changed.i
     age.i
+    enc$
   EndStructure
   
   ; main (root level) repository
@@ -144,10 +145,10 @@ Module repository
     
   EndProcedure
   
-  Procedure loadRepositoryMods(url$)
+  Procedure loadRepositoryMods(url$, enc$ = "")
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods("+url$+") - filename: {"+file$+"}")
+    debugger::add("repository::loadRepositoryMods("+url$+", "+enc$+") - filename: {"+file$+"}")
     
     Protected json, value, mods
     
@@ -156,34 +157,37 @@ Module repository
       updateRepository(url$)
     EndIf
     
+    Select enc$
+      Case "aes"
+        debugger::add("repository::loadRepositoryMods() - using AES decryption")
+        Protected size, file, *in, *out
+        size = FileSize(file$)
+        file = ReadFile(#PB_Any, file$)
+        If Not file
+          debugger::add("repository::loadRepositoryMods() - ERROR: cannot read file")
+          ProcedureReturn #False
+        EndIf
+        *in  = AllocateMemory(size)
+        *out = AllocateMemory(size)
+        ReadData(file, *in, size)
+        CloseFile(file)
+        AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
+        FreeMemory(*in)
+        json = CatchJSON(#PB_Any, *out, size)
+        FreeMemory(*out)
+        DataSection
+          key_aes_1:  ; key hidden!
+          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+        EndDataSection
+        
+      Default
+        json = LoadJSON(#PB_Any, file$)
+    EndSelect
     
-    json = LoadJSON(#PB_Any, file$)
     If Not json
-      ; TODO use encryption speficied in global repository info instead of "try and error"
       debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON - try to decrypt")
-;       ProcedureReturn #False
-      Protected size, file, *in, *out
-      size = FileSize(file$)
-      file = ReadFile(#PB_Any, file$)
-      If Not file
-        debugger::add("repository::loadRepositoryMods() - ERROR: cannot read file")
-        ProcedureReturn #False
-      EndIf
-      *in  = AllocateMemory(size)
-      *out = AllocateMemory(size)
-      ReadData(file, *in, size)
-      CloseFile(file)
-      AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
-      DataSection
-        key_aes_1:  ; key hidden!
-        Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-        Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-      EndDataSection
-      json = CatchJSON(#PB_Any, *out, size)
-      If Not json
-        debugger::add("repository::loadRepositoryMods() - ERROR: could not parse decrypted JSON")
-        ProcedureReturn #False
-      EndIf
+      ProcedureReturn #False
     EndIf
     
     
@@ -321,7 +325,7 @@ Module repository
         updateRepository(repo_main\mods\url$)
       EndIf
       ; Load mods from repository file
-      loadRepositoryMods(repo_main\mods\url$)
+      loadRepositoryMods(repo_main\mods\url$, repo_main\mods\enc$)
     EndIf
     
     If repo_main\locale\url$
