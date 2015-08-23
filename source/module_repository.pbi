@@ -147,8 +147,7 @@ Module repository
   Procedure loadRepositoryMods(url$)
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods("+url$+")")
-    debugger::add("repository::loadRepositoryMods() - filename: {"+file$+"}")
+    debugger::add("repository::loadRepositoryMods("+url$+") - filename: {"+file$+"}")
     
     Protected json, value, mods
     
@@ -235,6 +234,7 @@ Module repository
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
     
+    ProcedureReturn #True
   EndProcedure
   
   Procedure loadRepositoryLocale(url$)
@@ -635,12 +635,10 @@ CompilerIf #PB_Compiler_IsMainFile
                 If selected <> -1
                   *mod = GetGadgetItemData(0, selected)
                   If *mod
-                    Debug "double click on " + *mod\name$
-                    Debug "url = " + *mod\url$
+                    Debug "double click on " + *mod\name$ + " - url = " + *mod\url$
                     RunProgram(*mod\url$)
                   EndIf
                 EndIf
-                
               EndIf
           EndSelect
       EndSelect
