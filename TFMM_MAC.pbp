@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-23 19:56" user="trainfever" host="localhost"/>
+    <lastopen date="2015-08-23 21:06" user="trainfever" host="localhost"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
@@ -65,15 +65,15 @@
   </section>
   <section name="targets">
     <target name="mac32" enabled="1" default="1">
-      <inputfile value="source\main.pb"/>
+      <inputfile value="source/main.pb"/>
       <outputfile value="bin/mac32/TFMM.app"/>
       <compiler version="PureBasic 5.31 (MacOS X - x86)"/>
       <commandline value="-debug -testmode"/>
       <executable value="bin/mac32/TFMM.app"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source/TFMM.ico</icon>
-      <compilecount enable="1" value="2076"/>
-      <buildcount enable="1" value="131"/>
+      <compilecount enable="1" value="2103"/>
+      <buildcount enable="1" value="134"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
