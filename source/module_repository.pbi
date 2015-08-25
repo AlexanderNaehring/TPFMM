@@ -532,6 +532,7 @@ Module repository
               tmp_ok = 0
               str$ = Trim(StringField(search$, k, " "))
               If str$
+                ; search in author, name, tags
                 If FindString(\author_name$, str$, 1, #PB_String_NoCase)
                   tmp_ok = 1
                 ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)

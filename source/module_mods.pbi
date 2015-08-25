@@ -126,14 +126,6 @@ Module mods
       EndIf
     EndIf
     
-;     Select PeekI(*system)
-;       Case #system_old
-;         debugger::Add("mods::checkModFile() - old modding system deteced")
-;         Break
-;       Case #system_new
-;         debugger::Add("mods::checkModFile() - new modding system deteced")
-;     EndSelect
-    
     ProcedureReturn ret$
   EndProcedure
   
@@ -361,6 +353,18 @@ Module mods
       Next
     EndWith
     
+    ; if name or author not available
+    With *mod
+      If \aux\authors$ = ""
+        \aux\authors$ = StringField(*mod\tf_id$, 1, "_")
+        AddElement(\authors())
+        \authors()\name$ = \aux\authors$
+      EndIf
+      If \name$ = ""
+        \name$ = StringField(*mod\tf_id$, 2, "_")
+      EndIf
+    EndWith
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -375,30 +379,6 @@ Module mods
     FreeJSON(json)
     debugger::add("mods::debugInfo(): "+json$)
     ProcedureReturn #True
-    
-;     Protected deb$
-;     debugger::Add("mods::debugInfo() - tf_id: "+*mod\tf_id$)
-;     debugger::Add("mods::debugInfo() - name: "+*mod\name$)
-;     ForEach *mod\authors()
-;       debugger::Add("mods::debugInfo() - author: "+*mod\authors()\name$+", "+*mod\authors()\role$+", "+*mod\authors()\text$+", "+*mod\authors()\steamProfile$+", "+Str(*mod\authors()\tfnetId))
-;     Next
-;     debugger::Add("mods::debugInfo() - minorVersion: "+Str(*mod\minorVersion))
-;     debugger::Add("mods::debugInfo() - severityAdd: "+*mod\severityAdd$)
-;     debugger::Add("mods::debugInfo() - severityRemove: "+*mod\severityRemove$)
-;     debugger::Add("mods::debugInfo() - description: "+*mod\description$)
-;     debugger::Add("mods::debugInfo() - tfnetId: "+Str(*mod\tfnetId))
-;     debugger::Add("mods::debugInfo() - minGameVersion: "+Str(*mod\minGameVersion))
-;     debugger::Add("mods::debugInfo() - url: "+*mod\url$)
-;     deb$ = "mods::debugInfo() - tags: "
-;     ForEach *mod\tags$()
-;       deb$ + *mod\tags$()+", "
-;     Next
-;     debugger::Add(deb$)
-;     deb$ = "mods::debugInfo() - dependencies: "
-;     ForEach *mod\dependencies$()
-;       deb$ + *mod\dependencies$()+", "
-;     Next
-;     debugger::Add(deb$)
   EndProcedure
   
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
@@ -456,12 +436,10 @@ Module mods
   
   Procedure toList(*mod.mod) ; add *mod to map and to list gadget | if mod is overwritten, please make sure that old gadget entry is deleted beforehand!
     Protected count.i, id$ = *mod\tf_id$
-    
-    debugger::Add("mods::toList("+id$+")")
+;     debugger::Add("mods::toList("+id$+")")
     
     If id$ = ""
-      debugger::add("mods::toList() - ERROR: no id$ specified! CRITICAL")
-      End
+      debugger::add("mods::toList() - CRITICAL ERROR: no id$ specified!")
       ProcedureReturn #False
     EndIf
     
@@ -576,6 +554,111 @@ Module mods
   
     ProcedureReturn #True
   EndProcedure
+  
+  Procedure exportListHTML(all, file$)
+    debugger::add("mods::exportListHTML("+all+", "+file$+")")
+    Protected file
+    Protected *modinfo.mod
+    Protected name$, author$, authors$
+    
+    file = CreateFile(#PB_Any, file$)
+    If Not file
+      debugger::add("mods::exportListHTML() - ERROR: cannot create file {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    WriteStringN(file, "<!DOCTYPE html>", #PB_UTF8)
+    WriteString(file, "<html>", #PB_UTF8)
+    WriteString(file, "<head><meta charset='utf-8' /><meta name='Author' content='TFMM' /><title>TFMM Modification List Export</title><style>", #PB_UTF8)
+    WriteString(file, "h1 {color: #fff; text-align: center; width: 100%; margin: 5px 0px; padding: 10px; background: #831555} "+
+                      "table {width: 60%; min-width: 640px; background: #fff; padding: 0px; margin: 5px auto; border-collapse: collapse; border-spacing: 0px; border: 1px solid; border-color: RGBA(0, 0, 0, .2); box-shadow: 3px 3px 3px RGBA(0, 0, 0, .2); } "+
+                      "td { padding: 5px; text-align: left; vertical-align: middle; border: none; } "+
+                      "th { padding: 5px; text-align: center; vertical-align: moddle; border: none; font-weight: bold; font-size: 1.1em; border: none;background: #413e39; color: #fff } "+
+                      "tr {border: none;} "+
+                      "table tr:Not(:last-child) { border-style: solid; border-width: 0px 0px 1px 0px; border-color: RGBA(0, 0, 0, .2); } "+
+                      "table > tr:first-child > th { } "+
+                      "table tr:nth-child(even) td, table tr:nth-child(even) th { background: RGBA(0, 0, 0, .04); } "+
+                      "table tr:hover td { background: RGBA(0, 0, 0, .06) !important; } "+
+                      "footer { width: 100%; margin: 20px 0px; padding: 5px; border-top: 1px solid #413e39; text-align: right; font-size: small; color: rgba(65,62,57,.5); transition: color .5s ease-in-out } "+
+                      "footer:hover { color: #413e39; } "+
+                      "footer article { width: 60%; min-width: 640px; margin: 0px auto; padding: 0px; } "+
+                      "a { color: inherit; } "+
+                      "a:hover { color: #831555; } "+
+                      "", #PB_UTF8)
+    WriteString(file, "</style></head>", #PB_UTF8)
+    WriteString(file, "<body><h1>", #PB_UTF8)
+    If all
+      WriteString(file, "List of Modifications", #PB_UTF8)
+    Else
+      WriteString(file, "List of Activated Modifications", #PB_UTF8)
+    EndIf
+    WriteString(file, "</h1><table><tr><th>Modification</th><th>Version</th><th>Author</th></tr>", #PB_UTF8)
+    
+    ForEach *mods()
+      *modinfo = *mods()
+      With *modinfo
+        If all Or \aux\active
+          name$ = \name$
+          authors$ = ""
+          
+          If \url$
+            name$ = "<a href='"+ \url$ + "'>" + name$ + "</a>"
+          ElseIf \tfnetId
+            name$ = "<a href='http://www.train-fever.net/filebase/index.php/Entry/" + \tfnetId + "'>" + name$ + "</a>"
+          EndIf
+          
+          ForEach \authors()
+            author$ = \authors()\name$
+            If \authors()\tfnetId
+              author$ = "<a href='http://www.train-fever.net/index.php/User/" + \authors()\tfnetId + "'>" + author$ + "</a>"
+            EndIf
+            authors$ + author$ + ", "
+          Next
+          If Len(authors$) >= 2 ; cut off ", " at the end of the string
+            authors$ = Mid(authors$, 1, Len(authors$) -2)
+          EndIf
+          
+          
+          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \aux\version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
+        EndIf
+      EndWith
+    Next
+    
+    WriteString(file, "</table>", #PB_UTF8)
+    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TFMM</a> "+updater::#VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='http://tfmm.xanos.eu/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
+    
+    WriteString(file, "</body></html>", #PB_UTF8)
+    CloseFile(file)
+    
+    misc::openLink(File$)
+  EndProcedure
+  
+  Procedure exportListTXT(all, File$)
+    debugger::add("mods::exportListTXT("+all+", "+file$+")")
+    Protected file, i
+    Protected *modinfo.mod
+    
+    file = CreateFile(#PB_Any, File$)
+    If Not file
+      debugger::add("mods::exportListTXT() - ERROR: cannot create file {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    ForEach *mods()
+      *modinfo = *mods()
+      With *modinfo
+        If all Or \aux\active
+          WriteStringN(file, \name$ + Chr(9) + "v" + \aux\version$ + Chr(9) + \aux\authors$, #PB_UTF8)
+        EndIf
+      EndWith
+    Next
+    WriteStringN(file, "", #PB_UTF8)
+    WriteString(file, "Created with TFMM "+updater::#VERSION$, #PB_UTF8)
+    CloseFile(file)
+    
+    misc::openLink(File$)
+  EndProcedure
+  
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
@@ -942,12 +1025,13 @@ Module mods
           EndIf
           
           *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
-;           *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+          If *mod\aux\archiveMD5$ = ""
+            *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+          EndIf
         EndIf
         
         If *mod\name$ = ""
-          debugger::add("CRITICAL ERROR: no name for mod {"+*mod+"} {"+id$+"}!")
-          MessageRequester("CRITICAL ERROR in mods::loadList()", "Possible critical error occured,"+#LF$+"please contact the programmer!")
+          debugger::add("mods::loadList() - CRITICAL ERROR: no name for mod {"+id$+"}")
         EndIf
       Next
     EndIf
@@ -1143,7 +1227,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure remove(*data.queue::dat)
+  Procedure remove(*data.queue::dat) ; remove from Train Fever Mod folder (not library)
     debugger::Add("mods::remove("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
@@ -1156,10 +1240,12 @@ Module mods
     Protected targetDir$
     Protected i
     
-    ; TODO alternatively, backup mod
+    If Not *mod
+      ProcedureReturn #True
+    EndIf
+    
     If *mod\aux\active And Not *mod\aux\inLibrary
-      ; queue::add(queue::#QueueActionDelete, id$)
-      delete(*data)
+      ; TODO backup mod
     EndIf
     
     ; check prequesits
@@ -1190,10 +1276,15 @@ Module mods
       Next
     EndIf
     
+    If *mod\aux\active And Not *mod\aux\inLibrary
+      ; delete mod from list, as it is not in library anymore
+      delete(*data)
+    EndIf
+    
     ProcedureReturn #True
   EndProcedure
   
-  Procedure delete(*data.queue::dat) ; delete mod from library
+  Procedure delete(*data.queue::dat) ; delete mod completely from TF and TFMM
     debugger::Add("mods::delete("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
@@ -1388,7 +1479,53 @@ Module mods
   EndProcedure
   
   Procedure exportList(all=#False)
+    debugger::Add("Export Mod List")
+    Protected file$, selectedExt$, ext$
+    Protected ok = #False
     
+    file$ = SaveFileRequester(locale::l("management", "export_list"), "mods", "HTML|*.html|Plain Text|*.txt", 0)
+    If file$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    ; get selected file pattern (from dropdown in save file dialog)
+    Select SelectedFilePattern()
+      Case 0
+        selectedExt$ = "html"
+      Case 1
+        selectedExt$ = "txt"
+      Default
+        selectedExt$ = "html"
+    EndSelect
+    
+    ext$ = LCase(GetExtensionPart(file$))
+    ; only if no extension is specified in filename, use extension that was selected
+    If ext$ <> "html" And ext$ <> "txt"
+      ext$ = selectedExt$
+      file$ = GetPathPart(file$) + GetFilePart(file$, #PB_FileSystem_NoExtension) + "." + ext$
+    EndIf
+    
+    If FileSize(file$) > 0
+      If MessageRequester(locale::l("management", "export_list"), locale::l("management", "overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        ok = #True
+      EndIf
+    Else
+      ok = #True
+    EndIf
+    
+    If Not ok
+      ProcedureReturn #False
+    EndIf
+    
+    Select LCase(GetExtensionPart(file$))
+      Case "html"
+        ExportListHTML(all, file$)
+      Case "txt"
+        ExportListTXT(all, file$)
+      Default
+        ProcedureReturn #False
+    EndSelect
+    ProcedureReturn #True
   EndProcedure
   
 EndModule

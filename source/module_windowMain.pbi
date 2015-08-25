@@ -211,7 +211,7 @@ Module windowMain
         
         ; if load was successfull
         If IsImage(im)
-          im = misc::ResizeCenterImage(im, GadgetWidth(GadgetImageLogo), GadgetHeight(GadgetImageLogo))
+          im = misc::ResizeCenterImage(im, GadgetWidth(GadgetImageLogo), GadgetHeight(GadgetImageLogo), #PB_Image_Smooth)
           If IsImage(im)
             PreviewImages(*mod\tf_id$) = im
           EndIf
