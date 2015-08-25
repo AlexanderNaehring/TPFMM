@@ -116,6 +116,10 @@ yes_all       = Yes to all
 no_all        = No to all
 ok            = OK
 
+export_list   = Export Mod List
+overwrite_file = Do you want to overwrite the current file?
+
+
 [information]
 name      = Name:
 version   = Version:

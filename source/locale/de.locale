@@ -116,6 +116,9 @@ yes_all       = Ja zu allen
 no_all        = Nein zu allen
 ok            = Okay
 
+export_list   = Exportiere Liste von Modifikationen
+overwrite_file = Soll die vorhandene Datei überschrieben werden?
+
 [information]
 name      = Name:
 version   = Version:
