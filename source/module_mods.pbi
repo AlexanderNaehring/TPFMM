@@ -1227,7 +1227,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure remove(*data.queue::dat)
+  Procedure remove(*data.queue::dat) ; remove from Train Fever Mod folder (not library)
     debugger::Add("mods::remove("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
@@ -1240,10 +1240,12 @@ Module mods
     Protected targetDir$
     Protected i
     
-    ; TODO alternatively, backup mod
+    If Not *mod
+      ProcedureReturn #True
+    EndIf
+    
     If *mod\aux\active And Not *mod\aux\inLibrary
-      ; queue::add(queue::#QueueActionDelete, id$)
-      delete(*data)
+      ; TODO backup mod
     EndIf
     
     ; check prequesits
@@ -1274,10 +1276,15 @@ Module mods
       Next
     EndIf
     
+    If *mod\aux\active And Not *mod\aux\inLibrary
+      ; delete mod from list, as it is not in library anymore
+      delete(*data)
+    EndIf
+    
     ProcedureReturn #True
   EndProcedure
   
-  Procedure delete(*data.queue::dat) ; delete mod from library
+  Procedure delete(*data.queue::dat) ; delete mod completely from TF and TFMM
     debugger::Add("mods::delete("+Str(*data)+")")
     Protected TF$, id$
     id$ = *data\id$
