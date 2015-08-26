@@ -619,7 +619,7 @@ Module mods
           EndIf
           
           
-          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \aux\version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
+          WriteString(file, "<tr><td>" + name$ + "</td><td>" + \aux\version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
         EndIf
       EndWith
     Next
