@@ -95,8 +95,10 @@ DeclareModule repository
   Declare loadRepositoryList()
   
   Declare registerWindow(windowID)
-  Declare registerGadget(gadgetID, Array columns.column(1))
+  Declare registerListGadget(gadgetID, Array columns.column(1))
+  Declare registerThumbGadget(gadgetID)
   Declare filterMods(search$)
+  Declare displayThumbnail(url$)
   
   Global NewMap repo_mods.repo_mods()
 EndDeclareModule
@@ -112,11 +114,15 @@ Module repository
   EndStructure
   
   Global NewList repositories$()
-  Global _windowID, _gadgetID
+  Global _windowID, _listGadgetID, _thumbGadgetID
   Global Dim _columns.column_info(0)
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
+  CreateDirectory(#DIRECTORY + "/thumbnails")
+  
+  UsePNGImageDecoder()
+  UseJPEGImageDecoder()
   
   ; Create repository list file if not existing and add basic repository
   If FileSize(#DIRECTORY+"/repositories.List") <= 0
@@ -137,6 +143,18 @@ Module repository
   
   Procedure.s getRepoFileName(url$)
     ProcedureReturn #DIRECTORY + "/" + MD5Fingerprint(@url$, StringByteLength(url$)) + ".json"
+  EndProcedure
+  
+  Procedure.s getThumbFileName(url$)
+    Protected name$, ext$
+    
+    If url$
+      name$ = MD5Fingerprint(@url$, StringByteLength(url$))
+      ext$ = GetExtensionPart(url$)
+      ProcedureReturn #DIRECTORY + "/thumbnails/" + Left(name$, 2) + "/" + name$ + "." + ext$
+    Else
+      ProcedureReturn ""
+    EndIf
   EndProcedure
   
   Procedure updateRepository(url$)
@@ -389,24 +407,24 @@ Module repository
     ProcedureReturn _windowID
   EndProcedure
   
-  Procedure registerGadget(gadget, Array columns.column(1))
-    debugger::add("repository::loadRepositoryList(" + gadget + ")")
+  Procedure registerListGadget(gadget, Array columns.column(1))
+    debugger::add("repository::registerListGadget(" + gadget + ")")
     Protected col
     
     ; set new gadget ID
-    _gadgetID = gadget
-    If Not IsGadget(_gadgetID)
+    _listGadgetID = gadget
+    If Not IsGadget(_listGadgetID)
       ; if new id is not valid, return false
-      _gadgetID = #False
+      _listGadgetID = #False
       ProcedureReturn #False
     EndIf
     
     ; clear gadget item list
-    ClearGadgetItems(_gadgetID)
+    ClearGadgetItems(_listGadgetID)
     
     ; clear columns
     For col = 0 To 100 ; no native way to get column count
-      RemoveGadgetColumn(_gadgetID, col)
+      RemoveGadgetColumn(_listGadgetID, col)
     Next
     
     ; create _columns array
@@ -497,25 +515,36 @@ Module repository
     
     ; initialize new columns to gadget
     For col = 0 To ArraySize(_columns())
-      AddGadgetColumn(_gadgetID, col, _columns(col)\name$, _columns(col)\width)
+      AddGadgetColumn(_listGadgetID, col, _columns(col)\name$, _columns(col)\width)
     Next
     
     ; return
-    ProcedureReturn _gadgetID
+    ProcedureReturn _listGadgetID
+  EndProcedure
+  
+  Procedure registerThumbGadget(gadget)
+    debugger::add("repository::registerThumbGadget(" + gadget + ")")
+    
+    _thumbGadgetID = gadget
+    If Not IsGadget(_thumbGadgetID)
+      _thumbGadgetID = #False
+    EndIf
+    
+    ProcedureReturn _thumbGadgetID
   EndProcedure
   
   Procedure filterMods(search$)
     ; debugger::add("repository::filterMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address, *address
     
-    If Not IsWindow(_windowID) Or Not IsGadget(_gadgetID)
+    If Not IsWindow(_windowID) Or Not IsGadget(_listGadgetID)
       debugger::add("repository::filterMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
     
     StopWindowUpdate(WindowID(_windowID))
-    HideGadget(_gadgetID, 0)
-    ClearGadgetItems(_gadgetID)
+    HideGadget(_listGadgetID, 0)
+    ClearGadgetItems(_listGadgetID)
     
     count = CountString(search$, " ") + 1
     
@@ -572,17 +601,66 @@ Module repository
               EndIf
             Next
             
-            AddGadgetItem(_gadgetID, item, text$)
-            SetGadgetItemData(_gadgetID, item, repo_mods()\mods())
+            AddGadgetItem(_listGadgetID, item, text$)
+            SetGadgetItemData(_listGadgetID, item, repo_mods()\mods())
             item + 1
           EndIf
         EndWith
       Next
     Next
     
-    HideGadget(_gadgetID, 0)
+    HideGadget(_listGadgetID, 0)
     ContinueWindowUpdate(WindowID(_windowID))
     
+  EndProcedure
+  
+  Procedure displayThumbnail(url$)
+    debugger::add("repository::displayThumbnail("+url$+")")
+    Protected file$
+    Protected image
+    Static NewMap images()
+    
+    file$ = getThumbFileName(url$)
+    If file$ = ""
+      debugger::add("repository::displayThumbnail - ERROR: thumbnail url not defined")
+      ProcedureReturn #False
+    EndIf
+    Debug file$
+    
+    ; TODO move downloading thumbnails to a thread
+    ; start downloading and memorize filename to display
+    ; after downloading, display if still the same filename is in memory
+    
+    If images(file$) And IsImage(images(file$))
+      image = images(file$)
+      
+    Else
+      Debug "load image"
+      
+      CreateDirectory(GetPathPart(file$))
+      ReceiveHTTPFile(url$, file$)
+      
+      If FileSize(file$) > 0
+        images(file$) = LoadImage(#PB_Any, file$)
+        If IsImage(images(file$))
+          image = images(file$)
+        Else
+          Debug "image not loaded correctly"
+        EndIf
+      Else
+        Debug "filesize <= 0"
+      EndIf
+      
+    EndIf
+    
+    Debug "image = " + image + " _thumbGadgetID = " + _thumbGadgetID
+    
+    If image And _thumbGadgetID And IsGadget(_thumbGadgetID)
+      debugger::add("repository::displayThumbnail - display image #"+image+" on gadget "+_thumbGadgetID)
+      SetGadgetState(_thumbGadgetID, ImageID(image))
+    EndIf
+    
+    ProcedureReturn #False
   EndProcedure
   
 EndModule
@@ -595,7 +673,7 @@ CompilerIf #PB_Compiler_IsMainFile
   repository::loadRepositoryList()
   
   If OpenWindow(0, 0, 0, 800, 600, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 800, 570, "", 0, #PB_ListIcon_FullRowSelect)
+    ListIconGadget(0, 0, 30, 600, 570, "", 0, #PB_ListIcon_FullRowSelect)
     
     Define Dim columns.repository::column(0)
     
@@ -620,7 +698,7 @@ CompilerIf #PB_Compiler_IsMainFile
     FreeJSON(*json)
     
     repository::registerWindow(0)
-    repository::registerGadget(0, columns())
+    repository::registerListGadget(0, columns())
     
     ; save current configuration to json file
     *json = CreateJSON(#PB_Any)
@@ -631,6 +709,8 @@ CompilerIf #PB_Compiler_IsMainFile
     TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
     StringGadget(1, 570, 5, 200, 20, "")
     ButtonGadget(2, 775, 5, 20, 20, "X")
+    ImageGadget(3, 620, 30, 180, 150, 0)
+    repository::registerThumbGadget(3)
     
     repository::filterMods("") ; initially fill list
     
@@ -644,19 +724,27 @@ CompilerIf #PB_Compiler_IsMainFile
             Case 2 ; push "x" button
               SetGadgetText(1, "")
             Case 0 ; click on list
-              If EventType() = #PB_EventType_LeftDoubleClick
-                Define *mod.repository::mod
-                Define selected
-                selected = GetGadgetState(0)
-                If selected <> -1
-                  *mod = GetGadgetItemData(0, selected)
+              Define *mod.repository::mod
+              Define selected
+              selected = GetGadgetState(0)
+              *mod = 0
+              If selected <> -1
+                *mod = GetGadgetItemData(0, selected)
+              EndIf
+              
+              Select EventType() 
+                Case #PB_EventType_LeftDoubleClick
                   If *mod
                     Debug "double click on " + *mod\name$ + " - url = " + *mod\url$
                     RunProgram(*mod\url$)
                     ; TODO use misc::openLink for cross-plattform
                   EndIf
-                EndIf
-              EndIf
+                Case #PB_EventType_Change
+                  If *mod
+                    Debug "display image"
+                    repository::displayThumbnail(*mod\thumbnail$)
+                  EndIf
+              EndSelect
           EndSelect
       EndSelect
       If GetGadgetText(1) <> text$
