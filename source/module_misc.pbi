@@ -358,7 +358,7 @@ Module misc
     ProcedureReturn result
   EndProcedure
 
-  Procedure checkTFPath(Dir$)
+  Procedure checkTFPath(Dir$) ; return true, false or -1
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
@@ -367,7 +367,7 @@ Module misc
           ProcedureReturn #True
         EndIf
         CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          If FileSize(Dir$ + "TrainFever.exe") > 1
+          If FileSize(Dir$ + "TrainFever.exe") > 1 Or FileSize(Dir$ + "TrainFeverLauncher.exe") > 1
             ; TrainFever.exe is located in this path!
             ; seems to be valid
             
