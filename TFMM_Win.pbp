@@ -62,6 +62,9 @@
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
+    <file name="source\module_settings.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+    </file>
   </section>
   <section name="targets">
     <target name="win32" enabled="1" default="1">
