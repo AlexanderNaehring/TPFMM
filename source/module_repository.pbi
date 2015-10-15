@@ -116,6 +116,8 @@ Module repository
   Global NewList repositories$()
   Global _windowID, _listGadgetID, _thumbGadgetID
   Global Dim _columns.column_info(0)
+  Global currentImageURL$
+  Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -138,6 +140,7 @@ Module repository
     debugger::add("repository::init() - ERROR initializing network")
     End
   EndIf
+  
   
   ; Private
   
@@ -201,8 +204,8 @@ Module repository
         ReadData(file, *in, size)
         CloseFile(file)
         AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
-        FreeMemory(*in)
         json = CatchJSON(#PB_Any, *out, size)
+        FreeMemory(*in)
         FreeMemory(*out)
         DataSection
           key_aes_1:  ; key hidden!
@@ -297,6 +300,76 @@ Module repository
       ProcedureReturn #False
     EndIf
     
+  EndProcedure
+  
+  Procedure thumbnailThread(*dummy)
+    ; waits for new entries in queue and displays them to the registered image gadget
+    debugger::add("repository::thumbnailThread()")
+    
+    Protected url$, file$
+    Protected image
+    Protected scale.d
+    Static NewMap images()
+    
+    LockMutex(mutexStackDisplayThumb)
+    If ListSize(stackDisplayThumbnail$()) <= 0
+      ; no element waiting in stack
+      UnlockMutex(mutexStackDisplayThumb)
+      debugger::add("repository::thumbnailThread() - No element in stack")
+      ProcedureReturn #False
+    EndIf
+    
+    ; display (and if needed download) image from top of the stack (LiFo)
+    LastElement(stackDisplayThumbnail$())
+    url$ = stackDisplayThumbnail$()
+    DeleteElement(stackDisplayThumbnail$())
+    UnlockMutex(mutexStackDisplayThumb)
+    
+    file$ = getThumbFileName(url$)
+    debugger::add("repository::thumbnailThread() - display image url={"+url$+"}, file={"+file$+"}")
+    If file$ = ""
+      debugger::add("repository::thumbnailThread() - ERROR: thumbnail filename not defined")
+      ProcedureReturn #False
+    EndIf
+    
+    ; map access is threadsafe - no need for mutex here
+    If images(file$) And IsImage(images(file$))
+      ; image already loaded
+      image = images(file$)
+    Else
+      ; download image
+      ; TODO it is possible, that two threads download the same image simultaneously -> maybe keep track of urls$ that are being downloaded at the moment
+      CreateDirectory(GetPathPart(file$))
+      ReceiveHTTPFile(url$, file$)
+      If FileSize(file$) > 0
+        image = LoadImage(#PB_Any, file$)
+        If IsImage(image)
+          images(file$) = image
+        Else
+          debugger::add("repository::thumbnailThread() - ERROR: could not load image {"+file$+"}")
+        EndIf
+      Else
+        debugger::add("repository::thumbnailThread() - ERROR: download failed: {"+url$+"} -> {"+file$+"}")
+      EndIf
+    EndIf
+    
+    If Not image Or Not _thumbGadgetID Or Not IsGadget(_thumbGadgetID)
+      ProcedureReturn #False
+    EndIf
+    
+    If ImageWidth(image) <> GadgetWidth(_thumbGadgetID)
+      ; TODO also check height
+      scale = GadgetWidth(_thumbGadgetID)/ImageWidth(image)
+      ResizeImage(image, ImageWidth(image) * scale, ImageHeight(image) * scale)
+    EndIf
+    
+    ; check if image that is being handled in this thread is still the current image
+    ; user may have selected a different mod while this thread was downloading an image
+    If currentImageURL$ = url$
+      SetGadgetState(_thumbGadgetID, ImageID(image))
+    EndIf
+    
+    ProcedureReturn #True
   EndProcedure
   
   
@@ -616,51 +689,16 @@ Module repository
   
   Procedure displayThumbnail(url$)
     debugger::add("repository::displayThumbnail("+url$+")")
-    Protected file$
-    Protected image
-    Static NewMap images()
     
-    file$ = getThumbFileName(url$)
-    If file$ = ""
-      debugger::add("repository::displayThumbnail - ERROR: thumbnail url not defined")
-      ProcedureReturn #False
-    EndIf
-    Debug file$
+    LockMutex(mutexStackDisplayThumb)
+    LastElement(stackDisplayThumbnail$())
+    AddElement(stackDisplayThumbnail$())
+    stackDisplayThumbnail$() = url$
+    currentImageURL$ = url$
+    UnlockMutex(mutexStackDisplayThumb)
     
-    ; TODO move downloading thumbnails to a thread
-    ; start downloading and memorize filename to display
-    ; after downloading, display if still the same filename is in memory
-    
-    If images(file$) And IsImage(images(file$))
-      image = images(file$)
-      
-    Else
-      Debug "load image"
-      
-      CreateDirectory(GetPathPart(file$))
-      ReceiveHTTPFile(url$, file$)
-      
-      If FileSize(file$) > 0
-        images(file$) = LoadImage(#PB_Any, file$)
-        If IsImage(images(file$))
-          image = images(file$)
-        Else
-          Debug "image not loaded correctly"
-        EndIf
-      Else
-        Debug "filesize <= 0"
-      EndIf
-      
-    EndIf
-    
-    Debug "image = " + image + " _thumbGadgetID = " + _thumbGadgetID
-    
-    If image And _thumbGadgetID And IsGadget(_thumbGadgetID)
-      debugger::add("repository::displayThumbnail - display image #"+image+" on gadget "+_thumbGadgetID)
-      SetGadgetState(_thumbGadgetID, ImageID(image))
-    EndIf
-    
-    ProcedureReturn #False
+    CreateThread(@thumbnailThread(), 0)
+    ProcedureReturn #True
   EndProcedure
   
 EndModule
@@ -709,7 +747,7 @@ CompilerIf #PB_Compiler_IsMainFile
     TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
     StringGadget(1, 570, 5, 200, 20, "")
     ButtonGadget(2, 775, 5, 20, 20, "X")
-    ImageGadget(3, 620, 30, 180, 150, 0)
+    ImageGadget(3, 610, 30, 180, 500, 0)
     repository::registerThumbGadget(3)
     
     repository::filterMods("") ; initially fill list
