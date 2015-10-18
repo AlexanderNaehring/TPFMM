@@ -116,6 +116,7 @@ Module repository
   Global NewList repositories$()
   Global _windowID, _listGadgetID, _thumbGadgetID
   Global Dim _columns.column_info(0)
+  Global imageWait
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -139,6 +140,12 @@ Module repository
     End
   EndIf
   
+  imageWait = CatchImage(#PB_Any, )
+  DataSection
+    dataImageLoad:
+    IncludeBinary "images/loading.png"
+    dateImageLoadEnd:
+  EndDataSection
   ; Private
   
   Procedure.s getRepoFileName(url$)
@@ -299,6 +306,23 @@ Module repository
     
   EndProcedure
   
+  Procedure thumbnailDownload(url$)
+    debugger::add("repository::thumbnailDownload("+url$+")")
+    
+    file$ = getThumbFileName(url$)
+    If file$ = ""
+      debugger::add("repository::thumbnailDownload - ERROR: thumbnail url not defined")
+      ProcedureReturn #False
+    EndIf
+    
+    
+  EndProcedure
+  
+  Procedure thumbnailShow(image)
+    debugger::add("repository::thumbnailShow("+image+")")
+    
+    
+  EndProcedure
   
   ; Public
   
