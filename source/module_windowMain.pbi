@@ -42,7 +42,7 @@ Module windowMain
   EndEnumeration
   
   ; gadgets
-  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetImageLogo, GadgetDelete, GadgetInstall, GadgetRemove, GadgetImageHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2
+  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetImageLogo, GadgetDelete, GadgetInstall, GadgetRemove, GadgetImageHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2, GadgetMainPanel
   
   ; timer
   Global TimerMainGadgets = 101
@@ -87,7 +87,8 @@ Module windowMain
     ResizeGadget(GadgetImageLogo, width - 220, 15, 210, 118)
     ResizeGadget(GadgetDelete, width - 210, 240, 190, 30)
     ResizeGadget(GadgetInstall, width - 210, 160, 190, 30)
-    ResizeGadget(Library, 10, 8, width - 240, height - misc::max(MenuHeight(), 20) - 53) ; height - MenuHeight() - 53
+    ResizeGadget(GadgetMainPanel, 10, 10, width - 240, height - misc::max(MenuHeight(), 20) - 50) ; height - MenuHeight() - 50
+    ResizeGadget(Library, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight))
     ResizeGadget(GadgetRemove, width - 210, 200, 190, 30)
     ResizeGadget(GadgetImageHeader, 0, 0, width - 0, 8)
     ResizeGadget(TextGadgetVersion, width - 220, height - 50, 210, 20)
@@ -542,16 +543,24 @@ Module windowMain
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "Ctrl + H")
     MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
+    
+    GadgetMainPanel = PanelGadget(#PB_Any, 10, 10, 510, 410)
+    AddGadgetItem(GadgetMainPanel, -1, l("menu","mods"))
+    Library = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    AddGadgetColumn(Library, 1, l("main","author"), 90)
+    AddGadgetColumn(Library, 2, l("main","category"), 90)
+    AddGadgetColumn(Library, 3, l("main","version"), 60)
+    AddGadgetItem(GadgetMainPanel, -1, "DLC")
+    AddGadgetItem(GadgetMainPanel, -1, "Savegames")
+    CloseGadgetList()
+    
     GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
     GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
     GadgetStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
     GadgetImageLogo = ImageGadget(#PB_Any, 530, 15, 210, 118, 0)
     GadgetDelete = ButtonGadget(#PB_Any, 540, 240, 190, 30, l("main","delete"))
     GadgetInstall = ButtonGadget(#PB_Any, 540, 160, 190, 30, l("main","install"))
-    Library = ListIconGadget(#PB_Any, 10, 8, 510, 405, l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
-    AddGadgetColumn(Library, 1, l("main","author"), 90)
-    AddGadgetColumn(Library, 2, l("main","category"), 90)
-    AddGadgetColumn(Library, 3, l("main","version"), 60)
+    
     GadgetRemove = ButtonGadget(#PB_Any, 540, 200, 190, 30, l("main","remove"))
     GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
     TextGadgetVersion = TextGadget(#PB_Any, 530, 430, 210, 20, "TFMM "+updater::#VERSION$, #PB_Text_Right)
