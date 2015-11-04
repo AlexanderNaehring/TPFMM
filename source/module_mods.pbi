@@ -25,6 +25,8 @@ Module mods
   Global changed.i ; report variable if mod states have changed
   Global library.i ; library gadget
   
+  UseMD5Fingerprint()
+  
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
@@ -100,7 +102,7 @@ Module mods
           debugger::Add("mods::checkModFileRar() - found info.lua")
           ProcedureReturn entry$
         EndIf
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip to next entry in rar
       Wend
       unrar::RARCloseArchive(hRAR)
     EndIf
@@ -215,7 +217,7 @@ Module mods
       
       ; filter out Mac OS X bullshit
       If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip these files / entries
         Continue
       EndIf
       
@@ -223,14 +225,14 @@ Module mods
       ForEach Files$()
         entry$ = GetFilePart(entry$)
         If LCase(entry$) = LCase(Files$())
-          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
+          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, dir$ + Files$())
           DeleteElement(Files$()) ; if file is extracted, delete from list
           hit = #True
           Break ; ForEach
         EndIf
       Next
       If Not hit
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$)
       EndIf
       
     Wend
@@ -391,7 +393,7 @@ Module mods
     ; read standard information
     With *mod
       \aux\archive$ = GetFilePart(file$)
-      \aux\archiveMD5$ = MD5FileFingerprint(file$)
+      \aux\archiveMD5$ = FileFingerprint(file$, #PB_Cipher_MD5)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -534,7 +536,7 @@ Module mods
       
       ; filter out Mac OS X bullshit
       If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip these files / entries
         Continue
       EndIf
       
@@ -542,11 +544,11 @@ Module mods
         entry$ = Mid(entry$, FindString(entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
         entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
   
-        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
           debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
         EndIf
       Else
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; file not in "res", skip it
       EndIf
       
     Wend
@@ -663,12 +665,6 @@ Module mods
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
-  
-  Procedure changed()
-    Protected ret = changed
-    changed = #False
-    ProcedureReturn ret
-  EndProcedure
   
   Procedure registerLibraryGadget(lib)
     debugger::Add("registerLibraryGadget("+Str(lib)+")")
@@ -1026,7 +1022,7 @@ Module mods
           
           *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
           If *mod\aux\archiveMD5$ = ""
-            *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+            *mod\aux\archiveMD5$ = FileFingerprint(*mod\aux\archive$, #PB_Cipher_MD5)
           EndIf
         EndIf
         
@@ -1131,7 +1127,7 @@ Module mods
     i = 0
     ForEach files$()
       file$ = MapKey(files$())
-      If MD5FileFingerprint(file$) = files$()
+      If FileFingerprint(file$, #PB_Cipher_MD5) = files$()
         i + 1
         queue::progressVal(i, MapSize(files$()))
         debugger::Add("mods::convert() - delete {"+file$+"}")
