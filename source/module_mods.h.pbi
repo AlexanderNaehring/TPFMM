@@ -40,7 +40,6 @@
     aux.aux ; auxiliary information
   EndStructure
   
-  Declare changed_() ; report changed to mod map (new mods, changed status, etc)
   Declare registerLibraryGadget(library)
   
   Declare init() ; allocate structure, return *mod

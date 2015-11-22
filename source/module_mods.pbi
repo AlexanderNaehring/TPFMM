@@ -25,6 +25,8 @@ Module mods
   Global changed.i ; report variable if mod states have changed
   Global library.i ; library gadget
   
+  UseMD5Fingerprint()
+  
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
@@ -391,7 +393,7 @@ Module mods
     ; read standard information
     With *mod
       \aux\archive$ = GetFilePart(file$)
-      \aux\archiveMD5$ = MD5FileFingerprint(file$)
+      \aux\archiveMD5$ = FileFingerprint(file$, #PB_Cipher_MD5)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -663,12 +665,6 @@ Module mods
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
-  
-  Procedure changed_()
-    Protected ret = changed
-    changed = #False
-    ProcedureReturn ret
-  EndProcedure
   
   Procedure registerLibraryGadget(lib)
     debugger::Add("registerLibraryGadget("+Str(lib)+")")
@@ -1026,7 +1022,7 @@ Module mods
           
           *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
           If *mod\aux\archiveMD5$ = ""
-            *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+            *mod\aux\archiveMD5$ = FileFingerprint(*mod\aux\archive$, #PB_Cipher_MD5)
           EndIf
         EndIf
         
@@ -1131,7 +1127,7 @@ Module mods
     i = 0
     ForEach files$()
       file$ = MapKey(files$())
-      If MD5FileFingerprint(file$) = files$()
+      If FileFingerprint(file$, #PB_Cipher_MD5) = files$()
         i + 1
         queue::progressVal(i, MapSize(files$()))
         debugger::Add("mods::convert() - delete {"+file$+"}")
