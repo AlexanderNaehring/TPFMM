@@ -12,8 +12,6 @@
     active.i    ; true, if mod installed (new or old system)
     inLibrary.i ; true, if mod is in TFMM library
     luaDate.i   ; md5 of info.lua (check if it was changed -> relead info)
-    
-;     lua$        ; info.lua as string
   EndStructure
   
   Structure author
@@ -42,7 +40,7 @@
     aux.aux ; auxiliary information
   EndStructure
   
-  Declare changed() ; report changed to mod map (new mods, changed status, etc)
+  Declare changed_() ; report changed to mod map (new mods, changed status, etc)
   Declare registerLibraryGadget(library)
   
   Declare init() ; allocate structure, return *mod
