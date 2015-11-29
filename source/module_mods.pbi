@@ -33,7 +33,11 @@ Module mods
 ;     debugger::Add("mods::checkID("+id$+")")
     Static regexp
     If Not IsRegularExpression(regexp)
-      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$")
+      ; mods: author_name_version
+      ; DLC: name_version
+      ; general: (alphanum_)*num
+      ; regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$") ; at least one author name
+      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_)+[0-9]+$") ; no author name required
     EndIf
     
     ProcedureReturn MatchRegularExpression(regexp, id$)
@@ -106,7 +110,7 @@ Module mods
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file
+  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file, called in new(), return mod ID if any
     debugger::Add("mods::CheckModFile("+File$+")")
     Protected extension$, ret$
     
@@ -130,26 +134,27 @@ Module mods
   
   Procedure cleanModInfo(*mod.mod)
     debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
-    With *mod
-      \tf_id$ = ""
-      \aux\version$ = ""
-      \majorVersion = 0
-      \minorVersion = 0
-      \name$ = ""
-      \description$ = ""
-      \aux\authors$ = ""
-      ClearList(\authors())
-      \aux\tags$ = ""
-      ClearList(\tags$())
-      \tfnetId = 0
-      \minGameVersion = 0
-      ClearList(\dependencies$())
-      \url$ = ""
-    
-      \aux\archive$ = ""
-      \aux\active = 0
-;       \aux\lua$ = ""
-    EndWith
+    ClearStructure(*mod, mod)
+;     With *mod
+;       \tf_id$ = ""
+;       \aux\version$ = ""
+;       \majorVersion = 0
+;       \minorVersion = 0
+;       \name$ = ""
+;       \description$ = ""
+;       \aux\authors$ = ""
+;       ClearList(\authors())
+;       \aux\tags$ = ""
+;       ClearList(\tags$())
+;       \tfnetId = 0
+;       \minGameVersion = 0
+;       ClearList(\dependencies$())
+;       \url$ = ""
+;     
+;       \aux\archive$ = ""
+;       \aux\active = 0
+; ;       \aux\lua$ = ""
+;     EndWith
   EndProcedure
   
   Procedure ExtractFilesZip(zip$, List files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
@@ -425,6 +430,7 @@ Module mods
     ; Post Processing
     infoPP(*mod)
     
+    ; print mod information
     debugInfo(*mod)
     
     ; generate info.lua (in memory)
@@ -705,7 +711,7 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure new(file$) ; add new mod from any location to list of mods and initiate install
+  Procedure new(file$) ; INITIAL STEP: add new mod file from any location
     debugger::Add("mods::addMod("+file$+")")
     Protected *mod.mod, id$
     Protected TF$ = main::TF$
@@ -717,6 +723,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    ; allocate memory for mod information
     *mod = init()
     
     ; second step: read information
@@ -730,7 +737,7 @@ Module mods
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
-      If *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$ And *mod\aux\archiveMD5$
+      If *mod\aux\archiveMD5$ And *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$
         debugger::Add("mods::addMod() - MD5 check found match!")
         id$ = *mods()\tf_id$
         sameHash = #True
@@ -880,7 +887,7 @@ Module mods
     Protected TF$ = main::TF$
     debugger::Add("mods::loadList("+TF$+")")
     
-    Protected pMods$, pTFMM$, pLib$, pTMP$
+    Protected pMods$, pDLCs$, pTFMM$, pLib$, pTMP$
     Protected json, NewMap mods_json.mod(), *mod.mod
     Protected dir, entry$, NewMap mod_scanner.mod_scanner()
     Protected count, n, id$, modFolder$, luaFile$
@@ -888,8 +895,8 @@ Module mods
     pTFMM$  = misc::Path(TF$ + "/TFMM/")
     pLib$   = misc::Path(TF$ + "/TFMM/library/")
     pMods$  = misc::Path(TF$ + "/mods/")
+    pDLCs$  = misc::Path(TF$ + "/dlcs/")
     pTMP$   = GetTemporaryDirectory()
-    
     
     queue::progressText(locale::l("progress","load"))
     queue::progressVal(0, 1) ; 0% progress
@@ -1335,9 +1342,9 @@ Module mods
       ProcedureReturn
     EndIf
     
-    Static RegExp
-    If Not RegExp
-      RegExp  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
+    Static RegExpNonAlphaNum
+    If Not RegExpNonAlphaNum
+      RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
       ; regexp matches all non alphanum characters including spaces etc.
     EndIf
     
@@ -1349,6 +1356,7 @@ Module mods
         If checkID(id$)
           debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
           \tf_id$ = id$
+          ; id read from mod folder was valid, thus use it directly
           ProcedureReturn #True
         Else
           debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
@@ -1385,14 +1393,14 @@ Module mods
       ; ID = author_mod_version
       If ListSize(\authors()) > 0
         LastElement(\authors())
-        author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
       Else
         author$ = ""
       EndIf
       If author$ = ""
         author$ = "unknownauthor"
       EndIf
-      name$ = ReplaceRegularExpression(RegExp, LCase(\name$), "") ; remove all non alphanum + make lowercase
+      name$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\name$), "") ; remove all non alphanum + make lowercase
       If name$ = ""
         name$ = "unknown"
       EndIf
