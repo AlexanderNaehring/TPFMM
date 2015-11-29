@@ -51,24 +51,40 @@ Module windowSettings
   EndProcedure
   
   Procedure GadgetButtonAutodetect(event)
-    Protected Dir$
+    debugger::add("windowSettings::GadgetButtonAutodetect()")
+    Protected path$
     
     CompilerSelect #PB_Compiler_OS
+      
       CompilerCase #PB_OS_Windows 
-        Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
-        If Not FileSize(Dir$) = -2 ; -2 = directory
-          Dir$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+        ; try to get Steam install location
+        path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+        If Not FileSize(path$) = -2
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
         EndIf
+        ; try to get GOG install location
+        If Not FileSize(path$) = -2
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\GOG.com\Games\1424258777", "PATH")
+        EndIf
+        If Not FileSize(path$) = -2
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\Wow6432Node\GOG.com\Games\1424258777", "PATH")
+        EndIf
+        
       CompilerCase #PB_OS_Linux
-        Dir$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
+        path$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
+        
       CompilerCase #PB_OS_MacOS
-        Dir$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Train Fever/")
+        path$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Train Fever/")
     CompilerEndSelect
     
-    If Dir$
-      SetGadgetText(GadgetPath, Dir$)  
+    If path$ And FileSize(path$) = -2
+      debugger::add("windowSettings::GadgetButtonAutodetect() - found {"+path$+"}")
+      SetGadgetText(GadgetPath, path$)
+      ProcedureReturn #True
     EndIf
     
+    debugger::add("windowSettings::GadgetButtonAutodetect() - did not found any TF installation")
+    ProcedureReturn #False
   EndProcedure
   
   Procedure GadgetButtonBrowse(event)
@@ -156,7 +172,6 @@ Module windowSettings
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  
   Procedure create(parentWindow)
     parentW = parentWindow
     window = OpenWindow(#PB_Any, #PB_Ignore, #PB_Ignore, 580, 240, locale::l("settings","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_WindowCentered, WindowID(parentWindow))
@@ -240,6 +255,4 @@ Module windowSettings
     ProcedureReturn #True
   EndProcedure
   
-  
-
 EndModule
