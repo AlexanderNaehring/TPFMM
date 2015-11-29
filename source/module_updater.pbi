@@ -4,8 +4,8 @@ XIncludeFile "module_locale.pbi"
 DeclareModule updater
   EnableExplicit
   
-  #CHANNEL = "Testing"
-  #VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount + " ("+#CHANNEL+")"
+  Global CHANNEL$ = "Testing"
+  Global VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + FormatDate("%yy%mm%dd", #PB_Compiler_Date) + " (" + CHANNEL$ + ")"
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
@@ -54,7 +54,7 @@ Module updater
     gadgets("status")   = TextGadget(#PB_Any, 100, 25, 250, 20, "", #PB_Text_Center); |#PB_Text_Border
     
     FrameGadget(#PB_Any, 5, 50, 350, 40, locale::l("updater", "current"))
-    TextGadget(#PB_Any, 10, 67, 340, 20, #VERSION$, #PB_Text_Center)
+    TextGadget(#PB_Any, 10, 67, 340, 20, VERSION$, #PB_Text_Center)
     
     FrameGadget(#PB_Any, 5, 90, 350, 90, locale::l("updater", "information"))
     TextGadget(#PB_Any, 10, 105, 155, 20, locale::l("updater", "version"),  #PB_Text_Right); |#PB_Text_Border 
@@ -106,8 +106,8 @@ Module updater
               SetGadgetColor(gadgets("status"), #PB_Gadget_FrontColor, -1)
               If GetGadgetText(gadgets("channel")) = ""
                 ; if no channel is selected, switch to current channel
-                If FindMapElement(channel(), LCase(#CHANNEL))
-                  SetGadgetText(gadgets("channel"), #CHANNEL)
+                If FindMapElement(channel(), LCase(CHANNEL$))
+                  SetGadgetText(gadgets("channel"), CHANNEL$)
                 Else
                   SetGadgetText(gadgets("channel"), "Stable")
                 EndIf
@@ -141,9 +141,9 @@ Module updater
       SetGadgetColor(gadgets("status"), #PB_Gadget_FrontColor, #Red)
     EndIf
     
-    If channel(LCase(#CHANNEL))\build > #PB_Editor_CompileCount Or channel("stable")\build > #PB_Editor_CompileCount
-      If channel(LCase(#CHANNEL))\build > #PB_Editor_CompileCount 
-        SetGadgetText(gadgets("channel"), #CHANNEL)
+    If channel(LCase(CHANNEL$))\build > #PB_Editor_CompileCount Or channel("stable")\build > #PB_Editor_CompileCount
+      If channel(LCase(CHANNEL$))\build > #PB_Editor_CompileCount 
+        SetGadgetText(gadgets("channel"), CHANNEL$)
       ElseIf channel("stable")\build > #PB_Editor_CompileCount
         SetGadgetText(gadgets("channel"), "Stable")
       EndIf
