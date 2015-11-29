@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.31 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.40 LTS (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TFMM"/>
     <comment>Train Fever Mod Manager</comment>
@@ -8,20 +8,20 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-08-23 18:10" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-11-30 00:17" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_debugger.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_images.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_ListIcon.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -39,19 +39,22 @@
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_queue.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_registry.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+    </file>
+    <file name="source\module_settings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_unrar.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_updater.pbi">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="1" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowInformation.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
@@ -60,9 +63,6 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
-    </file>
-    <file name="source\module_settings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
   </section>
@@ -70,17 +70,17 @@
     <target name="win32" enabled="1" default="1">
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\win32\TFMM.exe"/>
-      <compiler version="PureBasic 5.31 (Windows - x86)"/>
+      <compiler version="PureBasic 5.40 LTS (Windows - x86)"/>
       <commandline value="-debug -testmode"/>
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="2069"/>
-      <buildcount enable="1" value="129"/>
+      <compilecount enable="1" value="2291"/>
+      <buildcount enable="1" value="138"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
-        <field0 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
-        <field1 value="0,8,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field0 value="0,9,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="0,9,%BUILDCOUNT,%COMPILECOUNT"/>
         <field3 value="Train Fever Mod Manager"/>
         <field4 value="%BUILDCOUNT"/>
         <field5 value="%COMPILECOUNT"/>
