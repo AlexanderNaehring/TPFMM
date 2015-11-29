@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<dialogs>
+  <window id='#PB_Any' name='first_start' text='First Start Wizard' minwidth='480' minheight='360' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu | #PB_Window_SizeGadget'>
+    <multibox>
+      <container name='welcome' invisible='no'>
+        <vbox expand='item:3' spacing='40'>
+          <text name='head' text='Welcome to Train Fever Mod Manager' flags='#PB_Text_Center'/>
+          <text text='This wizard will guide you through the first start of TFMM' />
+          <empty/>
+          <button text='Setup TFMM' onevent='firstStart::eShowInstallation()'/>
+        </vbox>
+      </container>
+      <container name='installation' invisible='yes'>
+        <vbox expand='item:3' >
+          <text text='Define Train Fever Installation Folder' flags='#PB_Text_Center'/>
+          <text text='Autodetecting Train Fever Installations...' />
+          <empty/>
+          <button text='Save and Continue' onevent='firstStart::eFinish()'/>
+        </vbox>
+      </container>
+    </multibox>
+  </window>
+</dialogs>

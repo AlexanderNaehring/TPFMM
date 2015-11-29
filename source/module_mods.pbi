@@ -20,21 +20,24 @@ Module mods
     folderLibrary.b
   EndStructure
   
-  
   Global NewMap *mods.mod()
-  Global changed.i ; report variable if mod states have changed
-  Global library.i ; library gadget
+  Global.i gadgetMod, gadgetDLC
+  
+  UseMD5Fingerprint()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
   
-  
   Procedure checkID(id$)
 ;     debugger::Add("mods::checkID("+id$+")")
     Static regexp
     If Not IsRegularExpression(regexp)
-      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$")
+      ; mods: author_name_version
+      ; DLC: name_version
+      ; general: (alphanum_)*num
+      ; regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$") ; at least one author name
+      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_)+[0-9]+$") ; no author name required
     EndIf
     
     ProcedureReturn MatchRegularExpression(regexp, id$)
@@ -100,14 +103,14 @@ Module mods
           debugger::Add("mods::checkModFileRar() - found info.lua")
           ProcedureReturn entry$
         EndIf
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip to next entry in rar
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip to next entry in rar
       Wend
       unrar::RARCloseArchive(hRAR)
     EndIf
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file
+  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file, called in new(), return mod ID if any
     debugger::Add("mods::CheckModFile("+File$+")")
     Protected extension$, ret$
     
@@ -131,26 +134,27 @@ Module mods
   
   Procedure cleanModInfo(*mod.mod)
     debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
-    With *mod
-      \tf_id$ = ""
-      \aux\version$ = ""
-      \majorVersion = 0
-      \minorVersion = 0
-      \name$ = ""
-      \description$ = ""
-      \aux\authors$ = ""
-      ClearList(\authors())
-      \aux\tags$ = ""
-      ClearList(\tags$())
-      \tfnetId = 0
-      \minGameVersion = 0
-      ClearList(\dependencies$())
-      \url$ = ""
-    
-      \aux\archive$ = ""
-      \aux\active = 0
-;       \aux\lua$ = ""
-    EndWith
+    ClearStructure(*mod, mod)
+;     With *mod
+;       \tf_id$ = ""
+;       \aux\version$ = ""
+;       \majorVersion = 0
+;       \minorVersion = 0
+;       \name$ = ""
+;       \description$ = ""
+;       \aux\authors$ = ""
+;       ClearList(\authors())
+;       \aux\tags$ = ""
+;       ClearList(\tags$())
+;       \tfnetId = 0
+;       \minGameVersion = 0
+;       ClearList(\dependencies$())
+;       \url$ = ""
+;     
+;       \aux\archive$ = ""
+;       \aux\active = 0
+; ;       \aux\lua$ = ""
+;     EndWith
   EndProcedure
   
   Procedure ExtractFilesZip(zip$, List files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
@@ -215,7 +219,7 @@ Module mods
       
       ; filter out Mac OS X bullshit
       If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip these files / entries
         Continue
       EndIf
       
@@ -223,14 +227,14 @@ Module mods
       ForEach Files$()
         entry$ = GetFilePart(entry$)
         If LCase(entry$) = LCase(Files$())
-          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, dir$ + Files$())
+          unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, dir$ + Files$())
           DeleteElement(Files$()) ; if file is extracted, delete from list
           hit = #True
           Break ; ForEach
         EndIf
       Next
       If Not hit
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$)
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$)
       EndIf
       
     Wend
@@ -391,7 +395,7 @@ Module mods
     ; read standard information
     With *mod
       \aux\archive$ = GetFilePart(file$)
-      \aux\archiveMD5$ = MD5FileFingerprint(file$)
+      \aux\archiveMD5$ = FileFingerprint(file$, #PB_Cipher_MD5)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -426,6 +430,7 @@ Module mods
     ; Post Processing
     infoPP(*mod)
     
+    ; print mod information
     debugInfo(*mod)
     
     ; generate info.lua (in memory)
@@ -454,15 +459,15 @@ Module mods
     EndIf
     
     *mods(id$) = *mod ; add (or overwrite) mod to/in map
-    If IsGadget(library) ; add newly added mod to list gadget
-      count = CountGadgetItems(library)
+    If IsGadget(gadgetMod) ; add newly added mod to list gadget
+      count = CountGadgetItems(gadgetMod)
       With *mod
-        ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
-        ListIcon::SetListItemData(library, count, *mod)
+        ListIcon::AddListItem(gadgetMod, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+        ListIcon::SetListItemData(gadgetMod, count, *mod)
         If \aux\active
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+          ListIcon::SetListItemImage(gadgetMod, count, ImageID(images::Images("yes")))
         Else 
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+          ListIcon::SetListItemImage(gadgetMod, count, ImageID(images::Images("no")))
         EndIf
       EndWith
     EndIf
@@ -534,7 +539,7 @@ Module mods
       
       ; filter out Mac OS X bullshit
       If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; skip these files / entries
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip these files / entries
         Continue
       EndIf
       
@@ -542,11 +547,11 @@ Module mods
         entry$ = Mid(entry$, FindString(entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
         entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
   
-        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #NULL$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, Path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
           debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
         EndIf
       Else
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #NULL$, #NULL$) ; file not in "res", skip it
+        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; file not in "res", skip it
       EndIf
       
     Wend
@@ -619,13 +624,13 @@ Module mods
           EndIf
           
           
-          WriteString(file, "<tr><td>" + \name$ + "</td><td>" + \aux\version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
+          WriteString(file, "<tr><td>" + name$ + "</td><td>" + \aux\version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
         EndIf
       EndWith
     Next
     
     WriteString(file, "</table>", #PB_UTF8)
-    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TFMM</a> "+updater::#VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='http://tfmm.xanos.eu/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
+    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TFMM</a> "+updater::VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='http://tfmm.xanos.eu/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
     
     WriteString(file, "</body></html>", #PB_UTF8)
     CloseFile(file)
@@ -653,7 +658,7 @@ Module mods
       EndWith
     Next
     WriteStringN(file, "", #PB_UTF8)
-    WriteString(file, "Created with TFMM "+updater::#VERSION$, #PB_UTF8)
+    WriteString(file, "Created with TFMM "+updater::VERSION$, #PB_UTF8)
     CloseFile(file)
     
     misc::openLink(File$)
@@ -664,16 +669,16 @@ Module mods
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure changed()
-    Protected ret = changed
-    changed = #False
-    ProcedureReturn ret
+  Procedure registerModGadget(gadget)
+    debugger::Add("registerModGadget("+Str(gadget)+")")
+    gadgetMod = gadget
+    ProcedureReturn gadget
   EndProcedure
   
-  Procedure registerLibraryGadget(lib)
-    debugger::Add("registerLibraryGadget("+Str(lib)+")")
-    library = lib
-    ProcedureReturn lib
+  Procedure registerDLCGadget(gadget)
+    debugger::Add("registerDLCGadget("+Str(gadget)+")")
+    gadgetDLC = gadget
+    ProcedureReturn gadget
   EndProcedure
   
   Procedure init() ; allocate mod structure
@@ -701,12 +706,12 @@ Module mods
     ForEach *mods()
       mods::free(*mods()\tf_id$)
     Next
-    If IsGadget(library)
-      ListIcon::ClearListItems(library)
+    If IsGadget(gadgetMod)
+      ListIcon::ClearListItems(gadgetMod)
     EndIf
   EndProcedure
   
-  Procedure new(file$) ; add new mod from any location to list of mods and initiate install
+  Procedure new(file$) ; INITIAL STEP: add new mod file from any location
     debugger::Add("mods::addMod("+file$+")")
     Protected *mod.mod, id$
     Protected TF$ = main::TF$
@@ -718,6 +723,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    ; allocate memory for mod information
     *mod = init()
     
     ; second step: read information
@@ -731,7 +737,7 @@ Module mods
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
-      If *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$ And *mod\aux\archiveMD5$
+      If *mod\aux\archiveMD5$ And *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$
         debugger::Add("mods::addMod() - MD5 check found match!")
         id$ = *mods()\tf_id$
         sameHash = #True
@@ -870,7 +876,7 @@ Module mods
     ; fifth step: add mod to list
     toList(*mod)
     
-    changed = #True
+    ;changed = #True
     
     ; last step: init install
     queue::add(queue::#QueueActionInstall, id$)
@@ -881,7 +887,7 @@ Module mods
     Protected TF$ = main::TF$
     debugger::Add("mods::loadList("+TF$+")")
     
-    Protected pMods$, pTFMM$, pLib$, pTMP$
+    Protected pMods$, pDLCs$, pTFMM$, pLib$, pTMP$
     Protected json, NewMap mods_json.mod(), *mod.mod
     Protected dir, entry$, NewMap mod_scanner.mod_scanner()
     Protected count, n, id$, modFolder$, luaFile$
@@ -889,8 +895,8 @@ Module mods
     pTFMM$  = misc::Path(TF$ + "/TFMM/")
     pLib$   = misc::Path(TF$ + "/TFMM/library/")
     pMods$  = misc::Path(TF$ + "/mods/")
+    pDLCs$  = misc::Path(TF$ + "/dlcs/")
     pTMP$   = GetTemporaryDirectory()
-    
     
     queue::progressText(locale::l("progress","load"))
     queue::progressVal(0, 1) ; 0% progress
@@ -1026,7 +1032,7 @@ Module mods
           
           *mod\aux\archive$ =  misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
           If *mod\aux\archiveMD5$ = ""
-            *mod\aux\archiveMD5$ = MD5FileFingerprint(*mod\aux\archive$)
+            *mod\aux\archiveMD5$ = FileFingerprint(*mod\aux\archive$, #PB_Cipher_MD5)
           EndIf
         EndIf
         
@@ -1131,7 +1137,7 @@ Module mods
     i = 0
     ForEach files$()
       file$ = MapKey(files$())
-      If MD5FileFingerprint(file$) = files$()
+      If FileFingerprint(file$, #PB_Cipher_MD5) = files$()
         i + 1
         queue::progressVal(i, MapSize(files$()))
         debugger::Add("mods::convert() - delete {"+file$+"}")
@@ -1179,10 +1185,10 @@ Module mods
     If FileSize(target$) = -2
       debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
       *mod\aux\active = #True
-      If IsGadget(library)
-        For i = 0 To CountGadgetItems(library) -1
-          If ListIcon::GetListItemData(library, i) = *mod
-            ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+      If IsGadget(gadgetMod)
+        For i = 0 To CountGadgetItems(gadgetMod) -1
+          If ListIcon::GetListItemData(gadgetMod, i) = *mod
+            ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("yes")))
             Break
           EndIf
         Next
@@ -1214,10 +1220,10 @@ Module mods
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
     *mod\aux\active = #True
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("yes")))
           Break
         EndIf
       Next
@@ -1267,10 +1273,10 @@ Module mods
     ; finish removal
     
     *mod\aux\active = #False
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::SetListItemImage(library, i, ImageID(images::Images("no")))
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("no")))
           Break
         EndIf
       Next
@@ -1315,10 +1321,10 @@ Module mods
     DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
     ; finish deletion
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::RemoveListItem(library, i)
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::RemoveListItem(gadgetMod, i)
           Break
         EndIf
       Next
@@ -1336,9 +1342,9 @@ Module mods
       ProcedureReturn
     EndIf
     
-    Static RegExp
-    If Not RegExp
-      RegExp  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
+    Static RegExpNonAlphaNum
+    If Not RegExpNonAlphaNum
+      RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
       ; regexp matches all non alphanum characters including spaces etc.
     EndIf
     
@@ -1350,6 +1356,7 @@ Module mods
         If checkID(id$)
           debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
           \tf_id$ = id$
+          ; id read from mod folder was valid, thus use it directly
           ProcedureReturn #True
         Else
           debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
@@ -1386,14 +1393,14 @@ Module mods
       ; ID = author_mod_version
       If ListSize(\authors()) > 0
         LastElement(\authors())
-        author$ = ReplaceRegularExpression(RegExp, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
       Else
         author$ = ""
       EndIf
       If author$ = ""
         author$ = "unknownauthor"
       EndIf
-      name$ = ReplaceRegularExpression(RegExp, LCase(\name$), "") ; remove all non alphanum + make lowercase
+      name$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\name$), "") ; remove all non alphanum + make lowercase
       If name$ = ""
         name$ = "unknown"
       EndIf
@@ -1529,5 +1536,3 @@ Module mods
   EndProcedure
   
 EndModule
-
-; EnableXP

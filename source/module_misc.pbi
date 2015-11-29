@@ -357,14 +357,21 @@ Module misc
     EndIf
     ProcedureReturn result
   EndProcedure
-
-  Procedure checkTFPath(Dir$) ; return true, false or -1
+  
+  Procedure checkTFPath(Dir$)
+    ; #True   = path okay, Train Fever executable found and writing possible
+    ; -1      = path okay, Train Fever executable found but cannot write
+    ; #False  = path not okay
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
         If main::_TESTMODE
           ; in testmode, do not check for TrainFever executable
           ProcedureReturn #True
+        EndIf
+        If FileSize(Dir$ + "res") <> -2
+          ; Subdirectory "res" not found -> wrong path
+          ProcedureReturn #False
         EndIf
         CompilerIf #PB_Compiler_OS = #PB_OS_Windows
           If FileSize(Dir$ + "TrainFever.exe") > 1 Or FileSize(Dir$ + "TrainFeverLauncher.exe") > 1

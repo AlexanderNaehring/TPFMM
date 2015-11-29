@@ -116,14 +116,11 @@ Module main
       PreferenceGroup("")
       ; reload column sizing
       PreferenceGroup("columns")
+      Protected Dim widths(5)
       For i = 0 To 5
-        If ReadPreferenceInteger(Str(i), 0)
-          ; FIXME move to windowMain module
-          SetGadgetItemAttribute(windowMain::Library, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
-          ; Sorting
-          ListIcon::SetColumnFlag(windowMain::Library, i, ListIcon::#String) 
-        EndIf
+        widths(i) = ReadPreferenceInteger(Str(i), 0)
       Next
+      
       PreferenceGroup("")
     EndIf
     
@@ -172,7 +169,7 @@ Module main
     EndIf
     PreferenceGroup("columns")
     For i = 0 To 5
-      WritePreferenceInteger(Str(i), GetGadgetItemAttribute(windowMain::Library, #PB_Any, #PB_Explorer_ColumnWidth, i))
+      WritePreferenceInteger(Str(i), windowMain::getColumnWidth(i))
     Next
     ClosePreferences()
     
