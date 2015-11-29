@@ -550,6 +550,7 @@ Module windowMain
     AddGadgetColumn(Library, 1, l("main","author"), 90)
     AddGadgetColumn(Library, 2, l("main","category"), 90)
     AddGadgetColumn(Library, 3, l("main","version"), 60)
+    
     AddGadgetItem(GadgetMainPanel, -1, "DLC")
     AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     CloseGadgetList()
@@ -608,7 +609,7 @@ Module windowMain
     EnableWindowDrop(id, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
     ; library
-    mods::registerLibraryGadget(Library)
+    mods::registerModGadget(Library)
     
     ; init gui
     updateGUI()

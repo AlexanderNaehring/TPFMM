@@ -11,7 +11,7 @@
     archiveMD5$ ; md5 of mod archive
     active.i    ; true, if mod installed (new or old system)
     inLibrary.i ; true, if mod is in TFMM library
-    luaDate.i   ; md5 of info.lua (check if it was changed -> relead info)
+    luaDate.i   ; date of info.lua (reload info when newer version available)
   EndStructure
   
   Structure author
@@ -40,7 +40,8 @@
     aux.aux ; auxiliary information
   EndStructure
   
-  Declare registerLibraryGadget(library)
+  Declare registerModGadget(gadget)
+  Declare registerDLCGadget(gadget)
   
   Declare init() ; allocate structure, return *mod
   Declare free(id$) ; free *mod structure

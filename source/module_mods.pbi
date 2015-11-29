@@ -20,17 +20,14 @@ Module mods
     folderLibrary.b
   EndStructure
   
-  
   Global NewMap *mods.mod()
-  Global changed.i ; report variable if mod states have changed
-  Global library.i ; library gadget
+  Global.i gadgetMod, gadgetDLC
   
   UseMD5Fingerprint()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
-  
   
   Procedure checkID(id$)
 ;     debugger::Add("mods::checkID("+id$+")")
@@ -456,15 +453,15 @@ Module mods
     EndIf
     
     *mods(id$) = *mod ; add (or overwrite) mod to/in map
-    If IsGadget(library) ; add newly added mod to list gadget
-      count = CountGadgetItems(library)
+    If IsGadget(gadgetMod) ; add newly added mod to list gadget
+      count = CountGadgetItems(gadgetMod)
       With *mod
-        ListIcon::AddListItem(library, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
-        ListIcon::SetListItemData(library, count, *mod)
+        ListIcon::AddListItem(gadgetMod, count, \name$ + Chr(10) + \aux\authors$ + Chr(10) + \aux\tags$ + Chr(10) + \aux\version$)
+        ListIcon::SetListItemData(gadgetMod, count, *mod)
         If \aux\active
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("yes")))
+          ListIcon::SetListItemImage(gadgetMod, count, ImageID(images::Images("yes")))
         Else 
-          ListIcon::SetListItemImage(library, count, ImageID(images::Images("no")))
+          ListIcon::SetListItemImage(gadgetMod, count, ImageID(images::Images("no")))
         EndIf
       EndWith
     EndIf
@@ -666,10 +663,16 @@ Module mods
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure registerLibraryGadget(lib)
-    debugger::Add("registerLibraryGadget("+Str(lib)+")")
-    library = lib
-    ProcedureReturn lib
+  Procedure registerModGadget(gadget)
+    debugger::Add("registerModGadget("+Str(gadget)+")")
+    gadgetMod = gadget
+    ProcedureReturn gadget
+  EndProcedure
+  
+  Procedure registerDLCGadget(gadget)
+    debugger::Add("registerDLCGadget("+Str(gadget)+")")
+    gadgetDLC = gadget
+    ProcedureReturn gadget
   EndProcedure
   
   Procedure init() ; allocate mod structure
@@ -697,8 +700,8 @@ Module mods
     ForEach *mods()
       mods::free(*mods()\tf_id$)
     Next
-    If IsGadget(library)
-      ListIcon::ClearListItems(library)
+    If IsGadget(gadgetMod)
+      ListIcon::ClearListItems(gadgetMod)
     EndIf
   EndProcedure
   
@@ -866,7 +869,7 @@ Module mods
     ; fifth step: add mod to list
     toList(*mod)
     
-    changed = #True
+    ;changed = #True
     
     ; last step: init install
     queue::add(queue::#QueueActionInstall, id$)
@@ -1175,10 +1178,10 @@ Module mods
     If FileSize(target$) = -2
       debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
       *mod\aux\active = #True
-      If IsGadget(library)
-        For i = 0 To CountGadgetItems(library) -1
-          If ListIcon::GetListItemData(library, i) = *mod
-            ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+      If IsGadget(gadgetMod)
+        For i = 0 To CountGadgetItems(gadgetMod) -1
+          If ListIcon::GetListItemData(gadgetMod, i) = *mod
+            ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("yes")))
             Break
           EndIf
         Next
@@ -1210,10 +1213,10 @@ Module mods
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
     *mod\aux\active = #True
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::SetListItemImage(library, i, ImageID(images::Images("yes")))
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("yes")))
           Break
         EndIf
       Next
@@ -1263,10 +1266,10 @@ Module mods
     ; finish removal
     
     *mod\aux\active = #False
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::SetListItemImage(library, i, ImageID(images::Images("no")))
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::SetListItemImage(gadgetMod, i, ImageID(images::Images("no")))
           Break
         EndIf
       Next
@@ -1311,10 +1314,10 @@ Module mods
     DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
     ; finish deletion
-    If IsGadget(library)
-      For i = 0 To CountGadgetItems(library) -1
-        If ListIcon::GetListItemData(library, i) = *mod
-          ListIcon::RemoveListItem(library, i)
+    If IsGadget(gadgetMod)
+      For i = 0 To CountGadgetItems(gadgetMod) -1
+        If ListIcon::GetListItemData(gadgetMod, i) = *mod
+          ListIcon::RemoveListItem(gadgetMod, i)
           Break
         EndIf
       Next
