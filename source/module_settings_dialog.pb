@@ -1,5 +1,7 @@
-﻿EnableExplicit
+﻿XIncludeFile "module_debugger.pbi"
+
 DeclareModule settings
+  EnableExplicit
   Declare create()
   
   ; Event Procedures
@@ -14,25 +16,15 @@ Module settings
     If xml And XMLStatus(xml) = #PB_XML_Success
       dialogMain = CreateDialog(-1)
       If dialogMain And OpenXMLDialog(dialogMain, xml, "settings")
-        
-        Protected event
-        Repeat
-          event = WaitWindowEvent()
-          Select event
-            Case #PB_Event_Gadget
-              Select EventGadget()
-                  
-              EndSelect
-          EndSelect
-        Until event = #PB_Event_CloseWindow 
+        ProcedureReturn #true
       Else  
-        Debug "Dialog error: " + DialogError(dialogMain)
+        debugger::add("Dialog error: " + DialogError(dialogMain))
       EndIf
     Else
-      Debug "XML error: " + XMLError(xml) + " (Line: " + XMLErrorLine(xml) + ")"
+      debugger::add("XML error: " + XMLError(xml) + " (Line: " + XMLErrorLine(xml) + ")")
     EndIf
+    ProcedureReturn #False
   EndProcedure
-  
   
   Runtime Procedure eManage(event)
     dialogManage = CreateDialog(-1)
@@ -47,3 +39,14 @@ Module settings
 EndModule
 
 settings::create()
+
+global event 
+Repeat
+  event = WaitWindowEvent()
+  Select event
+    Case #PB_Event_Gadget
+      Select EventGadget()
+          
+      EndSelect
+  EndSelect
+Until event = #PB_Event_CloseWindow 

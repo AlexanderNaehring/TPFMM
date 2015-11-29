@@ -26,8 +26,8 @@
         </tab>
       </panel>
       <hbox expand='equal'>
-        <empty />
         <button text='Cancel' />
+        <empty />
         <button text='Save' />
       </hbox>
     </vbox>
