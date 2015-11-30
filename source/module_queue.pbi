@@ -25,6 +25,9 @@ DeclareModule queue
   Declare progressText(string$)
   Declare progressVal(val, max=-1)
   
+  Declare progressStartWait()
+  Declare progressStopWait()
+  
 EndDeclareModule
 
 Module queue
@@ -38,6 +41,7 @@ Module queue
   Global NewList queue.queue()
   Global progressW, progressG, progressT
   Global *thread
+  Global *progressWaitThread, progressWaitThreadFlag
   
   debugger::Add("queue::mQueue = CreateMutex()")
   mQueue = CreateMutex()
@@ -131,6 +135,7 @@ Module queue
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
             If element\val$
+              ;- TODO implement as thread
               mods::new(element\val$)
             EndIf
             
@@ -170,6 +175,36 @@ Module queue
     
     UnlockMutex(mQueue)
     ProcedureReturn #True
+  EndProcedure
+  
+  
+  Procedure progressWaitThread(*dummy)
+    Static val
+    progressWaitThreadFlag = #True
+    While progressWaitThreadFlag
+      progressVal(val, 100)
+      val + 3
+      If val > 100
+        val = 0
+      EndIf
+      Delay(80)
+    Wend
+    progressVal(0, 1)
+  EndProcedure
+  
+  Procedure progressStartWait()
+    If Not IsThread(*progressWaitThread)
+      CreateThread(@progressWaitThread(), 0)
+    EndIf
+  EndProcedure
+  
+  Procedure progressStopWait()
+    progressWaitThreadFlag = #False
+    Delay(100)
+    If IsThread(*progressWaitThread)
+      KillThread(*progressWaitThread)
+    EndIf
+    *progressWaitThread = 0
   EndProcedure
   
 EndModule
