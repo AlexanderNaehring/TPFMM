@@ -19,6 +19,8 @@ update            = Aktualisiere TFMM
 license           = Lizenz
 
 [main]
+mods            = Modifikationen
+dlcs            = Herunterladbare Inhalte (DLC)
 name            = Name
 author          = Ersteller
 category        = Kategorie
@@ -164,6 +166,8 @@ install     = Installiere Modifikation
 remove      = Entferne Modifikation aus Train Fever
 delete      = Entferne Modifikation
 convert     = Konvertiere Modifikationen
+copy_lib    = Kopiere Modifikation in Bibliothek
+extract     = Entpacke Dateien
 
 [conversion]
 title       = Konvertierung

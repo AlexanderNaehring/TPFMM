@@ -89,16 +89,21 @@ Module windowMain
     ResizeGadget(GadgetImageLogo, width - 220, 15, 210, 118)
     ResizeGadget(GadgetDelete, width - 210, 240, 190, 30)
     ResizeGadget(GadgetInstall, width - 210, 160, 190, 30)
+    
     ResizeGadget(GadgetMainPanel, 10, 10, width - 240, height - misc::max(MenuHeight(), 20) - 50) ; height - MenuHeight() - 50
+    
     ResizeGadget(LibraryMods, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight))
     ResizeGadget(GadgetRemove, width - 210, 200, 190, 30)
-    ResizeGadget(GadgetImageHeader, 0, 0, width - 0, 8)
     ResizeGadget(TextGadgetVersion, width - 220, height - 50, 210, 20)
     ResizeGadget(GadgetButtonInformation, width - 210, 310, 190, 30)
     ResizeGadget(FrameGadget, width - 220, 140, 210, 140)
     ResizeGadget(FrameGadget2, width - 220, 290, 210, 60)
     
-    ResizeImage(images::Images("headermain"), GadgetWidth(GadgetImageHeader), GadgetHeight(GadgetImageHeader), #PB_Image_Raw)
+    ResizeGadget(LibraryDLCs, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 100)
+    
+    
+    ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
+    ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
   EndProcedure
   
@@ -547,16 +552,15 @@ Module windowMain
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
     GadgetMainPanel = PanelGadget(#PB_Any, 10, 10, 510, 410)
-    AddGadgetItem(GadgetMainPanel, -1, l("menu","mods"))
+    AddGadgetItem(GadgetMainPanel, -1, l("main","mods"))
     LibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     AddGadgetColumn(LibraryMods, 1, l("main","author"), 90)
     AddGadgetColumn(LibraryMods, 2, l("main","category"), 90)
     AddGadgetColumn(LibraryMods, 3, l("main","version"), 60)
     
-    AddGadgetItem(GadgetMainPanel, -1, l("menu","dlcs"))
-    LibraryDLCs = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
-    AddGadgetColumn(LibraryDLCs, 1, l("main","author"), 90)
-    AddGadgetColumn(LibraryDLCs, 3, l("main","version"), 60)
+    AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
+    LibraryDLCs = ListViewGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 100)
+    StringGadget(#PB_Any, 0, 105, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 20, "TEST")
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     CloseGadgetList()

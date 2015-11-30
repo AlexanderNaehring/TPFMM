@@ -132,31 +132,6 @@ Module mods
     ProcedureReturn ret$
   EndProcedure
   
-  Procedure cleanModInfo(*mod.mod)
-    debugger::Add("mods::cleanModInfo("+Str(*mod)+")")
-    ClearStructure(*mod, mod)
-;     With *mod
-;       \tf_id$ = ""
-;       \aux\version$ = ""
-;       \majorVersion = 0
-;       \minorVersion = 0
-;       \name$ = ""
-;       \description$ = ""
-;       \aux\authors$ = ""
-;       ClearList(\authors())
-;       \aux\tags$ = ""
-;       ClearList(\tags$())
-;       \tfnetId = 0
-;       \minGameVersion = 0
-;       ClearList(\dependencies$())
-;       \url$ = ""
-;     
-;       \aux\archive$ = ""
-;       \aux\active = 0
-; ;       \aux\lua$ = ""
-;     EndWith
-  EndProcedure
-  
   Procedure ExtractFilesZip(zip$, List files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
     debugger::Add("mods::ExtractFilesZip("+zip$+", Files$(), "+dir$+")")
     Protected deb$ = "mods::ExtractFilesZip() - search for: "
@@ -390,7 +365,8 @@ Module mods
     Protected tmpDir$ = GetTemporaryDirectory()
     
     ; clean info
-    cleanModInfo(*mod)
+    ClearStructure(*mod, mod)
+    InitializeStructure(*mod, mod)
     
     ; read standard information
     With *mod
@@ -664,6 +640,28 @@ Module mods
     misc::openLink(File$)
   EndProcedure
   
+  Procedure convertToTGA(imageFile$)
+    debugger::add("mods::convertToTGA("+imageFile$+")")
+    Protected im, i
+    Protected dir$, image$
+    dir$  = misc::Path(GetPathPart(imageFile$))
+    im    = LoadImage(#PB_Any, image$)
+    If IsImage(im)
+      ; im = misc::ResizeCenterImage(im, 320, 180)
+      i = 0
+      Repeat
+        image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
+        i + 1
+      Until FileSize(image$) <= 0
+      misc::encodeTGA(im, image$, 24)
+      FreeImage(im)
+      
+      If FileSize(image$) > 0
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
@@ -684,7 +682,7 @@ Module mods
   Procedure init() ; allocate mod structure
     Protected *mod.mod
     *mod = AllocateStructure(mod)
-;     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
+    debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
     ProcedureReturn *mod
   EndProcedure
   
@@ -712,33 +710,40 @@ Module mods
   EndProcedure
   
   Procedure new(file$) ; INITIAL STEP: add new mod file from any location
-    debugger::Add("mods::addMod("+file$+")")
+    debugger::Add("mods::new("+file$+")")
     Protected *mod.mod, id$
     Protected TF$ = main::TF$
+    
+    queue::progressText(locale::l("progress","new"))
+    queue::progressVal(0, 5)
     
     ; first step: check mod
     id$ = CheckModFile(file$)
     If id$ = "false"
-      debugger::Add("mods::addMod() - ERROR: check failed, abort")
+      debugger::Add("mods::new() - ERROR: check failed, abort")
       ProcedureReturn #False
     EndIf
+    queue::progressVal(1, 5)
     
     ; allocate memory for mod information
     *mod = init()
+    debugger::Add("mods::new() - memory adress of new mod: {"+*mod+"}")
     
     ; second step: read information
     If Not getInfo(file$, *mod, id$)
-      debugger::Add("mods::addMod() - ERROR: failed to retrieve info")
+      debugger::Add("mods::new() - ERROR: failed to retrieve info")
       FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
+    *mod\aux\installDate = Date()
+    queue::progressVal(2, 5)
     
     
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
       If *mod\aux\archiveMD5$ And *mods()\aux\archiveMD5$ = *mod\aux\archiveMD5$
-        debugger::Add("mods::addMod() - MD5 check found match!")
+        debugger::Add("mods::new() - MD5 check found match!")
         id$ = *mods()\tf_id$
         sameHash = #True
         Break
@@ -751,9 +756,9 @@ Module mods
       strings$("name") = *mods(id$)\name$
       If *mods()\aux\active
         MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
-        debugger::Add("mods::addMod() - cancel new installed, mod already installed")
+        debugger::Add("mods::new() - cancel new installation, mod already installed")
       Else
-        debugger::Add("mods::addMod() - trigger install of previous mod")
+        debugger::Add("mods::new() - trigger install of previous mod")
         queue::add(queue::#QueueActionInstall, id$)
       EndIf
       FreeStructure(*mod)
@@ -761,7 +766,7 @@ Module mods
     EndIf
     
     If FindMapElement(*mods(),  *mod\tf_id$)
-      debugger::Add("mods::addMod() - Another mod with id {"+id$+"} already in list!")
+      debugger::Add("mods::new() - Another mod with id {"+id$+"} already in list!")
       id$ = *mod\tf_id$
       sameID = #True
     EndIf
@@ -787,14 +792,16 @@ Module mods
         ProcedureReturn #True
       EndIf
     EndIf
+    queue::progressVal(3, 5)
     
     ; fourth step: copy mod to internal TFMM mod folder and extract all recognised information files
+    queue::progressText(locale::l("progress","copy_lib"))
     id$ = *mod\tf_id$
     Protected dir$ = misc::Path(TF$+"/TFMM/library/"+id$)
-    debugger::Add("mods::addMod() - add mod to library: {"+dir$+"}")
+    debugger::Add("mods::new() - add mod to library: {"+dir$+"}")
     ; create library entry (subdir)
     If Not misc::CreateDirectoryAll(dir$)
-      debugger::Add("mods::addMod() - ERROR - failed to create {"+dir$+"}")
+      debugger::Add("mods::new() - ERROR - failed to create {"+dir$+"}")
       FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
@@ -803,78 +810,47 @@ Module mods
     ;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
     ; TODO - decide to change filename and extension or leave it as original
     Protected newfile$ = dir$ + id$ + ".tfmod"
-    debugger::Add("mods::addMod() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
+    debugger::Add("mods::new() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
     
     If Not CopyFile(file$, newfile$)
-      debugger::Add("mods::addMod() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
+      debugger::Add("mods::new() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
       FreeStructure(*mod)
       ProcedureReturn #False
     EndIf
+    queue::progressVal(4, 5)
     
     ; extract files
     Protected NewList files$()
+    Protected i
     ClearList(files$())
-    AddElement(files$()) : files$() = "info.lua"
-    AddElement(files$()) : files$() = "strings.lua"
-    AddElement(files$()) : files$() = "main.lua"
-    AddElement(files$()) : files$() = "filesystem.lua"
-    ; TODO check if these important files needs to be re-extracted ?!
-    
     AddElement(files$()) : files$() = "header.jpg"
     AddElement(files$()) : files$() = "preview.png"
-    AddElement(files$()) : files$() = "image_00.tga"
+    For i = 0 To 9
+      AddElement(files$()) : files$() = "image_0" + i + ".tga"
+    Next
     If Not ExtractFilesZip(newfile$, files$(), dir$)
       If Not ExtractFilesRar(newfile$, files$(), dir$)
         debugger::Add("mods::GetModInfo() - failed to open {"+newfile$+"} for extraction")
       EndIf
     EndIf
     
-    Protected file
-    If FileSize(dir$ + "info.lua") <= 0
-      file = CreateFile(#PB_Any, dir$ + "info.lua")
-      If file
-        WriteString(file, getLUA(*mod), #PB_UTF8)
-        CloseFile(file)
-      EndIf
-    EndIf
-    
     ; images
     debugger::Add("mosd::new() - convert images")
-    Protected im, image$, i
+    Protected image$
     image$ = dir$ + "header.jpg"
     If FileSize(image$) > 0
-      im = LoadImage(#PB_Any, image$)
-      If IsImage(im)
-;         im = misc::ResizeCenterImage(im, 320, 180)
-        i = 0
-        Repeat
-          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
-          i + 1
-        Until FileSize(image$) <= 0
-        misc::encodeTGA(im, image$, 24)
-        FreeImage(im)
-        DeleteFile(dir$ + "header.jpg")
-      EndIf
+      convertToTGA(image$)
+      DeleteFile(image$)
     EndIf
     image$ = dir$ + "preview.png"
     If FileSize(image$) > 0
-      im = LoadImage(#PB_Any, image$)
-      If IsImage(im)
-;         im = misc::ResizeCenterImage(im, 320, 180)
-        i = 0
-        Repeat
-          image$ = dir$ + "image_" + RSet(Str(i) , 2, "0") + ".tga"
-          i + 1
-        Until FileSize(image$) <= 0
-        misc::encodeTGA(im, image$, 32)
-        FreeImage(im)
-        DeleteFile(dir$ + "preview.png")
-      EndIf
+      convertToTGA(image$)
+      DeleteFile(image$)
     EndIf
-    
     
     ; fifth step: add mod to list
     toList(*mod)
+    queue::progressVal(5, 5)
     
     ;changed = #True
     
@@ -1197,6 +1173,7 @@ Module mods
     EndIf
     misc::CreateDirectoryAll(target$)
     
+    queue::progressStartWait()
     If Not extractZIP(source$, target$)
       If Not extractRAR(source$, target$)
         debugger::Add("mods::install() - ERROR - failed to extract files")
@@ -1204,12 +1181,18 @@ Module mods
         ProcedureReturn #False
       EndIf
     EndIf
+    queue::progressStopWait()
     
     ; copy info.lua and images
     debugger::Add("mods::install() - copy info.lua and images")
     source$ = misc::Path(tf$+"TFMM/library/"+id$+"/")
     target$ = misc::Path(tf$+"/mods/"+id$+"/")
     
+    ;- TODO change this
+    ; these files are not longer extracted automatically
+    ; just extract files from zip and/or generate lua file manually
+    ; same issue: handle multilanguage in lua -> create strings.lua and internally save all strings in a language map:
+    ; map: strings.info() with info strucutre containing e.g. "name", "description", etc...
     CopyFile(source$ + "info.lua", target$ + "info.lua")
     CopyFile(source$ + "strings.lua", target$ + "strings.lua")
     CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
