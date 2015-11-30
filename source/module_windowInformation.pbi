@@ -182,7 +182,7 @@ Module windowInformation
         EndIf
       Next
       
-      StatusBarText(0, 0, \aux\archive$ + " " + "(" + misc::Bytes(0) + ")")
+      StatusBarText(0, 0, \tf_id$ + " " + "(" + misc::Bytes(FileSize(misc::Path(main::tf$+"TFMM/library/"+\tf_id$+"/") + \tf_id$ + ".tfmod")) + ")")
       
     EndWith
     
