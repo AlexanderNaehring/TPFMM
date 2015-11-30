@@ -267,29 +267,36 @@ Module misc
     If depth <> 24 And depth <> 32
       depth = 24
     EndIf
-    WriteByte(file, 0) 
-    WriteByte(file, 0) 
-    WriteByte(file, 2)
+    
+    ; 18 Bytes Header
+    ; Field 1 (1 Byte) ID length
     WriteByte(file, 0)
-    WriteByte(file, 0) 
+    ; Field 2 (1 Byte) Color map type
     WriteByte(file, 0)
-    WriteByte(file, 0) 
-    WriteByte(file, 16)
-    WriteByte(file, 0) 
+    ; Field 3 (1 Byte) Image Type
+    WriteByte(file, 2) ; 2 = uncompressed true-color
+    ; Field 4 (5 Bytes) Color Map
     WriteByte(file, 0)
     WriteByte(file, 0)
     WriteByte(file, 0)
-    WriteWord(file, ImageWidth(image))
-    WriteWord(file, ImageHeight(image))    
-    WriteByte(file, depth)
-    WriteByte(file, 0) ; 32 flipped
+    WriteByte(file, 0)
+    WriteByte(file, 0) ; bits per pixel
+    ; Field 6 (10 Bytes) Image specification
+    WriteWord(file, 0) ; X-Origin (2 Byte)
+    WriteWord(file, 0) ; X-Origin (2 Byte)
+    WriteWord(file, ImageWidth(image))  ; Width (2 Byte)
+    WriteWord(file, ImageHeight(image)) ; Height (2 Byte)
+    WriteByte(file, depth)  ; Depth (1 Byte)
+    WriteByte(file, 0)      ; Image descriptor (1 byte): bits 3-0 give the alpha channel depth, bits 5-4 give direction
+                            ; 32 = flipped
+    
     For y = ImageHeight(image) - 1 To 0 Step -1
       For x = 0 To ImageWidth(image) - 1
         color = Point(x, y)
         WriteByte(file, Blue(color))
         WriteByte(file, Green(color))
         WriteByte(file, Red(color))
-        If depth = 32
+        If depth = 32 ; Write Alpha Channel
           If ImageDepth(image) = 32
             WriteByte(file, 255-Alpha(color))
           Else
