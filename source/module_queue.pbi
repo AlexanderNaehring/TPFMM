@@ -163,8 +163,7 @@ Module queue
               If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
                 MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
               Else
-                dat\string$ = element\val$
-                *thread = CreateThread(mods::@convert(), dat)
+                *thread = CreateThread(mods::@convert(), #Null)
                 conversion = #True
                 progressText(locale::l("progress","convert"))
                 progressShow()
@@ -210,5 +209,3 @@ Module queue
   EndProcedure
   
 EndModule
-
-; EnableXP
