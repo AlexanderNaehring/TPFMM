@@ -15,7 +15,7 @@ DeclareModule queue
   EndEnumeration
   
   Structure dat
-    id$
+    string$
   EndStructure
   
   Declare add(action, val$ = "")
@@ -117,7 +117,7 @@ Module queue
           Case #QueueActionInstall
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
@@ -126,7 +126,7 @@ Module queue
           Case #QueueActionRemove
             debugger::Add("updateQueue() - #QueueActionRemove")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@remove(), dat)
               progressText(locale::l("progress","remove"))
               progressShow()
@@ -135,14 +135,16 @@ Module queue
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
             If element\val$
-              ;- TODO implement as thread
-              mods::new(element\val$)
+              dat\string$ = element\val$
+              *thread = CreateThread(mods::@new(), dat)
+              progressText(locale::l("progress","new"))
+              progressShow()
             EndIf
             
           Case #QueueActionDelete
             debugger::Add("updateQueue() - #QueueActionDelete")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@delete(), dat)
               progressText(locale::l("progress","delete"))
               progressShow()
@@ -161,7 +163,7 @@ Module queue
               If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
                 MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
               Else
-                dat\id$ = element\val$
+                dat\string$ = element\val$
                 *thread = CreateThread(mods::@convert(), dat)
                 conversion = #True
                 progressText(locale::l("progress","convert"))

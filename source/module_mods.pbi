@@ -413,6 +413,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  ;- TODO remove this procedure
   Procedure toList(*mod.mod) ; add *mod to map and to list gadget | if mod is overwritten, please make sure that old gadget entry is deleted beforehand!
     Protected count.i, id$ = *mod\tf_id$
 ;     debugger::Add("mods::toList("+id$+")")
@@ -707,7 +708,8 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure new(file$) ; INITIAL STEP: add new mod file from any location
+  Procedure new(*data.queue::dat) ; INITIAL STEP: add new mod file from any location
+    Protected file$ = *data\string$
     debugger::Add("mods::new("+file$+")")
     Protected *mod.mod, id$
     Protected TF$ = main::TF$
@@ -884,6 +886,9 @@ Module mods
       ForEach mods_json()
         *mod = init()
         CopyStructure(mods_json(), *mod, mod)
+        If Not *mod\aux\installDate
+          *mod\aux\installDate = Date()
+        EndIf
         *mods(MapKey(mods_json())) = *mod
       Next
       debugger::Add("mods::loadList() - loaded "+MapSize(mods_json())+" mods from mods.json")
@@ -925,8 +930,9 @@ Module mods
     EndIf
     
     ; check if a mod is in json file, that does not exist in one of the folders
-    ;- TODO - currently, only "new modding system" is used
-    ;- TODO - with "old" system, installed mods do not have to be in "mods/" folder
+    ; if mod is not found in any folder: delete!
+    ; if mod is found in one of the folders, the corresponding flags will be updates (active, inLibrary)
+    ;- TODO - currently, only "new modding system" is used. with "old" system, installed mods do not have to be in "mods/" folder
     ForEach *mods()
       If Not FindMapElement(mod_scanner(), MapKey(*mods()))
         debugger::add("mods::loadList() - WARNING: {"+MapKey(*mods())+"} in json but not in folders")
@@ -1086,7 +1092,8 @@ Module mods
         i + 1
         queue::progressVal(i, ListSize(mods$()))
         ; do not add to queue in order to wait in this thread until all mods are added , then delete files afterwards
-        new(mods$())
+        Protected *newMod.queue::dat\string$ = mods$()
+        new(*newMod)
       Next
       ClearList(mods$())
     EndIf
@@ -1133,7 +1140,7 @@ Module mods
   Procedure install(*data.queue::dat)
     debugger::Add("mods::install("+Str(*data)+")")
     Protected TF$, id$
-    id$ = *data\id$
+    id$ = *data\string$
     tf$ = main::TF$
     
     debugger::Add("mods::install() - mod {"+id$+"}")
@@ -1217,7 +1224,7 @@ Module mods
   Procedure remove(*data.queue::dat) ; remove from Train Fever Mod folder (not library)
     debugger::Add("mods::remove("+Str(*data)+")")
     Protected TF$, id$
-    id$ = *data\id$
+    id$ = *data\string$
     TF$ = main::TF$
     
     
@@ -1274,7 +1281,7 @@ Module mods
   Procedure delete(*data.queue::dat) ; delete mod completely from TF and TFMM
     debugger::Add("mods::delete("+Str(*data)+")")
     Protected TF$, id$
-    id$ = *data\id$
+    id$ = *data\string$
     TF$ = main::TF$
     
     debugger::Add("mods::delete() - mod {"+id$+"}")

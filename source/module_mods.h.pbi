@@ -55,7 +55,7 @@
   Declare generateID(*mod.mod, id$ = "")
   Declare.s getLUA(*mod.mod)
   
-  Declare new(file$)      ; read mod pack from any location, extract info
+  Declare new(*data)      ; read mod pack from any location, extract info
   Declare delete(*data)   ; delete mod from library
   
   Declare install(*data)  ; add mod to TF
