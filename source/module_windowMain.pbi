@@ -474,7 +474,6 @@ Module windowMain
     EndIf
   EndProcedure
   
-  ; TODO move information handler to information module, only call this module from here
   Procedure GadgetButtonInformation(event)
     Protected *mod.mods::mod
     Protected SelectedMod, i, Gadget
@@ -529,7 +528,7 @@ Module windowMain
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportListActivated)
     AddKeyboardShortcut(id, #PB_Shortcut_Alt | #PB_Shortcut_E, #MenuItem_ExportListAll)
-    AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_H, #MenuItem_Homepage)
+    AddKeyboardShortcut(id, #PB_Shortcut_F1, #MenuItem_Homepage)
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
     
     UseModule locale ; import locale namespace for shorthand "l()" access
@@ -547,7 +546,7 @@ Module windowMain
     MenuItem(#MenuItem_ExportListAll, l("menu","mod_export_all") + Chr(9) + "Alt + E")
     CloseSubMenu()
     MenuTitle(l("menu","about"))
-    MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "Ctrl + H")
+    MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
     MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
