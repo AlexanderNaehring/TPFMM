@@ -133,7 +133,14 @@ Module windowSettings
     EndIf
     
     mods::freeAll()
-    queue::add(queue::#QueueActionLoad, main::TF$)
+    
+    ; load library
+    queue::add(queue::#QueueActionLoad)
+    ; check for old TFMM configuration, trigger conversion if found
+    If FileSize(misc::Path(main::TF$ + "/TFMM/") + "mods.ini") >= 0
+      queue::add(queue::#QueueActionConvert)
+    EndIf
+      
     GadgetCloseSettings(event)
   EndProcedure
   
