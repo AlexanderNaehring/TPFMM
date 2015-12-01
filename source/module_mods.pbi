@@ -347,8 +347,6 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  ; TODO : extract & load all necesarry information at each startup!
-  
   Procedure debugInfo(*mod.mod)
     Protected json, json$
     
@@ -808,7 +806,7 @@ Module mods
     
     ; copy file to library
     ;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
-    ; TODO - decide to change filename and extension or leave it as original
+    ;- TODO - decide to change filename and extension or leave it as original
     Protected newfile$ = dir$ + id$ + ".tfmod"
     debugger::Add("mods::new() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
     
@@ -927,8 +925,8 @@ Module mods
     EndIf
     
     ; check if a mod is in json file, that does not exist in one of the folders
-    ; TODO - currently, only "new modding system" is used
-    ; TODO - with "old" system, installed mods do not have to be in "mods/" folder
+    ;- TODO - currently, only "new modding system" is used
+    ;- TODO - with "old" system, installed mods do not have to be in "mods/" folder
     ForEach *mods()
       If Not FindMapElement(mod_scanner(), MapKey(*mods()))
         debugger::add("mods::loadList() - WARNING: {"+MapKey(*mods())+"} in json but not in folders")
@@ -1123,12 +1121,12 @@ Module mods
     DeleteFile(misc::Path(TF$ + "/TFMM/") + "filetracker.ini")
     DeleteFile(misc::Path(TF$ + "/TFMM/") + "mod-dependencies.ini")
     
-    ; TODO restore backups ?!
+    ;- TODO restore backups ?!
     
     ; delete backup folder
     DeleteDirectory(misc::path(TF$ + "TFMM/Backup/"), "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
-    ; TODO move message requester out of thread!
+    ;- TODO move message requester out of thread!
     ProcedureReturn #True
   EndProcedure
   
@@ -1198,7 +1196,7 @@ Module mods
     CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
     CopyFile(source$ + "main.lua", target$ + "main.lua")
     CopyFile(source$ + "image_00.tga", target$ + "image_00.tga")
-    ; TODO copy all images
+    ;- TODO copy all images
     
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
@@ -1234,7 +1232,7 @@ Module mods
     EndIf
     
     If *mod\aux\active And Not *mod\aux\inLibrary
-      ; TODO backup mod
+      ;- TODO backup mod
     EndIf
     
     ; check prequesits
