@@ -113,7 +113,7 @@ Module windowMain
     ResizeGadget(GadgetFrameInformation, iwidth - 215, 290, 210, 50)
     ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
     
-    ResizeGadget(LibraryDLCs, 0, 0, iwidth-220, 100)
+    ResizeGadget(LibraryDLCs, 0, 0, iwidth-400, 80)
     
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)

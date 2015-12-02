@@ -65,4 +65,5 @@
   Declare exportList(all=#False)
   
   Declare displayMods(filter$="")
+  Declare displayDLCs()
 EndDeclareModule

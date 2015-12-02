@@ -878,6 +878,7 @@ Module mods
     ; fifth step: update lists
     addToMap(*mod)
     displayMods()
+    displayDLCs()
     queue::progressVal(5, 5)
     
     ; changed = #True
@@ -998,6 +999,7 @@ Module mods
         queue::progressVal(n)
         
         id$ = MapKey(mod_scanner())
+        debugger::Add("mods::loadList() - scanner: {"+id$+"}")
         
         If Not FindMapElement(*mods(), id$)
           debugger::add("mods::loadList() - Found mod {"+id$+"} in folders, add new mod")
@@ -1016,6 +1018,10 @@ Module mods
         *mod = *mods(id$)
         *mod\tf_id$ = id$ ; IMPORTANT
         
+        
+        debugger::add("mods::loadList() - \folderLibrary = " + mod_scanner()\folderLibrary +
+                      ", \folderMods = " + mod_scanner()\folderMods +
+                      ", \folderDLCs = " + mod_scanner()\folderDLCs)
         ; analogue for library
         *mod\aux\inLibrary = mod_scanner()\folderLibrary
         ; mark mod as active if found in mods/ folder
@@ -1026,12 +1032,15 @@ Module mods
         
         ; handle stuff for installed mods
         If *mod\aux\active
+          debugger::add("mods::loadList() - mod is active (installed)")
+          
           modFolder$  = misc::Path(pMods$ + id$ + "/")
           luaFile$    = modFolder$ + "info.lua"
           
           ; check if info.lua was modified and reload info.lua if required
           ; will also trigger, if no info is stored until now (luaDate = 0)
           If *mod\name$ = "" Or *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified)
+            debugger::add("mods::loadList() - reload information now")
             ; load info from info.lua
             If FileSize(luaFile$) > 0
               debugger::add("mods::loadList() - reload info.lua for {"+id$+"}")
@@ -1067,11 +1076,14 @@ Module mods
         
         ; handle stuff for mods in library
         If *mod\aux\inLibrary
+          debugger::add("mods::loadList() - mod is in TFMM library")
           modFolder$  = misc::Path(pLib$ + id$)
-          ; info should be stored in mods.json
-          ; if not? -> FIXME (load again from mod file)
-          ;- TODO reload info directly from archive if missing
-          getInfo(modFolder$ + *mod\aux\filename$, *mod, id$)
+          ; info should be stored in mods.json when file is in library
+          ; if not? -> load again from mod file
+          If *mod\name$ = "" Or Not *mod\aux\luaDate
+            getInfo(modFolder$ + *mod\aux\filename$, *mod, id$)
+            ;- TODO: information about active, aux info, etc are missing now!
+          EndIf
           
           ; file name was stored as "id.tfmod" with complete path
           ; now, only store "filename" without path and filename = original name
@@ -1099,7 +1111,7 @@ Module mods
     
     
     ; Final Check
-    debugger::add("mods::loadList() - add all mods to list gadget")
+    debugger::add("mods::loadList() - final checkup")
     ForEach *mods()
       *mod = *mods()
       If *mod\tf_id$ = "" Or MapKey(*mods()) = ""
@@ -1107,8 +1119,11 @@ Module mods
         End
       EndIf
     Next
+    
+    debugger::add("mods::loadList() - finished")
     ; Display mods in list gadget
     displayMods()
+    displayDLCs()
     
   EndProcedure
   
@@ -1640,12 +1655,12 @@ Module mods
   Procedure displayMods(filter$="")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     
-;     If Not IsWindow(_windowID)
-;       debugger::add("repository::filterMods() - ERROR: window not valid")
-;       ProcedureReturn #False
-;     EndIf
+    If Not IsWindow(_window)
+      debugger::add("mods::displayMods() - ERROR: window not valid")
+      ProcedureReturn #False
+    EndIf
     If Not IsGadget(_gadgetMod)
-      debugger::add("repository::filterMods() - ERROR: gadget not valid")
+      debugger::add("mods::displayMods() - ERROR: gadget not valid")
       ProcedureReturn #False
     EndIf
     
@@ -1697,6 +1712,11 @@ Module mods
           
           ListIcon::AddListItem(_gadgetMod, item, text$)
           ListIcon::SetListItemData(_gadgetMod, item, *mods())
+          If \aux\active
+            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("yes")))
+          Else
+            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("no")))
+          EndIf
           item + 1
         EndIf
       EndWith
@@ -1706,6 +1726,24 @@ Module mods
     misc::ContinueWindowUpdate(WindowID(_window))
     windowMain::stopGUIupdate(#False)
     
+  EndProcedure
+  Procedure displayDLCs()
+    Protected item
+    If Not IsGadget(_gadgetDLC)
+      debugger::add("mods::displayDLCs() - ERROR: gadget not valid")
+      ProcedureReturn #False
+    EndIf
+    
+    ClearGadgetItems(_gadgetDLC)
+    
+    ForEach *mods()
+      Debug *mods()\name$
+      If *mods()\isDLC
+        AddGadgetItem(_gadgetDLC, item, *mods()\name$)
+        SetGadgetItemData(_gadgetDLC, item, *mods())
+        item + 1
+      EndIf
+    Next
   EndProcedure
   
 EndModule
