@@ -36,6 +36,7 @@ remove_pl       = Remove Mods from Train Fever
 delete          = Uninstall Mod
 delete_pl       = Uninstall Mods
 information     = Mod Information
+filter          = Filter modifications
 
 [settings]
 title           = TFMM Settings
