@@ -43,8 +43,12 @@ Module windowMain
   EndEnumeration
   
   ; gadgets
-  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetImageLogo, GadgetDelete, GadgetInstall, GadgetRemove, GadgetImageHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2, GadgetMainPanel
-  Global LibraryMods, LibraryDLCs
+  Global GadgetImageHeader
+  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetVersionText
+  Global GadgetMainPanel, LibraryMods, LibraryDLCs
+  Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
+  Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetInstall, GadgetDelete, GadgetRemove, GadgetButtonInformation
+  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove
   
   ; timer
   Global TimerMainGadgets = 101
@@ -56,14 +60,14 @@ Module windowMain
   Declare resize()
   Declare updateGUI()
   
+  Declare MenuItemSettings()
+  Declare MenuItemHomepage()
+  Declare MenuItemLicense()
+  Declare MenuItemExportAll()
+  Declare MenuItemUpdate()
+  Declare MenuItemExportActivated()
   
-  Declare MenuItemHomepage(Event)
-  Declare MenuItemSettings(Event)
-  Declare MenuItemLicense(Event)
   Declare GadgetNewMod(Event)
-  Declare MenuItemExportAll(Event)
-  Declare MenuItemUpdate(Event)
-  Declare MenuItemExportActivated(Event)
   Declare GadgetButtonDelete(EventType)
   Declare GadgetLibrary(EventType)
   Declare GadgetImageMain(EventType)
@@ -80,26 +84,36 @@ Module windowMain
   
   
   Procedure resize()
-    Protected width, height
+    Protected width, height, iwidth, iheight
     width = WindowWidth(id)
     height = WindowHeight(id)
+    ; height - MenuHeight()?
+    
     ResizeGadget(GadgetNewMod, 10, height - 55, 120, 25)
     ResizeGadget(GadgetHomepage, 140, height - 55, 120, 25)
     ResizeGadget(GadgetStartGame, 270, height - 55, width - 500, 25)
-    ResizeGadget(GadgetImageLogo, width - 220, 15, 210, 118)
-    ResizeGadget(GadgetDelete, width - 210, 240, 190, 30)
-    ResizeGadget(GadgetInstall, width - 210, 160, 190, 30)
+    ResizeGadget(GadgetVersionText, width - 220, height - 50, 210, 20)
     
-    ResizeGadget(GadgetMainPanel, 10, 10, width - 240, height - misc::max(MenuHeight(), 20) - 50) ; height - MenuHeight() - 50
+    iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
+    iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
+    ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 20 - 50) 
+    ResizeGadget(LibraryMods, 0, 0, iwidth-220, iheight)
     
-    ResizeGadget(LibraryMods, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight))
-    ResizeGadget(GadgetRemove, width - 210, 200, 190, 30)
-    ResizeGadget(TextGadgetVersion, width - 220, height - 50, 210, 20)
-    ResizeGadget(GadgetButtonInformation, width - 210, 310, 190, 30)
-    ResizeGadget(FrameGadget, width - 220, 140, 210, 140)
-    ResizeGadget(FrameGadget2, width - 220, 290, 210, 60)
+    ResizeGadget(GadgetFrameFilter, iwidth-215, 0, 210, 40)
+    ResizeGadget(GadgetFilterMods, iwidth-210, 15, 175, 20)
+    ResizeGadget(GadgetResetFilterMods, iwidth-30, 15, 20, 20)
     
-    ResizeGadget(LibraryDLCs, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 100)
+    ResizeGadget(GadgetImageLogo, iwidth - 215, 45, 210, 118)
+    
+    ResizeGadget(GadgetFrameManagement, iwidth - 215, 165, 210, 120)
+    ResizeGadget(GadgetInstall, iwidth - 210, 180, 200, 30)
+    ResizeGadget(GadgetRemove, iwidth - 210, 215, 200, 30)
+    ResizeGadget(GadgetDelete, iwidth - 210, 250, 200, 30)
+    
+    ResizeGadget(GadgetFrameInformation, iwidth - 215, 290, 210, 50)
+    ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
+    
+    ResizeGadget(LibraryDLCs, 0, 0, iwidth-220, 100)
     
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
@@ -257,7 +271,7 @@ Module windowMain
       LastDir$ = main::TF$
       If misc::checkTFPath(main::TF$) <> #True
         main::ready = #False  ; flag for mod management
-        MenuItemSettings(0)
+        MenuItemSettings()
       EndIf
     EndIf
     
@@ -267,15 +281,19 @@ Module windowMain
   
   ; MENU
   
-  Procedure MenuItemHomepage(event)
+  Procedure MenuItemHomepage()
     misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
   EndProcedure
   
-  Procedure MenuItemUpdate(event)
+  Procedure MenuItemNewMod()
+    GadgetNewMod(0)
+  EndProcedure
+  
+  Procedure MenuItemUpdate()
     CreateThread(updater::@checkUpdate(), 0)
   EndProcedure
   
-  Procedure MenuItemLicense(event)
+  Procedure MenuItemLicense()
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
@@ -292,16 +310,16 @@ Module windowMain
     CompilerEndIf
   EndProcedure
   
-  Procedure MenuItemSettings(event) ; open settings window
+  Procedure MenuItemSettings() ; open settings window
     Protected locale$
     windowSettings::show()
   EndProcedure
   
-  Procedure MenuItemExportAll(event)
+  Procedure MenuItemExportAll()
     mods::exportList(#True)
   EndProcedure
   
-  Procedure MenuItemExportActivated(event)
+  Procedure MenuItemExportActivated()
     mods::exportList()
   EndProcedure
 
@@ -493,7 +511,16 @@ Module windowMain
     windowInformation::setMod(*mod)
     ProcedureReturn #True
   EndProcedure
-
+  
+  Procedure GadgetFilterMods()
+    mods::displayMods(GetGadgetText(GadgetFilterMods))
+  EndProcedure
+  
+  Procedure GadgetResetFilterMods()
+    SetGadgetText(GadgetFilterMods, "")
+    SetActiveGadget(GadgetFilterMods)
+  EndProcedure
+  
   ; DRAG & DROP
   
   Procedure HandleDroppedFiles(Files$)
@@ -550,33 +577,54 @@ Module windowMain
     MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
-    GadgetMainPanel = PanelGadget(#PB_Any, 10, 10, 510, 410)
+    BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
+    BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
+    BindMenuEvent(0, #MenuItem_AddMod, @MenuItemNewMod())
+    BindMenuEvent(0, #MenuItem_ExportListActivated, @MenuItemExportActivated())
+    BindMenuEvent(0, #MenuItem_ExportListAll, @MenuItemExportAll())
+    BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
+    BindMenuEvent(0, #MenuItem_Update, @MenuItemUpdate())
+    BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
+    
+    GadgetMainPanel = PanelGadget(#PB_Any, 5, 10, 740, 410)
+    ; MODs
     AddGadgetItem(GadgetMainPanel, -1, l("main","mods"))
-    LibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    
+    GadgetImageLogo = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
+    GadgetFrameFilter = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
+    GadgetFilterMods = StringGadget(#PB_Any, 0, 0, 0, 0, "")
+    GadgetResetFilterMods = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
+    GadgetFrameManagement = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","management"))
+    GadgetDelete = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","delete"))
+    GadgetInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install"))
+    GadgetRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove"))
+    GadgetFrameInformation = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
+    GadgetButtonInformation = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
+    
+    LibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)-220, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     AddGadgetColumn(LibraryMods, 1, l("main","author"), 90)
     AddGadgetColumn(LibraryMods, 2, l("main","category"), 90)
     AddGadgetColumn(LibraryMods, 3, l("main","version"), 60)
     
+    ; DLCs
     AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
-    LibraryDLCs = ListViewGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 100)
-    StringGadget(#PB_Any, 0, 105, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), 20, "TEST")
+    
+    LibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
+    GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
+    GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     CloseGadgetList()
     
+    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
     GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
     GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
     GadgetStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
-    GadgetImageLogo = ImageGadget(#PB_Any, 530, 15, 210, 118, 0)
-    GadgetDelete = ButtonGadget(#PB_Any, 540, 240, 190, 30, l("main","delete"))
-    GadgetInstall = ButtonGadget(#PB_Any, 540, 160, 190, 30, l("main","install"))
+    GadgetVersionText = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
     
-    GadgetRemove = ButtonGadget(#PB_Any, 540, 200, 190, 30, l("main","remove"))
-    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
-    TextGadgetVersion = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
-    GadgetButtonInformation = ButtonGadget(#PB_Any, 540, 310, 190, 30, l("main","information"))
-    FrameGadget = FrameGadget(#PB_Any, 530, 140, 210, 140, l("main","management"))
-    FrameGadget2 = FrameGadget(#PB_Any, 530, 290, 210, 60, l("main","information"))
+    ; Bind Gadget Events
+    BindGadgetEvent(GadgetFilterMods, @GadgetFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
     
     ; Set window boundaries, timers, events
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -617,8 +665,13 @@ Module windowMain
     ; Drag & Drop
     EnableWindowDrop(id, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
-    ; library
+    ; register to mods module
+    mods::registerMainWindow(id)
     mods::registerModGadget(LibraryMods)
+    mods::registerDLCGadget(LibraryDLCs)
+    
+    ; apply sizes
+    resize()
     
     ; init gui
     updateGUI()
@@ -632,25 +685,8 @@ Module windowMain
         ;resize() ; already bound to window, no handling required
       Case #PB_Event_CloseWindow
         main::exit()
-  
       Case #PB_Event_Menu
         Select EventMenu()
-          Case #PB_Menu_Preferences
-            MenuItemSettings(EventMenu())
-          Case #PB_Menu_Quit
-            main::exit()
-          Case #MenuItem_AddMod
-            GadgetNewMod(EventMenu())
-          Case #MenuItem_ExportListActivated
-            MenuItemExportActivated(EventMenu())
-          Case #MenuItem_ExportListAll
-            MenuItemExportAll(EventMenu())
-          Case #MenuItem_Homepage
-            MenuItemHomepage(EventMenu())
-          Case #MenuItem_Update
-            MenuItemUpdate(EventMenu())
-          Case #PB_Menu_About
-            MenuItemLicense(EventMenu())
           Case #MenuItem_Install
             GadgetButtonInstall(#PB_EventType_LeftClick)
           Case #MenuItem_Remove

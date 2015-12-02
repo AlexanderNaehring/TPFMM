@@ -7,8 +7,8 @@
     tfnet_author_id$  ; author ids on tf|net as string: id1, id2, id3, ...
     tags$             ; tags as string: tag1, tag2, tag3, ...
     
-    archive$          ; filename of mod archive (zip/rar/...)
-    archiveMD5$       ; md5 of mod archive
+    filename$         ; filename of mod archive (zip/rar/...), keep original file name
+    fileMD5$          ; md5 of mod archive, may be compared to new mod or online library
     active.i          ; true, if mod installed (new or old system)
     inLibrary.i       ; true, if mod is in TFMM library
     luaDate.i         ; date of info.lua (reload info when newer version available)
@@ -42,6 +42,7 @@
     aux.aux                 ; additional information
   EndStructure
   
+  Declare registerMainWindow(window)
   Declare registerModGadget(gadget)
   Declare registerDLCGadget(gadget)
   
@@ -62,4 +63,6 @@
   Declare remove(*data)   ; remove mod from TF
   
   Declare exportList(all=#False)
+  
+  Declare displayMods(filter$="")
 EndDeclareModule
