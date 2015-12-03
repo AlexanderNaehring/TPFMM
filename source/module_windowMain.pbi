@@ -630,6 +630,9 @@ Module windowMain
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
     AddWindowTimer(id, TimerMainGadgets, 100)
     BindEvent(#PB_Event_SizeWindow, @resize(), id)
+    BindEvent(#PB_Event_MaximizeWindow, @resize(), id)
+    BindEvent(#PB_Event_RestoreWindow, @resize(), id)
+    
     
     ; OS specific
     CompilerSelect #PB_Compiler_OS
