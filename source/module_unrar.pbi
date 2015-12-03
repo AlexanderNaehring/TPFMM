@@ -113,7 +113,7 @@ DeclareModule unrar
   Global RARSetPassword.RARSetPassword
   Global RARGetDllVersion.RARGetDllVersion
   
-  Declare OpenRar(File$, mode.i)
+  Declare OpenRar(File$, mode.i, *UserData = 0)
 EndDeclareModule
 
 Module unrar
@@ -154,7 +154,27 @@ Module unrar
       MessageRequester("Error", "unrar.dll not found! RAR Files cannot be opened.")
     EndIf
     
-    Procedure OpenRar(File$, mode.i)
+    Procedure Callback(msg, *UserData, *P1, *P2)
+      Protected pw$
+      Select msg
+        Case #UCM_NEEDPASSWORDW
+          pw$ = "testing_pw"
+          ; pw$ = InputRequester("Password", "Please enter the password for the RAR file", "", #PB_InputRequester_Password)
+          ; PW required each time the mod is opened...
+          ; first time: request PW from user, store in *mod using *UserData pointer, if opening file fails and pw is set, delete pw from *mod in mods module
+          *UserData + 1
+          If pw$ = ""
+            ProcedureReturn -1
+          EndIf
+          If Len(pw$) > *P2
+            pw$ = Left(pw$, *P2)
+          EndIf
+          PokeS(*P1, pw$)
+          ProcedureReturn 1
+      EndSelect
+    EndProcedure
+    
+    Procedure OpenRar(File$, mode.i, *UserData = 0)
       Debug "OpenRar("+File$+", "+Str(mode)+")"
       Protected raropen.RAROpenArchiveDataEx
       Protected hRAR
@@ -165,9 +185,17 @@ Module unrar
         raropen\ArcName = @File$
       CompilerEndIf
       raropen\OpenMode = mode
+      raropen\Callback = @Callback()
+      raropen\UserData = *UserData
+      
+      ; handle password by using the userdata variable!
+      ; also use flags inside module in order to track if passwords were used
       hRAR = RAROpenArchive(raropen)
+      
+      
       ProcedureReturn hRAR
     EndProcedure
+    
     
   CompilerElse ; Linux / Mac
     
