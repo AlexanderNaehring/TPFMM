@@ -44,10 +44,10 @@ Module windowMain
   
   ; gadgets
   Global GadgetImageHeader
-  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetVersionText
-  Global GadgetMainPanel, LibraryMods, LibraryDLCs
+  Global GadgetNewMod, GadgetHomepage, GadgetButtonStartGame, GadgetVersionText
+  Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
-  Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetInstall, GadgetDelete, GadgetRemove, GadgetButtonInformation
+  Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
   Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove
   
   ; timer
@@ -67,16 +67,16 @@ Module windowMain
   Declare MenuItemUpdate()
   Declare MenuItemExportActivated()
   
-  Declare GadgetNewMod(Event)
-  Declare GadgetButtonDelete(EventType)
-  Declare GadgetLibrary(EventType)
-  Declare GadgetImageMain(EventType)
-  Declare GadgetButtonInformation(EventType)
-  Declare GadgetNewMod(EventType)
-  Declare GadgetButtonStartGame(EventType)
-  Declare GadgetButtonTrainFeverNetDownloads(EventType)
-  Declare GadgetButtonInstall(EventType)
-  Declare GadgetButtonRemove(EventType)
+  Declare GadgetNewMod()
+  Declare GadgetButtonDelete()
+  Declare GadgetLibraryMods()
+  Declare GadgetImageMain()
+  Declare GadgetButtonInformation()
+  Declare GadgetNewMod()
+  Declare GadgetButtonStartGame()
+  Declare GadgetButtonTrainFeverNetDownloads()
+  Declare GadgetButtonInstall()
+  Declare GadgetButtonRemove()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -91,13 +91,13 @@ Module windowMain
     
     ResizeGadget(GadgetNewMod, 10, height - 55, 120, 25)
     ResizeGadget(GadgetHomepage, 140, height - 55, 120, 25)
-    ResizeGadget(GadgetStartGame, 270, height - 55, width - 500, 25)
+    ResizeGadget(GadgetButtonStartGame, 270, height - 55, width - 500, 25)
     ResizeGadget(GadgetVersionText, width - 220, height - 50, 210, 20)
     
     iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
     iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
     ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 20 - 50) 
-    ResizeGadget(LibraryMods, 0, 0, iwidth-220, iheight)
+    ResizeGadget(GadgetLibraryMods, 0, 0, iwidth-220, iheight)
     
     ResizeGadget(GadgetFrameFilter, iwidth-215, 0, 210, 40)
     ResizeGadget(GadgetFilterMods, iwidth-210, 15, 175, 20)
@@ -106,14 +106,14 @@ Module windowMain
     ResizeGadget(GadgetImageLogo, iwidth - 215, 45, 210, 118)
     
     ResizeGadget(GadgetFrameManagement, iwidth - 215, 165, 210, 120)
-    ResizeGadget(GadgetInstall, iwidth - 210, 180, 200, 30)
-    ResizeGadget(GadgetRemove, iwidth - 210, 215, 200, 30)
-    ResizeGadget(GadgetDelete, iwidth - 210, 250, 200, 30)
+    ResizeGadget(GadgetButtonInstall, iwidth - 210, 180, 200, 30)
+    ResizeGadget(GadgetButtonRemove, iwidth - 210, 215, 200, 30)
+    ResizeGadget(GadgetButtonDelete, iwidth - 210, 250, 200, 30)
     
     ResizeGadget(GadgetFrameInformation, iwidth - 215, 290, 210, 50)
     ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
     
-    ResizeGadget(LibraryDLCs, 0, 0, iwidth-400, 80)
+    ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
     
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
@@ -133,8 +133,8 @@ Module windowMain
     selectedActive = 0
     selectedInactive = 0
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
       If Not *mod
         Continue
       EndIf
@@ -143,7 +143,7 @@ Module windowMain
       Else
         countInactive + 1
       EndIf
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
         SelectedMod = i
         If *mod\aux\active
           selectedActive + 1
@@ -153,31 +153,31 @@ Module windowMain
       EndIf
     Next
     
-    SelectedMod =  GetGadgetState(LibraryMods)
+    SelectedMod =  GetGadgetState(GadgetLibraryMods)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
-      DisableGadget(GadgetInstall, #True)
-      DisableGadget(GadgetRemove, #True)
-      DisableGadget(GadgetDelete, #True)
+      DisableGadget(GadgetButtonInstall, #True)
+      DisableGadget(GadgetButtonRemove, #True)
+      DisableGadget(GadgetButtonDelete, #True)
       DisableGadget(GadgetButtonInformation, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_delete, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
     Else
-      DisableGadget(GadgetDelete, #False) ; delete is always possible!
+      DisableGadget(GadgetButtonDelete, #False) ; delete is always possible!
       DisableMenuItem(MenuLibrary, #MenuItem_delete, #False)
       If selectedActive > 0 ; if at least one of the mods is active
-        DisableGadget(GadgetRemove, #False)
+        DisableGadget(GadgetButtonRemove, #False)
         DisableMenuItem(MenuLibrary, #MenuItem_Remove, #False)
       Else  ; if no mod is active 
-        DisableGadget(GadgetRemove, #True)
+        DisableGadget(GadgetButtonRemove, #True)
         DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
       EndIf
       If selectedInactive > 0 ; if at least one of the mods is not active
-        DisableGadget(GadgetInstall, #False)
+        DisableGadget(GadgetButtonInstall, #False)
         DisableMenuItem(MenuLibrary, #MenuItem_Install, #False)
       Else ; if none of the selected mods is inactive
-        DisableGadget(GadgetInstall, #True)  ; disable activate button
+        DisableGadget(GadgetButtonInstall, #True)  ; disable activate button
         DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
       EndIf
       
@@ -190,24 +190,24 @@ Module windowMain
       EndIf
       
       If selectedActive + selectedInactive > 1
-        SetGadgetText(GadgetDelete, locale::l("main","delete_pl"))
+        SetGadgetText(GadgetButtonDelete, locale::l("main","delete_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_delete, locale::l("main","delete_pl"))
       Else
-        SetGadgetText(Gadgetdelete, locale::l("main","delete"))
+        SetGadgetText(GadgetButtonDelete, locale::l("main","delete"))
         SetMenuItemText(MenuLibrary, #MenuItem_delete, locale::l("main","delete"))
       EndIf
       If selectedActive > 1
-        SetGadgetText(GadgetRemove, locale::l("main","remove_pl"))
+        SetGadgetText(GadgetButtonRemove, locale::l("main","remove_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_Remove, locale::l("main","remove_pl"))
       Else
-        SetGadgetText(GadgetRemove, locale::l("main","remove"))
+        SetGadgetText(GadgetButtonRemove, locale::l("main","remove"))
         SetMenuItemText(MenuLibrary, #MenuItem_Remove, locale::l("main","remove"))
       EndIf
       If selectedInactive > 1
-        SetGadgetText(GadgetInstall, locale::l("main","install_pl"))
+        SetGadgetText(GadgetButtonInstall, locale::l("main","install_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_Install, locale::l("main","install_pl"))
       Else
-        SetGadgetText(GadgetInstall, locale::l("main","install"))
+        SetGadgetText(GadgetButtonInstall, locale::l("main","install"))
         SetMenuItemText(MenuLibrary, #MenuItem_Install, locale::l("main","install"))
       EndIf
     EndIf
@@ -215,7 +215,7 @@ Module windowMain
     If selectedActive + selectedInactive = 1
       ; one mod selected
       ; display image
-      *mod = ListIcon::GetListItemData(LibraryMods, SelectedMod)
+      *mod = ListIcon::GetListItemData(GadgetLibraryMods, SelectedMod)
       If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
         Protected im.i, image$
         
@@ -262,7 +262,7 @@ Module windowMain
   EndProcedure
   
   ;-------------------------------------------------
-  ; TIMER
+  ;- TIMER
   
   Procedure TimerMain()
     Static LastDir$ = ""
@@ -279,14 +279,14 @@ Module windowMain
     
   EndProcedure
   
-  ; MENU
+  ;- MENU
   
   Procedure MenuItemHomepage()
     misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
   EndProcedure
   
   Procedure MenuItemNewMod()
-    GadgetNewMod(0)
+    GadgetNewMod()
   EndProcedure
   
   Procedure MenuItemUpdate()
@@ -298,14 +298,14 @@ Module windowMain
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
                        updater::VERSION$ + #CRLF$ +
-                       "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                       "© 2014 – 2016 Alexander Nähring / Xanos" + #CRLF$ +
                        "Distributed on http://tfmm.xanos.eu/" +  #CRLF$ +
                        "unrar © Alexander L. Roshal")
     CompilerElse
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
                        updater::#VERSION$ + #CRLF$ +
-                       "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                       "© 2014 – 2016 Alexander Nähring / Xanos" + #CRLF$ +
                        "Distributed on http://tfmm.xanos.eu/")
     CompilerEndIf
   EndProcedure
@@ -322,10 +322,11 @@ Module windowMain
   Procedure MenuItemExportActivated()
     mods::exportList()
   EndProcedure
-
-  ; GADGETS
+  
+  
+  ;- GADGETS
       
-  Procedure GadgetNewMod(event)
+  Procedure GadgetNewMod()
     Protected file$
     If FileSize(main::TF$) <> -2
       ProcedureReturn #False
@@ -339,15 +340,15 @@ Module windowMain
     Wend
   EndProcedure
 
-  Procedure GadgetButtonInstall(event)
+  Procedure GadgetButtonInstall()
     debugger::Add("GadgetButtonInstall")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         If Not *mod\aux\active
           *last = *mod
           count + 1
@@ -366,9 +367,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             If Not *mod\aux\active
               queue::add(queue::#QueueActionInstall, *mod\tf_id$)
             EndIf
@@ -378,15 +379,15 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonRemove(event)
+  Procedure GadgetButtonRemove()
     debugger::Add("GadgetButtonRemove")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         With *mod
           If \aux\active
             *last = *mod
@@ -407,9 +408,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             With *mod
               If \aux\active
                 queue::add(queue::#QueueActionRemove, *mod\tf_id$)
@@ -421,15 +422,15 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonDelete(event)
+  Procedure GadgetButtonDelete()
     debugger::Add("GadgetButtonDelete")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         *last = *mod
         count + 1
       EndIf
@@ -446,9 +447,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             If *mod\aux\active
               queue::add(queue::#QueueActionRemove, *mod\tf_id$)
             EndIf
@@ -459,50 +460,53 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetLibrary(event)
+  Procedure GadgetLibraryMods()
     Protected *mod.mods::mod
-    Protected position
+    Protected position, event
+    
+    event = EventType()
     
     updateGUI()
     
     If event = #PB_EventType_LeftDoubleClick
-      GadgetButtonInformation(#PB_EventType_LeftClick)
+      GadgetButtonInformation()
     ElseIf event = #PB_EventType_RightClick
       DisplayPopupMenu(MenuLibrary, WindowID(windowMain::id))
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonStartGame(event)
+  Procedure GadgetButtonStartGame()
     misc::openLink("steam://run/304730/")
   EndProcedure
   
-  Procedure GadgetButtonTrainFeverNet(event)
+  Procedure GadgetButtonTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetButtonTrainFeverNetDownloads(event)
+  Procedure GadgetButtonTrainFeverNetDownloads()
     misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetImageMain(event)
+  Procedure GadgetImageMain()
+    Protected event = EventType()
     If event = #PB_EventType_LeftClick
       If GetGadgetState(GadgetImageLogo) = ImageID(images::Images("logo"))
-        GadgetButtonTrainFeverNet(event)
+        GadgetButtonTrainFeverNet()
       EndIf
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonInformation(event)
+  Procedure GadgetButtonInformation()
     Protected *mod.mods::mod
     Protected SelectedMod, i, Gadget
     Protected tfnet_mod_url$
     
     ; init
-    SelectedMod = GetGadgetState(LibraryMods)
+    SelectedMod = GetGadgetState(GadgetLibraryMods)
     If SelectedMod = -1
       ProcedureReturn #False
     EndIf
-    *mod = ListIcon::GetListItemData(LibraryMods, SelectedMod)
+    *mod = ListIcon::GetListItemData(GadgetLibraryMods, SelectedMod)
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -595,21 +599,21 @@ Module windowMain
     GadgetFilterMods = StringGadget(#PB_Any, 0, 0, 0, 0, "")
     GadgetResetFilterMods = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
     GadgetFrameManagement = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","management"))
-    GadgetDelete = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","delete"))
-    GadgetInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install"))
-    GadgetRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove"))
+    GadgetButtonDelete = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","delete"))
+    GadgetButtonInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install"))
+    GadgetButtonRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove"))
     GadgetFrameInformation = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
     GadgetButtonInformation = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
     
-    LibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)-220, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
-    AddGadgetColumn(LibraryMods, 1, l("main","author"), 90)
-    AddGadgetColumn(LibraryMods, 2, l("main","category"), 90)
-    AddGadgetColumn(LibraryMods, 3, l("main","version"), 60)
+    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)-220, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    AddGadgetColumn(GadgetLibraryMods, 1, l("main","author"), 90)
+    AddGadgetColumn(GadgetLibraryMods, 2, l("main","category"), 90)
+    AddGadgetColumn(GadgetLibraryMods, 3, l("main","version"), 60)
     
     ; DLCs
     AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
     
-    LibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
+    GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
     GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
     
@@ -619,10 +623,20 @@ Module windowMain
     GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
     GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
     GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
-    GadgetStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
+    GadgetButtonStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
     GadgetVersionText = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
     
     ; Bind Gadget Events
+    BindGadgetEvent(GadgetNewMod, @GadgetNewMod())
+    BindGadgetEvent(GadgetButtonInformation, @GadgetButtonInstall())
+    BindGadgetEvent(GadgetButtonRemove, @GadgetButtonRemove())
+    BindGadgetEvent(GadgetButtonDelete, @GadgetButtonDelete())
+    BindGadgetEvent(GadgetLibraryMods, @GadgetLibraryMods())
+    BindGadgetEvent(GadgetButtonStartGame, @GadgetButtonStartGame())
+;     BindGadgetEvent(GadgetHomepage, @GadgetButtonTrainFeverNet())
+    BindGadgetEvent(GadgetHomepage, @GadgetButtonTrainFeverNetDownloads())
+    BindGadgetEvent(GadgetImageLogo, @GadgetImageMain())
+    BindGadgetEvent(GadgetButtonInformation, @GadgetButtonInformation())
     BindGadgetEvent(GadgetFilterMods, @GadgetFilterMods(), #PB_EventType_Change)
     BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
     
@@ -638,7 +652,7 @@ Module windowMain
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         SetWindowTitle(id, GetWindowTitle(id) + " for Windows")
-        ListIcon::DefineListCallback(LibraryMods, ListIcon::#Edit)
+        ListIcon::DefineListCallback(GadgetLibraryMods, ListIcon::#Edit)
       CompilerCase #PB_OS_Linux
         SetWindowTitle(id, GetWindowTitle(id) + " for Linux")
       CompilerCase #PB_OS_MacOS
@@ -665,13 +679,18 @@ Module windowMain
     MenuItem(#MenuItem_Remove, l("main","remove"), ImageID(images::Images("no")))
     MenuItem(#MenuItem_Delete, l("main","delete"))
     
+    BindMenuEvent(MenuLibrary, #MenuItem_Information, @GadgetButtonInformation())
+    BindMenuEvent(MenuLibrary, #MenuItem_Install, @GadgetButtonInstall())
+    BindMenuEvent(MenuLibrary, #MenuItem_Remove, @GadgetButtonRemove())
+    BindMenuEvent(MenuLibrary, #MenuItem_Delete, @GadgetButtonDelete())
+    
     ; Drag & Drop
     EnableWindowDrop(id, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
     ; register to mods module
     mods::registerMainWindow(id)
-    mods::registerModGadget(LibraryMods)
-    mods::registerDLCGadget(LibraryDLCs)
+    mods::registerModGadget(GadgetLibraryMods)
+    mods::registerDLCGadget(GadgetLibraryDLCs)
     
     ; apply sizes
     resize()
@@ -685,42 +704,14 @@ Module windowMain
   Procedure events(event)
     Select event
       Case #PB_Event_SizeWindow
-        ;resize() ; already bound to window, no handling required
+        ; already bound to window, no handling required
       Case #PB_Event_CloseWindow
         main::exit()
       Case #PB_Event_Menu
-        Select EventMenu()
-          Case #MenuItem_Install
-            GadgetButtonInstall(#PB_EventType_LeftClick)
-          Case #MenuItem_Remove
-            GadgetButtonRemove(#PB_EventType_LeftClick)
-          Case #MenuItem_Delete
-            GadgetButtonDelete(#PB_EventType_LeftClick)
-          Case #MenuItem_Information
-            GadgetButtonInformation(#PB_EventType_LeftClick)
-        EndSelect
-  
+        ;bound
+        
       Case #PB_Event_Gadget
-        Select EventGadget()
-          Case GadgetNewMod
-            GadgetNewMod(EventType())
-          Case GadgetHomepage
-            GadgetButtonTrainFeverNetDownloads(EventType())
-          Case GadgetStartGame
-            GadgetButtonStartGame(EventType())
-          Case GadgetImageLogo
-            GadgetImageMain(EventType())
-          Case GadgetDelete
-            GadgetButtonDelete(EventType())
-          Case GadgetInstall
-            GadgetButtonInstall(EventType())
-          Case LibraryMods
-            GadgetLibrary(EventType())
-          Case GadgetRemove
-            GadgetButtonRemove(EventType())
-          Case GadgetButtonInformation
-            GadgetButtonInformation(EventType())
-        EndSelect
+        ;bound
         
       Case #PB_Event_Timer
         Select EventTimer()
@@ -743,15 +734,15 @@ Module windowMain
     Protected i
     For i = 0 To ArraySize(widths())
       If widths(i)
-        SetGadgetItemAttribute(LibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        SetGadgetItemAttribute(GadgetLibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
         ; Sorting
-        ListIcon::SetColumnFlag(LibraryMods, i, ListIcon::#String)
+        ListIcon::SetColumnFlag(GadgetLibraryMods, i, ListIcon::#String)
       EndIf
     Next
   EndProcedure
   
   Procedure getColumnWidth(column)
-    ProcedureReturn GetGadgetItemAttribute(LibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, column)
+    ProcedureReturn GetGadgetItemAttribute(GadgetLibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
   
 EndModule
