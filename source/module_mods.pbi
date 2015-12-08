@@ -44,11 +44,14 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-  Procedure.s checkModFileZip(File$) ; check for res/ or info.lua
-    debugger::Add("mods::CheckModFileZip("+File$+")")
+
+  
+  ;- TODO do not return string but directly store "id" in *mod -> handle in other functions accordingly
+  Procedure.s checkModFileZip(file$) ; check for res/ or info.lua
+    debugger::Add("mods::CheckModFileZip("+file$+")")
     Protected entry$, pack
     
-    pack = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
+    pack = OpenPack(#PB_Any, file$)
     If pack
       If ExaminePack(pack)
         While NextPackEntry(pack)
@@ -69,20 +72,17 @@ Module mods
           EndIf
         Wend
       EndIf
-      ClosePack(pack)
-    Else
-      debugger::Add("mods::checkModFileZip() - ERROR - cannot open pack {"+File$+"}")
     EndIf
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFileRar(File$) ; check for res/ or info.lua
+  Procedure.s checkModFileRar(file$, *mod.mod) ; check for res/ or info.lua
     debugger::Add("mods::CheckModFileRar("+File$+")")
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
     Protected entry$
     
-    hRAR = unrar::OpenRar(File$, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
+    hRAR = unrar::OpenRar(File$, *mod, unrar::#RAR_OM_LIST) ; only list rar files (do not extract)
     If hRAR
       While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS ; read header of file in rar
         CompilerIf #PB_Compiler_Unicode
@@ -111,8 +111,8 @@ Module mods
     ProcedureReturn "false"
   EndProcedure
   
-  Procedure.s checkModFile(File$) ; Check mod for a "res" folder or the info.lua file, called in new(), return mod ID if any
-    debugger::Add("mods::CheckModFile("+File$+")")
+  Procedure.s checkModFile(file$, *mod.mod) ; Check mod for a "res" folder or the info.lua file, called in new(), return mod ID if any
+    debugger::add("mods::CheckModFile("+file$+")")
     Protected extension$, ret$
     
     extension$ = LCase(GetExtensionPart(File$))
@@ -124,7 +124,7 @@ Module mods
     
     ret$ = checkModFileZip(File$)
     If ret$ = "false"
-      ret$ = checkModFileRar(File$)
+      ret$ = checkModFileRar(file$, *mod)
       If ret$ = "false"
         ProcedureReturn "false"
       EndIf
@@ -169,7 +169,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
 
-  Procedure ExtractFilesRar(RAR$, List Files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
+  Procedure ExtractFilesRar(RAR$, List Files$(), dir$, *mod) ; extracts all Files$() (from all subdirs!) to given directory
     debugger::Add("ExtractFilesRar("+RAR$+", Files$(), "+dir$+")")
     Protected deb$ = "mods::ExtractFilesZip() - search for: "
     ForEach Files$() : deb$ + files$()+", " : Next
@@ -180,7 +180,7 @@ Module mods
     Protected Entry$
     dir$ = misc::Path(dir$)
     
-    hRAR = unrar::OpenRar(RAR$, unrar::#RAR_OM_EXTRACT)
+    hRAR = unrar::OpenRar(RAR$, *mod, unrar::#RAR_OM_EXTRACT)
     If Not hRAR
       debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
       ProcedureReturn #False
@@ -376,18 +376,20 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure clearModInfo(*mod.mod)
+    ; clean info
+    ClearStructure(*mod, mod)
+    InitializeStructure(*mod, mod)
+  EndProcedure
+  
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
     debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
     Protected tmpDir$ = GetTemporaryDirectory()
     
-    ; clean info
-    ClearStructure(*mod, mod)
-    InitializeStructure(*mod, mod)
-    
     ; read standard information
     With *mod
-      \aux\filename$ = GetFilePart(file$)
-      \aux\fileMD5$ = FileFingerprint(file$, #PB_Cipher_MD5)
+      \archive\name$ = GetFilePart(file$)
+      \archive\md5$ = FileFingerprint(file$, #PB_Cipher_MD5)
       \name$ = GetFilePart(File$, #PB_FileSystem_NoExtension)
     EndWith
     
@@ -402,7 +404,7 @@ Module mods
     Next
     
     If Not ExtractFilesZip(file$, files$(), tmpDir$)
-      If Not ExtractFilesRar(file$, files$(), tmpDir$)
+      If Not ExtractFilesRar(file$, files$(), tmpDir$, *mod)
         debugger::Add("mods::GetModInfo() - failed to open {"+file$+"} for extraction")
       EndIf
     EndIf
@@ -504,14 +506,14 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure extractRAR(file$, path$)
+  Procedure extractRAR(file$, path$, *mod)
     debugger::Add("mods::extractRAR("+file$+", "+path$+")")
     
     Protected rarheader.unrar::RARHeaderDataEx
     Protected hRAR
     Protected entry$
     
-    hRAR = unrar::OpenRar(file$, unrar::#RAR_OM_EXTRACT)
+    hRAR = unrar::OpenRar(file$, *mod, unrar::#RAR_OM_EXTRACT)
     If Not hRAR
       debugger::Add("mods::extractRAR() - ERROR - failed to open {"+file$+"}")
       ProcedureReturn #False
@@ -713,12 +715,13 @@ Module mods
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure free(id$)
+  Procedure free(id$) ; delete mod from map and free memory
 ;     debugger::Add("mods::freeMod("+id$+")")
     Protected *mod.mod
     If FindMapElement(*mods(), id$)
-      FreeStructure(*mods())
+      *mod = *mods()
       DeleteMapElement(*mods())
+      FreeStructure(*mod)
       ProcedureReturn #True
     EndIf
     
@@ -743,17 +746,21 @@ Module mods
     queue::progressText(locale::l("progress","new"))
     queue::progressVal(0, 5)
     
-    ; first step: check mod
-    id$ = CheckModFile(file$)
-    If id$ = "false"
-      debugger::Add("mods::new() - ERROR: check failed, abort")
-      ProcedureReturn #False
-    EndIf
-    queue::progressVal(1, 5)
-    
     ; allocate memory for mod information
     *mod = init()
     debugger::Add("mods::new() - memory adress of new mod: {"+*mod+"}")
+    
+    ; open archive (with password check)
+    ; openArchive(*mod, file$)
+    
+    ; first step: check mod
+    id$ = CheckModFile(file$, *mod) ; for all archive related functions *mod is passed in order to handle password
+    If id$ = "false"
+      debugger::Add("mods::new() - ERROR: check failed, abort")
+      FreeStructure(*mod)
+      ProcedureReturn #False
+    EndIf
+    queue::progressVal(1, 5)
     
     ; second step: read information
     If Not getInfo(file$, *mod, id$)
@@ -769,7 +776,7 @@ Module mods
     ; third step: check if mod with same ID already installed
     Protected sameHash.b = #False, sameID.b = #False
     ForEach *mods()
-      If *mod\aux\fileMD5$ And *mods()\aux\fileMD5$ = *mod\aux\fileMD5$
+      If *mod\archive\md5$ And *mods()\archive\md5$ = *mod\archive\md5$
         debugger::Add("mods::new() - MD5 check found match!")
         id$ = *mods()\tf_id$
         sameHash = #True
@@ -836,7 +843,7 @@ Module mods
     ; copy file to library
     ;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
     ;- TODO - decide to change filename and extension or leave it as original
-    Protected newfile$ = dir$ + *mod\aux\filename$
+    Protected newfile$ = dir$ + *mod\archive\name$
     debugger::Add("mods::new() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
     
     If Not CopyFile(file$, newfile$)
@@ -856,7 +863,7 @@ Module mods
       AddElement(files$()) : files$() = "image_0" + i + ".tga"
     Next
     If Not ExtractFilesZip(newfile$, files$(), dir$)
-      If Not ExtractFilesRar(newfile$, files$(), dir$)
+      If Not ExtractFilesRar(newfile$, files$(), dir$, *mod)
         debugger::Add("mods::GetModInfo() - failed to open {"+newfile$+"} for extraction")
       EndIf
     EndIf
@@ -1081,20 +1088,20 @@ Module mods
           ; info should be stored in mods.json when file is in library
           ; if not? -> load again from mod file
           If *mod\name$ = "" Or Not *mod\aux\luaDate
-            getInfo(modFolder$ + *mod\aux\filename$, *mod, id$)
+            getInfo(modFolder$ + *mod\archive\name$, *mod, id$)
             ;- TODO: information about active, aux info, etc are missing now!
           EndIf
           
           ; file name was stored as "id.tfmod" with complete path
           ; now, only store "filename" without path and filename = original name
-          If *mod\aux\filename$ = ""
+          If *mod\archive\name$ = ""
             Protected file$ = misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
             If FileSize(file$)
-              *mod\aux\filename$ = id$ + ".tfmod"
+              *mod\archive\name$ = id$ + ".tfmod"
             EndIf
           EndIf
-          If *mod\aux\fileMD5$ = ""
-            *mod\aux\fileMD5$ = FileFingerprint(misc::Path(pLib$+id$+"/") + *mod\aux\filename$, #PB_Cipher_MD5)
+          If *mod\archive\md5$ = ""
+            *mod\archive\md5$ = FileFingerprint(misc::Path(pLib$+id$+"/") + *mod\archive\name$, #PB_Cipher_MD5)
           EndIf
         Else
           ; If mod is not saved in library, no filename is required.
@@ -1266,7 +1273,7 @@ Module mods
     EndIf
     
     ; extract files
-    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + *mod\aux\filename$
+    source$ = misc::Path(tf$+"TFMM/library/"+id$+"/") + *mod\archive\name$
     target$ = misc::Path(tf$+"/mods/"+id$+"/")
     If *mod\isDLC
       target$ = misc::Path(tf$+"/dlcs/"+id$+"/")
@@ -1289,17 +1296,16 @@ Module mods
     EndIf
     misc::CreateDirectoryAll(target$)
     
-    ;- TODO: extract lua files and images dircetly from mod archive
-    ;- TODO: make "overwrite lua with TFMM information" optional
+    ;- TODO: make "overwrite lua with TFMM information" optional, write info from TFMM as lua to mods/ (if it is a mod)
     If Not extractZIP(source$, target$)
-      If Not extractRAR(source$, target$)
+      If Not extractRAR(source$, target$, *mod)
         debugger::Add("mods::install() - ERROR - failed to extract files")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         ProcedureReturn #False
       EndIf
     EndIf
     
-    ; copy info.lua and images
+    ; copy images
     debugger::Add("mods::install() - copy images")
     CopyFile(GetPathPart(source$) + "image_00.tga", target$ + "image_00.tga")
     

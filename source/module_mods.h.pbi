@@ -1,14 +1,24 @@
 ﻿DeclareModule mods
   EnableExplicit
   
+  Enumeration
+    #TYPE_ZIP
+    #TYPE_RAR
+  EndEnumeration
+  
+  Structure archive ;-- information about the archive
+    name$             ; filename of archive
+    md5$              ; md5 file fingerprint of archive file
+;     type.i            ; #TYPE_ZIP or #TYPE_RAR
+    password$         ; password used for decrypting the archive
+  EndStructure
+  
   Structure aux     ;-- additional information about mod
     version$          ; version as string: major.minor
     authors$          ; authors as string: author1, author2, author3, ...
     tfnet_author_id$  ; author ids on tf|net as string: id1, id2, id3, ...
     tags$             ; tags as string: tag1, tag2, tag3, ...
     
-    filename$         ; filename of mod archive (zip/rar/...), keep original file name
-    fileMD5$          ; md5 of mod archive, may be compared to new mod or online library
     active.i          ; true, if mod installed (new or old system)
     inLibrary.i       ; true, if mod is in TFMM library
     luaDate.i         ; date of info.lua (reload info when newer version available)
@@ -40,6 +50,7 @@
     
     isDLC.b                 ; true (1) if mod is a DLC and has to be installed to "dlc" directory
     aux.aux                 ; additional information
+    archive.archive         ; archive file, type and handle
   EndStructure
   
   Declare registerMainWindow(window)
