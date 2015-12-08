@@ -1097,12 +1097,16 @@ Module mods
           *mod\isDLC = #True
         EndIf
         
-        ; handle stuff for installed mods
+        ; handle stuff for installed mods / dlcs
         If *mod\aux\active
           debugger::add("mods::loadList() - mod is active (installed)")
           
-          modFolder$  = misc::Path(pMods$ + id$ + "/")
-          luaFile$    = modFolder$ + "info.lua"
+          If *mod\isDLC
+            modFolder$ = misc::Path(pDLCs$+id$+"/")
+          Else
+            modFolder$ = misc::Path(pMods$+id$+"/")
+          EndIf
+          luaFile$ = modFolder$ + "info.lua"
           
           ; check if info.lua was modified and reload info.lua if required
           ; will also trigger, if no info is stored until now (luaDate = 0)
