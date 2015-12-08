@@ -44,7 +44,67 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-
+;   Procedure openArchive(*mod.mod, file$)
+;     debugger::add("mods::openArchive("+*mod+", "+file$+")")
+;     
+;     If Not *mod
+;       debugger::add("          ERROR: no memory adress defined")
+;       ProcedureReturn #False
+;     EndIf
+;     If FileSize(file$) <= 0
+;       debugger::add("          ERROR: file not found or empty")
+;       ProcedureReturn #False
+;     EndIf
+;     
+;     ; open archive
+;     Protected handle = 0
+;     If Not handle ; ZIP
+;       debugger::add("          Try to open "+file$+" as zip")
+;       handle = OpenPack(#PB_Any, file$, #PB_PackerPlugin_Zip)
+;       If handle
+;         debugger::add("          ... success")
+;         *mod\archive\type = #TYPE_ZIP
+;       Else
+;         debugger::add("          ... failed")
+;       EndIf
+;     EndIf
+;     If Not handle ; RAR
+;       debugger::add("          Try to open "+file$+" as rar")
+;       handle = unrar::OpenRar(File$, *mod, unrar::#RAR_OM_EXTRACT) ; #RAR_OM_LIST
+;       If handle
+;         debugger::add("          ... success")
+;         *mod\archive\type = #TYPE_RAR
+;       Else
+;         debugger::add("          ... failed")
+;       EndIf
+;     EndIf
+;     If Not handle
+;       debugger::add("          ERROR: Could not open file")
+;       ProcedureReturn #False
+;     EndIf
+;     
+;     *mod\archive\handle = handle
+;     
+;     ; check if archive is a valid TF modification
+;     
+;     With *mod
+;       
+;     EndWith
+;     
+;   EndProcedure
+;   
+;   Procedure closeArchive(*mod.mod)
+;     debugger::add("mods::closeArchive("+*mod+")")
+;     If *mod\archive\handle
+;       Select *mod\archive\type
+;         Case #TYPE_ZIP
+;           ClosePack(*mod\archive\handle)
+;         Case #TYPE_RAR
+;           unrar::RARCloseArchive(handle)
+;       EndSelect
+;       *mod\archive\handle = #Null
+;     EndIf
+;   EndProcedure
   
   ;- TODO do not return string but directly store "id" in *mod -> handle in other functions accordingly
   Procedure.s checkModFileZip(file$) ; check for res/ or info.lua
