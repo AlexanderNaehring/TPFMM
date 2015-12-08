@@ -1149,8 +1149,10 @@ Module mods
           ; if not? -> load again from mod file
           If *mod\name$ = "" Or Not *mod\aux\luaDate
             getInfo(modFolder$ + *mod\archive\name$, *mod, id$)
-            ;- TODO: information about active, aux info, etc are missing now!
           EndIf
+          ; FIXME
+          ;- FIXME/TODO: handle case when mod file (blabla.zip) is not stored
+          ; either try to find the zip/rar file in the current directory or delete mod from library
           
           ; file name was stored as "id.tfmod" with complete path
           ; now, only store "filename" without path and filename = original name
@@ -1210,6 +1212,9 @@ Module mods
     
     Protected pTFMM$
     pTFMM$  = misc::Path(TF$ + "/TFMM/")
+    If FileSize(pTFMM$) <> -2
+      misc::CreateDirectoryAll(pTFMM$)
+    EndIf
     
     Protected json
     json = CreateJSON(#PB_Any)
