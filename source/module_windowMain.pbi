@@ -464,15 +464,14 @@ Module windowMain
     Protected *mod.mods::mod
     Protected position, event
     
-    event = EventType()
-    
     updateGUI()
     
-    If event = #PB_EventType_LeftDoubleClick
-      GadgetButtonInformation()
-    ElseIf event = #PB_EventType_RightClick
-      DisplayPopupMenu(MenuLibrary, WindowID(windowMain::id))
-    EndIf
+    Select EventType()
+      Case #PB_EventType_LeftDoubleClick
+        GadgetButtonInformation()
+      Case #PB_EventType_RightClick
+        DisplayPopupMenu(MenuLibrary, WindowID(windowMain::id))
+    EndSelect
   EndProcedure
   
   Procedure GadgetButtonStartGame()
@@ -628,7 +627,7 @@ Module windowMain
     
     ; Bind Gadget Events
     BindGadgetEvent(GadgetNewMod, @GadgetNewMod())
-    BindGadgetEvent(GadgetButtonInformation, @GadgetButtonInstall())
+    BindGadgetEvent(GadgetButtonInstall, @GadgetButtonInstall())
     BindGadgetEvent(GadgetButtonRemove, @GadgetButtonRemove())
     BindGadgetEvent(GadgetButtonDelete, @GadgetButtonDelete())
     BindGadgetEvent(GadgetLibraryMods, @GadgetLibraryMods())
@@ -652,7 +651,7 @@ Module windowMain
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         SetWindowTitle(id, GetWindowTitle(id) + " for Windows")
-        ListIcon::DefineListCallback(GadgetLibraryMods, ListIcon::#Edit)
+        ListIcon::DefineListCallback(GadgetLibraryMods)
       CompilerCase #PB_OS_Linux
         SetWindowTitle(id, GetWindowTitle(id) + " for Linux")
       CompilerCase #PB_OS_MacOS
