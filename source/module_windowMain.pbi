@@ -559,7 +559,7 @@ Module windowMain
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportListActivated)
     AddKeyboardShortcut(id, #PB_Shortcut_Alt | #PB_Shortcut_E, #MenuItem_ExportListAll)
     AddKeyboardShortcut(id, #PB_Shortcut_F1, #MenuItem_Homepage)
-    AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
+    AddKeyboardShortcut(id, #PB_Shortcut_F5, #MenuItem_Update)
     
     UseModule locale ; import locale namespace for shorthand "l()" access
     
@@ -577,7 +577,7 @@ Module windowMain
     CloseSubMenu()
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
-    MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
+    MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "F5")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
     BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
