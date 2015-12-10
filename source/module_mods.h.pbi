@@ -77,4 +77,6 @@
   
   Declare displayMods(filter$="")
   Declare displayDLCs()
+  
+  Declare getPreviewImage(*mod.mod, original=#False)
 EndDeclareModule

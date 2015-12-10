@@ -30,6 +30,7 @@ XIncludeFile "module_windowInformation.pbi"
 XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_updater.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 Module windowMain
 
@@ -217,46 +218,22 @@ Module windowMain
       ; one mod selected
       ; display image
       *mod = ListIcon::GetListItemData(GadgetLibraryMods, SelectedMod)
-      If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
-        Protected im.i, image$
-        
-        If *mod\aux\active
-          image$ = misc::Path(main::TF$ + "mods/" + *mod\tf_id$) + "image_00.tga"
-          If FileSize(image$) > 0
-            im = LoadImage(#PB_Any, image$)
-          EndIf
-        ElseIf *mod\aux\inLibrary
-          image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
-          If FileSize(image$) > 0
-            im = LoadImage(#PB_Any, image$)
-          EndIf
-        EndIf
-        
-        ; if load was successfull
-        If IsImage(im)
-          im = misc::ResizeCenterImage(im, GadgetWidth(GadgetImageLogo), GadgetHeight(GadgetImageLogo), #PB_Image_Smooth)
-          If IsImage(im)
-            PreviewImages(*mod\tf_id$) = im
-          EndIf
-        EndIf
-      EndIf
-      ; if image is loaded now
-      If IsImage(PreviewImages(*mod\tf_id$))
+      
+      Protected im
+      im = mods::getPreviewImage(*mod)
+      If IsImage(im)
         ; display image
-        If GetGadgetState(GadgetImageLogo) <> ImageID(PreviewImages(*mod\tf_id$))
-          debugger::Add("ImageLogo: Display custom image")
-          SetGadgetState(GadgetImageLogo, ImageID(PreviewImages(*mod\tf_id$)))
+        If GetGadgetState(GadgetImageLogo) <> ImageID(im)
+          SetGadgetState(GadgetImageLogo, ImageID(im))
         EndIf
       Else
         ; else: display normal logo
         If GetGadgetState(GadgetImageLogo) <> ImageID(images::Images("logo"))
-          debugger::Add("ImageLogo: Display tf|net logo instead of custom image")
           SetGadgetState(GadgetImageLogo, ImageID(images::Images("logo")))
         EndIf
       EndIf
     Else
       If GetGadgetState(GadgetImageLogo) <> ImageID(images::Images("logo"))
-        debugger::Add("ImageLogo: Display tf|net logo")
         SetGadgetState(GadgetImageLogo, ImageID(images::Images("logo")))
       EndIf
     EndIf

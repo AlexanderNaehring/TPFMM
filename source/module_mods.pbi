@@ -1888,4 +1888,51 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure getPreviewImage(*mod.mod, original=#False)
+    Static NewMap previewImages()
+    Static NewMap previewImagesOriginal()
+    
+    If Not IsImage(previewImages(*mod\tf_id$))
+      ; if image is not yet loaded
+      Protected im.i, image$
+      If *mod\aux\active
+        If *mod\isDLC
+          image$ = misc::Path(main::TF$ + "dlcs/" + *mod\tf_id$) + "image_00.tga"
+        Else
+          image$ = misc::Path(main::TF$ + "mods/" + *mod\tf_id$) + "image_00.tga"
+        EndIf
+        If FileSize(image$) > 0
+          im = LoadImage(#PB_Any, image$)
+        EndIf
+      ElseIf *mod\aux\inLibrary
+        ;- TODO: check filenames of images! -> compare to "new()" procedure and set standard
+        image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
+        If FileSize(image$) > 0
+          im = LoadImage(#PB_Any, image$)
+        EndIf
+      EndIf
+      
+      ; still not loaded -> fail
+      If Not IsImage(im)
+        ProcedureReturn #False
+      EndIf
+      
+      previewImagesOriginal(*mod\tf_id$) = im
+      
+      ; now resize image to special size:
+      ; mod images: 210x118 (original: 320x180)
+      ; dlc images: 120x80
+      If *mod\isDLC
+        previewImages(*mod\tf_id$) = misc::ResizeCenterImage(im, 120, 80)
+      Else
+        previewImages(*mod\tf_id$) = misc::ResizeCenterImage(im, 210, 118)
+      EndIf
+    EndIf
+    
+    If original
+      ProcedureReturn previewImagesOriginal(*mod\tf_id$)
+    Else
+      ProcedureReturn previewImages(*mod\tf_id$)
+    EndIf
+  EndProcedure
 EndModule
