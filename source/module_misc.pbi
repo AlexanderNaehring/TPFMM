@@ -37,7 +37,7 @@
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
-  Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Raw)
+  Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
   Declare HexStrToMem(hex$, *memlen = 0)
   Declare.s MemToHexStr(*mem, memlen.i)
   Declare.s FileToHexStr(file$)
@@ -148,7 +148,7 @@ Module misc
     ProcedureReturn #False
   EndProcedure
   
-  Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Raw)
+  Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
     If IsImage(im)
       Protected image.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
       im_w = ImageWidth(im)
