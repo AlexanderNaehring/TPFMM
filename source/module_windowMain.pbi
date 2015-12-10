@@ -42,15 +42,16 @@ Module windowMain
     #MenuItem_Information
   EndEnumeration
   
-  ; gadgets
+  ;- Gadgets
+  Global NewMap gadgets()
   Global GadgetImageHeader
   Global GadgetNewMod, GadgetHomepage, GadgetButtonStartGame, GadgetVersionText
   Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
-  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove
+  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove, GadgetScrollAreaDLCs
   
-  ; timer
+  ;- Timer
   Global TimerMainGadgets = 101
   
   ; other stuff
@@ -113,8 +114,8 @@ Module windowMain
     ResizeGadget(GadgetFrameInformation, iwidth - 215, 290, 210, 50)
     ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
     
-    ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
-    
+    ; ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
+    ResizeGadget(GadgetScrollAreaDLCs, 0, 0, iwidth, 140)
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
     ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
@@ -612,6 +613,9 @@ Module windowMain
     ; DLCs
     AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
     
+    GadgetScrollAreaDLCs = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 100, 100, 10, #PB_ScrollArea_Center)
+    CloseGadgetList()
+    
     GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
     GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
@@ -689,7 +693,7 @@ Module windowMain
     ; register to mods module
     mods::registerMainWindow(id)
     mods::registerModGadget(GadgetLibraryMods)
-    mods::registerDLCGadget(GadgetLibraryDLCs)
+    mods::registerDLCGadget(GadgetScrollAreaDLCs)
     
     ; apply sizes
     resize()

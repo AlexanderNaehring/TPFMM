@@ -22,7 +22,7 @@ Module mods
   EndStructure
   
   Global NewMap *mods.mod()
-  Global _window, _gadgetMod, _gadgetDLC
+  Global _window, _gadgetMod, _gadgetDLC, _gadgetEventTriggerDLC
   
   UseMD5Fingerprint()
   
@@ -746,6 +746,56 @@ Module mods
   EndProcedure
   
   
+  Procedure dlcGadgetEvent()
+    Protected *mod.mod
+    *mod = GetGadgetData(EventGadget())
+    debugger::add("show mod info for mod "+*mod)
+    If *mod
+      debugger::add(*mod\name$)
+    EndIf
+    
+  EndProcedure
+  
+  Procedure displayDLCs_callback()
+    ; remove all old gadgets
+    Static NewList gadgets()
+    Protected count
+    ForEach gadgets()
+      UnbindGadgetEvent(gadgets(), @dlcGadgetEvent(), #PB_Event_LeftClick)
+      FreeGadget(gadgets())
+    Next
+    ; display all DLCs
+    debugger::add("          Open gadgetlist "+_gadgetDLC)
+    OpenGadgetList(_gadgetDLC)
+    ForEach *mods()
+      If *mods()\isDLC
+        AddElement(gadgets())
+        gadgets() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
+        SetGadgetData(gadgets(), *mods())
+        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
+        ; Image
+        AddElement(gadgets())
+        gadgets() = ImageGadget(#PB_Any, 15, 0, 120, 80, 0)
+        SetGadgetData(gadgets(), *mods())
+        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
+        ; Text
+        AddElement(gadgets())
+        gadgets() = TextGadget(#PB_Any, 5, 90, 140, 20, *mods()\name$, #PB_Text_Center)
+        SetGadgetData(gadgets(), *mods())
+        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
+        
+        count + 1
+        CloseGadgetList()
+        ; Size of scrollarea
+        SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerWidth, count*160)
+        SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerHeight, 120)
+      EndIf
+    Next
+    CloseGadgetList()
+  EndProcedure
+  
+  
+  
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
@@ -756,15 +806,29 @@ Module mods
     ProcedureReturn window
   EndProcedure
   
-  Procedure registerModGadget(gadget)
+  Procedure registerModGadget(gadget) ; ListIcon Gadget
     debugger::Add("registerModGadget("+Str(gadget)+")")
     _gadgetMod = gadget
     ProcedureReturn gadget
   EndProcedure
   
-  Procedure registerDLCGadget(gadget)
+  Procedure registerDLCGadget(gadget) ; ScrollArea Gadget
     debugger::Add("registerDLCGadget("+Str(gadget)+")")
+    If Not IsWindow(_window)
+      debugger::add("          ERROR: window not valid or not registered")
+      ProcedureReturn #False
+    EndIf
+    
     _gadgetDLC = gadget
+    
+    ; new gadgets can only be added to the scrollarea from main thread
+    ; as workaround, do not call "displayDLCs" directly but register an event to an invisible gadget
+    If Not _gadgetEventTriggerDLC Or Not IsGadget(_gadgetEventTriggerDLC)
+      UseGadgetList(WindowID(_window))
+      _gadgetEventTriggerDLC = ButtonGadget(#PB_Any, 0, 0, 0, 0, "")
+      HideGadget(_gadgetEventTriggerDLC, #True)
+      BindGadgetEvent(_gadgetEventTriggerDLC, @displayDLCs_callback())
+    EndIf
     ProcedureReturn gadget
   EndProcedure
   
@@ -1086,9 +1150,9 @@ Module mods
         *mod\tf_id$ = id$ ; IMPORTANT
         
         
-        debugger::add("mods::loadList() - \folderLibrary = " + mod_scanner()\folderLibrary +
-                      ", \folderMods = " + mod_scanner()\folderMods +
-                      ", \folderDLCs = " + mod_scanner()\folderDLCs)
+;         debugger::add("mods::loadList() - \folderLibrary = " + mod_scanner()\folderLibrary +
+;                       ", \folderMods = " + mod_scanner()\folderMods +
+;                       ", \folderDLCs = " + mod_scanner()\folderDLCs)
         ; analogue for library
         *mod\aux\inLibrary = mod_scanner()\folderLibrary
         ; mark mod as active if found in mods/ folder
@@ -1099,7 +1163,7 @@ Module mods
         
         ; handle stuff for installed mods / dlcs
         If *mod\aux\active
-          debugger::add("mods::loadList() - mod is active (installed)")
+;           debugger::add("mods::loadList() - mod is active (installed)")
           
           If *mod\isDLC
             modFolder$ = misc::Path(pDLCs$+id$+"/")
@@ -1147,7 +1211,7 @@ Module mods
         
         ; handle stuff for mods in library
         If *mod\aux\inLibrary
-          debugger::add("mods::loadList() - mod is in TFMM library")
+;           debugger::add("mods::loadList() - mod is in TFMM library")
           modFolder$  = misc::Path(pLib$ + id$)
           ; info should be stored in mods.json when file is in library
           ; if not? -> load again from mod file
@@ -1166,7 +1230,8 @@ Module mods
               *mod\archive\name$ = id$ + ".tfmod"
             EndIf
           EndIf
-          If *mod\archive\md5$ = ""
+          ;- TODO: check if file exists
+          If *mod\archive\md5$ = "" And FileSize(misc::Path(pLib$+id$+"/") + *mod\archive\name$) > 0
             *mod\archive\md5$ = FileFingerprint(misc::Path(pLib$+id$+"/") + *mod\archive\name$, #PB_Cipher_MD5)
           EndIf
         Else
@@ -1802,23 +1867,25 @@ Module mods
     windowMain::stopGUIupdate(#False)
     
   EndProcedure
+  
   Procedure displayDLCs()
     Protected item
     If Not IsGadget(_gadgetDLC)
-      debugger::add("mods::displayDLCs() - ERROR: gadget not valid")
+      debugger::add("          ERROR: gadget not valid")
+      ProcedureReturn #False
+    EndIf
+    If Not IsWindow(_window)
+      debugger::add("          ERROR: window not valid")
       ProcedureReturn #False
     EndIf
     
-    ClearGadgetItems(_gadgetDLC)
-    
-    ForEach *mods()
-      Debug *mods()\name$
-      If *mods()\isDLC
-        AddGadgetItem(_gadgetDLC, item, *mods()\name$)
-        SetGadgetItemData(_gadgetDLC, item, *mods())
-        item + 1
-      EndIf
-    Next
+    ; IMPORTANT: New gadgets can only be added inside the main thread!
+    ; therefore, ensure that this procedure always calls the main thread
+    ; -> Cannot check if current function is called in main thread or not
+    ; therefore, just send an "event" to the main window, which is always handled in the main thread
+    ; the event has to be bound to the real "displayDLCs" function, which is automatically called
+    PostEvent(#PB_Event_Gadget, _window, _gadgetEventTriggerDLC)
+    ProcedureReturn #True
   EndProcedure
   
 EndModule
