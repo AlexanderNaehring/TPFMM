@@ -23,6 +23,8 @@ DeclareModule windowMain
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
+  
+  Global GadgetDLCTest ; only test
 EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
@@ -117,6 +119,7 @@ Module windowMain
     
     ; ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
     ResizeGadget(GadgetScrollAreaDLCs, 0, 0, iwidth, 140)
+    ResizeGadget(GadgetDLCTest, 10, 150, iwidth-20, 20)
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
     ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
@@ -592,6 +595,8 @@ Module windowMain
     
     GadgetScrollAreaDLCs = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 100, 100, 10, #PB_ScrollArea_Center)
     CloseGadgetList()
+    GadgetDLCTest = TextGadget(#PB_Any, 0, 0, 0, 0, "", #PB_Text_Border)
+    
     
     GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
