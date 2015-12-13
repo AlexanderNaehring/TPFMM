@@ -753,13 +753,14 @@ Module mods
     If *mod
       debugger::add(*mod\name$)
     EndIf
-    
+    SetGadgetText(windowmain::GadgetDLCTest, "Show information about DLC '"+*mod\name$+"'")
   EndProcedure
   
   Procedure displayDLCs_callback()
     ; remove all old gadgets
     Static NewList gadgets()
-    Protected count
+    Protected count, im
+    
     ForEach gadgets()
       UnbindGadgetEvent(gadgets(), @dlcGadgetEvent(), #PB_Event_LeftClick)
       FreeGadget(gadgets())
@@ -769,23 +770,30 @@ Module mods
     OpenGadgetList(_gadgetDLC)
     ForEach *mods()
       If *mods()\isDLC
-        AddElement(gadgets())
-        gadgets() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
-        SetGadgetData(gadgets(), *mods())
-        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
+        ; container gadgets unfortunately do not throw events :(
+        ; cannot use the container gadget as replacement for a complex button
+;         AddElement(gadgets())
+;         gadgets() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
+;         SetGadgetData(gadgets(), *mods())
         ; Image
         AddElement(gadgets())
-        gadgets() = ImageGadget(#PB_Any, 15, 0, 120, 80, 0)
+        im = getPreviewImage(*mods())
+        If IsImage(im)
+          im = ImageID(im)
+        Else
+          im = 0
+        EndIf
+        gadgets() = ImageGadget(#PB_Any, count*160 + 15, 0, 120, 80, im)
         SetGadgetData(gadgets(), *mods())
         BindGadgetEvent(gadgets(), @dlcGadgetEvent())
         ; Text
         AddElement(gadgets())
-        gadgets() = TextGadget(#PB_Any, 5, 90, 140, 20, *mods()\name$, #PB_Text_Center)
+        gadgets() = ButtonGadget(#PB_Any, count*160 + 5, 90, 140, 20, *mods()\name$)
         SetGadgetData(gadgets(), *mods())
         BindGadgetEvent(gadgets(), @dlcGadgetEvent())
         
         count + 1
-        CloseGadgetList()
+;         CloseGadgetList()
         ; Size of scrollarea
         SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerWidth, count*160)
         SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerHeight, 120)
@@ -1897,7 +1905,11 @@ Module mods
       Protected im.i, image$
       If *mod\aux\active
         If *mod\isDLC
-          image$ = misc::Path(main::TF$ + "dlcs/" + *mod\tf_id$) + "image_00.tga"
+          If *mod\tf_id$ = "usa_1"
+            image$ = misc::Path(main::TF$ + "res/textures/ui/scenario/") + "usa.tga"
+          Else
+            image$ = misc::Path(main::TF$ + "dlcs/" + *mod\tf_id$) + "image_00.tga"
+          EndIf
         Else
           image$ = misc::Path(main::TF$ + "mods/" + *mod\tf_id$) + "image_00.tga"
         EndIf
