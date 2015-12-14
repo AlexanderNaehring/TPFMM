@@ -14,13 +14,7 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
-# =========================
-# Operating System Files
-# =========================
-
 # OSX
-# =========================
-
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -35,14 +29,15 @@ Icon
 .Spotlight-V100
 .Trashes
 
-
+# TFMM specific files
 *.ini
-*tfmm-output.txt
-*output.log
+*/tfmm-output.txt
+*/output.log
 bin/win32/unrar.dll
 bin/win32/locale/
 bin/lin64/locale/
 bin/mac32/locale/
 *.json
-*project.cfg
+*/project.cfg
 source/repositories/
+*/passwords.list
