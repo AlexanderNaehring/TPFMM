@@ -37,6 +37,8 @@ delete          = Uninstall Mod
 delete_pl       = Uninstall Mods
 information     = Mod Information
 filter          = Filter modifications
+install_dlc     = Add DLC to Train Fever
+remove_dlc      = Remove DLC from Train Fever
 
 [settings]
 title           = TFMM Settings
@@ -78,7 +80,7 @@ retrieved     = Retrieved version information
 errorchannel  = Error: No release channels found
 errorjson     = Error parsing json
 warningtesting  = Testing version may have bugs
-current       = Current Version
+current       = Used Version
 information   = Version Information
 version       = Version:
 filename      = Filename:
