@@ -185,7 +185,7 @@ Module unrar
       debugger::add("unrar::OpenRar("+File$+", "+Str(mode)+")")
       Protected raropen.RAROpenArchiveDataEx
       Protected hRAR
-      Protected NewList passwords$(), password$
+      Protected NewMap passwords(), password$, passwordFile
       
       CompilerIf #PB_Compiler_Unicode
         raropen\ArcNameW = @File$
@@ -214,49 +214,63 @@ Module unrar
         ; password required, add passwords to try to a list
         ; try password stored in mod info if available
         If *mod\archive\password$
-          debugger::add("          Mod has stored password: "+*mod\archive\password$)
-          AddElement(passwords$())
-          passwords$() = aes::decryptString(*mod\archive\password$) ;- TODO: AES decrypt
-          debugger::add("          Decrypted: "+passwords$())
+          passwords(*mod\archive\password$) = 1
         EndIf
-        ;- TODO: try passwords from password list file
-        ;...
+        
+        ; read passwords from password list file
+        passwordFile = OpenFile(#PB_Any, "passwords.list")
+        If passwordFile
+          While Not Eof(passwordFile)
+            passwords(ReadString(passwordFile)) = 1
+          Wend
+          CloseFile(passwordFile)
+        EndIf
         *mod\archive\password$ = "" ; reset stored PW
         
+        ; pre-defined passwords:
+        ; Nordic DLC:
+        passwords("E9sLDEP87impfL7PPIDSY4AH+Ym6LQ==") = 1
+        
         ; try different passwords now
-        ForEach passwords$()
-          userdata\password$ = passwords$()
+        ForEach passwords()
+          userdata\password$ = aes::decryptString(MapKey(passwords()))
           hRAR = RAROpenArchive(raropen)
           If hRAR
-            ; open successfull, store pw in mod info
-            debugger::add("          the following password is correct: "+userdata\password$)
-            *mod\archive\password$ = aes::encryptString(userdata\password$) ;- TODO: AES encrypt
-            debugger::add("          save in modinfo as: "+*mod\archive\password$)
-            ;- TODO: store in password list file
-            ProcedureReturn hRAR
+            Break
           EndIf
         Next
         
+        If Not hRAR
+          debugger::add("          Ask user for password to open file")
+          ; ask user for password
+          Repeat
+            password$ = InputRequester("Archive password", "Please specify the password to open the archive", "", #PB_InputRequester_Password)
+            If password$ = ""
+              Break
+            EndIf
+            
+            userdata\password$ = password$
+            hRAR = RAROpenArchive(raropen)
+            If hRAR
+              Break
+            EndIf
+          Until hRAR Or password$ = ""
+        EndIf
         
-        debugger::add("          Ask user for password to open file")
-        ; ask user for password
-        Repeat
-          password$ = InputRequester("Archive password", "Please specify the password to open the archive", "", #PB_InputRequester_Password)
-          If password$ = ""
-            Break
+        If hRAR
+          ; open successfull, store pw in mod info
+          *mod\archive\password$ = aes::encryptString(userdata\password$)
+          passwords(*mod\archive\password$) = 1
+          passwordFile = CreateFile(#PB_Any, "passwords.list")
+          If passwordFile
+            ForEach passwords()
+              WriteStringN(passwordFile, MapKey(passwords()))
+            Next
+            CloseFile(passwordFile)
           EndIf
-          
-          userdata\password$ = password$
-          hRAR = RAROpenArchive(raropen)
-          If hRAR
-            ; open successfull, store pw in mod info
-            debugger::add("          the following password is correct: "+userdata\password$)
-            *mod\archive\password$ = aes::encryptString(userdata\password$) ;- TODO: AES encrypt
-            debugger::add("          save in modinfo as: "+*mod\archive\password$)
-            ;- TODO: store in password list file
-            ProcedureReturn hRAR
-          EndIf
-        Until hRAR Or password$ = ""
+        EndIf
+        
+        ProcedureReturn hRAR
       EndIf
       
       ProcedureReturn hRAR
