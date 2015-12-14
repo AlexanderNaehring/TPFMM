@@ -211,10 +211,7 @@ Module repository
         FreeMemory(*out)
         DataSection
           key_aes_1:  ; key hidden!
-          Data.b $e3, $d1, $9c, $b2, $20, $1b, $4a, $77, $63, $77, $f0, $8a, $0d, $c3, $86, $1e
-          Data.b $67, $52, $01, $94, $cb, $2d, $ef, $79, $42, $44, $4e, $01, $95, $e6, $62, $87
-          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-          Data.b $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+          IncludeBinary "key.aes"
         EndDataSection
         
       Default
@@ -301,9 +298,11 @@ Module repository
     ; value is an object
     If JSONType(value) <> #PB_JSON_Object 
       debugger::add("repository::loadRepositoryLocale() - ERROR: Locale Repository should be of type JSON Object")
+      FreeJSON(json)
       ProcedureReturn #False
     EndIf
-    
+    FreeJSON(json)
+    ProcedureReturn #True
   EndProcedure
   
   Procedure thumbnailThread(*dummy)
