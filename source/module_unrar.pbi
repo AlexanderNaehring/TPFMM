@@ -3,6 +3,7 @@
 XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_aes.pbi"
 
 DeclareModule unrar
   #ERAR_SUCCESS             = 0
@@ -213,18 +214,24 @@ Module unrar
         ; password required, add passwords to try to a list
         ; try password stored in mod info if available
         If *mod\archive\password$
+          debugger::add("          Mod has stored password: "+*mod\archive\password$)
           AddElement(passwords$())
-          passwords$() = *mod\archive\password$ ;- TODO: AES decrypt
+          passwords$() = aes::decryptString(*mod\archive\password$) ;- TODO: AES decrypt
+          debugger::add("          Decrypted: "+passwords$())
         EndIf
         ;- TODO: try passwords from password list file
         ;...
         *mod\archive\password$ = "" ; reset stored PW
+        
+        ; try different passwords now
         ForEach passwords$()
           userdata\password$ = passwords$()
           hRAR = RAROpenArchive(raropen)
           If hRAR
             ; open successfull, store pw in mod info
-            *mod\archive\password$ = userdata\password$ ;- TODO: AES encrypt
+            debugger::add("          the following password is correct: "+userdata\password$)
+            *mod\archive\password$ = aes::encryptString(userdata\password$) ;- TODO: AES encrypt
+            debugger::add("          save in modinfo as: "+*mod\archive\password$)
             ;- TODO: store in password list file
             ProcedureReturn hRAR
           EndIf
@@ -243,7 +250,9 @@ Module unrar
           hRAR = RAROpenArchive(raropen)
           If hRAR
             ; open successfull, store pw in mod info
-            *mod\archive\password$ = userdata\password$ ;- TODO: AES encrypt
+            debugger::add("          the following password is correct: "+userdata\password$)
+            *mod\archive\password$ = aes::encryptString(userdata\password$) ;- TODO: AES encrypt
+            debugger::add("          save in modinfo as: "+*mod\archive\password$)
             ;- TODO: store in password list file
             ProcedureReturn hRAR
           EndIf
