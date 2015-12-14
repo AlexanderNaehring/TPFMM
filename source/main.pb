@@ -44,15 +44,16 @@ Module main
       EndSelect
     Next
     
+    debugger::DeleteLogFile()
     If _DEBUG
       debugger::SetLogFile("tfmm-output.txt")
     EndIf
+    
     ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
     CompilerIf #PB_Compiler_OS = #PB_OS_Linux
       misc::CreateDirectoryAll(misc::path(GetHomeDirectory()+"/.tfmm"))
       SetCurrentDirectory(misc::path(GetHomeDirectory()+"/.tfmm"))
     CompilerEndIf
-    debugger::DeleteLogFile()
     
     debugger::Add("init() - load plugins")
     If Not UseZipPacker()
