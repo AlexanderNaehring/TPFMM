@@ -204,7 +204,7 @@ Module mods
     
     zip = OpenPack(#PB_Any, zip$, #PB_PackerPlugin_Zip)
     If Not zip
-      debugger::Add("ExtractFilesZip() - Error opnening zip: "+ZIP$)
+      debugger::Add("ExtractFilesZip() - Error opening zip: "+ZIP$)
       ProcedureReturn #False
     EndIf
     
@@ -242,7 +242,7 @@ Module mods
     
     hRAR = unrar::OpenRar(RAR$, *mod, unrar::#RAR_OM_EXTRACT)
     If Not hRAR
-      debugger::Add("ExtractFilesRar() - Error opnening rar: "+RAR$)
+      debugger::Add("ExtractFilesRar() - Error opening rar: "+RAR$)
       ProcedureReturn #False
     EndIf
     
@@ -476,6 +476,7 @@ Module mods
     ; read info.lua
     parseInfoLUA(tmpDir$ + "info.lua", *mod)
     DeleteFile(tmpDir$ + "info.lua")
+    DeleteFile(tmpDir$ + "strings.lua")
     
     If Not generateID(*mod, id$)
       ProcedureReturn #False
@@ -746,60 +747,9 @@ Module mods
   EndProcedure
   
   
-  Procedure dlcGadgetEvent()
-    Protected *mod.mod
-    *mod = GetGadgetData(EventGadget())
-    debugger::add("show mod info for mod "+*mod)
-    If *mod
-      debugger::add(*mod\name$)
-    EndIf
-    SetGadgetText(windowmain::GadgetDLCTest, "Show information about DLC '"+*mod\name$+"'")
-  EndProcedure
   
   Procedure displayDLCs_callback()
-    ; remove all old gadgets
-    Static NewList gadgets()
-    Protected count, im
-    
-    ForEach gadgets()
-      UnbindGadgetEvent(gadgets(), @dlcGadgetEvent(), #PB_Event_LeftClick)
-      FreeGadget(gadgets())
-    Next
-    ; display all DLCs
-    debugger::add("          Open gadgetlist "+_gadgetDLC)
-    OpenGadgetList(_gadgetDLC)
-    ForEach *mods()
-      If *mods()\isDLC
-        ; container gadgets unfortunately do not throw events :(
-        ; cannot use the container gadget as replacement for a complex button
-;         AddElement(gadgets())
-;         gadgets() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
-;         SetGadgetData(gadgets(), *mods())
-        ; Image
-        AddElement(gadgets())
-        im = getPreviewImage(*mods())
-        If IsImage(im)
-          im = ImageID(im)
-        Else
-          im = 0
-        EndIf
-        gadgets() = ImageGadget(#PB_Any, count*160 + 15, 0, 120, 80, im)
-        SetGadgetData(gadgets(), *mods())
-        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
-        ; Text
-        AddElement(gadgets())
-        gadgets() = ButtonGadget(#PB_Any, count*160 + 5, 90, 140, 20, *mods()\name$)
-        SetGadgetData(gadgets(), *mods())
-        BindGadgetEvent(gadgets(), @dlcGadgetEvent())
-        
-        count + 1
-;         CloseGadgetList()
-        ; Size of scrollarea
-        SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerWidth, count*160)
-        SetGadgetAttribute(_gadgetDLC, #PB_ScrollArea_InnerHeight, 120)
-      EndIf
-    Next
-    CloseGadgetList()
+    windowMain::displayDLCs(*mods())
   EndProcedure
   
   
@@ -1512,10 +1462,22 @@ Module mods
     EndIf
     
     ; delete folder
-    targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    If *mod\isDLC
+      If *mod\tf_id$ = "usa_1"
+        debugger::Add("mods::remove() - ERROR - cannot remove usa_1 DLC")
+        ProcedureReturn #False
+      EndIf
+      targetDir$ = misc::Path(tf$+"/dlcs/"+id$+"/")
+    Else
+      targetDir$ = misc::Path(tf$+"/mods/"+id$+"/")
+    EndIf
     
     debugger::add("mods::remove() - delete {"+targetDir$+"} and all subfolders")
     DeleteDirectory(targetDir$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    
+    
+    ; special: if res folder files have been replaced: restore backup
+    ;- TODO
     
     ; finish removal
     

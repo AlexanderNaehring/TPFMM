@@ -1,3 +1,11 @@
+
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_windowInformation.pbi"
+XIncludeFile "module_windowSettings.pbi"
+XIncludeFile "module_ListIcon.pbi"
+XIncludeFile "module_updater.pbi"
+XIncludeFile "module_mods.h.pbi"
+
 DeclareModule windowMain
   EnableExplicit
   
@@ -24,15 +32,11 @@ DeclareModule windowMain
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
   
-  Global GadgetDLCTest ; only test
+  
+  Declare displayDLCs(Map *dlcs.mods::Mod())
+  Declare displayMods()
+  
 EndDeclareModule
-
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_windowInformation.pbi"
-XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_updater.pbi"
-XIncludeFile "module_mods.h.pbi"
 
 Module windowMain
 
@@ -52,7 +56,7 @@ Module windowMain
   Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
-  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove, GadgetScrollAreaDLCs
+  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
   
   ;- Timer
   Global TimerMainGadgets = 101
@@ -100,7 +104,7 @@ Module windowMain
     
     iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
     iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
-    ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 20 - 50) 
+    ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 20 - 50)
     ResizeGadget(GadgetLibraryMods, 0, 0, iwidth-220, iheight)
     
     ResizeGadget(GadgetFrameFilter, iwidth-215, 0, 210, 40)
@@ -118,8 +122,11 @@ Module windowMain
     ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
     
     ; ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
-    ResizeGadget(GadgetScrollAreaDLCs, 0, 0, iwidth, 140)
-    ResizeGadget(GadgetDLCTest, 10, 150, iwidth-20, 20)
+    ResizeGadget(GadgetDLCScrollAreaList, 0, 0, 140, iheight)
+    ResizeGadget(GadgetDLCName, 150, 5, iwidth-160, 40)
+    ; ResizeGadget(GadgetDLCInstall, iwidth-420, iheight-30, 200, 25)
+    ResizeGadget(GadgetDLCRemove, iwidth-210, iheight-30, 200, 25)
+    ResizeGadget(GadgetDLCScrollAreaAuthors, 150, 40, iwidth-160, iheight-40-40)
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
     ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
@@ -593,14 +600,23 @@ Module windowMain
     ; DLCs
     AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
     
-    GadgetScrollAreaDLCs = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 100, 100, 10, #PB_ScrollArea_Center)
+    GadgetDLCScrollAreaList = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_Flat)
+    SetGadgetColor(GadgetDLCScrollAreaList, #PB_Gadget_BackColor, RGB(255,255,255))
     CloseGadgetList()
-    GadgetDLCTest = TextGadget(#PB_Any, 0, 0, 0, 0, "", #PB_Text_Border)
-    
-    
+    GadgetDLCName = TextGadget(#PB_Any, 0, 0, 0, 0, "", #PB_Text_Center)
+    LoadFont(0, "", 18)
+    SetGadgetColor(GadgetDLCName, #PB_Gadget_FrontColor, RGB(131, 21, 85))
+    SetGadgetFont(GadgetDLCName, FontID(0))
     GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
     GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
+    GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_Flat)
+    SetGadgetColor(GadgetDLCScrollAreaAuthors, #PB_Gadget_BackColor, RGB(255,255,255))
+    TextGadget(#PB_Any, 0, 0, 0, 0, "") ; not used, just for "offset/padding" of gadgets inside of scroll area
+    CloseGadgetList()
+    HideGadget(GadgetDLCRemove, #True)
+    HideGadget(GadgetDLCName, #True)
+    HideGadget(GadgetDLCScrollAreaAuthors, #True)
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     CloseGadgetList()
@@ -675,7 +691,7 @@ Module windowMain
     ; register to mods module
     mods::registerMainWindow(id)
     mods::registerModGadget(GadgetLibraryMods)
-    mods::registerDLCGadget(GadgetScrollAreaDLCs)
+    mods::registerDLCGadget(GadgetDLCScrollAreaList)
     
     ; apply sizes
     resize()
@@ -729,5 +745,131 @@ Module windowMain
   Procedure getColumnWidth(column)
     ProcedureReturn GetGadgetItemAttribute(GadgetLibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
+  
+  
+  ; callbacks from mods module
+  
+  Procedure dlcGadgetEvent()
+    Protected *mod.mods::mod
+    Protected i, count, string$
+    Protected y
+    *mod = GetGadgetData(EventGadget())
+    debugger::add("windowMain::dlcGadgetEvent() - show mod info for mod "+*mod)
+    
+    Static NewList gadgetsDLCAuthors()
+    
+    HideGadget(GadgetDLCRemove, #True)
+    HideGadget(GadgetDLCName, #True)
+    HideGadget(GadgetDLCScrollAreaAuthors, #True)
+    ForEach gadgetsDLCAuthors()
+      If IsGadget(gadgetsDLCAuthors())
+        FreeGadget(gadgetsDLCAuthors())
+      EndIf
+    Next
+    ClearList(gadgetsDLCAuthors())
+    SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 0)
+    SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 0)
+    
+    If *mod
+      If *mod\tf_id$ = "usa_1"
+        SetGadgetText(GadgetDLCName, "USA DLC")
+        OpenGadgetList(GadgetDLCScrollAreaAuthors)
+        AddElement(gadgetsDLCAuthors())
+        gadgetsDLCAuthors() = TextGadget(#PB_Any, 10, 10, 440, 20, "Official DLC by Urban Games")
+        SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_FrontColor, RGB(131, 21, 85))
+        SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+        CloseGadgetList()
+        SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
+        SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 40)
+        
+      Else
+        SetGadgetText(GadgetDLCName, *mod\name$+" DLC")
+        y = 10
+        OpenGadgetList(GadgetDLCScrollAreaAuthors)
+        ForEach *mod\authors()
+          AddElement(gadgetsDLCAuthors())
+          If *mod\authors()\tfnetId
+            gadgetsDLCAuthors() = HyperLinkGadget(#PB_Any, 10, y, 90, 20, *mod\authors()\name$, RGB(131, 21, 85))
+          Else
+            gadgetsDLCAuthors() = TextGadget(#PB_Any, 10, y, 90, 20, *mod\authors()\name$)
+          EndIf
+          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_FrontColor, RGB(131, 21, 85))
+          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+          count = CountString(*mod\authors()\text$, ",")
+          For i = 1 To count+1
+            AddElement(gadgetsDLCAuthors())
+            gadgetsDLCAuthors() = TextGadget(#PB_Any, 110, y, 330, 20, Trim(StringField(*mod\authors()\text$, i, ",")))
+            SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+            y + 25
+          Next
+          AddElement(gadgetsDLCAuthors())
+          gadgetsDLCAuthors() = TextGadget(#PB_Any, 0, y, 460, 1, "")
+          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(65, 62, 57)) ; dark grey
+          
+          SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
+          SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, y)
+          y + 15
+        Next
+        CloseGadgetList()
+        
+        HideGadget(GadgetDLCRemove, #False)
+      EndIf
+      
+      HideGadget(GadgetDLCName, #False)
+      HideGadget(GadgetDLCScrollAreaAuthors, #False)
+    EndIf
+  EndProcedure
+  
+  Procedure displayDLCs(Map *dlcs.mods::Mod())
+    ; remove all old gadgets
+    Static NewList gadgetsSelectDLC()
+    Protected count, im
+    
+    ForEach gadgetsSelectDLC()
+      UnbindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent(), #PB_Event_LeftClick)
+      FreeGadget(gadgetsSelectDLC())
+    Next
+    ; display all DLCs
+    debugger::add("          Open gadgetlist "+GadgetDLCScrollAreaList)
+    OpenGadgetList(GadgetDLCScrollAreaList)
+    ForEach *dlcs()
+      If *dlcs()\isDLC
+        ; container gadgets unfortunately do not throw events :(
+        ; cannot use the container gadget as replacement for a complex button
+;         AddElement(gadgetsSelectDLC())
+;         gadgetsSelectDLC() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
+;         SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        ; Image
+        AddElement(gadgetsSelectDLC())
+        im = mods::getPreviewImage(*dlcs())
+        If IsImage(im)
+          im = ImageID(im)
+        Else
+          im = 0
+        EndIf
+        gadgetsSelectDLC() = ImageGadget(#PB_Any, 0, count*120, 120, 80, im)
+        SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
+        ; Text
+        AddElement(gadgetsSelectDLC())
+        gadgetsSelectDLC() = ButtonGadget(#PB_Any, 0, count*120+90, 120, 20, *dlcs()\name$)
+        SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
+        
+        count + 1
+;         CloseGadgetList()
+        ; Size of scrollarea
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerWidth, 120)
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerHeight, count*120)
+      EndIf
+    Next
+    CloseGadgetList()
+  EndProcedure
+  
+  
+  Procedure displayMods()
+    
+  EndProcedure
+  
   
 EndModule
