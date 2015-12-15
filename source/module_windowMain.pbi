@@ -610,7 +610,7 @@ Module windowMain
     ; GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     ; GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
     GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
-    GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_Flat)
+    GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_BorderLess)
     SetGadgetColor(GadgetDLCScrollAreaAuthors, #PB_Gadget_BackColor, RGB(255,255,255))
     TextGadget(#PB_Any, 0, 0, 0, 0, "") ; not used, just for "offset/padding" of gadgets inside of scroll area
     CloseGadgetList()
@@ -802,9 +802,12 @@ Module windowMain
             SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
             y + 25
           Next
+          
           AddElement(gadgetsDLCAuthors())
-          gadgetsDLCAuthors() = TextGadget(#PB_Any, 0, y, 460, 1, "")
-          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(65, 62, 57)) ; dark grey
+          gadgetsDLCAuthors() = CanvasGadget(#PB_Any, 0, y, 460, 1)
+          StartDrawing(CanvasOutput(gadgetsDLCAuthors()))
+          Box(0, 0, 460, 1, RGB(65, 62, 57)) ; dark grey
+          StopDrawing()
           
           SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
           SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, y)
