@@ -1927,6 +1927,7 @@ Module mods
   EndProcedure
   
   Procedure getPreviewImage(*mod.mod, original=#False)
+    debugger::add("mods::getPreviewImage("+*mod+", "+original+")")
     Static NewMap previewImages()
     Static NewMap previewImagesOriginal()
     
