@@ -292,7 +292,7 @@ Module windowMain
     CompilerElse
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
-                       updater::#VERSION$ + #CRLF$ +
+                       updater::VERSION$ + #CRLF$ +
                        "© 2014 – 2016 Alexander Nähring / Xanos" + #CRLF$ +
                        "Distributed on http://tfmm.xanos.eu/")
     CompilerEndIf
@@ -592,7 +592,7 @@ Module windowMain
     GadgetFrameInformation = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
     GadgetButtonInformation = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
     
-    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)-220, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, 0, 0, l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     AddGadgetColumn(GadgetLibraryMods, 1, l("main","author"), 90)
     AddGadgetColumn(GadgetLibraryMods, 2, l("main","category"), 90)
     AddGadgetColumn(GadgetLibraryMods, 3, l("main","version"), 60)
@@ -607,8 +607,8 @@ Module windowMain
     LoadFont(0, "", 18)
     SetGadgetColor(GadgetDLCName, #PB_Gadget_FrontColor, RGB(131, 21, 85))
     SetGadgetFont(GadgetDLCName, FontID(0))
-    GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
-    GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
+    ; GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
+    ; GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
     GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
     GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_Flat)
     SetGadgetColor(GadgetDLCScrollAreaAuthors, #PB_Gadget_BackColor, RGB(255,255,255))
