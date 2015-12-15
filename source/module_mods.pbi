@@ -926,6 +926,7 @@ Module mods
       If *mods()\aux\active
         MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
         debugger::Add("mods::new() - cancel new installation, mod already installed")
+        ;- TODO: maybe ask, if user wants to reinstall (reload archive file)
       Else
         debugger::Add("mods::new() - trigger install of previous mod")
         queue::add(queue::#QueueActionInstall, id$)
@@ -1431,15 +1432,19 @@ Module mods
     If FileSize(target$) = -2
       debugger::Add("mods::install() - {"+target$+"} already exists - assume already installed")
       *mod\aux\active = #True
-      displayMods()
-      ;- TODO Image Update: Check if easier way to only update images (new procedure: updateActiveIcons() just crawls through list and sets image ID)
-      If IsGadget(_gadgetMod)
-        For i = 0 To CountGadgetItems(_gadgetMod) -1
-          If ListIcon::GetListItemData(_gadgetMod, i) = *mod
-            ListIcon::SetListItemImage(_gadgetMod, i, ImageID(images::Images("yes")))
-            Break
-          EndIf
-        Next
+      If *mod\isDLC
+        displayDLCs()
+      Else
+        displayMods()
+        ;- TODO Image Update: Check if easier way to only update images (new procedure: updateActiveIcons() just crawls through list and sets image ID)
+        If IsGadget(_gadgetMod)
+          For i = 0 To CountGadgetItems(_gadgetMod) -1
+            If ListIcon::GetListItemData(_gadgetMod, i) = *mod
+              ListIcon::SetListItemImage(_gadgetMod, i, ImageID(images::Images("yes")))
+              Break
+            EndIf
+          Next
+        EndIf
       EndIf
       ProcedureReturn #True
     EndIf
@@ -1471,7 +1476,7 @@ Module mods
         debugger::add("          copy shader file: "+files$())
         If FileSize(main::TF$ + files$()) > 0
           ; file exists in res, backup first
-          If FileSize(backups$ + files$())
+          If FileSize(backups$ + files$()) > 0
             ; backup exists, do NOT backup again
           Else
             ; no backup there yet, backup original file
