@@ -117,7 +117,7 @@ Module mods
         While NextPackEntry(pack)
           entry$ = PackEntryName(pack)
           entry$ = misc::Path(GetPathPart(entry$), "/")+GetFilePart(entry$)
-          debugger::Add("mods::checkModFileZip() - {"+entry$+"}")
+          ; debugger::Add("mods::checkModFileZip() - {"+entry$+"}")
           If FindString(entry$, "res/") ; found a "res" subfolder, assume this mod is valid 
             ClosePack(pack)
             entry$ = GetFilePart(Left(entry$, FindString(entry$, "res/")-2)) ; entry = folder name (id)
@@ -132,6 +132,7 @@ Module mods
           EndIf
         Wend
       EndIf
+      ClosePack(pack)
     EndIf
     ProcedureReturn "false"
   EndProcedure
@@ -196,7 +197,7 @@ Module mods
   Procedure ExtractFilesZip(zip$, List files$(), dir$) ; extracts all Files$() (from all subdirs!) to given directory
     debugger::Add("mods::ExtractFilesZip("+zip$+", Files$(), "+dir$+")")
     Protected deb$ = "mods::ExtractFilesZip() - search for: "
-    ForEach Files$() : deb$ + files$()+", " : Next
+    ForEach files$() : deb$ + files$()+", " : Next
     debugger::Add(deb$)
     
     Protected zip, Entry$
@@ -216,14 +217,19 @@ Module mods
         EndIf
         
         entry$ = GetFilePart(entry$)
-        ForEach Files$()
+        ForEach files$()
           If LCase(Entry$) = LCase(Files$())
-            UncompressPackFile(zip, dir$ + Files$())
+            debugger::add("          extract "+entry$+" -> "+dir$ + files$())
+            If UncompressPackFile(zip, dir$ + files$()) = -1
+              debugger::add("          ERROR: failed to extract file!")
+            EndIf
             DeleteElement(Files$()) ; if file is extracted, delete from list
             Break ; ForEach
           EndIf
         Next
       Wend
+    Else
+      debugger::add("          ERROR: could not examine zip")
     EndIf
     ClosePack(zip)
     ProcedureReturn #True
@@ -443,8 +449,14 @@ Module mods
   EndProcedure
   
   Procedure getInfo(file$, *mod.mod, id$) ; extract info from new mod file$ (tfmm.ini, info.lua, ...)
-    debugger::Add("mods::loadInfo("+file$+", "+Str(*mod)+", "+id$+")")
-    Protected tmpDir$ = GetTemporaryDirectory()
+    debugger::Add("mods::getInfo("+file$+", "+Str(*mod)+", "+id$+")")
+    Protected tmpDir$ = misc::Path(GetTemporaryDirectory()+"/tfmm/")
+    misc::CreateDirectoryAll(tmpDir$)
+    
+    If FileSize(file$) <= 0
+      debugger::add("mods::GetModInfo() - ERROR: no file {"+file$+"}")
+      ProcedureReturn #False
+    EndIf
     
     ; read standard information
     With *mod
@@ -461,6 +473,11 @@ Module mods
     
     ForEach files$()
       DeleteFile(tmpDir$ + files$(), #PB_FileSystem_Force)
+    Next
+    ForEach files$()
+      If FileSize(files$()) >= 0
+        debugger::add("          ERROR: file "+files$()+" still present in temporary folder")
+      EndIf
     Next
     
     If Not ExtractFilesZip(file$, files$(), tmpDir$)
@@ -539,14 +556,14 @@ Module mods
       
       file$ = PackEntryName(zip)
       file$ = misc::Path(GetPathPart(file$), "/")+GetFilePart(file$) ; zip always uses "/"
-      debugger::Add("mods::extractZIP() - {"+file$+"}")
+      ; debugger::Add("mods::extractZIP() - {"+file$+"}")
       If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
         If FindString(file$, "res/") ; only extract files which are located in subfoldres of res/
           file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
-          ; adjust path delimiters to OS
           file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
           misc::CreateDirectoryAll(GetPathPart(path$ + file$))
-          If Not UncompressPackFile(zip, path$ + file$, PackEntryName(zip))
+          debugger::Add("          extract {"+file$+"}")
+          If UncompressPackFile(zip, path$ + file$) = -1
             debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
           EndIf
         ElseIf FindString(file$, "main.lua") Or
@@ -554,8 +571,9 @@ Module mods
                FindString(file$, "strings.lua") Or
                FindString(file$, "filesystem.lua") Or
                FindString(file$, "image_00.tga")
-          file$ = GetFilePart(file$)
-          If Not UncompressPackFile(zip, path$ + file$, PackEntryName(zip))
+          debugger::Add("          extract {"+file$+"}")
+          file$ = GetFilePart(file$) ; these files will be stored directly in the root folder of the mod
+          If UncompressPackFile(zip, path$ + file$) = -1
             debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + file$+"}")
           EndIf
         EndIf
@@ -744,6 +762,41 @@ Module mods
       EndIf
     EndIf
     ProcedureReturn #False
+  EndProcedure
+  
+  Procedure.s findArchive(path$)
+    Protected dir, entry$
+    debugger::add("mods::findArchive("+path$+")")
+    
+    path$ = misc::path(path$)
+    dir = ExamineDirectory(#PB_Any, path$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
+          Continue
+        EndIf
+        Select LCase(GetExtensionPart(DirectoryEntryName(dir)))
+          Case "zip"
+            entry$ = DirectoryEntryName(dir)
+            Break
+          Case "rar"
+            entry$ = DirectoryEntryName(dir)
+            Break
+          Case "tfmod"
+            entry$ = DirectoryEntryName(dir)
+            Break
+          Default
+            Continue
+        EndSelect
+      Wend
+      FinishDirectory(dir)
+    Else
+      debugger::add("          ERROR: cannot examine "+path$)
+    EndIf
+    If entry$
+      debugger::add("          -> "+entry$)
+    EndIf
+    ProcedureReturn entry$
   EndProcedure
   
   
@@ -990,7 +1043,7 @@ Module mods
     pLib$   = misc::Path(TF$ + "/TFMM/library/")
     pMods$  = misc::Path(TF$ + "/mods/")
     pDLCs$  = misc::Path(TF$ + "/dlcs/")
-    pTMP$   = GetTemporaryDirectory()
+    ; pTMP$   = GetTemporaryDirectory()
     
     queue::progressText(locale::l("progress","load"))
     queue::progressVal(0, 1) ; 0% progress
@@ -1171,26 +1224,29 @@ Module mods
         If *mod\aux\inLibrary
 ;           debugger::add("mods::loadList() - mod is in TFMM library")
           modFolder$  = misc::Path(pLib$ + id$)
+          ; file name was stored as "id.tfmod" with complete path for older versions
+          ; now, only store "filename" without path and filename = original name
+          If *mod\archive\name$ = ""
+            debugger::add("          ERROR: no filename known for archive in library, try to find zip or rar file")
+            *mod\archive\name$ = findArchive(misc::Path(pLib$ + id$ + "/"))
+            If *mod\archive\name$
+              debugger::add("          Archivename found and stored")
+            Else
+              Protected file$ = misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
+              If FileSize(file$)
+                *mod\archive\name$ = id$ + ".tfmod"
+              EndIf
+            EndIf
+          EndIf
+          
+          If *mod\archive\md5$ = "" And FileSize(misc::Path(pLib$+id$+"/") + *mod\archive\name$) > 0
+            *mod\archive\md5$ = FileFingerprint(misc::Path(pLib$+id$+"/") + *mod\archive\name$, #PB_Cipher_MD5)
+          EndIf
+          
           ; info should be stored in mods.json when file is in library
           ; if not? -> load again from mod file
           If *mod\name$ = "" Or Not *mod\aux\luaDate
             getInfo(modFolder$ + *mod\archive\name$, *mod, id$)
-          EndIf
-          ; FIXME
-          ;- FIXME/TODO: handle case when mod file (blabla.zip) is not stored
-          ; either try to find the zip/rar file in the current directory or delete mod from library
-          
-          ; file name was stored as "id.tfmod" with complete path
-          ; now, only store "filename" without path and filename = original name
-          If *mod\archive\name$ = ""
-            Protected file$ = misc::Path(pLib$ + id$ + "/") + id$ + ".tfmod"
-            If FileSize(file$)
-              *mod\archive\name$ = id$ + ".tfmod"
-            EndIf
-          EndIf
-          ;- TODO: check if file exists
-          If *mod\archive\md5$ = "" And FileSize(misc::Path(pLib$+id$+"/") + *mod\archive\name$) > 0
-            *mod\archive\md5$ = FileFingerprint(misc::Path(pLib$+id$+"/") + *mod\archive\name$, #PB_Cipher_MD5)
           EndIf
         Else
           ; If mod is not saved in library, no filename is required.
