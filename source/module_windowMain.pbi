@@ -839,6 +839,10 @@ Module windowMain
 ;         AddElement(gadgetsSelectDLC())
 ;         gadgetsSelectDLC() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
 ;         SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          AddElement(gadgetsSelectDLC())
+          gadgetsSelectDLC() = FrameGadget(#PB_Any, 0, count*130, 130, 120, "", #PB_Frame_Flat)
+        CompilerEndIf
         ; Image
         AddElement(gadgetsSelectDLC())
         im = mods::getPreviewImage(*dlcs())
@@ -847,20 +851,20 @@ Module windowMain
         Else
           im = 0
         EndIf
-        gadgetsSelectDLC() = ImageGadget(#PB_Any, 0, count*120, 120, 80, im)
+        gadgetsSelectDLC() = ImageGadget(#PB_Any, 5, count*130+5, 120, 80, im)
         SetGadgetData(gadgetsSelectDLC(), *dlcs())
         BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
         ; Text
         AddElement(gadgetsSelectDLC())
-        gadgetsSelectDLC() = ButtonGadget(#PB_Any, 0, count*120+90, 120, 20, *dlcs()\name$)
+        gadgetsSelectDLC() = ButtonGadget(#PB_Any, 5, count*130+90, 120, 25, *dlcs()\name$)
         SetGadgetData(gadgetsSelectDLC(), *dlcs())
         BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
         
         count + 1
 ;         CloseGadgetList()
         ; Size of scrollarea
-        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerWidth, 120)
-        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerHeight, count*120)
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerWidth, 130)
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerHeight, count*130)
       EndIf
     Next
     CloseGadgetList()
