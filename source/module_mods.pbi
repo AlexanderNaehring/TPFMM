@@ -1474,6 +1474,9 @@ Module mods
       ForEach files$()
         files$() = misc::path("/res/shaders/") + files$() ; only scanned the res/shaders folder, add path manually
         debugger::add("          copy shader file: "+files$())
+        Debug "res: " + main::TF$ + files$()
+        Debug "bak: " + backups$ + files$()
+        Debug "dlc: " + target$ + files$()
         If FileSize(main::TF$ + files$()) > 0
           ; file exists in res, backup first
           If FileSize(backups$ + files$()) > 0
@@ -1485,9 +1488,11 @@ Module mods
               debugger::add("          ERROR: cannot backup shader file: "+files$())
             EndIf
           EndIf
+        Else
+          ; file not present in res
         EndIf
         ; now copy file from dlc to res:
-        misc::CreateDirectoryAll(GetPathPart(target$ + files$()))
+        misc::CreateDirectoryAll(GetPathPart(main::TF$ + files$()))
         CopyFile(target$ + files$(), main::TF$ + files$())
         WritePreferenceString(files$(), FileFingerprint(main::TF$ + files$(), #PB_Cipher_MD5))
       Next
@@ -1587,18 +1592,20 @@ Module mods
       While NextPreferenceKey()
         file$ = PreferenceKeyName()
         If FileFingerprint(main::TF$ + file$, #PB_Cipher_MD5) = PreferenceKeyValue()
-          ; fingerprint identical -> replace file with backup
+          ; check if backup present
           If FileSize(backups$ + file$) > 0
+            ; backup file present
             debugger::add("          restore backup file: "+file$)
             DeleteFile(main::TF$ + file$)
             RenameFile(backups$ + file$, main::TF$ + file$)
           Else
             ; no backup file found!
-            debugger::add("          ERROR: cannot find backup file: "+file$)
+            debugger::add("          delete file (without backup): "+file$)
+            DeleteFile(main::TF$ + file$)
           EndIf
         Else
           ; fingerprint different -> file has been changed since install, do NOT overwrite with backup!
-          debugger::add("          WARNING: fingerprint missmatch, do not restore: "+file$)
+          debugger::add("          WARNING: fingerprint missmatch, do not touch: "+file$)
         EndIf
       Wend
     EndIf

@@ -521,6 +521,8 @@ Module windowMain
     
     If *mod\aux\active
       queue::add(queue::#QueueActionRemove, *mod\tf_id$)
+    Else
+      queue::add(queue::#QueueActionInstall, *mod\tf_id$)
     EndIf
   EndProcedure
   
