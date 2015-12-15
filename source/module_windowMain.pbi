@@ -512,6 +512,18 @@ Module windowMain
     SetActiveGadget(GadgetFilterMods)
   EndProcedure
   
+  Procedure GadgetDLCRemove()
+    Protected *mod.mods::mod
+    *mod = GetGadgetData(GadgetDLCRemove)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\active
+      queue::add(queue::#QueueActionRemove, *mod\tf_id$)
+    EndIf
+  EndProcedure
+  
   ; DRAG & DROP
   
   Procedure HandleDroppedFiles(Files$)
@@ -640,6 +652,8 @@ Module windowMain
     BindGadgetEvent(GadgetButtonInformation, @GadgetButtonInformation())
     BindGadgetEvent(GadgetFilterMods, @GadgetFilterMods(), #PB_EventType_Change)
     BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
+    ;
+    BindGadgetEvent(GadgetDLCRemove, @GadgetDLCRemove())
     
     ; Set window boundaries, timers, events
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -758,6 +772,7 @@ Module windowMain
     
     Static NewList gadgetsDLCAuthors()
     
+    SetGadgetData(GadgetDLCRemove, 0)
     HideGadget(GadgetDLCRemove, #True)
     HideGadget(GadgetDLCName, #True)
     HideGadget(GadgetDLCScrollAreaAuthors, #True)
@@ -782,6 +797,9 @@ Module windowMain
         SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
         SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 40)
         
+        SetGadgetData(GadgetDLCRemove, 0)
+        HideGadget(GadgetDLCRemove, #False)
+        DisableGadget(GadgetDLCRemove, #True)
       Else
         SetGadgetText(GadgetDLCName, *mod\name$+" DLC")
         y = 10
@@ -815,7 +833,9 @@ Module windowMain
         Next
         CloseGadgetList()
         
+        SetGadgetData(GadgetDLCRemove, *mod)
         HideGadget(GadgetDLCRemove, #False)
+        DisableGadget(GadgetDLCRemove, #False)
       EndIf
       
       HideGadget(GadgetDLCName, #False)
