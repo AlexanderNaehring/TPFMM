@@ -633,7 +633,7 @@ Module mods
       
     Wend
     unrar::RARCloseArchive(hRAR)
-  
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -1456,12 +1456,36 @@ Module mods
     
     ; special case: copy files to res?
     ; required for nordic dlc shaders
-    Protected shaderDLC$, shaderRES$
+    Protected backups$
     If *mod\tf_id$ = "nordic_1" And *mod\isDLC
       debugger::Add("mods::install() - ATTENTION: overwrite original shaders")
-      shaderDLC$ = misc::path(target$ + "/res/shaders/")
-      shaderRES$ = misc::path(main::TF$ + "/res/shaders/")
-      debugger::Add("          "+shaderDLC$+" -> "+shaderRES$)
+      OpenPreferences(misc::path(main::TF$ + "TFMM") + "files.list")
+      PreferenceGroup("nordic_1")
+      UseMD5Fingerprint()
+      backups$ = misc::path(main::TF$ + "TFMM/backups/")
+      Protected NewList files$()
+      misc::examineDirectoryRecusrive(misc::path(target$ + "/res/shaders/"), files$())
+      ForEach files$()
+        files$() = misc::path("/res/shaders/") + files$() ; only scanned the res/shaders folder, add path manually
+        debugger::add("          copy shader file: "+files$())
+        If FileSize(main::TF$ + files$()) > 0
+          ; file exists in res, backup first
+          If FileSize(backups$ + files$())
+            ; backup exists, do NOT backup again
+          Else
+            ; no backup there yet, backup original file
+            misc::CreateDirectoryAll(GetPathPart(backups$ + files$()))
+            If Not CopyFile(main::TF$ + files$(), backups$ + files$())
+              debugger::add("          ERROR: cannot backup shader file: "+files$())
+            EndIf
+          EndIf
+        EndIf
+        ; now copy file from dlc to res:
+        misc::CreateDirectoryAll(GetPathPart(target$ + files$()))
+        CopyFile(target$ + files$(), main::TF$ + files$())
+        WritePreferenceString(files$(), FileFingerprint(main::TF$ + files$(), #PB_Cipher_MD5))
+      Next
+      ClosePreferences()
     EndIf
     
     ; copy images
@@ -1485,13 +1509,17 @@ Module mods
     debugger::Add("mods::install() - finish installation...")
     *mod\aux\active = #True
     ;- TODO Image Update
-    If IsGadget(_gadgetMod)
-      For i = 0 To CountGadgetItems(_gadgetMod) -1
-        If ListIcon::GetListItemData(_gadgetMod, i) = *mod
-          ListIcon::SetListItemImage(_gadgetMod, i, ImageID(images::Images("yes")))
-          Break
-        EndIf
-      Next
+    If *mod\isDLC
+      displayDLCs()
+    Else
+      If IsGadget(_gadgetMod)
+        For i = 0 To CountGadgetItems(_gadgetMod) -1
+          If ListIcon::GetListItemData(_gadgetMod, i) = *mod
+            ListIcon::SetListItemImage(_gadgetMod, i, ImageID(images::Images("yes")))
+            Break
+          EndIf
+        Next
+      EndIf
     EndIf
     
     debugger::Add("mods::install() - finished")
@@ -1545,7 +1573,31 @@ Module mods
     
     
     ; special: if res folder files have been replaced: restore backup
-    ;- TODO
+    OpenPreferences(misc::path(main::TF$ + "TFMM") + "files.list")
+    If PreferenceGroup(*mod\tf_id$)
+      Protected file$, backups$
+      backups$ = misc::path(main::TF$ + "TFMM/backups/")
+      ExaminePreferenceKeys()
+      While NextPreferenceKey()
+        file$ = PreferenceKeyName()
+        If FileFingerprint(main::TF$ + file$, #PB_Cipher_MD5) = PreferenceKeyValue()
+          ; fingerprint identical -> replace file with backup
+          If FileSize(backups$ + file$) > 0
+            debugger::add("          restore backup file: "+file$)
+            DeleteFile(main::TF$ + file$)
+            RenameFile(backups$ + file$, main::TF$ + file$)
+          Else
+            ; no backup file found!
+            debugger::add("          ERROR: cannot find backup file: "+file$)
+          EndIf
+        Else
+          ; fingerprint different -> file has been changed since install, do NOT overwrite with backup!
+          debugger::add("          WARNING: fingerprint missmatch, do not restore: "+file$)
+        EndIf
+      Wend
+    EndIf
+    RemovePreferenceGroup(*mod\tf_id$)
+    ClosePreferences()
     
     ; finish removal
     
