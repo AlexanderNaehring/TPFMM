@@ -32,8 +32,8 @@
     CompilerEndIf
   EndMacro
   
-  Declare.s Path(path$, delimiter$ = "")
-  Declare.s Bytes(bytes.d)
+  Declare.s path(path$, delimiter$ = "")
+  Declare.s bytes(bytes.d)
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
@@ -46,7 +46,7 @@
   Declare encodeTGA(image, file$, depth =24)
   Declare packDirectory(dir$, file$)
   Declare checkTFPath(Dir$)
-  
+  Declare examineDirectoryRecusrive(root$, List files$(), path$="")
 EndDeclareModule
 
 Module misc
@@ -404,6 +404,32 @@ Module misc
           EndIf
         CompilerEndIf
       EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure examineDirectoryRecusrive(root$, List files$(), path$="")
+    Protected dir, name$
+    root$ = path(root$)
+    path$ = path(path$)
+    dir = ExamineDirectory(#PB_Any, path(root$ + path$), "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          AddElement(files$())
+          files$() = path$ + DirectoryEntryName(dir)
+        Else
+          name$ = DirectoryEntryName(dir)
+          If name$ = "." Or name$ = ".."
+            Continue
+          EndIf
+          examineDirectoryRecusrive(root$, files$(), path(path$ + name$))
+        EndIf
+      Wend
+      FinishDirectory(dir)
+      ProcedureReturn #True
+    Else
+      debugger::Add("          ERROR: could not examine directory "+path(root$ + path$))
     EndIf
     ProcedureReturn #False
   EndProcedure
