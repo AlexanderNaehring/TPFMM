@@ -56,7 +56,7 @@ Module windowMain
   Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
-  Global GadgetDLCLogo, GadgetDLCInstall, GadgetDLCRemove, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
+  Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
   
   ;- Timer
   Global TimerMainGadgets = 101
@@ -125,7 +125,7 @@ Module windowMain
     ResizeGadget(GadgetDLCScrollAreaList, 0, 0, 140, iheight)
     ResizeGadget(GadgetDLCName, 150, 5, iwidth-160, 40)
     ; ResizeGadget(GadgetDLCInstall, iwidth-420, iheight-30, 200, 25)
-    ResizeGadget(GadgetDLCRemove, iwidth-210, iheight-30, 200, 25)
+    ResizeGadget(GadgetDLCToggle, iwidth-210, iheight-30, 200, 25)
     ResizeGadget(GadgetDLCScrollAreaAuthors, 150, 40, iwidth-160, iheight-40-40)
     
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
@@ -512,9 +512,9 @@ Module windowMain
     SetActiveGadget(GadgetFilterMods)
   EndProcedure
   
-  Procedure GadgetDLCRemove()
+  Procedure GadgetDLCToggle()
     Protected *mod.mods::mod
-    *mod = GetGadgetData(GadgetDLCRemove)
+    *mod = GetGadgetData(GadgetDLCToggle)
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -623,12 +623,12 @@ Module windowMain
     SetGadgetFont(GadgetDLCName, FontID(0))
     ; GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
     ; GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
-    GadgetDLCRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
+    GadgetDLCToggle = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
     GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_BorderLess)
     SetGadgetColor(GadgetDLCScrollAreaAuthors, #PB_Gadget_BackColor, RGB(255,255,255))
     TextGadget(#PB_Any, 0, 0, 0, 0, "") ; not used, just for "offset/padding" of gadgets inside of scroll area
     CloseGadgetList()
-    HideGadget(GadgetDLCRemove, #True)
+    HideGadget(GadgetDLCToggle, #True)
     HideGadget(GadgetDLCName, #True)
     HideGadget(GadgetDLCScrollAreaAuthors, #True)
     
@@ -655,7 +655,7 @@ Module windowMain
     BindGadgetEvent(GadgetFilterMods, @GadgetFilterMods(), #PB_EventType_Change)
     BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
     ;
-    BindGadgetEvent(GadgetDLCRemove, @GadgetDLCRemove())
+    BindGadgetEvent(GadgetDLCToggle, @GadgetDLCToggle())
     
     ; Set window boundaries, timers, events
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -774,8 +774,8 @@ Module windowMain
     
     Static NewList gadgetsDLCAuthors()
     
-    SetGadgetData(GadgetDLCRemove, 0)
-    HideGadget(GadgetDLCRemove, #True)
+    SetGadgetData(GadgetDLCToggle, 0)
+    HideGadget(GadgetDLCToggle, #True)
     HideGadget(GadgetDLCName, #True)
     HideGadget(GadgetDLCScrollAreaAuthors, #True)
     ForEach gadgetsDLCAuthors()
@@ -799,9 +799,9 @@ Module windowMain
         SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
         SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 40)
         
-        SetGadgetData(GadgetDLCRemove, 0)
-        HideGadget(GadgetDLCRemove, #False)
-        DisableGadget(GadgetDLCRemove, #True)
+        SetGadgetData(GadgetDLCToggle, 0)
+        HideGadget(GadgetDLCToggle, #False)
+        DisableGadget(GadgetDLCToggle, #True)
       Else
         SetGadgetText(GadgetDLCName, *mod\name$+" DLC")
         y = 10
@@ -835,11 +835,16 @@ Module windowMain
         Next
         CloseGadgetList()
         
-        SetGadgetData(GadgetDLCRemove, *mod)
-        HideGadget(GadgetDLCRemove, #False)
-        DisableGadget(GadgetDLCRemove, #False)
+        SetGadgetData(GadgetDLCToggle, *mod)
+        HideGadget(GadgetDLCToggle, #False)
+        DisableGadget(GadgetDLCToggle, #False)
       EndIf
       
+      If *mod\aux\active
+        SetGadgetText(GadgetDLCToggle, locale::l("main","remove_dlc"))
+      Else
+        SetGadgetText(GadgetDLCToggle, locale::l("main","install_dlc"))
+      EndIf
       HideGadget(GadgetDLCName, #False)
       HideGadget(GadgetDLCScrollAreaAuthors, #False)
     EndIf
