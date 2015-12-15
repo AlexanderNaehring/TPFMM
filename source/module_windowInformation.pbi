@@ -154,12 +154,12 @@ Module windowInformation
       
       SetGadgetText(ModInformationChangeName, \name$)
       SetGadgetText(ModInformationChangeVersion, \aux\version$)
-  ;     SetGadgetText(ModInformationChangeCategory, \categoryDisplay$)
+      SetGadgetText(ModInformationChangeCategory, \aux\tags$)
       SetGadgetText(ModInformationChangeDownload, \url$)
       
       SetGadgetText(ModInformationDisplayName, \name$)
       SetGadgetText(ModInformationDisplayVersion, \aux\version$)
-  ;     SetGadgetText(ModInformationDisplayCategory, \categoryDisplay$)
+      SetGadgetText(ModInformationDisplayCategory, \aux\tags$)
       SetGadgetText(ModInformationDisplayDownload, tfnet_mod_url$)
       
       i = 0
@@ -200,11 +200,11 @@ Module windowInformation
         ; resize()
       Case #PB_Event_CloseWindow
         GadgetButtonInformationClose(#PB_EventType_LeftClick)
-  
+      
       Case #PB_Event_Menu
         Select EventMenu()
         EndSelect
-  
+      
       Case #PB_Event_Gadget
         Select EventGadget()
           Case ModInformationDisplayDownload
