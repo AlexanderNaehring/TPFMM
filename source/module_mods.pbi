@@ -1453,9 +1453,22 @@ Module mods
       EndIf
     EndIf
     
+    
+    ; special case: copy files to res?
+    ; required for nordic dlc shaders
+    Protected shaderDLC$, shaderRES$
+    If *mod\tf_id$ = "nordic_1" And *mod\isDLC
+      debugger::Add("mods::install() - ATTENTION: overwrite original shaders")
+      shaderDLC$ = misc::path(target$ + "/res/shaders/")
+      shaderRES$ = misc::path(main::TF$ + "/res/shaders/")
+      debugger::Add("          "+shaderDLC$+" -> "+shaderRES$)
+    EndIf
+    
     ; copy images
-    debugger::Add("mods::install() - copy images")
-    CopyFile(GetPathPart(source$) + "image_00.tga", target$ + "image_00.tga")
+    If FileSize(target$ + "image_00.tga") <= 0
+      debugger::Add("mods::install() - copy images")
+      CopyFile(GetPathPart(source$) + "image_00.tga", target$ + "image_00.tga")
+    EndIf
     
     
     ;- TODO change this
@@ -1463,11 +1476,10 @@ Module mods
     ; just extract files from zip and/or generate lua file manually
     ; same issue: handle multilanguage in lua -> create strings.lua and internally save all strings in a language map:
     ; map: strings.info() with info strucutre containing e.g. "name", "description", etc...
-    CopyFile(source$ + "info.lua", target$ + "info.lua")
-    CopyFile(source$ + "strings.lua", target$ + "strings.lua")
-    CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
-    CopyFile(source$ + "main.lua", target$ + "main.lua")
-    ;- TODO copy all images
+;     CopyFile(source$ + "info.lua", target$ + "info.lua")
+;     CopyFile(source$ + "strings.lua", target$ + "strings.lua")
+;     CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
+;     CopyFile(source$ + "main.lua", target$ + "main.lua")
     
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
