@@ -1006,12 +1006,13 @@ Module mods
     ; images
     debugger::Add("mosd::new() - convert images")
     Protected image$
-    image$ = dir$ + "header.jpg"
+    ; make sure at least the "image_00.tga" is in the library
+    image$ = dir$ + "preview.png"
     If FileSize(image$) > 0
-      convertToTGA(image$)
+      convertToTGA(image$) ; convert the file to the first "free" image_xx.tga
       DeleteFile(image$)
     EndIf
-    image$ = dir$ + "preview.png"
+    image$ = dir$ + "header.jpg"
     If FileSize(image$) > 0
       convertToTGA(image$)
       DeleteFile(image$)
@@ -2001,9 +2002,19 @@ Module mods
         EndIf
       ElseIf *mod\aux\inLibrary
         ;- TODO: check filenames of images! -> compare to "new()" procedure and set standard
-        image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
+        ; image_00.tga should always be present
+        image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "image_00.tga"
         If FileSize(image$) > 0
           im = LoadImage(#PB_Any, image$)
+        Else
+          ; otherwise try preview.png file
+          image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
+          If FileSize(image$) > 0
+            im = LoadImage(#PB_Any, image$)
+          Else
+            ; no image found
+            debugger::add("          ERROR: cannot find a preview image in ./TFMM/library/" + *mod\tf_id$)
+          EndIf
         EndIf
       EndIf
       
@@ -2030,4 +2041,5 @@ Module mods
       ProcedureReturn previewImages(*mod\tf_id$)
     EndIf
   EndProcedure
+  
 EndModule
