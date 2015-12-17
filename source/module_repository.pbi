@@ -1,4 +1,5 @@
 ﻿XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_aes.pbi"
 
 DeclareModule repository
   EnableExplicit
@@ -193,7 +194,7 @@ Module repository
     Select enc$
       Case "aes"
         debugger::add("repository::loadRepositoryMods() - using AES decryption")
-        Protected size, file, *in, *out
+        Protected size, file, *buffer
         size = FileSize(file$)
         file = ReadFile(#PB_Any, file$)
         If Not file
@@ -201,18 +202,12 @@ Module repository
           ProcedureReturn #False
         EndIf
         
-        *in  = AllocateMemory(size)
-        *out = AllocateMemory(size)
-        ReadData(file, *in, size)
+        *buffer = AllocateMemory(size)
+        ReadData(file, *buffer, size)
         CloseFile(file)
-        AESDecoder(*in, *out, size, ?key_aes_1, 256, #Null, #PB_Cipher_ECB)
-        json = CatchJSON(#PB_Any, *out, size)
-        FreeMemory(*in)
-        FreeMemory(*out)
-        DataSection
-          key_aes_1:  ; key hidden!
-          IncludeBinary "key.aes"
-        EndDataSection
+        aes::decrypt(*buffer, size)
+        json = CatchJSON(#PB_Any, *buffer, size)
+        FreeMemory(*buffer)
         
       Default
         json = LoadJSON(#PB_Any, file$)
@@ -259,7 +254,7 @@ Module repository
         ; aggregate tag list to string
         \tags_string$ = ""
         ForEach \tags$()
-          ; TODO add localization here (translate tags)
+          ;- TODO add localization here (translate tags)
           \tags_string$ + \tags$() + ", "
         Next
         If Len(\tags_string$) >= 2
