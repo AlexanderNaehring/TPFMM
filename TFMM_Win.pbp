@@ -8,11 +8,14 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-11-30 00:17" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-12-19 17:10" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+    </file>
+    <file name="source\module_aes.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -24,7 +27,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_locale.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_luaParser.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -36,7 +39,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_mods.pbi">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -48,13 +51,13 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_unrar.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_updater.pbi">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowInformation.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
@@ -63,7 +66,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
   </section>
   <section name="targets">
@@ -75,8 +78,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="2291"/>
-      <buildcount enable="1" value="138"/>
+      <compilecount enable="1" value="2697"/>
+      <buildcount enable="1" value="156"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="0,9,%BUILDCOUNT,%COMPILECOUNT"/>
