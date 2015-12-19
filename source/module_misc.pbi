@@ -364,7 +364,7 @@ Module misc
     EndIf
     ProcedureReturn result
   EndProcedure
-
+  
   Procedure checkTFPath(Dir$)
     ; #True   = path okay, Train Fever executable found and writing possible
     ; -1      = path okay, Train Fever executable found but cannot write
