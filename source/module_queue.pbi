@@ -15,7 +15,7 @@ DeclareModule queue
   EndEnumeration
   
   Structure dat
-    id$
+    string$
   EndStructure
   
   Declare add(action, val$ = "")
@@ -24,6 +24,9 @@ DeclareModule queue
   Declare progressRegister(window, gadgetP, gadgetT)
   Declare progressText(string$)
   Declare progressVal(val, max=-1)
+  
+  Declare progressStartWait()
+  Declare progressStopWait()
   
 EndDeclareModule
 
@@ -38,6 +41,7 @@ Module queue
   Global NewList queue.queue()
   Global progressW, progressG, progressT
   Global *thread
+  Global *progressWaitThread, progressWaitThreadFlag
   
   debugger::Add("queue::mQueue = CreateMutex()")
   mQueue = CreateMutex()
@@ -113,7 +117,7 @@ Module queue
           Case #QueueActionInstall
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
@@ -122,7 +126,7 @@ Module queue
           Case #QueueActionRemove
             debugger::Add("updateQueue() - #QueueActionRemove")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@remove(), dat)
               progressText(locale::l("progress","remove"))
               progressShow()
@@ -131,13 +135,16 @@ Module queue
           Case #QueueActionNew
             debugger::Add("updateQueue() - #QueueActionNew")
             If element\val$
-              mods::new(element\val$)
+              dat\string$ = element\val$
+              *thread = CreateThread(mods::@new(), dat)
+              progressText(locale::l("progress","new"))
+              progressShow()
             EndIf
             
           Case #QueueActionDelete
             debugger::Add("updateQueue() - #QueueActionDelete")
             If element\val$
-              dat\id$ = element\val$
+              dat\string$ = element\val$
               *thread = CreateThread(mods::@delete(), dat)
               progressText(locale::l("progress","delete"))
               progressShow()
@@ -156,8 +163,7 @@ Module queue
               If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
                 MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
               Else
-                dat\id$ = element\val$
-                *thread = CreateThread(mods::@convert(), dat)
+                *thread = CreateThread(mods::@convert(), #Null)
                 conversion = #True
                 progressText(locale::l("progress","convert"))
                 progressShow()
@@ -172,6 +178,34 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
+  
+  Procedure progressWaitThread(*dummy)
+    Static val
+    progressWaitThreadFlag = #True
+    While progressWaitThreadFlag
+      progressVal(val, 100)
+      val + 3
+      If val > 100
+        val = 0
+      EndIf
+      Delay(80)
+    Wend
+    progressVal(0, 1)
+  EndProcedure
+  
+  Procedure progressStartWait()
+    If Not IsThread(*progressWaitThread)
+      CreateThread(@progressWaitThread(), 0)
+    EndIf
+  EndProcedure
+  
+  Procedure progressStopWait()
+    progressWaitThreadFlag = #False
+    Delay(100)
+    If IsThread(*progressWaitThread)
+      KillThread(*progressWaitThread)
+    EndIf
+    *progressWaitThread = 0
+  EndProcedure
+  
 EndModule
-
-; EnableXP

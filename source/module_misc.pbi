@@ -32,12 +32,12 @@
     CompilerEndIf
   EndMacro
   
-  Declare.s Path(path$, delimiter$ = "")
-  Declare.s Bytes(bytes.d)
+  Declare.s path(path$, delimiter$ = "")
+  Declare.s bytes(bytes.d)
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
-  Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Raw)
+  Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
   Declare HexStrToMem(hex$, *memlen = 0)
   Declare.s MemToHexStr(*mem, memlen.i)
   Declare.s FileToHexStr(file$)
@@ -46,7 +46,7 @@
   Declare encodeTGA(image, file$, depth =24)
   Declare packDirectory(dir$, file$)
   Declare checkTFPath(Dir$)
-  
+  Declare examineDirectoryRecusrive(root$, List files$(), path$="")
 EndDeclareModule
 
 Module misc
@@ -148,7 +148,7 @@ Module misc
     ProcedureReturn #False
   EndProcedure
   
-  Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Raw)
+  Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
     If IsImage(im)
       Protected image.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
       im_w = ImageWidth(im)
@@ -267,29 +267,36 @@ Module misc
     If depth <> 24 And depth <> 32
       depth = 24
     EndIf
-    WriteByte(file, 0) 
-    WriteByte(file, 0) 
-    WriteByte(file, 2)
+    
+    ; 18 Bytes Header
+    ; Field 1 (1 Byte) ID length
     WriteByte(file, 0)
-    WriteByte(file, 0) 
+    ; Field 2 (1 Byte) Color map type
     WriteByte(file, 0)
-    WriteByte(file, 0) 
-    WriteByte(file, 16)
-    WriteByte(file, 0) 
+    ; Field 3 (1 Byte) Image Type
+    WriteByte(file, 2) ; 2 = uncompressed true-color
+    ; Field 4 (5 Bytes) Color Map
     WriteByte(file, 0)
     WriteByte(file, 0)
     WriteByte(file, 0)
-    WriteWord(file, ImageWidth(image))
-    WriteWord(file, ImageHeight(image))    
-    WriteByte(file, depth)
-    WriteByte(file, 0) ; 32 flipped
+    WriteByte(file, 0)
+    WriteByte(file, 0) ; bits per pixel
+    ; Field 6 (10 Bytes) Image specification
+    WriteWord(file, 0) ; X-Origin (2 Byte)
+    WriteWord(file, 0) ; X-Origin (2 Byte)
+    WriteWord(file, ImageWidth(image))  ; Width (2 Byte)
+    WriteWord(file, ImageHeight(image)) ; Height (2 Byte)
+    WriteByte(file, depth)  ; Depth (1 Byte)
+    WriteByte(file, 0)      ; Image descriptor (1 byte): bits 3-0 give the alpha channel depth, bits 5-4 give direction
+                            ; 32 = flipped
+    
     For y = ImageHeight(image) - 1 To 0 Step -1
       For x = 0 To ImageWidth(image) - 1
         color = Point(x, y)
         WriteByte(file, Blue(color))
         WriteByte(file, Green(color))
         WriteByte(file, Red(color))
-        If depth = 32
+        If depth = 32 ; Write Alpha Channel
           If ImageDepth(image) = 32
             WriteByte(file, 255-Alpha(color))
           Else
@@ -397,6 +404,32 @@ Module misc
           EndIf
         CompilerEndIf
       EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure examineDirectoryRecusrive(root$, List files$(), path$="")
+    Protected dir, name$
+    root$ = path(root$)
+    path$ = path(path$)
+    dir = ExamineDirectory(#PB_Any, path(root$ + path$), "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          AddElement(files$())
+          files$() = path$ + DirectoryEntryName(dir)
+        Else
+          name$ = DirectoryEntryName(dir)
+          If name$ = "." Or name$ = ".."
+            Continue
+          EndIf
+          examineDirectoryRecusrive(root$, files$(), path(path$ + name$))
+        EndIf
+      Wend
+      FinishDirectory(dir)
+      ProcedureReturn #True
+    Else
+      debugger::Add("          ERROR: could not examine directory "+path(root$ + path$))
     EndIf
     ProcedureReturn #False
   EndProcedure

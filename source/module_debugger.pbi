@@ -3,7 +3,7 @@
 DeclareModule debugger
   Declare SetLogFile(file$)
   Declare DeleteLogFile()
-  Declare Add(str$)
+  Declare add(str$)
 EndDeclareModule
 
 Module debugger
@@ -15,7 +15,7 @@ Module debugger
   Procedure DeleteLogFile()
     DeleteFile(LogFile$, #PB_FileSystem_Force)
   EndProcedure
-  Procedure Add(str$)
+  Procedure add(str$)
     Protected file
     Debug str$
     If LogFile$ <> ""

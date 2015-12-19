@@ -1,6 +1,9 @@
 ﻿; modified from http://www.purebasic.fr/english/viewtopic.php?f=40&t=56876
 
 XIncludeFile "module_misc.pbi"
+XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_aes.pbi"
 
 DeclareModule unrar
   #ERAR_SUCCESS             = 0
@@ -113,7 +116,7 @@ DeclareModule unrar
   Global RARSetPassword.RARSetPassword
   Global RARGetDllVersion.RARGetDllVersion
   
-  Declare OpenRar(File$, mode.i)
+  Declare OpenRar(File$, *mod, mode = #RAR_OM_EXTRACT)
 EndDeclareModule
 
 Module unrar
@@ -154,24 +157,129 @@ Module unrar
       MessageRequester("Error", "unrar.dll not found! RAR Files cannot be opened.")
     EndIf
     
-    Procedure OpenRar(File$, mode.i)
-      Debug "OpenRar("+File$+", "+Str(mode)+")"
+    
+    
+    Structure userdata
+      pwRequired.b
+      password$
+    EndStructure
+    
+    Procedure Callback(msg, *UserData.userdata, *P1, *P2)
+      Protected pw$
+      Select msg
+        Case #UCM_NEEDPASSWORDW ; unicode password callback
+          *UserData\pwRequired = #True
+          pw$ = *UserData\password$
+          If pw$ = ""
+            ProcedureReturn -1
+          EndIf
+          If Len(pw$) > *P2
+            pw$ = Left(pw$, *P2)
+          EndIf
+          PokeS(*P1, pw$) ; push password to password buffer of RAR library
+          ProcedureReturn 1 ; signal to rar library to try this password
+      EndSelect
+    EndProcedure
+    
+    Procedure OpenRar(File$, *mod.mods::mod, mode = #RAR_OM_EXTRACT)
+      debugger::add("unrar::OpenRar("+File$+", "+Str(mode)+")")
       Protected raropen.RAROpenArchiveDataEx
       Protected hRAR
+      Protected NewMap passwords(), password$, passwordFile
       
       CompilerIf #PB_Compiler_Unicode
         raropen\ArcNameW = @File$
       CompilerElse
         raropen\ArcName = @File$
       CompilerEndIf
+      
+      
+      ; try to open the archive without password first
+      Protected userdata.userdata
+      userdata\pwRequired = 0
+      userdata\password$  = ""
       raropen\OpenMode = mode
+      raropen\Callback = @Callback()
+      raropen\UserData = @userdata
+      
       hRAR = RAROpenArchive(raropen)
+      
+      If Not hRAR And Not userdata\pwRequired
+        debugger::add("          ERROR: Cannot open file!")
+        ProcedureReturn #False
+      EndIf
+      
+      If Not hRAR And userdata\pwRequired
+        debugger::add("          Password required")
+        ; password required, add passwords to try to a list
+        ; try password stored in mod info if available
+        If *mod\archive\password$
+          passwords(*mod\archive\password$) = 1
+        EndIf
+        
+        ; read passwords from password list file
+        passwordFile = OpenFile(#PB_Any, "passwords.list")
+        If passwordFile
+          While Not Eof(passwordFile)
+            passwords(ReadString(passwordFile)) = 1
+          Wend
+          CloseFile(passwordFile)
+        EndIf
+        *mod\archive\password$ = "" ; reset stored PW
+        
+        ; pre-defined passwords:
+        ; Nordic DLC:
+        passwords("E9sLDEP87impfL7PPIDSY4AH+Ym6LQ==") = 1
+        
+        ; try different passwords now
+        ForEach passwords()
+          userdata\password$ = aes::decryptString(MapKey(passwords()))
+          hRAR = RAROpenArchive(raropen)
+          If hRAR
+            Break
+          EndIf
+        Next
+        
+        If Not hRAR
+          debugger::add("          Ask user for password to open file")
+          ; ask user for password
+          Repeat
+            password$ = InputRequester("Archive password", "Please specify the password to open the archive", "", #PB_InputRequester_Password)
+            If password$ = ""
+              Break
+            EndIf
+            
+            userdata\password$ = password$
+            hRAR = RAROpenArchive(raropen)
+            If hRAR
+              Break
+            EndIf
+          Until hRAR Or password$ = ""
+        EndIf
+        
+        If hRAR
+          ; open successfull, store pw in mod info
+          *mod\archive\password$ = aes::encryptString(userdata\password$)
+          passwords(*mod\archive\password$) = 1
+          passwordFile = CreateFile(#PB_Any, "passwords.list")
+          If passwordFile
+            ForEach passwords()
+              WriteStringN(passwordFile, MapKey(passwords()))
+            Next
+            CloseFile(passwordFile)
+          EndIf
+        EndIf
+        
+        ProcedureReturn hRAR
+      EndIf
+      
       ProcedureReturn hRAR
     EndProcedure
     
+    
   CompilerElse ; Linux / Mac
     
-    Procedure OpenRar(File$, mode.i)
+    Procedure OpenRar(File$, *mod, mode = #RAR_OM_EXTRACT)
       ProcedureReturn #False
     EndProcedure
     

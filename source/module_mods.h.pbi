@@ -1,17 +1,28 @@
 ﻿DeclareModule mods
   EnableExplicit
   
+  Enumeration
+    #TYPE_ZIP
+    #TYPE_RAR
+  EndEnumeration
+  
+  Structure archive ;-- information about the archive
+    name$             ; filename of archive
+    md5$              ; md5 file fingerprint of archive file
+;     type.i            ; #TYPE_ZIP or #TYPE_RAR
+    password$         ; password used for decrypting the archive
+  EndStructure
+  
   Structure aux     ;-- additional information about mod
-    version$          ; version as string
-    authors$          ; authors as string
-    tfnet_author_id$  ; author ids on tf|net as string
-    tags$             ; tags as string
+    version$          ; version as string: major.minor
+    authors$          ; authors as string: author1, author2, author3, ...
+    tfnet_author_id$  ; author ids on tf|net as string: id1, id2, id3, ...
+    tags$             ; tags as string: tag1, tag2, tag3, ...
     
-    archive$          ; filename of mod archive (zip/rar/...)
-    archiveMD5$       ; md5 of mod archive
     active.i          ; true, if mod installed (new or old system)
     inLibrary.i       ; true, if mod is in TFMM library
     luaDate.i         ; date of info.lua (reload info when newer version available)
+    installDate.i     ; date of first encounter of this file (added to TFMM)
   EndStructure
   
   Structure author  ;-- information about author
@@ -22,7 +33,7 @@
     tfnetId.i         ; user ID (number) on train-fever.net
   EndStructure
   
-  Structure mod           ;-- information about mod
+  Structure mod           ;-- information about mod/dlc
     tf_id$                  ; unique id for Train Fever: author_name_version
     name$                   ; name of mod
     minorVersion.i          ; latter part of version number
@@ -37,10 +48,12 @@
     List dependencies$()    ; list of required mods (tf_id)
     url$                    ; online information about mod
     
-    isDLC.b                 ; true (1) if mod is a DLC and to be installed to "dlc" directory
+    isDLC.b                 ; true (1) if mod is a DLC and has to be installed to "dlc" directory
     aux.aux                 ; additional information
+    archive.archive         ; archive file, type and handle
   EndStructure
   
+  Declare registerMainWindow(window)
   Declare registerModGadget(gadget)
   Declare registerDLCGadget(gadget)
   
@@ -54,11 +67,16 @@
   Declare generateID(*mod.mod, id$ = "")
   Declare.s getLUA(*mod.mod)
   
-  Declare new(file$)      ; read mod pack from any location, extract info
+  Declare new(*data)      ; read mod pack from any location, extract info
   Declare delete(*data)   ; delete mod from library
   
   Declare install(*data)  ; add mod to TF
   Declare remove(*data)   ; remove mod from TF
   
   Declare exportList(all=#False)
+  
+  Declare displayMods(filter$="")
+  Declare displayDLCs()
+  
+  Declare getPreviewImage(*mod.mod, original=#False)
 EndDeclareModule

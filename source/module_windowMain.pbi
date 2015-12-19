@@ -1,3 +1,11 @@
+
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_windowInformation.pbi"
+XIncludeFile "module_windowSettings.pbi"
+XIncludeFile "module_ListIcon.pbi"
+XIncludeFile "module_updater.pbi"
+XIncludeFile "module_mods.h.pbi"
+
 DeclareModule windowMain
   EnableExplicit
   
@@ -23,13 +31,12 @@ DeclareModule windowMain
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
+  
+  
+  Declare displayDLCs(Map *dlcs.mods::Mod())
+  Declare displayMods()
+  
 EndDeclareModule
-
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_windowInformation.pbi"
-XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_updater.pbi"
 
 Module windowMain
 
@@ -42,11 +49,16 @@ Module windowMain
     #MenuItem_Information
   EndEnumeration
   
-  ; gadgets
-  Global GadgetNewMod, GadgetHomepage, GadgetStartGame, GadgetImageLogo, GadgetDelete, GadgetInstall, GadgetRemove, GadgetImageHeader, TextGadgetVersion, GadgetButtonInformation, FrameGadget, FrameGadget2, GadgetMainPanel
-  Global LibraryMods, LibraryDLCs
+  ;- Gadgets
+  Global NewMap gadgets()
+  Global GadgetImageHeader
+  Global GadgetNewMod, GadgetHomepage, GadgetButtonStartGame, GadgetVersionText
+  Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
+  Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
+  Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
+  Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
   
-  ; timer
+  ;- Timer
   Global TimerMainGadgets = 101
   
   ; other stuff
@@ -56,23 +68,23 @@ Module windowMain
   Declare resize()
   Declare updateGUI()
   
+  Declare MenuItemSettings()
+  Declare MenuItemHomepage()
+  Declare MenuItemLicense()
+  Declare MenuItemExportAll()
+  Declare MenuItemUpdate()
+  Declare MenuItemExportActivated()
   
-  Declare MenuItemHomepage(Event)
-  Declare MenuItemSettings(Event)
-  Declare MenuItemLicense(Event)
-  Declare GadgetNewMod(Event)
-  Declare MenuItemExportAll(Event)
-  Declare MenuItemUpdate(Event)
-  Declare MenuItemExportActivated(Event)
-  Declare GadgetButtonDelete(EventType)
-  Declare GadgetLibrary(EventType)
-  Declare GadgetImageMain(EventType)
-  Declare GadgetButtonInformation(EventType)
-  Declare GadgetNewMod(EventType)
-  Declare GadgetButtonStartGame(EventType)
-  Declare GadgetButtonTrainFeverNetDownloads(EventType)
-  Declare GadgetButtonInstall(EventType)
-  Declare GadgetButtonRemove(EventType)
+  Declare GadgetNewMod()
+  Declare GadgetButtonDelete()
+  Declare GadgetLibraryMods()
+  Declare GadgetImageMain()
+  Declare GadgetButtonInformation()
+  Declare GadgetNewMod()
+  Declare GadgetButtonStartGame()
+  Declare GadgetButtonTrainFeverNetDownloads()
+  Declare GadgetButtonInstall()
+  Declare GadgetButtonRemove()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -80,25 +92,44 @@ Module windowMain
   
   
   Procedure resize()
-    Protected width, height
+    Protected width, height, iwidth, iheight
     width = WindowWidth(id)
     height = WindowHeight(id)
+    ; height - MenuHeight()?
+    
     ResizeGadget(GadgetNewMod, 10, height - 55, 120, 25)
     ResizeGadget(GadgetHomepage, 140, height - 55, 120, 25)
-    ResizeGadget(GadgetStartGame, 270, height - 55, width - 500, 25)
-    ResizeGadget(GadgetImageLogo, width - 220, 15, 210, 118)
-    ResizeGadget(GadgetDelete, width - 210, 240, 190, 30)
-    ResizeGadget(GadgetInstall, width - 210, 160, 190, 30)
-    ResizeGadget(GadgetMainPanel, 10, 10, width - 240, height - misc::max(MenuHeight(), 20) - 50) ; height - MenuHeight() - 50
-    ResizeGadget(LibraryMods, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight))
-    ResizeGadget(GadgetRemove, width - 210, 200, 190, 30)
-    ResizeGadget(GadgetImageHeader, 0, 0, width - 0, 8)
-    ResizeGadget(TextGadgetVersion, width - 220, height - 50, 210, 20)
-    ResizeGadget(GadgetButtonInformation, width - 210, 310, 190, 30)
-    ResizeGadget(FrameGadget, width - 220, 140, 210, 140)
-    ResizeGadget(FrameGadget2, width - 220, 290, 210, 60)
+    ResizeGadget(GadgetButtonStartGame, 270, height - 55, width - 500, 25)
+    ResizeGadget(GadgetVersionText, width - 220, height - 50, 210, 20)
     
-    ResizeImage(images::Images("headermain"), GadgetWidth(GadgetImageHeader), GadgetHeight(GadgetImageHeader), #PB_Image_Raw)
+    iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
+    iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
+    ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 20 - 50)
+    ResizeGadget(GadgetLibraryMods, 0, 0, iwidth-220, iheight)
+    
+    ResizeGadget(GadgetFrameFilter, iwidth-215, 0, 210, 40)
+    ResizeGadget(GadgetFilterMods, iwidth-210, 15, 175, 20)
+    ResizeGadget(GadgetResetFilterMods, iwidth-30, 15, 20, 20)
+    
+    ResizeGadget(GadgetImageLogo, iwidth - 215, 45, 210, 118)
+    
+    ResizeGadget(GadgetFrameManagement, iwidth - 215, 165, 210, 120)
+    ResizeGadget(GadgetButtonInstall, iwidth - 210, 180, 200, 30)
+    ResizeGadget(GadgetButtonRemove, iwidth - 210, 215, 200, 30)
+    ResizeGadget(GadgetButtonDelete, iwidth - 210, 250, 200, 30)
+    
+    ResizeGadget(GadgetFrameInformation, iwidth - 215, 290, 210, 50)
+    ResizeGadget(GadgetButtonInformation, iwidth - 210, 305, 200, 30)
+    
+    ; ResizeGadget(GadgetLibraryDLCs, 0, 0, iwidth-400, 80)
+    ResizeGadget(GadgetDLCScrollAreaList, 0, 0, 140, iheight)
+    ResizeGadget(GadgetDLCName, 150, 5, iwidth-160, 40)
+    ; ResizeGadget(GadgetDLCInstall, iwidth-420, iheight-30, 200, 25)
+    ResizeGadget(GadgetDLCToggle, iwidth-210, iheight-30, 200, 25)
+    ResizeGadget(GadgetDLCScrollAreaAuthors, 150, 40, iwidth-160, iheight-40-40)
+    
+    ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
+    ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
   EndProcedure
   
@@ -114,8 +145,8 @@ Module windowMain
     selectedActive = 0
     selectedInactive = 0
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
       If Not *mod
         Continue
       EndIf
@@ -124,7 +155,7 @@ Module windowMain
       Else
         countInactive + 1
       EndIf
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
         SelectedMod = i
         If *mod\aux\active
           selectedActive + 1
@@ -134,31 +165,31 @@ Module windowMain
       EndIf
     Next
     
-    SelectedMod =  GetGadgetState(LibraryMods)
+    SelectedMod =  GetGadgetState(GadgetLibraryMods)
     If SelectedMod = -1 ; if nothing is selected -> disable buttons
-      DisableGadget(GadgetInstall, #True)
-      DisableGadget(GadgetRemove, #True)
-      DisableGadget(GadgetDelete, #True)
+      DisableGadget(GadgetButtonInstall, #True)
+      DisableGadget(GadgetButtonRemove, #True)
+      DisableGadget(GadgetButtonDelete, #True)
       DisableGadget(GadgetButtonInformation, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_delete, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Information, #True)
     Else
-      DisableGadget(GadgetDelete, #False) ; delete is always possible!
+      DisableGadget(GadgetButtonDelete, #False) ; delete is always possible!
       DisableMenuItem(MenuLibrary, #MenuItem_delete, #False)
       If selectedActive > 0 ; if at least one of the mods is active
-        DisableGadget(GadgetRemove, #False)
+        DisableGadget(GadgetButtonRemove, #False)
         DisableMenuItem(MenuLibrary, #MenuItem_Remove, #False)
       Else  ; if no mod is active 
-        DisableGadget(GadgetRemove, #True)
+        DisableGadget(GadgetButtonRemove, #True)
         DisableMenuItem(MenuLibrary, #MenuItem_Remove, #True)
       EndIf
       If selectedInactive > 0 ; if at least one of the mods is not active
-        DisableGadget(GadgetInstall, #False)
+        DisableGadget(GadgetButtonInstall, #False)
         DisableMenuItem(MenuLibrary, #MenuItem_Install, #False)
       Else ; if none of the selected mods is inactive
-        DisableGadget(GadgetInstall, #True)  ; disable activate button
+        DisableGadget(GadgetButtonInstall, #True)  ; disable activate button
         DisableMenuItem(MenuLibrary, #MenuItem_Install, #True)
       EndIf
       
@@ -171,24 +202,24 @@ Module windowMain
       EndIf
       
       If selectedActive + selectedInactive > 1
-        SetGadgetText(GadgetDelete, locale::l("main","delete_pl"))
+        SetGadgetText(GadgetButtonDelete, locale::l("main","delete_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_delete, locale::l("main","delete_pl"))
       Else
-        SetGadgetText(Gadgetdelete, locale::l("main","delete"))
+        SetGadgetText(GadgetButtonDelete, locale::l("main","delete"))
         SetMenuItemText(MenuLibrary, #MenuItem_delete, locale::l("main","delete"))
       EndIf
       If selectedActive > 1
-        SetGadgetText(GadgetRemove, locale::l("main","remove_pl"))
+        SetGadgetText(GadgetButtonRemove, locale::l("main","remove_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_Remove, locale::l("main","remove_pl"))
       Else
-        SetGadgetText(GadgetRemove, locale::l("main","remove"))
+        SetGadgetText(GadgetButtonRemove, locale::l("main","remove"))
         SetMenuItemText(MenuLibrary, #MenuItem_Remove, locale::l("main","remove"))
       EndIf
       If selectedInactive > 1
-        SetGadgetText(GadgetInstall, locale::l("main","install_pl"))
+        SetGadgetText(GadgetButtonInstall, locale::l("main","install_pl"))
         SetMenuItemText(MenuLibrary, #MenuItem_Install, locale::l("main","install_pl"))
       Else
-        SetGadgetText(GadgetInstall, locale::l("main","install"))
+        SetGadgetText(GadgetButtonInstall, locale::l("main","install"))
         SetMenuItemText(MenuLibrary, #MenuItem_Install, locale::l("main","install"))
       EndIf
     EndIf
@@ -196,54 +227,30 @@ Module windowMain
     If selectedActive + selectedInactive = 1
       ; one mod selected
       ; display image
-      *mod = ListIcon::GetListItemData(LibraryMods, SelectedMod)
-      If Not IsImage(PreviewImages(*mod\tf_id$)) ; if image is not yet loaded
-        Protected im.i, image$
-        
-        If *mod\aux\active
-          image$ = misc::Path(main::TF$ + "mods/" + *mod\tf_id$) + "image_00.tga"
-          If FileSize(image$) > 0
-            im = LoadImage(#PB_Any, image$)
-          EndIf
-        ElseIf *mod\aux\inLibrary
-          image$ = misc::Path(main::TF$ + "TFMM/library/" + *mod\tf_id$) + "preview.png"
-          If FileSize(image$) > 0
-            im = LoadImage(#PB_Any, image$)
-          EndIf
-        EndIf
-        
-        ; if load was successfull
-        If IsImage(im)
-          im = misc::ResizeCenterImage(im, GadgetWidth(GadgetImageLogo), GadgetHeight(GadgetImageLogo), #PB_Image_Smooth)
-          If IsImage(im)
-            PreviewImages(*mod\tf_id$) = im
-          EndIf
-        EndIf
-      EndIf
-      ; if image is loaded now
-      If IsImage(PreviewImages(*mod\tf_id$))
+      *mod = ListIcon::GetListItemData(GadgetLibraryMods, SelectedMod)
+      
+      Protected im
+      im = mods::getPreviewImage(*mod)
+      If IsImage(im)
         ; display image
-        If GetGadgetState(GadgetImageLogo) <> ImageID(PreviewImages(*mod\tf_id$))
-          debugger::Add("ImageLogo: Display custom image")
-          SetGadgetState(GadgetImageLogo, ImageID(PreviewImages(*mod\tf_id$)))
+        If GetGadgetState(GadgetImageLogo) <> ImageID(im)
+          SetGadgetState(GadgetImageLogo, ImageID(im))
         EndIf
       Else
         ; else: display normal logo
         If GetGadgetState(GadgetImageLogo) <> ImageID(images::Images("logo"))
-          debugger::Add("ImageLogo: Display tf|net logo instead of custom image")
           SetGadgetState(GadgetImageLogo, ImageID(images::Images("logo")))
         EndIf
       EndIf
     Else
       If GetGadgetState(GadgetImageLogo) <> ImageID(images::Images("logo"))
-        debugger::Add("ImageLogo: Display tf|net logo")
         SetGadgetState(GadgetImageLogo, ImageID(images::Images("logo")))
       EndIf
     EndIf
   EndProcedure
   
   ;-------------------------------------------------
-  ; TIMER
+  ;- TIMER
   
   Procedure TimerMain()
     Static LastDir$ = ""
@@ -252,7 +259,7 @@ Module windowMain
       LastDir$ = main::TF$
       If misc::checkTFPath(main::TF$) <> #True
         main::ready = #False  ; flag for mod management
-        MenuItemSettings(0)
+        MenuItemSettings()
       EndIf
     EndIf
     
@@ -260,49 +267,54 @@ Module windowMain
     
   EndProcedure
   
-  ; MENU
+  ;- MENU
   
-  Procedure MenuItemHomepage(event)
+  Procedure MenuItemHomepage()
     misc::openLink("http://goo.gl/utB3xn") ; Download Page TFMM (Train-Fever.net)
   EndProcedure
   
-  Procedure MenuItemUpdate(event)
+  Procedure MenuItemNewMod()
+    GadgetNewMod()
+  EndProcedure
+  
+  Procedure MenuItemUpdate()
     CreateThread(updater::@checkUpdate(), 0)
   EndProcedure
   
-  Procedure MenuItemLicense(event)
+  Procedure MenuItemLicense()
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
                        updater::VERSION$ + #CRLF$ +
-                       "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                       "© 2014 – 2016 Alexander Nähring / Xanos" + #CRLF$ +
                        "Distributed on http://tfmm.xanos.eu/" +  #CRLF$ +
                        "unrar © Alexander L. Roshal")
     CompilerElse
       MessageRequester("License",
                        "Train Fever Mod Manager" + #CRLF$ +
-                       updater::#VERSION$ + #CRLF$ +
-                       "© 2014 – 2015 Alexander Nähring / Xanos" + #CRLF$ +
+                       updater::VERSION$ + #CRLF$ +
+                       "© 2014 – 2016 Alexander Nähring / Xanos" + #CRLF$ +
                        "Distributed on http://tfmm.xanos.eu/")
     CompilerEndIf
   EndProcedure
   
-  Procedure MenuItemSettings(event) ; open settings window
+  Procedure MenuItemSettings() ; open settings window
     Protected locale$
     windowSettings::show()
   EndProcedure
   
-  Procedure MenuItemExportAll(event)
+  Procedure MenuItemExportAll()
     mods::exportList(#True)
   EndProcedure
   
-  Procedure MenuItemExportActivated(event)
+  Procedure MenuItemExportActivated()
     mods::exportList()
   EndProcedure
-
-  ; GADGETS
+  
+  
+  ;- GADGETS
       
-  Procedure GadgetNewMod(event)
+  Procedure GadgetNewMod()
     Protected file$
     If FileSize(main::TF$) <> -2
       ProcedureReturn #False
@@ -316,15 +328,15 @@ Module windowMain
     Wend
   EndProcedure
 
-  Procedure GadgetButtonInstall(event)
+  Procedure GadgetButtonInstall()
     debugger::Add("GadgetButtonInstall")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         If Not *mod\aux\active
           *last = *mod
           count + 1
@@ -343,9 +355,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             If Not *mod\aux\active
               queue::add(queue::#QueueActionInstall, *mod\tf_id$)
             EndIf
@@ -355,15 +367,15 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonRemove(event)
+  Procedure GadgetButtonRemove()
     debugger::Add("GadgetButtonRemove")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         With *mod
           If \aux\active
             *last = *mod
@@ -384,9 +396,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             With *mod
               If \aux\active
                 queue::add(queue::#QueueActionRemove, *mod\tf_id$)
@@ -398,15 +410,15 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonDelete(event)
+  Procedure GadgetButtonDelete()
     debugger::Add("GadgetButtonDelete")
     Protected *mod.mods::mod, *last.mods::mod
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(LibraryMods) - 1
-      If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(LibraryMods, i)
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
         *last = *mod
         count + 1
       EndIf
@@ -423,9 +435,9 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(LibraryMods) - 1
-          If GetGadgetItemState(LibraryMods, i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(LibraryMods, i)
+        For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+          If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
+            *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             If *mod\aux\active
               queue::add(queue::#QueueActionRemove, *mod\tf_id$)
             EndIf
@@ -436,51 +448,52 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetLibrary(event)
+  Procedure GadgetLibraryMods()
     Protected *mod.mods::mod
-    Protected position
+    Protected position, event
     
     updateGUI()
     
-    If event = #PB_EventType_LeftDoubleClick
-      GadgetButtonInformation(#PB_EventType_LeftClick)
-    ElseIf event = #PB_EventType_RightClick
-      DisplayPopupMenu(MenuLibrary, WindowID(windowMain::id))
-    EndIf
+    Select EventType()
+      Case #PB_EventType_LeftDoubleClick
+        GadgetButtonInformation()
+      Case #PB_EventType_RightClick
+        DisplayPopupMenu(MenuLibrary, WindowID(windowMain::id))
+    EndSelect
   EndProcedure
   
-  Procedure GadgetButtonStartGame(event)
+  Procedure GadgetButtonStartGame()
     misc::openLink("steam://run/304730/")
   EndProcedure
   
-  Procedure GadgetButtonTrainFeverNet(event)
+  Procedure GadgetButtonTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetButtonTrainFeverNetDownloads(event)
+  Procedure GadgetButtonTrainFeverNetDownloads()
     misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetImageMain(event)
+  Procedure GadgetImageMain()
+    Protected event = EventType()
     If event = #PB_EventType_LeftClick
       If GetGadgetState(GadgetImageLogo) = ImageID(images::Images("logo"))
-        GadgetButtonTrainFeverNet(event)
+        GadgetButtonTrainFeverNet()
       EndIf
     EndIf
   EndProcedure
   
-  ; TODO move information handler to information module, only call this module from here
-  Procedure GadgetButtonInformation(event)
+  Procedure GadgetButtonInformation()
     Protected *mod.mods::mod
     Protected SelectedMod, i, Gadget
     Protected tfnet_mod_url$
     
     ; init
-    SelectedMod = GetGadgetState(LibraryMods)
+    SelectedMod = GetGadgetState(GadgetLibraryMods)
     If SelectedMod = -1
       ProcedureReturn #False
     EndIf
-    *mod = ListIcon::GetListItemData(LibraryMods, SelectedMod)
+    *mod = ListIcon::GetListItemData(GadgetLibraryMods, SelectedMod)
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -489,7 +502,30 @@ Module windowMain
     windowInformation::setMod(*mod)
     ProcedureReturn #True
   EndProcedure
-
+  
+  Procedure GadgetFilterMods()
+    mods::displayMods(GetGadgetText(GadgetFilterMods))
+  EndProcedure
+  
+  Procedure GadgetResetFilterMods()
+    SetGadgetText(GadgetFilterMods, "")
+    SetActiveGadget(GadgetFilterMods)
+  EndProcedure
+  
+  Procedure GadgetDLCToggle()
+    Protected *mod.mods::mod
+    *mod = GetGadgetData(GadgetDLCToggle)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\active
+      queue::add(queue::#QueueActionRemove, *mod\tf_id$)
+    Else
+      queue::add(queue::#QueueActionInstall, *mod\tf_id$)
+    EndIf
+  EndProcedure
+  
   ; DRAG & DROP
   
   Procedure HandleDroppedFiles(Files$)
@@ -524,8 +560,8 @@ Module windowMain
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportListActivated)
     AddKeyboardShortcut(id, #PB_Shortcut_Alt | #PB_Shortcut_E, #MenuItem_ExportListAll)
-    AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_H, #MenuItem_Homepage)
-    AddKeyboardShortcut(id, #PB_Shortcut_Control | #PB_Shortcut_U, #MenuItem_Update)
+    AddKeyboardShortcut(id, #PB_Shortcut_F1, #MenuItem_Homepage)
+    AddKeyboardShortcut(id, #PB_Shortcut_F5, #MenuItem_Update)
     
     UseModule locale ; import locale namespace for shorthand "l()" access
     
@@ -542,49 +578,98 @@ Module windowMain
     MenuItem(#MenuItem_ExportListAll, l("menu","mod_export_all") + Chr(9) + "Alt + E")
     CloseSubMenu()
     MenuTitle(l("menu","about"))
-    MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "Ctrl + H")
-    MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "Ctrl + U")
+    MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
+    MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "F5")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
-    GadgetMainPanel = PanelGadget(#PB_Any, 10, 10, 510, 410)
-    AddGadgetItem(GadgetMainPanel, -1, l("menu","mods"))
-    LibraryMods = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
-    AddGadgetColumn(LibraryMods, 1, l("main","author"), 90)
-    AddGadgetColumn(LibraryMods, 2, l("main","category"), 90)
-    AddGadgetColumn(LibraryMods, 3, l("main","version"), 60)
+    BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
+    BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
+    BindMenuEvent(0, #MenuItem_AddMod, @MenuItemNewMod())
+    BindMenuEvent(0, #MenuItem_ExportListActivated, @MenuItemExportActivated())
+    BindMenuEvent(0, #MenuItem_ExportListAll, @MenuItemExportAll())
+    BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
+    BindMenuEvent(0, #MenuItem_Update, @MenuItemUpdate())
+    BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     
-    AddGadgetItem(GadgetMainPanel, -1, l("menu","dlcs"))
-    LibraryDLCs = ListIconGadget(#PB_Any, 0, 0, GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth), GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight), l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
-    AddGadgetColumn(LibraryDLCs, 1, l("main","author"), 90)
-    AddGadgetColumn(LibraryDLCs, 3, l("main","version"), 60)
+    GadgetMainPanel = PanelGadget(#PB_Any, 5, 10, 740, 410)
+    ; MODs
+    AddGadgetItem(GadgetMainPanel, -1, l("main","mods"))
+    
+    GadgetImageLogo = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
+    GadgetFrameFilter = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
+    GadgetFilterMods = StringGadget(#PB_Any, 0, 0, 0, 0, "")
+    GadgetResetFilterMods = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
+    GadgetFrameManagement = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","management"))
+    GadgetButtonDelete = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","delete"))
+    GadgetButtonInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install"))
+    GadgetButtonRemove = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove"))
+    GadgetFrameInformation = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
+    GadgetButtonInformation = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","information"))
+    
+    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, 0, 0, l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    AddGadgetColumn(GadgetLibraryMods, 1, l("main","author"), 90)
+    AddGadgetColumn(GadgetLibraryMods, 2, l("main","category"), 90)
+    AddGadgetColumn(GadgetLibraryMods, 3, l("main","version"), 60)
+    
+    ; DLCs
+    AddGadgetItem(GadgetMainPanel, -1, l("main","dlcs"))
+    
+    GadgetDLCScrollAreaList = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_Flat)
+    SetGadgetColor(GadgetDLCScrollAreaList, #PB_Gadget_BackColor, RGB(255,255,255))
+    CloseGadgetList()
+    GadgetDLCName = TextGadget(#PB_Any, 0, 0, 0, 0, "", #PB_Text_Center)
+    LoadFont(0, "", 18)
+    SetGadgetColor(GadgetDLCName, #PB_Gadget_FrontColor, RGB(131, 21, 85))
+    SetGadgetFont(GadgetDLCName, FontID(0))
+    ; GadgetLibraryDLCs = ListViewGadget(#PB_Any, 0, 0, 0, 0)
+    ; GadgetDLCInstall = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install_dlc"))
+    GadgetDLCToggle = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","remove_dlc"))
+    GadgetDLCScrollAreaAuthors = ScrollAreaGadget(#PB_Any, 0, 0, 0, 0, 0, 0, 10, #PB_ScrollArea_Center|#PB_ScrollArea_BorderLess)
+    SetGadgetColor(GadgetDLCScrollAreaAuthors, #PB_Gadget_BackColor, RGB(255,255,255))
+    TextGadget(#PB_Any, 0, 0, 0, 0, "") ; not used, just for "offset/padding" of gadgets inside of scroll area
+    CloseGadgetList()
+    HideGadget(GadgetDLCToggle, #True)
+    HideGadget(GadgetDLCName, #True)
+    HideGadget(GadgetDLCScrollAreaAuthors, #True)
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     CloseGadgetList()
     
+    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
     GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
     GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
-    GadgetStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
-    GadgetImageLogo = ImageGadget(#PB_Any, 530, 15, 210, 118, 0)
-    GadgetDelete = ButtonGadget(#PB_Any, 540, 240, 190, 30, l("main","delete"))
-    GadgetInstall = ButtonGadget(#PB_Any, 540, 160, 190, 30, l("main","install"))
+    GadgetButtonStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
+    GadgetVersionText = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
     
-    GadgetRemove = ButtonGadget(#PB_Any, 540, 200, 190, 30, l("main","remove"))
-    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
-    TextGadgetVersion = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
-    GadgetButtonInformation = ButtonGadget(#PB_Any, 540, 310, 190, 30, l("main","information"))
-    FrameGadget = FrameGadget(#PB_Any, 530, 140, 210, 140, l("main","management"))
-    FrameGadget2 = FrameGadget(#PB_Any, 530, 290, 210, 60, l("main","information"))
+    ; Bind Gadget Events
+    BindGadgetEvent(GadgetNewMod, @GadgetNewMod())
+    BindGadgetEvent(GadgetButtonInstall, @GadgetButtonInstall())
+    BindGadgetEvent(GadgetButtonRemove, @GadgetButtonRemove())
+    BindGadgetEvent(GadgetButtonDelete, @GadgetButtonDelete())
+    BindGadgetEvent(GadgetLibraryMods, @GadgetLibraryMods())
+    BindGadgetEvent(GadgetButtonStartGame, @GadgetButtonStartGame())
+;     BindGadgetEvent(GadgetHomepage, @GadgetButtonTrainFeverNet())
+    BindGadgetEvent(GadgetHomepage, @GadgetButtonTrainFeverNetDownloads())
+    BindGadgetEvent(GadgetImageLogo, @GadgetImageMain())
+    BindGadgetEvent(GadgetButtonInformation, @GadgetButtonInformation())
+    BindGadgetEvent(GadgetFilterMods, @GadgetFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
+    ;
+    BindGadgetEvent(GadgetDLCToggle, @GadgetDLCToggle())
     
     ; Set window boundaries, timers, events
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
     AddWindowTimer(id, TimerMainGadgets, 100)
     BindEvent(#PB_Event_SizeWindow, @resize(), id)
+    BindEvent(#PB_Event_MaximizeWindow, @resize(), id)
+    BindEvent(#PB_Event_RestoreWindow, @resize(), id)
+    
     
     ; OS specific
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         SetWindowTitle(id, GetWindowTitle(id) + " for Windows")
-        ListIcon::DefineListCallback(LibraryMods, ListIcon::#Edit)
+        ListIcon::DefineListCallback(GadgetLibraryMods)
       CompilerCase #PB_OS_Linux
         SetWindowTitle(id, GetWindowTitle(id) + " for Linux")
       CompilerCase #PB_OS_MacOS
@@ -611,11 +696,21 @@ Module windowMain
     MenuItem(#MenuItem_Remove, l("main","remove"), ImageID(images::Images("no")))
     MenuItem(#MenuItem_Delete, l("main","delete"))
     
+    BindMenuEvent(MenuLibrary, #MenuItem_Information, @GadgetButtonInformation())
+    BindMenuEvent(MenuLibrary, #MenuItem_Install, @GadgetButtonInstall())
+    BindMenuEvent(MenuLibrary, #MenuItem_Remove, @GadgetButtonRemove())
+    BindMenuEvent(MenuLibrary, #MenuItem_Delete, @GadgetButtonDelete())
+    
     ; Drag & Drop
     EnableWindowDrop(id, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
-    ; library
-    mods::registerModGadget(LibraryMods)
+    ; register to mods module
+    mods::registerMainWindow(id)
+    mods::registerModGadget(GadgetLibraryMods)
+    mods::registerDLCGadget(GadgetDLCScrollAreaList)
+    
+    ; apply sizes
+    resize()
     
     ; init gui
     updateGUI()
@@ -626,59 +721,14 @@ Module windowMain
   Procedure events(event)
     Select event
       Case #PB_Event_SizeWindow
-        ;resize() ; already bound to window, no handling required
+        ; already bound to window, no handling required
       Case #PB_Event_CloseWindow
         main::exit()
-  
       Case #PB_Event_Menu
-        Select EventMenu()
-          Case #PB_Menu_Preferences
-            MenuItemSettings(EventMenu())
-          Case #PB_Menu_Quit
-            main::exit()
-          Case #MenuItem_AddMod
-            GadgetNewMod(EventMenu())
-          Case #MenuItem_ExportListActivated
-            MenuItemExportActivated(EventMenu())
-          Case #MenuItem_ExportListAll
-            MenuItemExportAll(EventMenu())
-          Case #MenuItem_Homepage
-            MenuItemHomepage(EventMenu())
-          Case #MenuItem_Update
-            MenuItemUpdate(EventMenu())
-          Case #PB_Menu_About
-            MenuItemLicense(EventMenu())
-          Case #MenuItem_Install
-            GadgetButtonInstall(#PB_EventType_LeftClick)
-          Case #MenuItem_Remove
-            GadgetButtonRemove(#PB_EventType_LeftClick)
-          Case #MenuItem_Delete
-            GadgetButtonDelete(#PB_EventType_LeftClick)
-          Case #MenuItem_Information
-            GadgetButtonInformation(#PB_EventType_LeftClick)
-        EndSelect
-  
+        ;bound
+        
       Case #PB_Event_Gadget
-        Select EventGadget()
-          Case GadgetNewMod
-            GadgetNewMod(EventType())
-          Case GadgetHomepage
-            GadgetButtonTrainFeverNetDownloads(EventType())
-          Case GadgetStartGame
-            GadgetButtonStartGame(EventType())
-          Case GadgetImageLogo
-            GadgetImageMain(EventType())
-          Case GadgetDelete
-            GadgetButtonDelete(EventType())
-          Case GadgetInstall
-            GadgetButtonInstall(EventType())
-          Case LibraryMods
-            GadgetLibrary(EventType())
-          Case GadgetRemove
-            GadgetButtonRemove(EventType())
-          Case GadgetButtonInformation
-            GadgetButtonInformation(EventType())
-        EndSelect
+        ;bound
         
       Case #PB_Event_Timer
         Select EventTimer()
@@ -701,15 +751,163 @@ Module windowMain
     Protected i
     For i = 0 To ArraySize(widths())
       If widths(i)
-        SetGadgetItemAttribute(LibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        SetGadgetItemAttribute(GadgetLibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
         ; Sorting
-        ListIcon::SetColumnFlag(LibraryMods, i, ListIcon::#String)
+        ListIcon::SetColumnFlag(GadgetLibraryMods, i, ListIcon::#String)
       EndIf
     Next
   EndProcedure
   
   Procedure getColumnWidth(column)
-    ProcedureReturn GetGadgetItemAttribute(LibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, column)
+    ProcedureReturn GetGadgetItemAttribute(GadgetLibraryMods, #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
+  
+  
+  ; callbacks from mods module
+  
+  Procedure dlcGadgetEvent()
+    Protected *mod.mods::mod
+    Protected i, count, string$
+    Protected y
+    *mod = GetGadgetData(EventGadget())
+    debugger::add("windowMain::dlcGadgetEvent() - show mod info for mod "+*mod)
+    
+    Static NewList gadgetsDLCAuthors()
+    
+    SetGadgetData(GadgetDLCToggle, 0)
+    HideGadget(GadgetDLCToggle, #True)
+    HideGadget(GadgetDLCName, #True)
+    HideGadget(GadgetDLCScrollAreaAuthors, #True)
+    ForEach gadgetsDLCAuthors()
+      If IsGadget(gadgetsDLCAuthors())
+        FreeGadget(gadgetsDLCAuthors())
+      EndIf
+    Next
+    ClearList(gadgetsDLCAuthors())
+    SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 0)
+    SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 0)
+    
+    If *mod
+      If *mod\tf_id$ = "usa_1"
+        SetGadgetText(GadgetDLCName, "USA DLC")
+        OpenGadgetList(GadgetDLCScrollAreaAuthors)
+        AddElement(gadgetsDLCAuthors())
+        gadgetsDLCAuthors() = TextGadget(#PB_Any, 10, 10, 440, 20, "Official DLC by Urban Games")
+        SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_FrontColor, RGB(131, 21, 85))
+        SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+        CloseGadgetList()
+        SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
+        SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 40)
+        
+        SetGadgetData(GadgetDLCToggle, 0)
+        HideGadget(GadgetDLCToggle, #False)
+        DisableGadget(GadgetDLCToggle, #True)
+      Else
+        SetGadgetText(GadgetDLCName, *mod\name$+" DLC")
+        y = 10
+        OpenGadgetList(GadgetDLCScrollAreaAuthors)
+        ForEach *mod\authors()
+          AddElement(gadgetsDLCAuthors())
+          If *mod\authors()\tfnetId
+            gadgetsDLCAuthors() = HyperLinkGadget(#PB_Any, 10, y, 90, 20, *mod\authors()\name$, RGB(131, 21, 85))
+          Else
+            gadgetsDLCAuthors() = TextGadget(#PB_Any, 10, y, 90, 20, *mod\authors()\name$)
+          EndIf
+          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_FrontColor, RGB(131, 21, 85))
+          SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+          count = CountString(*mod\authors()\text$, ",")
+          For i = 1 To count+1
+            ; image element of author description
+;             AddElement(gadgetsDLCAuthors())
+;             gadgetsDLCAuthors() = ImageGadget(#PB_Any, 110, y, 330, 20, Trim(StringField(*mod\authors()\text$, i, ",")))
+            ; text element of author description
+            AddElement(gadgetsDLCAuthors())
+            gadgetsDLCAuthors() = TextGadget(#PB_Any, 110, y, 330, 20, Trim(StringField(*mod\authors()\text$, i, ",")))
+            SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
+            y + 25
+          Next
+          
+          AddElement(gadgetsDLCAuthors())
+          gadgetsDLCAuthors() = CanvasGadget(#PB_Any, 0, y, 460, 1)
+          StartDrawing(CanvasOutput(gadgetsDLCAuthors()))
+          Box(0, 0, 460, 1, RGB(65, 62, 57)) ; dark grey
+          StopDrawing()
+          
+          SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerWidth, 460)
+          SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, y)
+          y + 15
+        Next
+        CloseGadgetList()
+        
+        SetGadgetData(GadgetDLCToggle, *mod)
+        HideGadget(GadgetDLCToggle, #False)
+        DisableGadget(GadgetDLCToggle, #False)
+      EndIf
+      
+      If *mod\aux\active
+        SetGadgetText(GadgetDLCToggle, locale::l("main","remove_dlc"))
+      Else
+        SetGadgetText(GadgetDLCToggle, locale::l("main","install_dlc"))
+      EndIf
+      HideGadget(GadgetDLCName, #False)
+      HideGadget(GadgetDLCScrollAreaAuthors, #False)
+    EndIf
+  EndProcedure
+  
+  Procedure displayDLCs(Map *dlcs.mods::Mod())
+    ; remove all old gadgets
+    Static NewList gadgetsSelectDLC()
+    Protected count, im
+    
+    ForEach gadgetsSelectDLC()
+      UnbindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent(), #PB_Event_LeftClick)
+      FreeGadget(gadgetsSelectDLC())
+    Next
+    ; display all DLCs
+    debugger::add("          Open gadgetlist "+GadgetDLCScrollAreaList)
+    OpenGadgetList(GadgetDLCScrollAreaList)
+    ForEach *dlcs()
+      If *dlcs()\isDLC
+        ; container gadgets unfortunately do not throw events :(
+        ; cannot use the container gadget as replacement for a complex button
+;         AddElement(gadgetsSelectDLC())
+;         gadgetsSelectDLC() = ContainerGadget(#PB_Any, count*160, 0, 150, 120, #PB_Container_Raised)
+;         SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          AddElement(gadgetsSelectDLC())
+          gadgetsSelectDLC() = FrameGadget(#PB_Any, 0, count*130, 130, 120, "", #PB_Frame_Flat)
+        CompilerEndIf
+        ; Image
+        AddElement(gadgetsSelectDLC())
+        im = mods::getPreviewImage(*dlcs())
+        If IsImage(im)
+          im = ImageID(im)
+        Else
+          im = 0
+        EndIf
+        gadgetsSelectDLC() = ImageGadget(#PB_Any, 5, count*130+5, 120, 80, im)
+        SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
+        ; Text
+        AddElement(gadgetsSelectDLC())
+        gadgetsSelectDLC() = ButtonGadget(#PB_Any, 5, count*130+90, 120, 25, *dlcs()\name$)
+        SetGadgetData(gadgetsSelectDLC(), *dlcs())
+        BindGadgetEvent(gadgetsSelectDLC(), @dlcGadgetEvent())
+        
+        count + 1
+;         CloseGadgetList()
+        ; Size of scrollarea
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerWidth, 130)
+        SetGadgetAttribute(GadgetDLCScrollAreaList, #PB_ScrollArea_InnerHeight, count*130)
+      EndIf
+    Next
+    CloseGadgetList()
+  EndProcedure
+  
+  
+  Procedure displayMods()
+    
+  EndProcedure
+  
   
 EndModule
