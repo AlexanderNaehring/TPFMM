@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-12-19 21:05" user="Alexander" host="TOWER"/>
+    <lastopen date="2015-12-19 21:50" user="Alexander" host="TOWER"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -78,8 +78,8 @@
       <executable value="bin\win32\TFMM.exe"/>
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="2704"/>
-      <buildcount enable="1" value="160"/>
+      <compilecount enable="1" value="2707"/>
+      <buildcount enable="1" value="162"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>

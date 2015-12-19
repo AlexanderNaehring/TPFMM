@@ -4,8 +4,8 @@ XIncludeFile "module_locale.pbi"
 DeclareModule updater
   EnableExplicit
   
-  Global CHANNEL$ = "Testing"
-  Global VERSION$ = "Version 1.0." + #PB_Editor_BuildCount + " Build " + FormatDate("%yy%mm%dd", #PB_Compiler_Date) + " (" + CHANNEL$ + ")"
+  Global CHANNEL$ = "Stable"
+  Global VERSION$ = "Version 1.0." + #PB_Editor_BuildCount + " Build " + #PB_Editor_CompileCount + " (" + CHANNEL$ + ")"
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
