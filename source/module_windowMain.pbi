@@ -817,6 +817,10 @@ Module windowMain
           SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))
           count = CountString(*mod\authors()\text$, ",")
           For i = 1 To count+1
+            ; image element of author description
+;             AddElement(gadgetsDLCAuthors())
+;             gadgetsDLCAuthors() = ImageGadget(#PB_Any, 110, y, 330, 20, Trim(StringField(*mod\authors()\text$, i, ",")))
+            ; text element of author description
             AddElement(gadgetsDLCAuthors())
             gadgetsDLCAuthors() = TextGadget(#PB_Any, 110, y, 330, 20, Trim(StringField(*mod\authors()\text$, i, ",")))
             SetGadgetColor(gadgetsDLCAuthors(), #PB_Gadget_BackColor, RGB(255, 255, 255))

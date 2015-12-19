@@ -5,7 +5,7 @@ DeclareModule updater
   EnableExplicit
   
   Global CHANNEL$ = "Testing"
-  Global VERSION$ = "Version 0.9." + #PB_Editor_BuildCount + " Build " + FormatDate("%yy%mm%dd", #PB_Compiler_Date) + " (" + CHANNEL$ + ")"
+  Global VERSION$ = "Version 1.0." + #PB_Editor_BuildCount + " Build " + FormatDate("%yy%mm%dd", #PB_Compiler_Date) + " (" + CHANNEL$ + ")"
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
