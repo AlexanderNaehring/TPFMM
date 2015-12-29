@@ -788,6 +788,16 @@ Module windowMain
     SetGadgetAttribute(GadgetDLCScrollAreaAuthors, #PB_ScrollArea_InnerHeight, 0)
     
     If *mod
+      If Not *mod\isDLC
+        ProcedureReturn #False
+      EndIf
+      Select *mod\tf_id$
+        Case "usa_1"
+        Case "nordic_1"
+        Default
+          ProcedureReturn #False
+      EndSelect
+      
       If *mod\tf_id$ = "usa_1"
         SetGadgetText(GadgetDLCName, "USA DLC")
         OpenGadgetList(GadgetDLCScrollAreaAuthors)
