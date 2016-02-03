@@ -21,6 +21,7 @@ license           = License
 [main]
 mods            = Modifications
 dlcs            = Downloadable Content
+maps 			= Maps
 name            = Name
 author          = Author
 category        = Category

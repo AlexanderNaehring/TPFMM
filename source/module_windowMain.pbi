@@ -633,6 +633,11 @@ Module windowMain
     HideGadget(GadgetDLCScrollAreaAuthors, #True)
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
+    
+    ; Maps
+    AddGadgetItem(GadgetMainPanel, -1, l("main","maps"))
+    
+    
     CloseGadgetList()
     
     GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
