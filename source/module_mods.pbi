@@ -1463,7 +1463,8 @@ Module mods
     ; special case: copy files to res?
     ; required for nordic dlc shaders
     Protected backups$
-    If *mod\tf_id$ = "nordic_1" And *mod\isDLC
+    ; with latest Train Fever patch, shaders no longer have to be copied to res folder
+    If #False ; *mod\tf_id$ = "nordic_1" And *mod\isDLC
       debugger::Add("mods::install() - ATTENTION: overwrite original shaders")
       OpenPreferences(misc::path(main::TF$ + "TFMM") + "files.list")
       PreferenceGroup("nordic_1")
