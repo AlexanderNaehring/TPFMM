@@ -16,7 +16,7 @@ Module aes
     IncludeBinary "key.aes"
   EndDataSection
   
-  Procedure encrypt(*buffer, length)
+  Procedure encrypt(*buffer, length) ; AES encrpyt memory
     debugger::add("aes::encrypt()")
     If Not *buffer Or Not length
       ProcedureReturn #False
@@ -36,7 +36,7 @@ Module aes
     ProcedureReturn #True
   EndProcedure
   
-  Procedure decrypt(*buffer, length)
+  Procedure decrypt(*buffer, length) ; decrypt memory
     debugger::add("aes::decrypt()")
     If Not *buffer Or Not length
       ProcedureReturn #False
@@ -57,7 +57,7 @@ Module aes
   EndProcedure
   
   
-  Procedure.s encryptString(string$)
+  Procedure.s encryptString(string$) ; convert plain text o AES (Base64 encoded)
     debugger::add("aes::encryptString()")
     Protected *buffer, len, *out, out$
     
@@ -87,7 +87,7 @@ Module aes
     ProcedureReturn out$
   EndProcedure
   
-  Procedure.s decryptString(string$)
+  Procedure.s decryptString(string$) ; convert an Base64 encoded AES string to plain text
     debugger::add("aes::decryptString()")
     Protected *buffer, len, *out, out$
     
