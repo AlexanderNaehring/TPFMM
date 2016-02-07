@@ -5,6 +5,7 @@ XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_updater.pbi"
 XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_repository.pbi"
 
 DeclareModule windowMain
   EnableExplicit
@@ -26,7 +27,6 @@ DeclareModule windowMain
   EndEnumeration
   
   Declare create()
-  Declare events(event)
   
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
@@ -57,6 +57,8 @@ Module windowMain
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
   Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
+  Global GadgetRepositoryList, GadgetRepositoryThumbnail, GadgetRepositoryFrameFilter, GadgetRepositoryFilterString, GadgetRepositoryFilterReset
+;   Global GadgetMaps
   
   ;- Timer
   Global TimerMainGadgets = 101
@@ -131,6 +133,13 @@ Module windowMain
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
     ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
+    
+    ResizeGadget(GadgetRepositoryList, 0, 0, iwidth-220, iheight)
+    ResizeGadget(GadgetRepositoryFrameFilter, iwidth-215, 0, 210, 40)
+    ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 15, 175, 20)
+    ResizeGadget(GadgetRepositoryFilterReset, iwidth-30, 15, 20, 20)
+    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 45, 210, 118)
+    
   EndProcedure
   
   Procedure updateGUI()
@@ -249,22 +258,33 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure close()
+;     HideWindow(id, #True)
+    main::exit()
+  EndProcedure
+  
+  Procedure loadRepositoryThread(*dummy)
+    repository::loadRepositoryList()
+    repository::filterMods("") ; initially fill list
+  EndProcedure
+  
   ;-------------------------------------------------
   ;- TIMER
   
   Procedure TimerMain()
     Static LastDir$ = ""
-    
-    If LastDir$ <> main::TF$
-      LastDir$ = main::TF$
-      If misc::checkTFPath(main::TF$) <> #True
-        main::ready = #False  ; flag for mod management
-        MenuItemSettings()
+    If EventTimer() = TimerMainGadgets
+      
+      If LastDir$ <> main::TF$
+        LastDir$ = main::TF$
+        If misc::checkTFPath(main::TF$) <> #True
+          main::ready = #False  ; flag for mod management
+          MenuItemSettings()
+        EndIf
       EndIf
+      
+      queue::update()
     EndIf
-    
-    queue::update()
-    
   EndProcedure
   
   ;- MENU
@@ -512,6 +532,11 @@ Module windowMain
     SetActiveGadget(GadgetFilterMods)
   EndProcedure
   
+  Procedure GadgetResetFilterRepository()
+    SetGadgetText(GadgetRepositoryFilterString, "")
+    SetActiveGadget(GadgetRepositoryFilterString)
+  EndProcedure
+  
   Procedure GadgetDLCToggle()
     Protected *mod.mods::mod
     *mod = GetGadgetData(GadgetDLCToggle)
@@ -528,9 +553,11 @@ Module windowMain
   
   ; DRAG & DROP
   
-  Procedure HandleDroppedFiles(Files$)
+  Procedure HandleDroppedFiles()
     Protected count, i
-    Protected file$
+    Protected file$, files$
+    
+    files$ = EventDropFiles()
     
     debugger::Add("dropped files:")
     count  = CountString(files$, Chr(10)) + 1
@@ -634,8 +661,16 @@ Module windowMain
     
     ; AddGadgetItem(GadgetMainPanel, -1, "Savegames")
     
+    ; Repository
+    AddGadgetItem(GadgetMainPanel, -1, l("main","repository"))
+    GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0, #PB_ListIcon_FullRowSelect)
+    GadgetRepositoryThumbnail     = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
+    GadgetRepositoryFrameFilter   = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
+    GadgetRepositoryFilterString  = StringGadget(#PB_Any, 0, 0, 0, 0, "")
+    GadgetRepositoryFilterReset   = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
+    
     ; Maps
-    AddGadgetItem(GadgetMainPanel, -1, l("main","maps"))
+;     AddGadgetItem(GadgetMainPanel, -1, l("main","maps"))
     
     
     CloseGadgetList()
@@ -661,6 +696,8 @@ Module windowMain
     BindGadgetEvent(GadgetResetFilterMods, @GadgetResetFilterMods(), #PB_EventType_LeftClick)
     ;
     BindGadgetEvent(GadgetDLCToggle, @GadgetDLCToggle())
+    ;
+    BindGadgetEvent(GadgetRepositoryFilterReset, @GadgetResetFilterRepository())
     
     ; Set window boundaries, timers, events
     WindowBounds(id, 700, 400, #PB_Ignore, #PB_Ignore) 
@@ -668,7 +705,9 @@ Module windowMain
     BindEvent(#PB_Event_SizeWindow, @resize(), id)
     BindEvent(#PB_Event_MaximizeWindow, @resize(), id)
     BindEvent(#PB_Event_RestoreWindow, @resize(), id)
-    
+    BindEvent(#PB_Event_CloseWindow, @close(), id)
+    BindEvent(#PB_Event_Timer, @TimerMain(), id)
+    BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), id)
     
     ; OS specific
     CompilerSelect #PB_Compiler_OS
@@ -714,6 +753,26 @@ Module windowMain
     mods::registerModGadget(GadgetLibraryMods)
     mods::registerDLCGadget(GadgetDLCScrollAreaList)
     
+    ; register to repository module
+    Protected json$, *json
+    Protected Dim columns.repository::column(0)
+    json$ = ReplaceString("[{'width':240,'name':'name'},"+
+                          "{'width':60,'name':'version'},"+
+                          "{'width':100,'name':'author_name'},"+
+                          "{'width':60,'name':'state'},"+
+                          "{'width':200,'name':'tags_string'},"+
+                          "{'width':60,'name':'downloads'},"+
+                          "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
+    *json = ParseJSON(#PB_Any, json$)
+    ExtractJSONArray(JSONValue(*json), columns())
+    FreeJSON(*json)
+    
+    repository::registerWindow(id)
+    repository::registerListGadget(GadgetRepositoryList, columns())
+    repository::registerThumbGadget(GadgetRepositoryThumbnail)
+    repository::registerFilterGadget(GadgetRepositoryFilterString)
+    CreateThread(@loadRepositoryThread(), 0)
+    
     ; apply sizes
     resize()
     
@@ -721,31 +780,6 @@ Module windowMain
     updateGUI()
     
     UnuseModule locale
-  EndProcedure
-  
-  Procedure events(event)
-    Select event
-      Case #PB_Event_SizeWindow
-        ; already bound to window, no handling required
-      Case #PB_Event_CloseWindow
-        main::exit()
-      Case #PB_Event_Menu
-        ;bound
-        
-      Case #PB_Event_Gadget
-        ;bound
-        
-      Case #PB_Event_Timer
-        Select EventTimer()
-          Case TimerMainGadgets
-            TimerMain()
-        EndSelect
-        
-      Case #PB_Event_WindowDrop
-        HandleDroppedFiles(EventDropFiles())
-        
-    EndSelect
-    ProcedureReturn #True
   EndProcedure
   
   Procedure stopGUIupdate(stop = #True)
@@ -923,6 +957,8 @@ Module windowMain
   Procedure displayMods()
     
   EndProcedure
+  
+  
   
   
 EndModule

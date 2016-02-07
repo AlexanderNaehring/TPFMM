@@ -21,7 +21,8 @@ license           = Lizenz
 [main]
 mods            = Modifikationen
 dlcs            = Herunterladbare Inhalte (DLC)
-maps 			= Karten
+repository      = Online Datenbank
+maps            = Karten
 name            = Name
 author          = Ersteller
 category        = Kategorie

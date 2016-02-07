@@ -155,7 +155,6 @@ Module main
   
   Procedure exit()
     Protected i.i
-    HideWindow(windowMain::id, #True)
     
     mods::saveList()
     mods::freeAll()
@@ -184,7 +183,7 @@ Module main
       
       Select EventWindow()
         Case windowMain::id
-          windowMain::events(event)
+          ; no events to handle here :)
         Case windowSettings::window
           windowSettings::events(event)
         Case windowProgress::id

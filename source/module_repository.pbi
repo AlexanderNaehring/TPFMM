@@ -98,6 +98,7 @@ DeclareModule repository
   Declare registerWindow(windowID)
   Declare registerListGadget(gadgetID, Array columns.column(1))
   Declare registerThumbGadget(gadgetID)
+  Declare registerFilterGadget(gadgetID)
   Declare filterMods(search$)
   Declare displayThumbnail(url$)
   
@@ -115,7 +116,7 @@ Module repository
   EndStructure
   
   Global NewList repositories$()
-  Global _windowID, _listGadgetID, _thumbGadgetID
+  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
@@ -124,8 +125,6 @@ Module repository
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
   CreateDirectory(#DIRECTORY + "/thumbnails")
   
-  UsePNGImageDecoder()
-  UseJPEGImageDecoder()
   
   ; Create repository list file if not existing and add basic repository
   If FileSize(#DIRECTORY+"/repositories.List") <= 0
@@ -254,7 +253,8 @@ Module repository
         ; aggregate tag list to string
         \tags_string$ = ""
         ForEach \tags$()
-          ;- TODO add localization here (translate tags)
+          ; tags are stored without localization here (english)
+          ; only display translated strings but store original strings
           \tags_string$ + \tags$() + ", "
         Next
         If Len(\tags_string$) >= 2
@@ -370,6 +370,31 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
+  Procedure handleEventList()
+    Protected *mod.mod
+    Protected selected
+    selected = GetGadgetState(EventGadget())
+    *mod = #Null
+    If selected <> -1
+      *mod = GetGadgetItemData(EventGadget(), selected)
+    EndIf
+    If *mod
+      Select EventType() 
+        Case #PB_EventType_LeftDoubleClick
+          misc::openLink(*mod\url$)
+        Case #PB_EventType_Change
+          displayThumbnail(*mod\thumbnail$)
+      EndSelect
+    EndIf
+  EndProcedure
+  
+  Procedure handleEventFilter()
+    If EventType() = #PB_EventType_Change Or 
+       EventType() = #PB_EventType_Focus
+      filterMods(GetGadgetText(EventGadget()))
+    EndIf
+  EndProcedure
+  
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
@@ -386,7 +411,7 @@ Module repository
     Protected age
     
     ; TODO check when to load new file from server!
-    ; currently: relead from server every time
+    ; currently: reload from server every time
     updateRepository(url$)
     
     json = LoadJSON(#PB_Any, file$)
@@ -591,6 +616,9 @@ Module repository
       AddGadgetColumn(_listGadgetID, col, _columns(col)\name$, _columns(col)\width)
     Next
     
+    ; Bind events for gadget (left click shows image, double click opens webseite, ...)
+    BindGadgetEvent(_listGadgetID, @handleEventList())
+    
     ; return
     ProcedureReturn _listGadgetID
   EndProcedure
@@ -604,6 +632,19 @@ Module repository
     EndIf
     
     ProcedureReturn _thumbGadgetID
+  EndProcedure
+  
+  Procedure registerFilterGadget(gadget)
+    debugger::add("repository::registerFilterGadget(" + gadget + ")")
+    
+    _filterGadgetID = gadget
+    If Not IsGadget(_filterGadgetID)
+      _filterGadgetID = #False
+    EndIf
+    
+    BindGadgetEvent(_filterGadgetID, @handleEventFilter())
+    
+    ProcedureReturn _filterGadgetID
   EndProcedure
   
   Procedure filterMods(search$)
@@ -706,6 +747,8 @@ EndModule
 CompilerIf #PB_Compiler_IsMainFile
   Define text$, event
   
+  UsePNGImageDecoder()
+  UseJPEGImageDecoder()
   debugger::setlogfile("output.log")
   
   repository::loadRepositoryList()
@@ -717,8 +760,10 @@ CompilerIf #PB_Compiler_IsMainFile
     
     ; load column definition
     Define *json, *value, json$
+    ; load old column settings
     *json = LoadJSON(#PB_Any, "columns.json")
     If Not *json
+      ; if no column settings found, initialize with base columns
       json$ = ReplaceString("[{'width':240,'name':'name'},"+
                             "{'width':60,'name':'version'},"+
                             "{'width':100,'name':'author_name'},"+
@@ -761,28 +806,6 @@ CompilerIf #PB_Compiler_IsMainFile
           Select EventGadget()
             Case 2 ; push "x" button
               SetGadgetText(1, "")
-            Case 0 ; click on list
-              Define *mod.repository::mod
-              Define selected
-              selected = GetGadgetState(0)
-              *mod = 0
-              If selected <> -1
-                *mod = GetGadgetItemData(0, selected)
-              EndIf
-              
-              Select EventType() 
-                Case #PB_EventType_LeftDoubleClick
-                  If *mod
-                    Debug "double click on " + *mod\name$ + " - url = " + *mod\url$
-                    RunProgram(*mod\url$)
-                    ; TODO use misc::openLink for cross-plattform
-                  EndIf
-                Case #PB_EventType_Change
-                  If *mod
-                    Debug "display image"
-                    repository::displayThumbnail(*mod\thumbnail$)
-                  EndIf
-              EndSelect
           EndSelect
       EndSelect
       If GetGadgetText(1) <> text$
