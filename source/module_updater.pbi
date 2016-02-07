@@ -76,7 +76,7 @@ Module updater
   Procedure checkUpdate(auto)
     debugger::Add("updater::checkUpdate("+Str(auto)+")")
     Protected URL$, json, *value
-    Protected channel$
+    Protected ch$
     
     SetGadgetText(gadgets("status"), locale::l("updater", "checking"))
     SetGadgetColor(gadgets("status"), #PB_Gadget_FrontColor, -1)
@@ -100,8 +100,8 @@ Module updater
             If MapSize(channel())
               ; add channels to select gadget (first letter upper case)
               ForEach channel()
-                channel$ = MapKey(channel())
-                AddGadgetItem(gadgets("channel"), -1, UCase(Left(channel$, 1)) + Mid(channel$, 2))
+                ch$ = MapKey(channel())
+                AddGadgetItem(gadgets("channel"), -1, UCase(Left(ch$, 1)) + Mid(ch$, 2))
               Next
               SetGadgetText(gadgets("status"), locale::l("updater", "retrieved"))
               SetGadgetColor(gadgets("status"), #PB_Gadget_FrontColor, -1)

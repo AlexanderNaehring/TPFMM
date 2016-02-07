@@ -850,11 +850,21 @@ Module mods
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure free(id$) ; delete mod from map and free memory
-;     debugger::Add("mods::freeMod("+id$+")")
-    Protected *mod.mod
+  Procedure free(*mod.mod) ; delete mod from map and free memory
+    Protected id$
+    If *mod
+      id$ = *mod\tf_id$
+      If id$ = "" ; TODO check for valid ID (in case of IMA)
+        debugger::Add("                - ERROR: could not find ID for mod "+Str(*mod))
+      EndIf
+    Else
+      debugger::Add("                - ERROR: invalid memory address provided")
+      ProcedureReturn #False
+    EndIf
+    
     If FindMapElement(*mods(), id$)
       *mod = *mods()
+      debugger::Add("                - free mod "+Str(*mod)+" ("+id$+")")
       DeleteMapElement(*mods())
       FreeStructure(*mod)
       ProcedureReturn #True
@@ -862,14 +872,15 @@ Module mods
     
     debugger::Add("mods::freeMod() - ERROR: could not find mod {"+id$+"} in List")
     ProcedureReturn #False
+    
   EndProcedure
   
   Procedure freeAll()
     debugger::Add("mods::freeAll()")
     ForEach *mods()
-      mods::free(*mods()\tf_id$)
+      mods::free(*mods())
     Next
-    displayMods()
+    ; displayMods()
   EndProcedure
   
   Procedure new(*data.queue::dat) ; INITIAL STEP: add new mod file from any location
@@ -1127,7 +1138,7 @@ Module mods
     ForEach *mods()
       If Not FindMapElement(mod_scanner(), MapKey(*mods()))
         debugger::add("mods::loadList() - WARNING: {"+MapKey(*mods())+"} in json but not in folders")
-        free(MapKey(*mods()))
+        free(*mods())
       EndIf
     Next
     
@@ -1674,7 +1685,7 @@ Module mods
         EndIf
       Next
     EndIf
-    free(id$)
+    free(*mod)
     
     ProcedureReturn #True
   EndProcedure

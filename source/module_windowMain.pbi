@@ -259,7 +259,7 @@ Module windowMain
   EndProcedure
   
   Procedure close()
-;     HideWindow(id, #True)
+    HideWindow(id, #True)
     main::exit()
   EndProcedure
   

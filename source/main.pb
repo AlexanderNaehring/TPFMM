@@ -156,9 +156,6 @@ Module main
   Procedure exit()
     Protected i.i
     
-    mods::saveList()
-    mods::freeAll()
-    
     OpenPreferences("TFMM.ini")
     If ReadPreferenceInteger("windowlocation", #False)
       PreferenceGroup("window")
@@ -173,6 +170,13 @@ Module main
     Next
     ClosePreferences()
     
+    mods::saveList()
+    mods::freeAll()
+    
+    Debug "close main window"
+    CloseWindow(windowMain::id)
+    
+    Debug "Shutdown now"
     End
   EndProcedure
   

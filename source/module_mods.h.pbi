@@ -58,7 +58,7 @@
   Declare registerDLCGadget(gadget)
   
   Declare init()    ; allocate new mod structure, return *mod
-  Declare free(id$) ; free *mod structure
+  Declare free(*mod.mod) ; free *mod structure
   Declare freeAll() ; free all mods in map
   Declare loadList(*dummy)
   Declare saveList()
