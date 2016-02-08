@@ -137,10 +137,15 @@ change    = Anpassen
 save      = Speichern
 
 [tags]
+all         = Alle
+mod         = Modifikation
+map         = Karte
+dlc         = DLC
 tool        = Tool
 pack        = Mod-Pack
 vehicle	    = Fahrzeug
 bus         = Bus
+truck       = LKW
 tram        = Straßenbahn
 train       = Zug
 steam       = Dampflokomotive
@@ -161,7 +166,17 @@ towns       = Städtenamen
 streets     = Straßennamen
 costs       = Kosten
 sandbox     = Sandkasten
-other       = anderes
+asset       = Asset
+catenary    = Oberleitung
+crossing    = Bahnübergang
+other       = Anderes
+script      = Skript Mod
+repaint     = Repaint
+europe      = Europa
+north america = Nordamerika
+asia        = Asien
+australia   = Australien
+oceania     = Ozeanien
 
 [progress]
 title       = Fortschritt

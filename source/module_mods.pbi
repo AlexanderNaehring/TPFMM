@@ -389,9 +389,12 @@ Module mods
     ; tags
     With *mod
       \aux\tags$ = ""
+      ClearList(\tagsLocalized$())
       ForEach \tags$()
+        AddElement(\tagsLocalized$())
+        \tagsLocalized$() = locale::l("tags", LCase(\tags$()))
         If \aux\tags$ : \aux\tags$ + ", " : EndIf
-        \aux\tags$ + locale::l("tags", LCase(\tags$()))
+        \aux\tags$ + \tagsLocalized$()
       Next
     EndWith
     
@@ -1946,11 +1949,19 @@ Module mods
                 tmp_ok = 1
               Else
                 ForEach \tags$()
-                  If FindString(\tags$(), str$, 1, #PB_String_NoCase) Or 
-                     FindString(locale::l("tags", LCase(\tags$())), str$, 1, #PB_String_NoCase)
+                  If FindString(\tags$(), str$, 1, #PB_String_NoCase)
                     tmp_ok = 1
+                    Break
                   EndIf
                 Next
+                If Not tmp_ok
+                  ForEach \tagsLocalized$()
+                    If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
+                      tmp_ok = 1
+                      Break
+                    EndIf
+                  Next
+                EndIf
               EndIf
             Else
               tmp_ok = 1 ; empty search string is just ignored (ok)

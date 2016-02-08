@@ -50,15 +50,14 @@ Module windowMain
   EndEnumeration
   
   ;- Gadgets
-  Global NewMap gadgets()
+;   Global NewMap gadgets()
   Global GadgetImageHeader
   Global GadgetNewMod, GadgetHomepage, GadgetButtonStartGame, GadgetVersionText
   Global GadgetMainPanel, GadgetLibraryMods, GadgetLibraryDLCs
   Global GadgetFrameManagement, GadgetFrameInformation, GadgetFrameFilter
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonInstall, GadgetButtonDelete, GadgetButtonRemove, GadgetButtonInformation
   Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
-  Global GadgetRepositoryList, GadgetRepositoryThumbnail, GadgetRepositoryFrameFilter, GadgetRepositoryFilterString, GadgetRepositoryFilterReset
-;   Global GadgetMaps
+  Global GadgetRepositoryList, GadgetRepositoryThumbnail, GadgetRepositoryFrameFilter, GadgetRepositoryFilterType, GadgetRepositoryFilterString, GadgetRepositoryFilterReset
   
   ;- Timer
   Global TimerMainGadgets = 101
@@ -135,10 +134,11 @@ Module windowMain
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
     
     ResizeGadget(GadgetRepositoryList, 0, 0, iwidth-220, iheight)
-    ResizeGadget(GadgetRepositoryFrameFilter, iwidth-215, 0, 210, 40)
-    ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 15, 175, 20)
-    ResizeGadget(GadgetRepositoryFilterReset, iwidth-30, 15, 20, 20)
-    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 45, 210, 118)
+    ResizeGadget(GadgetRepositoryFrameFilter, iwidth-215, 0, 210, 75)
+    ResizeGadget(GadgetRepositoryFilterType, iwidth-210, 15, 200, 25)
+    ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 45, 170, 25)
+    ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 45, 25, 25)
+    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 80, 210, 118)
     
   EndProcedure
   
@@ -265,7 +265,8 @@ Module windowMain
   
   Procedure loadRepositoryThread(*dummy)
     repository::loadRepositoryList()
-    repository::filterMods("") ; initially fill list
+    repository::filterMods("", "") ; initially fill list
+    
   EndProcedure
   
   ;-------------------------------------------------
@@ -666,6 +667,7 @@ Module windowMain
     GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0, #PB_ListIcon_FullRowSelect)
     GadgetRepositoryThumbnail     = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
     GadgetRepositoryFrameFilter   = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
+    GadgetRepositoryFilterType    = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
     GadgetRepositoryFilterString  = StringGadget(#PB_Any, 0, 0, 0, 0, "")
     GadgetRepositoryFilterReset   = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
     
@@ -760,7 +762,7 @@ Module windowMain
                           "{'width':60,'name':'version'},"+
                           "{'width':100,'name':'author_name'},"+
                           "{'width':60,'name':'state'},"+
-                          "{'width':200,'name':'tags_string'},"+
+                          "{'width':100,'name':'tags_string'},"+
                           "{'width':60,'name':'downloads'},"+
                           "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
     *json = ParseJSON(#PB_Any, json$)
@@ -770,6 +772,7 @@ Module windowMain
     repository::registerWindow(id)
     repository::registerListGadget(GadgetRepositoryList, columns())
     repository::registerThumbGadget(GadgetRepositoryThumbnail)
+    repository::registerTypeGadget(GadgetRepositoryFilterType)
     repository::registerFilterGadget(GadgetRepositoryFilterString)
     CreateThread(@loadRepositoryThread(), 0)
     

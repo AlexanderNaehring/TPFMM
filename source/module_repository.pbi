@@ -1,5 +1,6 @@
 ﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_aes.pbi"
+XIncludeFile "module_locale.pbi"
 
 DeclareModule repository
   EnableExplicit
@@ -69,7 +70,9 @@ DeclareModule repository
     likes.i
     created.i
     changed.i
+    type$
     List tags$()
+    List tagsLocalized$()
     tags_string$
     version$
     state$
@@ -98,8 +101,9 @@ DeclareModule repository
   Declare registerWindow(windowID)
   Declare registerListGadget(gadgetID, Array columns.column(1))
   Declare registerThumbGadget(gadgetID)
+  Declare registerTypeGadget(gadgetID)
   Declare registerFilterGadget(gadgetID)
-  Declare filterMods(search$)
+  Declare filterMods(type$, search$)
   Declare displayThumbnail(url$)
   
   Global NewMap repo_mods.repo_mods()
@@ -114,12 +118,17 @@ Module repository
     offset.i
     type.i
   EndStructure
+  Structure type ; type information (for filtering)
+    key$
+    localized$
+  EndStructure
   
   Global NewList repositories$()
-  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID
+  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
+  Global Dim type.type(0) ; type information (for filtering)
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -250,12 +259,17 @@ Module repository
             \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
           Next
         EndIf
+        ; tags are stored without localization here (english)
+        ; only display translated strings but store original strings
+        ClearList(\tagsLocalized$())
+        ForEach \tags$()
+          AddElement(\tagsLocalized$())
+          \tagsLocalized$() = locale::l("tags", \tags$())
+        Next
         ; aggregate tag list to string
         \tags_string$ = ""
-        ForEach \tags$()
-          ; tags are stored without localization here (english)
-          ; only display translated strings but store original strings
-          \tags_string$ + \tags$() + ", "
+        ForEach \tagsLocalized$()
+          \tags_string$ + \tagsLocalized$() + ", "
         Next
         If Len(\tags_string$) >= 2
           ; cut of ', ' from end of string
@@ -389,9 +403,19 @@ Module repository
   EndProcedure
   
   Procedure handleEventFilter()
+    Protected n, type$, filter$
     If EventType() = #PB_EventType_Change Or 
        EventType() = #PB_EventType_Focus
-      filterMods(GetGadgetText(EventGadget()))
+      If IsGadget(_typeGadgetID)
+        n = GetGadgetState(_typeGadgetID)
+        If n >= 0 And n <= ArraySize(type())
+          type$ = type(n)\key$
+        EndIf
+      EndIf
+      If IsGadget(_filterGadgetID)
+        filter$ = GetGadgetText(_filterGadgetID)
+      EndIf
+      filterMods(type$, filter$)
     EndIf
   EndProcedure
   
@@ -634,6 +658,37 @@ Module repository
     ProcedureReturn _thumbGadgetID
   EndProcedure
   
+  Procedure registerTypeGadget(gadget)
+    Protected i.i
+    debugger::add("repository::registerTypeGadget(" + gadget + ")")
+    
+    _typeGadgetID = gadget
+    If Not IsGadget(_typeGadgetID)
+      _typeGadgetID = #False
+    EndIf
+    
+    ReDim type.type(3)
+    type(0)\key$ = ""
+    type(0)\localized$ = locale::l("tags", "all")
+    type(1)\key$ = "mod"
+    type(1)\localized$ = locale::l("tags", "mod")
+    type(2)\key$ = "map"
+    type(2)\localized$ = locale::l("tags", "map")
+    type(3)\key$ = "dlc"
+    type(3)\localized$ = locale::l("tags", "dlc")
+    
+    
+    ClearGadgetItems(_typeGadgetID)
+    For i = 0 To ArraySize(type())
+      AddGadgetItem(_typeGadgetID, i, type(i)\localized$)
+    Next
+    SetGadgetState(_typeGadgetID, 0)
+    
+    BindGadgetEvent(_typeGadgetID, @handleEventFilter())
+    
+    ProcedureReturn _typeGadgetID
+  EndProcedure
+  
   Procedure registerFilterGadget(gadget)
     debugger::add("repository::registerFilterGadget(" + gadget + ")")
     
@@ -647,7 +702,7 @@ Module repository
     ProcedureReturn _filterGadgetID
   EndProcedure
   
-  Procedure filterMods(search$)
+  Procedure filterMods(type$, search$)
     ; debugger::add("repository::filterMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address, *address
     
@@ -667,6 +722,13 @@ Module repository
         With repo_mods()\mods()
           *base_address = repo_mods()\mods()
           mod_ok = 0 ; reset ok for every mod entry
+          
+          If type$ And \type$ <> type$
+            ;TODO better way of cheking for localized version of type?
+            Continue
+          EndIf
+          
+          
           If search$ = ""
             mod_ok = 1
             count = 1
@@ -686,6 +748,13 @@ Module repository
                       tmp_ok = 1
                     EndIf
                   Next
+                  If Not tmp_ok ; only check further if not already found a hit
+                    ForEach \tagsLocalized$()
+                      If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
+                        tmp_ok = 1
+                      EndIf
+                    Next
+                  EndIf
                 EndIf
               Else
                 tmp_ok = 1 ; empty search string is just ignored (ok)
@@ -696,6 +765,7 @@ Module repository
               EndIf
             Next
           EndIf
+          
           If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
             text$ = ""
             ; generate text based on specified columns

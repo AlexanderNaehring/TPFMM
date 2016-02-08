@@ -43,6 +43,7 @@
     description$            ; optional description
     List authors.author()   ; information about author(s)
     List tags$()            ; list of tags
+    List tagsLocalized$()   ; translated tags
     tfnetId.i               ; ID (number) on train-fever.net
     minGameVersion.i        ; minimum required build number of Train Fever
     List dependencies$()    ; list of required mods (tf_id)
