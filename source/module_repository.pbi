@@ -346,22 +346,29 @@ Module repository
     
     ; map access is threadsafe - no need for mutex here
     If images(file$) And IsImage(images(file$))
-      ; image already loaded
+      ; image already loaded in memory
       image = images(file$)
     Else
-      ; download image
-      ; TODO it is possible, that two threads download the same image simultaneously -> maybe keep track of urls$ that are being downloaded at the moment
-      CreateDirectory(GetPathPart(file$))
-      ReceiveHTTPFile(url$, file$)
-      If FileSize(file$) > 0
-        image = LoadImage(#PB_Any, file$)
-        If IsImage(image)
-          images(file$) = image
+      ; try to load file from disk if available
+      image = LoadImage(#PB_Any, file$)
+      If image And IsImage(image)
+        images(file$) = image
+      Else ; could not load from disk
+        image = #Null
+        ; download image
+        ; TODO it is possible, that two threads download the same image simultaneously -> maybe keep track of urls$ that are being downloaded at the moment
+        CreateDirectory(GetPathPart(file$))
+        ReceiveHTTPFile(url$, file$)
+        If FileSize(file$) > 0
+          image = LoadImage(#PB_Any, file$)
+          If image And IsImage(image)
+            images(file$) = image
+          Else
+            debugger::add("repository::thumbnailThread() - ERROR: could not load image {"+file$+"}")
+          EndIf
         Else
-          debugger::add("repository::thumbnailThread() - ERROR: could not load image {"+file$+"}")
+          debugger::add("repository::thumbnailThread() - ERROR: download failed: {"+url$+"} -> {"+file$+"}")
         EndIf
-      Else
-        debugger::add("repository::thumbnailThread() - ERROR: download failed: {"+url$+"} -> {"+file$+"}")
       EndIf
     EndIf
     
