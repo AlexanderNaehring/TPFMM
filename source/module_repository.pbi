@@ -8,7 +8,7 @@ DeclareModule repository
   Macro StopWindowUpdate(_winID_)
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        SendMessage_(_winID_,#WM_SETREDRAW,0,0)
+        ;SendMessage_(_winID_,#WM_SETREDRAW,0,0)
       CompilerCase #PB_OS_Linux
         
       CompilerCase #PB_OS_MacOS
@@ -18,7 +18,7 @@ DeclareModule repository
   Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        SendMessage_(_winID_,#WM_SETREDRAW,1,0)
+        ;SendMessage_(_winID_,#WM_SETREDRAW,1,0)
         InvalidateRect_(_winID_,0,_redrawBackground_)
         UpdateWindow_(_winID_)
       CompilerCase #PB_OS_Linux
@@ -136,11 +136,12 @@ Module repository
   
   
   ; Create repository list file if not existing and add basic repository
-  If FileSize(#DIRECTORY+"/repositories.List") <= 0
+  If FileSize(#DIRECTORY+"/repositories.list") <= 0
+    debugger::add("repository::init() - create repositories.list")
     Define file
     file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
-      WriteStringN(file, "http://repo.tfmm.xanos.eu/")
+      WriteStringN(file, "http://www.transportfevermods.com/repository/")
       CloseFile(file)
     EndIf
   EndIf
@@ -507,13 +508,15 @@ Module repository
     time = ElapsedMilliseconds()
     
     ClearList(repositories$())
-    file = ReadFile(#PB_Any, "repositories/repositories.list", #PB_File_SharedRead)
+    file = ReadFile(#PB_Any, #DIRECTORY+"/repositories.list", #PB_File_SharedRead)
     If file
       While Not Eof(file)
         AddElement(repositories$())
         repositories$() = ReadString(file)
       Wend
       CloseFile(file)
+    Else
+    debugger::add("repository::loadRepositoryList() - cannot read repositories.list")
     EndIf
     
     If ListSize(repositories$())
@@ -523,9 +526,11 @@ Module repository
       
       debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
       ProcedureReturn #True
+    Else
+      debugger::add("repository::loadRepositoryList() - no repositories in list")
+      ProcedureReturn #False
     EndIf
     
-    ProcedureReturn #False
   EndProcedure
   
   Procedure registerWindow(window)
@@ -557,7 +562,7 @@ Module repository
     Next
     
     ; create _columns array
-    debugger::add("repository::loadRepositoryList() - generate _columns")
+    debugger::add("repository::registerListGadget() - generate _columns")
     FreeArray(_columns())
     Dim _columns(ArraySize(columns()))
     ; in PureBasic, Dim Array(10) created array with 11 elements (0 to 10)
@@ -638,7 +643,7 @@ Module repository
             Continue
         EndSelect ;}
         \width = columns(col)\width
-        debugger::add("repository::loadRepositoryList() - new column: {" + \name$ + "} of width {" + \width + "}")
+        debugger::add("repository::registerListGadget() - new column: {" + \name$ + "} of width {" + \width + "}")
       EndWith
     Next
     

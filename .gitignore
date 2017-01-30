@@ -5,9 +5,6 @@ ehthumbs.db
 # Folder config file
 Desktop.ini
 
-# Recycle Bin used on file shares
-$RECYCLE.BIN/
-
 # Windows Installer files
 *.cab
 *.msi
@@ -19,8 +16,6 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
-# Icon must ends with two \r.
-Icon
 
 # Thumbnails
 ._*
@@ -29,15 +24,10 @@ Icon
 .Spotlight-V100
 .Trashes
 
-# TFMM specific files
-*.ini
-*/tfmm-output.txt
-*/output.log
-bin/win32/unrar.dll
-bin/win32/locale/
-bin/lin64/locale/
-bin/mac32/locale/
+
+# TPFMM specific files
+bin/*
 *.json
 */project.cfg
 source/repositories/
-*/passwords.list
+*/key.aes*

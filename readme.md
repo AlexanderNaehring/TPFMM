@@ -1,6 +1,5 @@
-Train Fever Mod Manager (TFMM)
+Transport Fever Mod Manager (TPFMM)
 ====
 
-_TFMM_ aims to help the player organize and keep track of modifications installed for Train Fever, a transportation simulation game developed by Urban Games.
-
-_TFMM_ is written in PureBasic which can be compiled to Windows, Mac and Linux.
+_TPFMM_ aims to help the player organize and keep track of modifications installed for Transport Fever, a transportation simulation game developed by Urban Games.
+_TPFMM_ is written in PureBasic which can be compiled to Windows, Mac and Linux.

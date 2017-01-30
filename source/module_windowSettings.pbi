@@ -5,7 +5,6 @@ DeclareModule windowSettings
   
   Declare create(parentWindow)
   Declare show()
-  Declare events(event)
   
 EndDeclareModule
 
@@ -35,13 +34,13 @@ Module windowSettings
     ResizeGadget(GadgetButtonBrowse, width - 120, 70, 100, 25)
   EndProcedure
   
-  Procedure GadgetCloseSettings(event) ; close settings window and apply settings
+  Procedure GadgetCloseSettings() ; close settings window and apply settings
     RemoveWindowTimer(window, timerSettings)
     HideWindow(window, #True)
     DisableWindow(parentW, #False)
     SetActiveWindow(parentW)
     
-    If misc::checkTFPath(main::TF$) <> #True
+    If misc::checkGameDirectory(main::gameDirectory$) <> 0
       main::ready = #False
       End
       ; TODO  - call exit routine (not available currently)
@@ -50,31 +49,36 @@ Module windowSettings
     
   EndProcedure
   
-  Procedure GadgetButtonAutodetect(event)
+  Procedure GadgetButtonAutodetect()
     debugger::add("windowSettings::GadgetButtonAutodetect()")
     Protected path$
     
     CompilerSelect #PB_Compiler_OS
       
       CompilerCase #PB_OS_Windows 
-        ; try to get Steam install location
-        path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+        ; try to get Steam install location                         SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800
+        path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800", "InstallLocation")
+        Debug "registry: "+path$
+        Debug ""
+        Debug ""
+        Debug ""
+        Debug "filesize("+path$+") = "+FileSize(path$)
         If Not FileSize(path$) = -2
-          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 304730", "InstallLocation")
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800", "InstallLocation")
         EndIf
         ; try to get GOG install location
         If Not FileSize(path$) = -2
-          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\GOG.com\Games\1424258777", "PATH")
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\GOG.com\Games\1720767912", "PATH")
         EndIf
         If Not FileSize(path$) = -2
-          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\Wow6432Node\GOG.com\Games\1424258777", "PATH")
+          path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE, "SOFTWARE\WOW6432Node\GOG.com\Games\1720767912", "PATH")
         EndIf
         
       CompilerCase #PB_OS_Linux
-        path$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Train Fever/")
+        path$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Transport Fever/")
         
       CompilerCase #PB_OS_MacOS
-        path$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Train Fever/")
+        path$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Transport Fever/")
     CompilerEndSelect
     
     If path$ And FileSize(path$) = -2
@@ -87,25 +91,32 @@ Module windowSettings
     ProcedureReturn #False
   EndProcedure
   
-  Procedure GadgetButtonBrowse(event)
+  Procedure GadgetButtonBrowse()
     Protected Dir$
     Dir$ = GetGadgetText(GadgetPath)
-    Dir$ = PathRequester("Train Fever installation path", Dir$)
+    Dir$ = PathRequester("Transport Fever Installation Path", Dir$)
     If Dir$
       SetGadgetText(GadgetPath, Dir$)
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonOpenPath(event)
+  Procedure GadgetButtonOpenPath()
     misc::openLink(GetGadgetText(GadgetPath))
   EndProcedure
   
-  Procedure GadgetSaveSettings(event)
+  Procedure GadgetSaveSettings()
     Protected Dir$, locale$, restart.i = #False
     Dir$ = GetGadgetText(GadgetPath)
     Dir$ = misc::Path(Dir$)
     
-    main::TF$ = Dir$ ; store in global variable
+    If misc::checkGameDirectory(Dir$) = 0
+      ; 0   = path okay, executable found and writing possible
+      ; 1   = path okay, executable found but cannot write
+      ; 2   = path not okay
+      
+      main::gameDirectory$ = Dir$ ; store in global variable
+    EndIf
+    
     
     locale$ = StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
@@ -113,8 +124,8 @@ Module windowSettings
     EndIf
     
     
-    OpenPreferences("TFMM.ini")
-    WritePreferenceString("path", main::TF$)
+    OpenPreferences("TPFMM.ini")
+    WritePreferenceString("path", main::gameDirectory$)
     WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
     If Not GetGadgetState(GadgetSettingsWindowLocation)
       RemovePreferenceGroup("window")
@@ -127,7 +138,7 @@ Module windowSettings
     ClosePreferences()
     
     If restart
-      MessageRequester("Restart TFMM", "TFMM will now restart to display the selected locale")
+      MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
       RunProgram(ProgramFilename())
       End
     EndIf
@@ -136,12 +147,8 @@ Module windowSettings
     
     ; load library
     queue::add(queue::#QueueActionLoad)
-    ; check for old TFMM configuration, trigger conversion if found
-    If FileSize(misc::Path(main::TF$ + "/TFMM/") + "mods.ini") >= 0
-      queue::add(queue::#QueueActionConvert)
-    EndIf
       
-    GadgetCloseSettings(event)
+    GadgetCloseSettings()
   EndProcedure
   
   Procedure TimerSettingsGadgets()
@@ -158,15 +165,18 @@ Module windowSettings
         DisableGadget(GadgetOpenPath, #True)
       EndIf
       
-      ret = misc::checkTFPath(LastDir$)
-      If ret = #True
+      ret = misc::checkGameDirectory(LastDir$)
+      ; 0   = path okay, executable found and writing possible
+      ; 1   = path okay, executable found but cannot write
+      ; 2   = path not okay
+      If ret = 0
         SetGadgetText(GadgetRights, locale::l("settings","success"))
         SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
         DisableGadget(GadgetSaveSettings, #False)
       Else
         SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(255,0,0))
         DisableGadget(GadgetSaveSettings, #True)
-        If ret = -1
+        If ret = 1
           SetGadgetText(GadgetRights, locale::l("settings","failed"))
         Else
           SetGadgetText(GadgetRights, locale::l("settings","not_found"))
@@ -203,20 +213,31 @@ Module windowSettings
     GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, locale::l("settings","other"))
     GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, locale::l("settings","locale"))
     GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25, #PB_ComboBox_Image)
+    
+    BindGadgetEvent(GadgetButtonAutodetect, @GadgetButtonAutodetect())
+    BindGadgetEvent(GadgetButtonBrowse, @GadgetButtonBrowse())
+    BindGadgetEvent(GadgetOpenPath, @GadgetButtonOpenPath())
+    BindGadgetEvent(GadgetSaveSettings, @GadgetSaveSettings())
+    BindGadgetEvent(GadgetCancelSettings, @GadgetCloseSettings())
+    
+    BindEvent(#PB_Event_Timer, @TimerSettingsGadgets(), window)
+    BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
+    BindEvent(#PB_Event_SizeWindow, @resize(), window)
+    
   EndProcedure
   
   Procedure show()
     Protected locale$
     
-    OpenPreferences("TFMM.ini")
-    SetGadgetText(GadgetPath, ReadPreferenceString("path", main::TF$))
+    OpenPreferences("TPFMM.ini")
+    SetGadgetText(GadgetPath, ReadPreferenceString("path", main::gameDirectory$))
     SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
     SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
     locale$ = ReadPreferenceString("locale", "en")
     ClosePreferences()
     
     If GetGadgetText(GadgetPath) = ""
-      GadgetButtonAutodetect(0)
+      GadgetButtonAutodetect()
     EndIf
     
     Protected NewMap locale$(), count.i = 0
@@ -228,38 +249,9 @@ Module windowSettings
     SetActiveWindow(window)
   EndProcedure
   
-  Procedure events(event)
-    Select event
-      Case #PB_Event_SizeWindow
-        resize()
-      Case #PB_Event_CloseWindow
-        GadgetCloseSettings(0)
-  
-      Case #PB_Event_Menu
-        Select EventMenu()
-        EndSelect
-        
-      Case #PB_Event_Timer
-        Select EventTimer()
-          Case timerSettings
-            TimerSettingsGadgets()
-        EndSelect
-        
-      Case #PB_Event_Gadget
-        Select EventGadget()
-          Case GadgetButtonAutodetect
-            GadgetButtonAutodetect(EventType())
-          Case GadgetButtonBrowse
-            GadgetButtonBrowse(EventType())
-          Case GadgetOpenPath
-            GadgetButtonOpenPath(EventType())
-          Case GadgetSaveSettings
-            GadgetSaveSettings(EventType())
-          Case GadgetCancelSettings
-            GadgetCloseSettings(EventType())
-        EndSelect
-    EndSelect
-    ProcedureReturn #True
-  EndProcedure
-  
 EndModule
+
+; IDE Options = PureBasic 5.50 (Windows - x86)
+; CursorPosition = 25
+; Folding = ---
+; EnableXP

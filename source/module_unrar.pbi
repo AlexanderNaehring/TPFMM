@@ -116,7 +116,7 @@ DeclareModule unrar
   Global RARSetPassword.RARSetPassword
   Global RARGetDllVersion.RARGetDllVersion
   
-  Declare OpenRar(File$, *mod, mode = #RAR_OM_EXTRACT)
+  Declare OpenRar(File$, *mod = #Null, mode = #RAR_OM_EXTRACT)
 EndDeclareModule
 
 Module unrar
@@ -135,7 +135,6 @@ Module unrar
         DataUnrarEnd:
       EndDataSection
       misc::extractBinary("unrar.dll", ?DataUnrar, ?DataUnrarEnd - ?DataUnrar, #False)
-      
       DLL = OpenLibrary(#PB_Any, "unrar.dll")
     CompilerEndIf
     
@@ -156,8 +155,6 @@ Module unrar
     Else
       MessageRequester("Error", "unrar.dll not found! RAR Files cannot be opened.")
     EndIf
-    
-    
     
     Structure userdata
       pwRequired.b
@@ -181,7 +178,7 @@ Module unrar
       EndSelect
     EndProcedure
     
-    Procedure OpenRar(File$, *mod.mods::mod, mode = #RAR_OM_EXTRACT)
+    Procedure OpenRar(File$, *mod.mods::mod = #Null, mode = #RAR_OM_EXTRACT)
       debugger::add("unrar::OpenRar("+File$+", "+Str(mode)+")")
       Protected raropen.RAROpenArchiveDataEx
       Protected hRAR
@@ -213,8 +210,8 @@ Module unrar
         debugger::add("          Password required")
         ; password required, add passwords to try to a list
         ; try password stored in mod info if available
-        If *mod\archive\password$
-          passwords(*mod\archive\password$) = 1
+        If *mod And *mod\aux\archive\password$
+          passwords(*mod\aux\archive\password$) = 1
         EndIf
         
         ; read passwords from password list file
@@ -225,7 +222,9 @@ Module unrar
           Wend
           CloseFile(passwordFile)
         EndIf
-        *mod\archive\password$ = "" ; reset stored PW
+        If *mod
+          *mod\aux\archive\password$ = "" ; reset stored PW
+        EndIf
         
         ; pre-defined passwords:
         ; Nordic DLC:
@@ -259,8 +258,11 @@ Module unrar
         
         If hRAR
           ; open successfull, store pw in mod info
-          *mod\archive\password$ = aes::encryptString(userdata\password$)
-          passwords(*mod\archive\password$) = 1
+          password$ = aes::encryptString(userdata\password$)
+          passwords(password$) = 1
+          If *mod
+            *mod\aux\archive\password$ = password$
+          EndIf
           passwordFile = CreateFile(#PB_Any, "passwords.list")
           If passwordFile
             ForEach passwords()

@@ -45,7 +45,7 @@
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
   Declare packDirectory(dir$, file$)
-  Declare checkTFPath(Dir$)
+  Declare checkGameDirectory(Dir$)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
 EndDeclareModule
 
@@ -365,47 +365,47 @@ Module misc
     ProcedureReturn result
   EndProcedure
   
-  Procedure checkTFPath(Dir$)
-    ; #True   = path okay, Train Fever executable found and writing possible
-    ; -1      = path okay, Train Fever executable found but cannot write
-    ; #False  = path not okay
+  Procedure checkGameDirectory(Dir$)
+    ; 0   = path okay, executable found and writing possible
+    ; 1   = path okay, executable found but cannot write
+    ; 2   = path not okay
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
         If main::_TESTMODE
-          ; in testmode, do not check for TrainFever executable
-          ProcedureReturn #True
+          ; in testmode, do not check if directory is correct
+          ProcedureReturn 0
         EndIf
         If FileSize(Dir$ + "res") <> -2
-          ; Subdirectory "res" not found -> wrong path
-          ProcedureReturn #False
+          ; required diretories not found -> wrong path
+          ProcedureReturn 2
         EndIf
         CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          If FileSize(Dir$ + "TrainFever.exe") > 1 Or FileSize(Dir$ + "TrainFeverLauncher.exe") > 1
+          If FileSize(Dir$ + "TransportFever.exe") > 1 Or FileSize(Dir$ + "TransportFeverLauncher.exe") > 1
             ; TrainFever.exe is located in this path!
             ; seems to be valid
             
             ; check if able to write to path
-            If CreateFile(0, Dir$ + "TFMM.tmp")
+            If CreateFile(0, Dir$ + "TPFMM.tmp")
               CloseFile(0)
-              DeleteFile(Dir$ + "TFMM.tmp")
-              ProcedureReturn #True
+              DeleteFile(Dir$ + "TPFMM.tmp")
+              ProcedureReturn 0
             EndIf
-            ProcedureReturn -1
+            ProcedureReturn 1
           EndIf
         CompilerElse
-          If FileSize(Dir$ + "TrainFever") > 1
-            If CreateFile(0, Dir$ + "TFMM.tmp")
+          If FileSize(Dir$ + "Transport Fever") > 1
+            If CreateFile(0, Dir$ + "TPFMM.tmp")
               CloseFile(0)
-              DeleteFile(Dir$ + "TFMM.tmp")
-              ProcedureReturn #True
+              DeleteFile(Dir$ + "TPFMM.tmp")
+              ProcedureReturn 0
             EndIf
-            ProcedureReturn -1
+            ProcedureReturn 1
           EndIf
         CompilerEndIf
       EndIf
     EndIf
-    ProcedureReturn #False
+    ProcedureReturn 2
   EndProcedure
   
   Procedure examineDirectoryRecusrive(root$, List files$(), path$="")

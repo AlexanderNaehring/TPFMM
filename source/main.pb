@@ -1,17 +1,27 @@
 ﻿EnableExplicit
 
+CreateDirectory(GetHomeDirectory()+"/.tpfmm")
+SetCurrentDirectory(GetHomeDirectory()+"/.tpfmm")
+
+CompilerSelect #PB_Compiler_OS
+  CompilerCase #PB_OS_Linux
+  CompilerCase #PB_OS_Windows
+    SetFileAttributes(GetCurrentDirectory(), #PB_FileSystem_Hidden)
+  CompilerCase #PB_OS_MacOS
+CompilerEndSelect
+
 DeclareModule main
   EnableExplicit
   
-  Global _DEBUG = #False
-  Global _TESTMODE = #False
-  Global TF$
-  Global ready
+  Global _DEBUG     = #True ; write debug messages to log file
+  Global _TESTMODE  = #False
+  Global ready      = #False
+  Global gameDirectory$
+  Global settingsFile$ = "TPFMM.ini"
   
   Declare init()
   Declare exit()
   Declare loop()
-  
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
@@ -32,28 +42,22 @@ Module main
     Protected i
     ; program parameter
     For i = 0 To CountProgramParameters() - 1
+      Debug "Parameter: "+ProgramParameter(i)
       Select LCase(ProgramParameter(i)) 
-        Case "-debug"
-          Debug "parameter: enable debug mode"
-          _DEBUG = #True
         Case "-testmode"
-          Debug "parameter: enable testing mode"
+          Debug "enable testing mode"
           _TESTMODE = #True
         Default
-          Debug "unknown parameter: " + ProgramParameter(i)
+          If FileSize(ProgramParameter(i))
+            ; install mod?
+          EndIf
       EndSelect
     Next
     
-    debugger::DeleteLogFile()
     If _DEBUG
-      debugger::SetLogFile("tfmm-output.txt")
+      debugger::SetLogFile("tpfmm.log")
     EndIf
-    
-    ;   SetCurrentDirectory(GetPathPart(ProgramFilename()))
-    CompilerIf #PB_Compiler_OS = #PB_OS_Linux
-      misc::CreateDirectoryAll(misc::path(GetHomeDirectory()+"/.tfmm"))
-      SetCurrentDirectory(misc::path(GetHomeDirectory()+"/.tfmm"))
-    CompilerEndIf
+    debugger::DeleteLogFile()
     
     debugger::Add("init() - load plugins")
     If Not UseZipPacker()
@@ -64,56 +68,41 @@ Module main
     If Not InitNetwork()
       debugger::Add("ERROR: InitNetwork()")
     EndIf
-    If Not UsePNGImageDecoder()
-      debugger::Add("ERROR: UsePNGImageDecoder()")
-      MessageRequester("Error", "Could not initialize PNG Decoder.")
+    If Not UsePNGImageDecoder() Or
+       Not UsePNGImageEncoder() Or 
+       Not UseJPEGImageDecoder() Or
+       Not UseTGAImageDecoder()
+      debugger::Add("ERROR: ImageDecoder")
+      MessageRequester("Error", "Could not initialize Image Decoder.")
       End
     EndIf
-    If Not UsePNGImageEncoder()
-      debugger::Add("ERROR: UsePNGImageEncoder()")
-      MessageRequester("Error", "Could not initialize PNG Encoder.")
-      End
-    EndIf
-    If Not UseJPEGImageDecoder()
-      debugger::Add("ERROR: UseJPEGImageDecoder()")
-      MessageRequester("Error", "Could not initialize JPEG Decoder.")
-      End
-    EndIf
-    If Not UseTGAImageDecoder()
-      debugger::Add("ERROR: UseTGAImageDecoder()")
-      MessageRequester("Error", "Could not initialize TGA Decoder.")
-      End
-    EndIf
-    
     
     images::LoadImages()
     
-    
     debugger::Add("init() - read locale")
-    OpenPreferences("TFMM.ini")
+    OpenPreferences(settingsFile$)
     locale::use(ReadPreferenceString("locale","en"))
     ClosePreferences()
     
     ; open all windows
     windowMain::create()
-    windowSettings::create(windowMain::id)
-    windowProgress::create(windowMain::id) ;OpenWindowProgress()
-    updater::create(windowMain::id)
-    
-    
+    windowSettings::create(windowMain::window)
+;     windowProgress::create(windowMain::id)
+;     updater::create(windowMain::id)
     
     debugger::Add("init() - load settings")
-    OpenPreferences("TFMM.ini")
-    TF$ = ReadPreferenceString("path", "")
+    OpenPreferences(settingsFile$)
+    gameDirectory$ = ReadPreferenceString("path", "")
     
     ; Window Location
     If ReadPreferenceInteger("windowlocation", #False)
       PreferenceGroup("window")
-      ResizeWindow(windowMain::id,
+      ResizeWindow(windowMain::window,
                    ReadPreferenceInteger("x", #PB_Ignore),
                    ReadPreferenceInteger("y", #PB_Ignore),
                    ReadPreferenceInteger("width", #PB_Ignore),
                    ReadPreferenceInteger("height", #PB_Ignore))
+      PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
       PreferenceGroup("")
       ; reload column sizing
       PreferenceGroup("columns")
@@ -124,45 +113,39 @@ Module main
       
       PreferenceGroup("")
     EndIf
-    
-    
-    ; update
-    debugger::Add("init() - start updater")
-    If ReadPreferenceInteger("update", 0)
-      CreateThread(updater::@checkUpdate(), 1)
-    EndIf
-    
     ClosePreferences()
     
-    If TF$ = ""
+;     ; start update in background
+;     debugger::Add("init() - start updater")
+;     If ReadPreferenceInteger("update", 0)
+;       CreateThread(updater::@checkUpdate(), 1)
+;     EndIf
+    
+    
+    If gameDirectory$
+      queue::add(queue::#QueueActionLoad)
+    Else
       ; no path specified upon program start -> open settings dialog
       windowSettings::show()
     EndIf
     
-    
-    If TF$ <> ""
-      ; load library
-      queue::add(queue::#QueueActionLoad)
-      
-      ; check for old TFMM configuration, trigger conversion if found
-      If FileSize(misc::Path(TF$ + "/TFMM/") + "mods.ini") >= 0
-        queue::add(queue::#QueueActionConvert, TF$)
-      EndIf
-    EndIf
-    
     debugger::Add("init complete")
+    
+    loop()
   EndProcedure
   
   Procedure exit()
     Protected i.i
     
-    OpenPreferences("TFMM.ini")
+    HideWindow(windowMain::window, 1)
+    
+    OpenPreferences(settingsFile$)
     If ReadPreferenceInteger("windowlocation", #False)
       PreferenceGroup("window")
-      WritePreferenceInteger("x", WindowX(windowMain::id))
-      WritePreferenceInteger("y", WindowY(windowMain::id))
-      WritePreferenceInteger("width", WindowWidth(windowMain::id))
-      WritePreferenceInteger("height", WindowHeight(windowMain::id))
+      WritePreferenceInteger("x", WindowX(windowMain::window))
+      WritePreferenceInteger("y", WindowY(windowMain::window))
+      WritePreferenceInteger("width", WindowWidth(windowMain::window))
+      WritePreferenceInteger("height", WindowHeight(windowMain::window))
     EndIf
     PreferenceGroup("columns")
     For i = 0 To 5
@@ -174,35 +157,20 @@ Module main
     mods::freeAll()
     
     Debug "close main window"
-    CloseWindow(windowMain::id)
+    CloseWindow(windowMain::window)
     
     Debug "Shutdown now"
     End
   EndProcedure
   
   Procedure loop()
-    Protected event
     Repeat
-      event = WaitWindowEvent(100)
-      
-      Select EventWindow()
-        Case windowMain::id
-          ; no events to handle here :)
-        Case windowSettings::window
-          windowSettings::events(event)
-        Case windowProgress::id
-          windowProgress::events(event)
-        Case windowInformation::id
-          windowInformation::events(event)
-        Case updater::window
-          updater::windowEvents(Event)
-      EndSelect
+      WaitWindowEvent(100)
     ForEver
   EndProcedure
   
 EndModule
 
-
 main::init()
-main::loop()
+
 End

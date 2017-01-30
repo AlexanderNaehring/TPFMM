@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 flag        = 89504E470D0A1A0A0000000D494844520000001A00000010080600000008D16FA8000000017352474200AECE1CE90000000467414D410000B18F0BFC6105000000097048597300000EC400000EC401952B0E1B00000006624B474400FF00FF00FFA0BDA7930000000774494D4507DE0C1210282B36C751700000003E49444154384F63646060F80FC434074C509AE660D422B201E31C3A2506C667F4B2E8EE704BDE8CB7E916473674B2E8FF7D7A59746E982586E16611030300A16F101890BFC8630000000049454E44AE426082
@@ -15,7 +15,7 @@ mod_export_all    = Liste mit allen Modifikationen exportieren
 mod_export_active = Liste mit aktiven Modifikationen exportieren
 about             = Über
 homepage          = Homepage
-update            = Aktualisiere TFMM
+update            = Aktualisiere TPFMM
 license           = Lizenz
 
 [main]
@@ -29,37 +29,37 @@ category        = Kategorie
 version         = Version
 new_mod         = Neue Mod
 download        = Download Mods
-start_tf        = Starte Train Fever
+start_tf        = Starte Transport Fever
 management      = Mod Verwaltung
-install         = Füge Mod in Train Fever ein
-install_pl      = Füge Mods in Train Fever ein
-remove          = Lösche Mod aus Train Fever
-remove_pl       = Lösche Mods aus Train Fever
-delete          = Lösche Mod aus TFMM
-delete_pl       = Lösche Mods aus TFMM
+install         = Füge Mod in Transport Fever ein
+install_pl      = Füge Mods in Transport Fever ein
+uninstall       = Entferne Modifikation
+uninstall_pl    = Entferne Modifikationen
+backup          = Erstelle Sicherheitskopie
+backup_pl       = Erstelle Sicherheitskopien
 information     = Informationen
 filter          = Filter Modifikationen
-install_dlc     = Füge DLC in Train Fever ein
-remove_dlc      = Lösche DLC aus Train Fever
+install_dlc     = Füge DLC in Transport Fever ein
+remove_dlc      = Lösche DLC aus Transport Fever
 
 [settings]
-title           = TFMM Einstellungen
-path            = Train Fever Verzeichnis
-text            = Wähle den Train Fever Installationspfad.\nBeachte, dass TFMM Schreibrechte für den Ordner benötigt.
+title           = TPFMM Einstellungen
+path            = Transport Fever Verzeichnis
+text            = Wähle den Transport Fever Installationspfad.\nBeachte, dass TPFMM Schreibrechte für den Ordner benötigt.
 browse          = Durchsuchen
-browse_tip      = Suche manuell nach dem Installationspfad von Train Fever
+browse_tip      = Suche manuell nach dem Installationspfad von Transport Fever
 autodetect      = Auto Pfad
-autodetect_tip  = TFMM versucht den Pfad zur Train Fever Installtion automatisch zu erkennen.
+autodetect_tip  = TPFMM versucht den Pfad zur Transport Fever Installtion automatisch zu erkennen.
 open            = Öffne
 open_tip        = Öffne den ausgewählten Pfad
-success         = Pfad ist korrekt und TFMM hat alle benötigten Rechte.
-failed          = TFMM hat keine Schreibrechte für den Spielordner. Eventuell werden Administratorrechte benötigt.
-not_found       = Train Fever konnte nicht gefunden werden. Eventuell werden Administratorrechte benötigt.
+success         = Pfad ist korrekt und TPFMM hat alle benötigten Rechte.
+failed          = TPFMM hat keine Schreibrechte für den Spielordner. Eventuell werden Administratorrechte benötigt.
+not_found       = Transport Fever konnte nicht gefunden werden. Eventuell werden Administratorrechte benötigt.
 other           = Weitere Einstellungen
 restore         = Merke Fensterposition
-restore_tip     = TFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
-update          = Prüfe automatisch auf neue Versionen des TFMM
-update_tip      = TFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.train-fever.net eigenständig auf neue Versionen überprüft werden.
+restore_tip     = TPFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
+update          = Prüfe automatisch auf neue Versionen des TPFMM
+update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.train-fever.net eigenständig auf neue Versionen überprüft werden.
 locale          = Lokalisierung (Sprache)
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
@@ -67,13 +67,13 @@ save            = Speichern
 save_tip        = Speichere Änderungen und schließe Einstellungen
 
 [update]
-title   = Aktualisiere TFMM
-update  = Eine neue Version von TFMM ist verfügbar.\nSoll die Homepage geöffnet werden?
+title   = Aktualisiere TPFMM
+update  = Eine neue Version von TPFMM ist verfügbar.\nSoll die Homepage geöffnet werden?
 current = Keine Aktualisierung notwendig.
 failed  = Fehler bei der Abfrage.
 
 [updater]
-title         = Aktualisiere TFMM
+title         = Aktualisiere TPFMM
 channel       = Veröffentlichungskanal
 check         = Prüfe auf neue Version
 download      = Herunterladen
@@ -92,17 +92,14 @@ nonewversion  = Keine neue Version verfügbar
 errordownload = Fehler bei der Abfrage
 
 [management]
-install       = Füge '{name}' zu Train Fever hinzu
-install1      = Soll '{name}' zu Train Fever hinzugefügt werden?
-install2      = Sollen {count} Modifikationen zu Train Fever hinzugefügt werden?
-remove        = Entferne '{name}' aus Train Fever
-remove1       = Soll '{name}' aus Train Fever entfernt werden?
-remove2       = Sollen {count} Modifikationen aus Train Fever entfernt werden?
-delete        = Lösche '{name}'
-delete1       = Soll '{name}' gelöscht werden?
-delete2       = Sollen {count} Modifikationen gelöscht werden?
+install       = Füge '{name}' zu Transport Fever hinzu
+install1      = Soll '{name}' zu Transport Fever hinzugefügt werden?
+install2      = Sollen {count} Modifikationen zu Transport Fever hinzugefügt werden?
+uninstall     = Lösche '{name}'
+uninstall1    = Soll '{name}' gelöscht werden?
+uninstall2    = Sollen {count} Modifikationen gelöscht werden?
 
-conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Train Fever hinzugefügt.
+conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Transport Fever hinzugefügt.
 conflict_id   = Konflikt bei der Installation von '{new_name}':\nEs existiert bereits eine Modifikation mit der ID '{id}': '{old_name} v{old_version}'\nSoll '{old_name} v{old_version}' durch '{new_name} v{new_version}' ersetzt werden?
 
 select_mod    = Wähle Modifikation aus
@@ -148,15 +145,19 @@ bus         = Bus
 truck       = LKW
 tram        = Straßenbahn
 train       = Zug
+locomotive  = Lokomotive
 steam       = Dampflokomotive
 diesel      = Diesellokomotive
 electric    = Elektrolokomotive
 railcar     = Triebwagen
+multiple_unit = Mehrfachtraktion
 wagon       = Waggon
 passenger   =	Passagierwaggon
 goods       = Güterwaggon
 building    = Gebäude
 station     = Bahnhof
+train_station = Bahnhof
+bus_station = Bushof
 deco        = Dekoration
 town        = Stadtgebäude
 depot       = Depot
@@ -171,19 +172,29 @@ catenary    = Oberleitung
 crossing    = Bahnübergang
 other       = Anderes
 script      = Skript Mod
+script_mod  = Skript Mod
 repaint     = Repaint
 europe      = Europa
 north america = Nordamerika
+usa         = USA
 asia        = Asien
 australia   = Australien
 oceania     = Ozeanien
+germany     = Deutschland
+logo        = Logo
+icon        = Icon
+brush_asset = Pinsel
+plane       = Flugzeug
+misc        = Sonstiges
+bridge      = Brücke
+track       = Gleis
 
 [progress]
 title       = Fortschritt
 load        = Lade Bibliothek
 new         = Füge neue Modifikation hinzu
 install     = Installiere Modifikation
-remove      = Entferne Modifikation aus Train Fever
+remove      = Entferne Modifikation aus Transport Fever
 delete      = Entferne Modifikation
 convert     = Konvertiere Modifikationen
 copy_lib    = Kopiere Modifikation in Bibliothek
@@ -191,6 +202,6 @@ extract     = Entpacke Dateien
 
 [conversion]
 title       = Konvertierung
-start       = Seit dem 27. Februar 2015 benutzt Train Fever ein neues Modding System.\nTrain Fever erkennt nun die Modifikationen und diese können im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt in das neue Format umgewandelt werden?
-finish      = Die Umwandlung ist abgeschlossen.\n\nBitte lösche nun manuell den "res/" Ordner im Train Fever Verzeichnis\nund führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch.\nHilfe dazu findest Du auf www.train-fever.net.
-legacy      = Um das alte Modding System zu nutzen, muss eine alte Version von TFMM verwendet werden.
+start       = Seit dem 27. Februar 2015 benutzt Transport Fever ein neues Modding System.\nTransport Fever erkennt nun die Modifikationen und diese können im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt in das neue Format umgewandelt werden?
+finish      = Die Umwandlung ist abgeschlossen.\n\nBitte lösche nun manuell den "res/" Ordner im Transport Fever Verzeichnis\nund führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch.\nHilfe dazu findest Du auf www.train-fever.net.
+legacy      = Um das alte Modding System zu nutzen, muss eine alte Version von TPFMM verwendet werden.

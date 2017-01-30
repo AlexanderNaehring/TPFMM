@@ -70,7 +70,6 @@ Module locale
   EndProcedure
   
   Procedure listAvailable(ComboBoxGadget, current_locale$)
-    init()
     debugger::Add("locale::listAvailable()")
     Protected dir.i, count.i
     Protected file$, locale$, name$
@@ -110,7 +109,6 @@ Module locale
   EndProcedure
     
   Procedure use(locale$)
-    init()
     debugger::Add("locale::use("+locale$+")")
     
     current_locale$ = locale$
@@ -142,23 +140,34 @@ Module locale
   EndProcedure
   
   Procedure.s getEx(group$, string$, Map var$())
-    init()
     Protected out$, key$
     
     If group$ = "" Or string$ = ""
       ProcedureReturn ""
     EndIf
     
-    key$ = group$+"/"+string$
+    If group$ = "category"
+      group$ = "tags"
+    EndIf
+    
+    
+    
+    key$ = LCase(group$+"/"+string$)
+    key$ = ReplaceString(key$, " ", "_")
     out$ = locale$(key$)
     If out$ = ""
-      debugger::Add("locale:: failed to load '"+group$+"/"+string$+"' from '"+current_locale$+"'")
+      If group$ <> "tags"
+        debugger::add("locale::getEx() - failed to load '"+key$+"' from '"+current_locale$+"'")
+      EndIf
+      
       out$ = localeEN$(key$)
       If out$ = ""
-        debugger::Add("locale:: failed to load fallback for '"+key$+"'")
-        out$ = "<"+key$+">"
-        If group$ = "category" Or group$ = "tags"
+        If group$ = "tags"
+          debugger::add("locale::getEx() - cannot find tag '"+string$+"'")
           out$ = string$
+        Else
+          debugger::add("locale::getEx() - failed to load fallback for '"+key$+"'")
+          out$ = "<"+key$+">"
         EndIf
       EndIf
     EndIf
@@ -173,13 +182,11 @@ Module locale
   EndProcedure
   
   Procedure.s get(group$, string$)
-    init()
     Protected NewMap var$()
     ProcedureReturn getEx(group$, string$, var$())
   EndProcedure
   
   Procedure getFlag(locale$)
-    init()
     Protected im.i
     Protected max_w.i, max_h.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
     Protected flag$, *image
@@ -222,6 +229,8 @@ Module locale
   Procedure.s getCurrentLocale()
     ProcedureReturn current_locale$
   EndProcedure
+  
+  init()
   
   DataSection
     DataLocaleEnglish:

@@ -5,13 +5,10 @@ DeclareModule queue
   
   Enumeration
     #QueueActionLoad
-    #QueueActionConvert
     
-    #QueueActionNew
-    #QueueActionDelete
-    
-    #QueueActionInstall
-    #QueueActionRemove
+    #QueueActionInstall   ; add file from HDD (and install)
+    #QueueActionDownload  ; download and install mod from online repository
+    #QueueActionUninstall ; remove mods from TPF (delete folder vom HDD)
   EndEnumeration
   
   Structure dat
@@ -53,16 +50,24 @@ Module queue
   EndProcedure
   
   Procedure progressShow(show = #True)
-    If IsWindow(progressW)
+    If progressW And IsWindow(progressW)
       HideWindow(progressW, Bool(Not show), #PB_Window_WindowCentered)
+    Else
+      ; if no window is defined, just hide / show the gadgets
+      If progressG And IsGadget(progressG)
+        HideGadget(progressG, Bool(Not show))
+      EndIf
+      If progressT And IsGadget(progressT)
+        HideGadget(progressT, Bool(Not show))
+      EndIf
     EndIf
   EndProcedure
   
   Procedure progressVal(val, max=-1)
     ;debugger::Add("queue::progressVal("+Str(val)+","+Str(max)+")")
     
-    If IsWindow(progressW) And IsGadget(progressG)
-      If max <> -1
+    If IsGadget(progressG)
+      If max <> -1 ; if max is defined, set range to [0, max]
         SetGadgetAttribute(progressG, #PB_ProgressBar_Minimum, 0)
         SetGadgetAttribute(progressG, #PB_ProgressBar_Maximum, max)
       EndIf
@@ -89,23 +94,19 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-  Procedure update() ; periodically called by main window / main loop
+  Procedure update() ; periodically called by main window
     Protected element.queue
-    Static dat.dat, conversion.i
+    Static dat.dat
     
     LockMutex(mQueue)
     If *thread
       If Not IsThread(*thread) ; thread finished
         *thread = #False
         progressShow(#False)
-        If conversion
-          conversion = #False
-          MessageRequester(locale::l("conversion","title"), locale::l("conversion","finish"))
-        EndIf
       EndIf
     EndIf
     
-    If main::TF$ And Not *thread
+    If main::gameDirectory$ And Not *thread
       If ListSize(queue()) > 0
         debugger::Add("updateQueue() - handle next element")
         ; pop first element
@@ -114,6 +115,14 @@ Module queue
         DeleteElement(queue(),1)
         
         Select element\action
+          Case #QueueActionLoad
+            debugger::Add("updateQueue() - #QueueActionLoad")
+            *thread = CreateThread(mods::@loadList(), #Null)
+            progressText("") ; text will be set in function
+            progressVal(0, 1)
+            progressShow()
+            
+            
           Case #QueueActionInstall
             debugger::Add("updateQueue() - #QueueActionInstall")
             If element\val$
@@ -123,52 +132,25 @@ Module queue
               progressShow()
             EndIf
             
-          Case #QueueActionRemove
-            debugger::Add("updateQueue() - #QueueActionRemove")
+          Case #QueueActionDownload
+            debugger::Add("updateQueue() - #QueueActionDownload")
             If element\val$
               dat\string$ = element\val$
-              *thread = CreateThread(mods::@remove(), dat)
-              progressText(locale::l("progress","remove"))
+              *thread = CreateThread(mods::@install(), dat)
+              progressText(locale::l("progress","install"))
               progressShow()
             EndIf
             
-          Case #QueueActionNew
-            debugger::Add("updateQueue() - #QueueActionNew")
+            
+          Case #QueueActionUninstall
+            debugger::Add("updateQueue() - #QueueActionUninstall")
             If element\val$
               dat\string$ = element\val$
-              *thread = CreateThread(mods::@new(), dat)
-              progressText(locale::l("progress","new"))
+              *thread = CreateThread(mods::@uninstall(), dat)
+              progressText(locale::l("progress","uninstall"))
               progressShow()
             EndIf
             
-          Case #QueueActionDelete
-            debugger::Add("updateQueue() - #QueueActionDelete")
-            If element\val$
-              dat\string$ = element\val$
-              *thread = CreateThread(mods::@delete(), dat)
-              progressText(locale::l("progress","delete"))
-              progressShow()
-            EndIf
-            
-          Case #QueueActionLoad
-            debugger::Add("updateQueue() - #QueueActionLoad")
-            *thread = CreateThread(mods::@loadList(), #Null)
-            progressText("") ; text will be set in function
-            progressVal(0, 1)
-            progressShow()
-            
-          Case #QueueActionConvert
-            debugger::Add("updateQueue() - #QueueActionConvert")
-            If element\val$
-              If MessageRequester(locale::l("conversion","title"), locale::l("conversion","start"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-                MessageRequester(locale::l("conversion","title"), locale::l("conversion","legacy"))
-              Else
-                *thread = CreateThread(mods::@convert(), #Null)
-                conversion = #True
-                progressText(locale::l("progress","convert"))
-                progressShow()
-              EndIf
-            EndIf
             
         EndSelect
       EndIf
@@ -178,17 +160,17 @@ Module queue
     ProcedureReturn #True
   EndProcedure
   
-  
+  ; progress animation for tasks that to not update the progress value themselves
   Procedure progressWaitThread(*dummy)
     Static val
     progressWaitThreadFlag = #True
     While progressWaitThreadFlag
       progressVal(val, 100)
-      val + 3
+      val + 2
       If val > 100
         val = 0
       EndIf
-      Delay(80)
+      Delay(50)
     Wend
     progressVal(0, 1)
   EndProcedure
