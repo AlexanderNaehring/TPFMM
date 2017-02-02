@@ -34,8 +34,14 @@ Module mods
     pMaps$        = misc::Path(main::gameDirectory$ + "/maps/")
   EndMacro
   
-  Procedure.s getModFolder(id$, type$ = "mod")
+  
+  
+  Procedure.s getModFolder(id$ = "", type$ = "mod")
     defineFolder()
+    
+    If id$ = "" And type$ = "mod"
+      ProcedureReturn pMods$
+    EndIf
     
     If Left(id$, 1) = "*"
       ProcedureReturn misc::Path(pWorkshop$ + Mid(id$, 2, Len(id$)-3) + "/")
@@ -43,12 +49,11 @@ Module mods
       ProcedureReturn misc::Path(pStagingArea$ + Mid(id$, 2) + "/")
     ElseIf type$ = "dlc"
       ProcedureReturn misc::path(pDLCs$ + id$ + "/")
-;     ElseIf type$ = "map"
-;       ProcedureReturn misc::path(pMaps$ + id$ + "/")
+    ElseIf type$ = "map"
+      ProcedureReturn misc::path(pMaps$ + id$ + "/")
     Else
       ProcedureReturn misc::path(pMods$ + id$ + "/")
     EndIf
-    
   EndProcedure
   
   
@@ -170,7 +175,7 @@ Module mods
     ; check if mod at specified path is valid
     ; mods must have
     ; - res/       OR
-    ; - main.lua
+    ; - mod.lua
     ; mods should have
     ; - mod.lua               
     ; - image_00.tga          (ingame preview)
@@ -188,15 +193,51 @@ Module mods
       ProcedureReturn #True
     EndIf
     
-    If FileSize(path$ + "main.lua") > 0
-      ; main.lua found, assume mod is ok
+    If FileSize(path$ + "mod.lua") > 0
+      ; mod.lua found, assume mod is ok
       ProcedureReturn #True
     EndIf
     
-    If FileSize(path$ + "mod.lua") > 0
-      ; mod.lua found, but no "main.lua" and no "res/"... mod may be broken
-      ProcedureReturn #False
+    
+  EndProcedure
+  
+  Procedure.s getModRoot(path$) ; try to find mod.lua to determine the root location of the mod
+    Protected dir
+    Protected entry$, result$
+    path$ = misc::path(path$) ; makes sure that string ends on delimiter
+    
+    dir = ExamineDirectory(#PB_Any, path$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        entry$ = DirectoryEntryName(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
+          If entry$ = "." Or entry$ = ".."
+            Continue
+          EndIf
+          
+          If entry$ = "res" And #False ; only rely on "mod.lua"
+            FinishDirectory(dir)
+            ProcedureReturn path$
+          Else
+            result$ = getModRoot(path$ + entry$)
+            If result$
+              FinishDirectory(dir)
+              ProcedureReturn result$
+            EndIf
+          EndIf
+          
+        Else
+          If entry$ = "mod.lua"
+            debugger::add("mods::getModRoot() - found mod.lua in: "+path$)
+            FinishDirectory(dir)
+            ProcedureReturn path$
+          EndIf
+        EndIf
+      Wend
     EndIf
+    
+    FinishDirectory(dir)
+    ProcedureReturn ""
     
   EndProcedure
   
@@ -460,6 +501,7 @@ Module mods
   Procedure extractZIP(file$, path$)
     debugger::Add("mods::extractZIP("+File$+")")
     Protected zip, error
+    Protected zippedFile$, targetFile$
     
     zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
     If Not zip
@@ -480,28 +522,15 @@ Module mods
         Continue
       EndIf
       
-      file$ = PackEntryName(zip)
-      file$ = misc::Path(GetPathPart(file$), "/")+GetFilePart(file$) ; zip always uses "/"
-      ; debugger::Add("mods::extractZIP() - {"+file$+"}")
+      zippedFile$ = PackEntryName(zip)
+      zippedFile$ = misc::Path(GetPathPart(zippedFile$), "/")+GetFilePart(zippedFile$) ; zip always uses "/"
       If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
-        If FindString(file$, "res/") ; only extract files which are located in subfoldres of res/
-          file$ = Mid(file$, FindString(file$, "res/")) ; let all paths start with "res/" (if res is located in a subfolder!)
-          file$ = misc::Path(GetPathPart(file$)) + GetFilePart(file$)
-          misc::CreateDirectoryAll(GetPathPart(path$ + file$))
-          debugger::Add("          extract {"+file$+"}")
-          If UncompressPackFile(zip, path$ + file$) = -1
-            debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + File$+"}")
-          EndIf
-        ElseIf FindString(file$, "main.lua") Or
-               FindString(file$, "mod.lua") Or
-               FindString(file$, "strings.lua") Or
-               FindString(file$, "filesystem.lua") Or
-               FindString(file$, "image_00.tga")
-          debugger::Add("          extract {"+file$+"}")
-          file$ = GetFilePart(file$) ; these files will be stored directly in the root folder of the mod
-          If UncompressPackFile(zip, path$ + file$) = -1
-            debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+Path$ + file$+"}")
-          EndIf
+        zippedFile$ = misc::Path(GetPathPart(zippedFile$)) + GetFilePart(zippedFile$)
+        targetFile$ = path$ + zippedFile$
+        misc::CreateDirectoryAll(GetPathPart(targetFile$))
+        debugger::Add("          extract {"+zippedFile$+"}")
+        If UncompressPackFile(zip, targetFile$) = -1
+          debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+targetFile$+"}")
         EndIf
       EndIf
     Wend
@@ -537,24 +566,10 @@ Module mods
         Continue
       EndIf
       
-      If FindString(entry$, "res\") ; only extract files to list which are located in subfoldres of res
-        entry$ = Mid(entry$, FindString(entry$, "res\")) ; let all paths start with "res\" (if res is located in a subfolder!)
-        entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
-        
-        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
-          debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
-        EndIf
-      ElseIf FindString(entry$, "main.lua") Or
-             FindString(entry$, "mod.lua") Or
-             FindString(entry$, "strings.lua") Or
-             FindString(entry$, "filesystem.lua") Or
-             FindString(entry$, "image_00.tga")
-        entry$ = GetFilePart(entry$)
-        If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, path$ + entry$) <> unrar::#ERAR_SUCCESS
-          debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
-        EndIf
-      Else
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; file not in "res", skip it
+      entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
+      
+      If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
+        debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
       EndIf
       
     Wend
@@ -803,6 +818,8 @@ Module mods
   EndProcedure
   
   Procedure new(*data.queue::dat) ; INITIAL STEP: add new mod file from any location
+    ProcedureReturn #False
+    
     Protected file$ = *data\string$
     debugger::Add("mods::new("+file$+")")
     Protected *mod.mod, id$
@@ -1233,7 +1250,7 @@ Module mods
   
   ;### mod handling
   
-  Procedure install(*data.queue::dat)
+  Procedure install(*data.queue::dat) ; install mod from file (archive)
     debugger::Add("mods::install("+Str(*data)+")")
     Protected file$ = *data\string$
     
@@ -1263,17 +1280,19 @@ Module mods
     
     ; extract files to temp
     source$ = file$
-    target$ = misc::Path(main::gameDirectory$+"/TPFMM/install/"+GetFilePart(file$)+"/")
+    target$ = misc::Path(main::gameDirectory$+"/TPFMM/install/"+GetFilePart(file$, #PB_FileSystem_NoExtension)+"/")
     
     ; make sure target is clean!
-    DeleteDirectory(target$, "*", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
-    If FileSize(target$) = -2
-      ; target directory could not be removed!
-      debugger::add("mods::install() - could not create clean target directory {"+target$+"}")
-      ProcedureReturn #False
-    EndIf
+    DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+;     If FileSize(target$) = -2
+;       ; target directory could not be removed!
+;       debugger::add("mods::install() - could not create clean target directory {"+target$+"}")
+;       ProcedureReturn #False
+;     EndIf
+    
     ; create fresh target directory
     misc::CreateDirectoryAll(target$)
+    ;RunProgram(target$)
     
     If Not extractZIP(source$, target$)
       If Not extractRAR(source$, target$)
@@ -1284,37 +1303,47 @@ Module mods
     EndIf
     
     ; archive is extracted to target$
-    ; check extracted files and format
+    ; try to find mod in target$ (may be in some sub-directory)...
+    Protected modRoot$
+    modRoot$ = getModRoot(target$)
+    
+    If modRoot$ = ""
+      debugger::add("mods::install() - ERROR: getModRoot("+target$+") failed!")
+      DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+      ProcedureReturn #False
+    EndIf
+    
+    ; modRoot folder found. 
+    ; try to get ID from folder name
+    Protected id$
+    id$ = misc::getDirectoryName(modRoot$)
+    Debug id$
+    
+    If Not checkID(id$)
+      debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
+      DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+      ProcedureReturn #False
+    EndIf
+    
+    ; copy mod to game folder
+    Protected pMods$, modFolder$
+    pMods$ = getModFolder()
+    modFolder$ = misc::path(pMods$ + id$)
+    
+    ;- TODO: remove old version if present! (also handle old version in *mods list
+    If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
+      debugger::add("mods::install() - ERROR: MoveDirectory() failed!")
+      DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+      ProcedureReturn #False
+    EndIf
     
     
-    
-    
-    ;- TODO change this
-    ; these files are not longer extracted automatically
-    ; just extract files from zip and/or generate lua file manually
-    ; same issue: handle multilanguage in lua -> create strings.lua and internally save all strings in a language map:
-    ; map: strings.info() with info strucutre containing e.g. "name", "description", etc...
-;     CopyFile(source$ + "mod.lua", target$ + "mod.lua")
-;     CopyFile(source$ + "strings.lua", target$ + "strings.lua")
-;     CopyFile(source$ + "filesystem.lua", target$ + "filesystem.lua")
-;     CopyFile(source$ + "main.lua", target$ + "main.lua")
-    
-    
+    ;RunProgram(modFolder$)
     
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
-    ;- TODO Image Update
-    
-;     ; update gadget mod list
-;     If IsGadget(_gadgetMod)
-;       For i = 0 To CountGadgetItems(_gadgetMod) -1
-;         If ListIcon::GetListItemData(_gadgetMod, i) = *mod
-;           ListIcon::SetListItemImage(_gadgetMod, i, ImageID(images::Images("yes")))
-;           Break
-;         EndIf
-;       Next
-;     EndIf
-    
+    DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+    displayMods(GetGadgetText(_gadgetMod))
     debugger::Add("mods::install() - finished")
     ProcedureReturn #True
   EndProcedure
@@ -1334,44 +1363,25 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    If Left(id$, 10) = "urbangames"
+    If Left(id$, 11) = "urbangames_"
       debugger::add("mods::uninstall() - ERROR: cannot uninstall vanilla mods created by urbangames")
       ProcedureReturn #False
     EndIf
     
-    Protected modFolder$                          ;- TODO !!!
-    defineFolder()
-    
     If Left(id$, 1) = "*"
-      modFolder$ = misc::Path(pWorkshop$ + Mid(id$, 2, Len(id$)-3) + "/")
-    ElseIf Left(id$, 1) = "?"
-      modFolder$ = misc::Path(pStagingArea$ + Mid(id$, 2) + "/")
-    ElseIf *mod\aux\type$ = "dlc"
-      modFolder$ = misc::path(pDLCs$ + id$ + "/")
-    ElseIf *mod\aux\type$ = "map"
-      modFolder$ = misc::path(pMaps$ + id$ + "/")
-    Else
-      modFolder$ = misc::path(pMods$ + id$ + "/")
+      debugger::add("mods::uninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
     EndIf
     
-    ; delete folder
-    ;- TODO if backup is enabled, move folder to backup instead of deleting
+    Protected modFolder$
+    modFolder$ = getModFolder(id$, *mod\aux\type$)
     
     debugger::add("mods::uninstall() - delete {"+modFolder$+"} and all subfolders")
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
-    ; finish removal
-    
-;     If IsGadget(_gadgetMod)
-;       For i = 0 To CountGadgetItems(_gadgetMod) -1
-;         If ListIcon::GetListItemData(_gadgetMod, i) = *mod
-;           ListIcon::RemoveListItem(_gadgetMod, i)
-;           Break
-;         EndIf
-;       Next
-;     EndIf
-    
     free(*mod)
+    
+    displayMods(GetGadgetText(_gadgetMod))
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -1668,6 +1678,16 @@ Module mods
           ListIcon::SetListItemData(_gadgetMod, item, *mods())
           ; ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("yes")))
           ;- TODO: image based on online update status or something else?
+          If Left(\tpf_id$, 1) = "*"
+            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_workshop")))
+          Else
+            If Left(\tpf_id$, 11) = "urbangames_"
+              ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod_official")))
+            Else
+              ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod")))
+            EndIf
+          EndIf
+          
           item + 1
         EndIf
       EndWith

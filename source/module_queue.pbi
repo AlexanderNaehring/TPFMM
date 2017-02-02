@@ -102,7 +102,9 @@ Module queue
     If *thread
       If Not IsThread(*thread) ; thread finished
         *thread = #False
-        progressShow(#False)
+        ;progressShow(#False)
+        progressVal(0, 1)
+        progressText("")
       EndIf
     EndIf
     

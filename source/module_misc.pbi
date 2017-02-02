@@ -33,6 +33,7 @@
   EndMacro
   
   Declare.s path(path$, delimiter$ = "")
+  Declare.s getDirectoryName(path$)
   Declare.s bytes(bytes.d)
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
@@ -51,7 +52,7 @@ EndDeclareModule
 
 Module misc
  
-  Procedure.s Path(path$, delimiter$ = "")
+  Procedure.s path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
     path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
     While FindString(path$, "//")           ; strip multiple /
@@ -105,6 +106,13 @@ Module misc
       ProcedureReturn #True
     EndIf
     ProcedureReturn #False
+  EndProcedure
+  
+  Procedure.s getDirectoryName(path$)
+    path$ = path(path$)
+    path$ = Left(path$, Len(path$)-1)
+    path$ = GetFilePart(path$)
+    ProcedureReturn path$
   EndProcedure
   
   Procedure.s Bytes(bytes.d)

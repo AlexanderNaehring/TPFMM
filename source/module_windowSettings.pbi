@@ -250,8 +250,3 @@ Module windowSettings
   EndProcedure
   
 EndModule
-
-; IDE Options = PureBasic 5.50 (Windows - x86)
-; CursorPosition = 25
-; Folding = ---
-; EnableXP

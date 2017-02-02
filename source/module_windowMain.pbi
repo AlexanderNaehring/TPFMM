@@ -355,7 +355,17 @@ Module windowMain
   EndProcedure
   
   Procedure GadgetButtonInfomation()
+    debugger::add("windowMain::GadgetButtonInformation()")
     
+    Protected *mod.mods::mod
+    
+    *mod = ListIcon::GetListItemData(GadgetLibraryMods, GetGadgetState(GadgetLibraryMods))
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    
+    debugger::add("windowMain::GadgetButtonInformation() - show information of mod {"+*mod\tpf_id$+"}")
   EndProcedure
   
   Procedure GadgetLibraryMods()
@@ -400,6 +410,7 @@ Module windowMain
   Procedure GadgetResetFilterMods()
     SetGadgetText(GadgetFilterMods, "")
     SetActiveGadget(GadgetFilterMods)
+    mods::displayMods()
   EndProcedure
   
   Procedure GadgetResetFilterRepository()
@@ -594,6 +605,9 @@ Module windowMain
     ; register to mods module
     mods::registerMainWindow(window)
     mods::registerModGadget(GadgetLibraryMods)
+    
+    ; register to progress
+    queue::progressRegister(0, GadgetProgressBar, GadgetProgressText)
     
     ; register to repository module
     Protected json$, *json
