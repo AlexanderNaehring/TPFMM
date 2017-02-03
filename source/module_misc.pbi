@@ -345,6 +345,7 @@ Module misc
             Continue
           EndIf
           If Not addDirToPack(pack, dir$+entry$, root$)
+            FinishDirectory(dir)
             ProcedureReturn #False
           EndIf
       EndSelect
