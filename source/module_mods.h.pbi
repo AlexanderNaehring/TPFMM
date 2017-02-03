@@ -10,6 +10,7 @@
   
   Structure aux     ;-- additional information about mod
     type$             ; "mod", "map", "dlc", ...
+    isVanilla.b       ; pre-installed mods should not be uninstalled
     luaDate.i         ; date of info.lua (reload info when newer version available)
     installDate.i     ; date of first encounter of this file (added to TPFMM)
     archive.archive   ; archive file, type and handle

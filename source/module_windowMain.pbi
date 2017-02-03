@@ -134,7 +134,7 @@ Module windowMain
   EndProcedure
   
   Procedure updateGUI()
-    Protected selectedMod, i, numSelected
+    Protected i, numSelected, numCanUninstall, numCanBackup
     Protected *mod.mods::mod
     Protected text$, author$
     
@@ -142,7 +142,9 @@ Module windowMain
       ProcedureReturn #False
     EndIf
     
-    numSelected = 0
+    numSelected     = 0
+    numCanUninstall = 0
+    numCanBackup    = 0
     
     For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
       *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
@@ -152,41 +154,57 @@ Module windowMain
       
       If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
         numSelected + 1
+        If Not *mod\aux\isVanilla ;-TODO: find other possible reasons (e.g. do not uninstall workshop mods, etc...)
+          numCanBackup + 1
+          numCanUninstall + 1
+        EndIf
       EndIf
     Next
     
-    selectedMod =  GetGadgetState(GadgetLibraryMods)
-    If selectedMod = -1 ; if nothing is selected -> disable buttons
+    
+    If numSelected = 0
       DisableGadget(GadgetButtonInfomation, #True)
+    Else
+      DisableGadget(GadgetButtonInfomation, #False)
+    EndIf
+    
+    If numCanBackup = 0
       DisableGadget(GadgetButtonBackup,     #True)
-      DisableGadget(GadgetButtonUninstall,  #True)
       DisableMenuItem(MenuLibrary, #MenuItem_Backup,    #True)
-      DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #True)
     Else
       DisableGadget(GadgetButtonBackup,     #False)
-      DisableGadget(GadgetButtonUninstall,  #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Backup,    #False)
+    EndIf
+    
+    If numCanUninstall = 0
+      DisableGadget(GadgetButtonUninstall,  #True)
+      DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #True)
+    Else
+      DisableGadget(GadgetButtonUninstall,  #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #False)
-      
-      If numSelected > 1
-        DisableGadget(GadgetButtonInfomation, #True)
-        SetGadgetText(GadgetButtonBackup,     locale::l("main","backup_pl"))
-        SetGadgetText(GadgetButtonUninstall,  locale::l("main","uninstall_pl"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
-      Else
-        DisableGadget(GadgetButtonInfomation, #False)
-        SetGadgetText(GadgetButtonBackup,     locale::l("main","backup"))
-        SetGadgetText(GadgetButtonUninstall,  locale::l("main","uninstall"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
-        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
-      EndIf
+    EndIf
+    
+    
+    If numCanBackup > 1
+      SetGadgetText(GadgetButtonBackup,     locale::l("main","backup_pl"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
+    Else
+      SetGadgetText(GadgetButtonBackup,     locale::l("main","backup"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
+    EndIf
+    
+    If numCanUninstall > 1
+      SetGadgetText(GadgetButtonUninstall,  locale::l("main","uninstall_pl"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
+    Else
+      SetGadgetText(GadgetButtonUninstall,  locale::l("main","uninstall"))
+      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
     EndIf
     
     If numSelected = 1
       ; one mod selected
       ; display image
-      *mod = ListIcon::GetListItemData(GadgetLibraryMods, selectedMod)
+      *mod = ListIcon::GetListItemData(GadgetLibraryMods, GetGadgetState(GadgetLibraryMods))
       
       Protected im
       im = mods::getPreviewImage(*mod)
@@ -355,15 +373,12 @@ Module windowMain
   EndProcedure
   
   Procedure GadgetButtonInfomation()
-    debugger::add("windowMain::GadgetButtonInformation()")
-    
     Protected *mod.mods::mod
     
     *mod = ListIcon::GetListItemData(GadgetLibraryMods, GetGadgetState(GadgetLibraryMods))
     If Not *mod
       ProcedureReturn #False
     EndIf
-    
     
     debugger::add("windowMain::GadgetButtonInformation() - show information of mod {"+*mod\tpf_id$+"}")
   EndProcedure
@@ -593,7 +608,7 @@ Module windowMain
     
     ; right click menu on mod item
     MenuLibrary = CreatePopupImageMenu(#PB_Any)
-    MenuItem(#MenuItem_Backup, l("main","backup"))
+    MenuItem(#MenuItem_Backup, l("main","backup"), ImageID(images::Images("icon_backup")))
     MenuItem(#MenuItem_Uninstall, l("main","uninstall"), ImageID(images::Images("no")))
     
     BindMenuEvent(MenuLibrary, #MenuItem_Backup, @GadgetButtonBackup())
