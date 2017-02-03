@@ -357,6 +357,7 @@ Module repository
       Else ; could not load from disk
         image = #Null
         ; download image
+        ;-TODO keep track of downloads!
         ; TODO it is possible, that two threads download the same image simultaneously -> maybe keep track of urls$ that are being downloaded at the moment
         CreateDirectory(GetPathPart(file$))
         ReceiveHTTPFile(url$, file$)
