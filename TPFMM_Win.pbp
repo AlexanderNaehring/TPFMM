@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-03 16:00" user="naehring" host="MU732281"/>
+    <lastopen date="2017-02-03 16:54" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -36,7 +36,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_mods.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
@@ -45,7 +45,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_queue.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -80,7 +80,7 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="254"/>
+      <compilecount enable="1" value="263"/>
       <buildcount enable="1" value="2"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

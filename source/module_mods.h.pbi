@@ -66,12 +66,15 @@
   Declare canUninstall(*mod.mod)
   Declare canBackup(*mod.mod)
   
+  ; queue callbacks:
   Declare install(*data)    ; check and extract archive to game folder
   Declare uninstall(*data)  ; remove mod folder from game, maybe create a security backup by zipping content
+  Declare backup(*data)     ; backup mod
   
-  
+  ; export
   Declare exportList(all=#False)
   
+  ; display callbacks
   Declare displayMods(filter$="")
   Declare displayDLCs()
   

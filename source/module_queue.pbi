@@ -9,13 +9,15 @@ DeclareModule queue
     #QueueActionInstall   ; add file from HDD (and install)
     #QueueActionDownload  ; download and install mod from online repository
     #QueueActionUninstall ; remove mods from TPF (delete folder vom HDD)
+    #QueueActionBackup    ; backup mod to given backupFolder
   EndEnumeration
   
   Structure dat
     string$
+    option$
   EndStructure
   
-  Declare add(action, val$ = "")
+  Declare add(action, string$ = "", option$ = "")
   Declare update()
   
   Declare progressRegister(window, gadgetP, gadgetT)
@@ -31,7 +33,8 @@ Module queue
   
   Structure queue
     action.i
-    val$
+    string$
+    option$
   EndStructure
   
   Global mQueue.i
@@ -81,14 +84,15 @@ Module queue
     EndIf
   EndProcedure
   
-  Procedure add(action, val$ = "") ; add new task to queue
-    debugger::Add("queue::add("+Str(action)+", "+val$+")")
+  Procedure add(action, string$ = "", option$ = "") ; add new task to queue
+    debugger::Add("queue::add("+Str(action)+", "+string$+", "+option$+")")
     
     LockMutex(mQueue)
     LastElement(queue())
     AddElement(queue())
-    queue()\action = action
-    queue()\val$ = val$
+    queue()\action  = action
+    queue()\string$ = string$
+    queue()\option$ = option$
     UnlockMutex(mQueue)
     
     ProcedureReturn #True
@@ -103,6 +107,7 @@ Module queue
       If Not IsThread(*thread) ; thread finished
         *thread = #False
         ;progressShow(#False)
+        progressStopWait()
         progressVal(0, 1)
         progressText("")
       EndIf
@@ -110,7 +115,7 @@ Module queue
     
     If main::gameDirectory$ And Not *thread
       If ListSize(queue()) > 0
-        debugger::Add("updateQueue() - handle next element")
+        debugger::Add("queue::update() - handle next element")
         ; pop first element
         FirstElement(queue())
         element = queue()
@@ -118,7 +123,7 @@ Module queue
         
         Select element\action
           Case #QueueActionLoad
-            debugger::Add("updateQueue() - #QueueActionLoad")
+            debugger::Add("queue::update() - #QueueActionLoad")
             *thread = CreateThread(mods::@loadList(), #Null)
             progressText("") ; text will be set in function
             progressVal(0, 1)
@@ -126,18 +131,18 @@ Module queue
             
             
           Case #QueueActionInstall
-            debugger::Add("updateQueue() - #QueueActionInstall")
-            If element\val$
-              dat\string$ = element\val$
+            debugger::Add("queue::update() - #QueueActionInstall")
+            If element\string$
+              dat\string$ = element\string$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
             EndIf
             
           Case #QueueActionDownload
-            debugger::Add("updateQueue() - #QueueActionDownload")
-            If element\val$
-              dat\string$ = element\val$
+            debugger::Add("queue::update() - #QueueActionDownload")
+            If element\string$
+              dat\string$ = element\string$
               *thread = CreateThread(mods::@install(), dat)
               progressText(locale::l("progress","install"))
               progressShow()
@@ -145,14 +150,23 @@ Module queue
             
             
           Case #QueueActionUninstall
-            debugger::Add("updateQueue() - #QueueActionUninstall")
-            If element\val$
-              dat\string$ = element\val$
+            debugger::Add("queue::update() - #QueueActionUninstall")
+            If element\string$
+              dat\string$ = element\string$
               *thread = CreateThread(mods::@uninstall(), dat)
               progressText(locale::l("progress","uninstall"))
               progressShow()
             EndIf
             
+          Case #QueueActionBackup
+            debugger::add("queue::update() - #QueueActionBackup")
+            If element\string$ And element\option$
+              dat\string$ = element\string$
+              dat\option$ = element\option$
+              *thread = CreateThread(mods::@backup(), dat)
+              progressText(locale::l("progress","backup"))
+              progressShow()
+            EndIf
             
         EndSelect
       EndIf
@@ -168,7 +182,7 @@ Module queue
     progressWaitThreadFlag = #True
     While progressWaitThreadFlag
       progressVal(val, 100)
-      val + 2
+      val + 4
       If val > 100
         val = 0
       EndIf

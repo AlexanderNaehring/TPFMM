@@ -363,6 +363,52 @@ Module windowMain
   
   Procedure GadgetButtonBackup()
     debugger::Add("windowMain::GadgetButtonBackup()")
+    
+    Protected *mod.mods::mod
+    Protected i, count
+    Protected backupFolder$
+    Protected NewMap strings$()
+    
+    For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+      If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
+        *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
+        If mods::canBackup(*mod)
+          count + 1
+        EndIf
+      EndIf
+    Next i
+    If count > 0
+      backupFolder$ = misc::path(main::gameDirectory$+"/TPFMM/backups/")
+      misc::CreateDirectoryAll(backupFolder$)
+      
+      OpenPreferences(main::settingsFile$)
+      backupFolder$ = ReadPreferenceString("backupFolder", backupFolder$)
+      ClosePreferences()
+      
+      backupFolder$ = PathRequester(locale::l("management", "backup"), backupFolder$)
+      If backupFolder$ = ""
+        ProcedureReturn #False
+      EndIf
+      
+      If FileSize(backupFolder$) <> -2
+        debugger::add("windowMain::GadgetButtonBackup() - ERROR: selected folder {"+backupFolder$+"} does not exist")
+        ProcedureReturn #False
+      EndIf
+      
+      OpenPreferences(main::settingsFile$)
+      WritePreferenceString("backupFolder", backupFolder$)
+      ClosePreferences()
+      
+      For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
+        If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
+          *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
+          If mods::canBackup(*mod)
+            queue::add(queue::#QueueActionBackup, *mod\tpf_id$, backupFolder$)
+          EndIf
+        EndIf
+      Next i
+      
+    EndIf
   EndProcedure
   
   Procedure GadgetButtonInfomation()

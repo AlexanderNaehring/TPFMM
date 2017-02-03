@@ -1281,6 +1281,37 @@ Module mods
   
   ;### mod handling
   
+  Procedure.s generateNewID(*mod.mod) ; return new ID as string
+    Protected author$, name$, version$
+    ; ID = author_mod_version
+    
+    Static RegExpNonAlphaNum
+    If Not RegExpNonAlphaNum
+      RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
+      ; regexp matches all non alphanum characters including spaces etc.
+    EndIf
+    
+    With *mod
+      If ListSize(\authors()) > 0
+        FirstElement(\authors()) ; LastElement ?
+        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+      Else
+        author$ = ""
+      EndIf
+      If author$ = ""
+        author$ = "unknownauthor"
+      EndIf
+      name$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\name$), "") ; remove all non alphanum + make lowercase
+      If name$ = ""
+        name$ = "unknown"
+      EndIf
+      version$ = Str(Val(StringField(\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
+      
+      ProcedureReturn author$ + "_" + name$ + "_" + version$ ; concatenate id parts
+    EndWith
+    
+  EndProcedure
+  
   Procedure canUninstall(*mod.mod)
     If Not *mod
       ProcedureReturn #False
@@ -1375,8 +1406,18 @@ Module mods
     
     If Not checkID(id$)
       debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
-      DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      ProcedureReturn #False
+      
+      ; try to get ID from file name
+      id$ = GetFilePart(source$, #PB_FileSystem_NoExtension)
+      If Not checkID(id$)
+        debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
+        
+        ;-TODO try to generate ID if not found?
+        ; required for older mods - but new mods should not require this
+        ;-TODO handle mods downloaded from workshop as well!
+        DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+        ProcedureReturn #False
+      EndIf
     EndIf
     
     ; copy mod to game folder
@@ -1436,18 +1477,59 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure backup(*data.queue::dat)
+    Protected id$, backupFolder$, modFolder$, backupFile$
+    Protected *mod.mod
+    
+    id$           = *data\string$
+    backupFolder$ = *data\option$
+    debugger::add("mods::backup("+id$+", "+backupFolder$+")")
+    
+    If FindMapElement(*mods(), id$)
+      *mod = *mods(id$)
+    Else
+      debugger::add("mods::backup() - ERROR: cannot find mod {"+id$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    
+    If FileSize(backupFolder$) <> -2
+      debugger::add("mods::backup() - ERROR: target directory does not exist {"+backupFolder$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    modFolder$ = getModFolder(id$, *mod\aux\type$)
+    
+    If FileSize(modFolder$) <> -2
+      debugger::add("mods::backup() - ERROR: mod directory does not exist {"+modFolder$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    ; normally, use id$ as filename. DO NOT when creating backup of mods in workshop or staging area
+    backupFile$ = id$
+    If Left(id$, 1) = "*" Or Left(id$, 1) = "?" ; workshop or staging area
+      ;backupFile$ = generateNewID(*mod)
+      ; for now, use original folder name (without * and ?)
+      backupFile$ = Right(id$, Len(id$)-1)
+    EndIf
+    
+    ; add backupPath
+    backupFile$ = misc::path(backupFolder$) + backupFile$ + ".zip"
+    
+    ; start backup now: modFolder$ -> zip -> backupFile$
+    misc::CreateDirectoryAll(backupFolder$)
+    misc::packDirectory(modFolder$, backupFile$)
+    
+    debugger::add("mods::backup() - finished")
+    ProcedureReturn #True
+  EndProcedure
+  
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
     
     If Not *mod
       ProcedureReturn
-    EndIf
-    
-    Static RegExpNonAlphaNum
-    If Not RegExpNonAlphaNum
-      RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
-      ; regexp matches all non alphanum characters including spaces etc.
     EndIf
     
     With *mod
@@ -1486,26 +1568,7 @@ Module mods
         ProcedureReturn #True
       EndIf
       
-      \tpf_id$ = ""
-      
-      debugger::Add("mods::generateID() - generate new ID")
-      ; ID = author_mod_version
-      If ListSize(\authors()) > 0
-        LastElement(\authors())
-        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
-      Else
-        author$ = ""
-      EndIf
-      If author$ = ""
-        author$ = "unknownauthor"
-      EndIf
-      name$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\name$), "") ; remove all non alphanum + make lowercase
-      If name$ = ""
-        name$ = "unknown"
-      EndIf
-      version$ = Str(Val(StringField(\version$, 1, "."))) ; first part of version string concatenated by "." as numeric value
-      
-      \tpf_id$ = author$ + "_" + name$ + "_" + version$ ; concatenate id parts
+      \tpf_id$ = generateNewID(*mod)
       
       If \tpf_id$ And checkID(\tpf_id$)
         debugger::Add("mods::generateID() - ID {"+\tpf_id$+"} is well defined (generated by TPFMM)")
