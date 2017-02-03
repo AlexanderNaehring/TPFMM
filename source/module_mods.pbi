@@ -1281,6 +1281,33 @@ Module mods
   
   ;### mod handling
   
+  Procedure canUninstall(*mod.mod)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\isVanilla
+      ProcedureReturn #False
+    EndIf
+    If Left(*mod\tpf_id$, 1) = "*"
+      ProcedureReturn #False
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure canBackup(*mod.mod)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\isVanilla
+      ProcedureReturn #False
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
   Procedure install(*data.queue::dat) ; install mod from file (archive)
     debugger::Add("mods::install("+Str(*data)+")")
     Protected file$ = *data\string$
@@ -1388,10 +1415,8 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    Debug "mod is vanilla? "+*mod\aux\isVanilla
-    
-    If *mod\aux\isVanilla
-      debugger::add("mods::uninstall() - ERROR: {"+id$+"} is a vanilla mod, do not remove")
+    If Not canUninstall(*mod)
+      debugger::add("mods::uninstall() - ERROR: can not uninstall {"+id$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -1707,7 +1732,7 @@ Module mods
           If Left(\tpf_id$, 1) = "*"
             ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_workshop")))
           Else
-            If Left(\tpf_id$, 11) = "urbangames_"
+            If \aux\isVanilla
               ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod_official")))
             Else
               ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod")))

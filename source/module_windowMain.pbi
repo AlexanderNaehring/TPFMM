@@ -154,19 +154,21 @@ Module windowMain
       
       If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
         numSelected + 1
-        If Not *mod\aux\isVanilla ;-TODO: find other possible reasons (e.g. do not uninstall workshop mods, etc...)
-          numCanBackup + 1
+        If mods::canUninstall(*mod)
           numCanUninstall + 1
+        EndIf
+        If mods::canBackup(*mod)
+          numCanBackup + 1
         EndIf
       EndIf
     Next
     
-    
-    If numSelected = 0
-      DisableGadget(GadgetButtonInfomation, #True)
-    Else
-      DisableGadget(GadgetButtonInfomation, #False)
-    EndIf
+    DisableGadget(GadgetButtonInfomation, #True) ;- not yet implemented
+;     If numSelected = 0
+;       DisableGadget(GadgetButtonInfomation, #True)
+;     Else
+;       DisableGadget(GadgetButtonInfomation, #False)
+;     EndIf
     
     If numCanBackup = 0
       DisableGadget(GadgetButtonBackup,     #True)
@@ -183,7 +185,6 @@ Module windowMain
       DisableGadget(GadgetButtonUninstall,  #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #False)
     EndIf
-    
     
     If numCanBackup > 1
       SetGadgetText(GadgetButtonBackup,     locale::l("main","backup_pl"))
@@ -320,18 +321,6 @@ Module windowMain
   Procedure GadgetButtonInstall() ; install new mod from repository (online)
     debugger::Add("windowMain::GadgetButtonInstall")
     
-    Protected NewMap strings$()
-    
-;     If count = 1
-;       ClearMap(strings$())
-;       strings$("name") = *last\name$
-;       result = MessageRequester(locale::l("main","install"), locale::getEx("management", "install1", strings$()), #PB_MessageRequester_YesNo)
-;     Else
-;       ClearMap(strings$())
-;       strings$("count") = Str(count)
-;       result = MessageRequester(locale::l("main","install_pl"), locale::getEx("management", "install2", strings$()), #PB_MessageRequester_YesNo)
-;     EndIf
-      
   EndProcedure
   
   Procedure GadgetButtonUninstall() ; Uninstall selected mods (delete from HDD)
@@ -343,7 +332,9 @@ Module windowMain
     For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
       If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected 
         *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
-        count + 1
+        If mods::canUninstall(*mod)
+          count + 1
+        EndIf
       EndIf
     Next i
     If count > 0
@@ -361,7 +352,9 @@ Module windowMain
         For i = 0 To CountGadgetItems(GadgetLibraryMods) - 1
           If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
             *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
-            queue::add(queue::#QueueActionUninstall, *mod\tpf_id$)
+            If mods::canUninstall(*mod)
+              queue::add(queue::#QueueActionUninstall, *mod\tpf_id$)
+            EndIf
           EndIf
         Next i
       EndIf
@@ -493,7 +486,7 @@ Module windowMain
     CloseSubMenu()
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
-    MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "F5")
+    ; MenuItem(#MenuItem_Update, l("menu","update") + Chr(9) + "F5")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     
     ; Menu Events

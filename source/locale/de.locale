@@ -39,8 +39,6 @@ backup          = Erstelle Sicherheitskopie
 backup_pl       = Erstelle Sicherheitskopien
 information     = Informationen
 filter          = Filter Modifikationen
-install_dlc     = Füge DLC in Transport Fever ein
-remove_dlc      = Lösche DLC aus Transport Fever
 
 [settings]
 title           = TPFMM Einstellungen

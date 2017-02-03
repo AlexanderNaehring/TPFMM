@@ -31,16 +31,12 @@ start_tf        = Start Transport Fever
 management      = Mod Management
 install         = Add Mod to Transport Fever
 install_pl      = Add Mods to Transport Fever
-uninstall       = Remove Mod from Transport Fever
-uninstall_pl    = Remove Mods from Transport Fever
+uninstall       = Uninstall Mod
+uninstall_pl    = Uninstall Mods
 backup          = Create Backup
 backup_pl       = Create Backups
-delete          = Uninstall Mod
-delete_pl       = Uninstall Mods
 information     = Mod Information
 filter          = Filter modifications
-install_dlc     = Add DLC to Transport Fever
-remove_dlc      = Remove DLC from Transport Fever
 
 [settings]
 title           = TPFMM Settings
@@ -95,12 +91,9 @@ errordownload = Failed to retrieve info from server
 install       = Add '{name}' to Transport Fever
 install1      = Do you want to add '{name}' to Transport Fever?
 install2      = Do you want to add {count} modifications to Transport Fever?
-remove        = Remove '{name}' from Transport Fever
-remove1       = Do you want to remove '{name}' from Transport Fever?
-remove2       = Do you want to remove {count} modifications from Transport Fever?
-delete        = Delete '{name}'
-delete1       = Do you want to permanently delete '{name}'?
-delete2       = Do you want to permanently delete {count} modifications?
+uninstall     = Uninstall '{name}'
+uninstall1    = Do you want to uninstall '{name}'?
+uninstall2    = Do you want to uninstall {count} modifications?
 
 conflict_hash = Modification '{name}' is already installed and added to Transport Fever.
 conflict_id   = Conflict while installing '{new_name}':\nA mod with id '{id}' already exists: '{old_name} v{old_version}'\nShould '{old_name} v{old_version}' be replaced by '{new_name} v{new_version}'?

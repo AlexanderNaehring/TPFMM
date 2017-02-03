@@ -63,6 +63,9 @@
   ; 
   ; download(*data) - provided by repository module! -> dowloads file to temp dir and calls install procedure
   
+  Declare canUninstall(*mod.mod)
+  Declare canBackup(*mod.mod)
+  
   Declare install(*data)    ; check and extract archive to game folder
   Declare uninstall(*data)  ; remove mod folder from game, maybe create a security backup by zipping content
   
