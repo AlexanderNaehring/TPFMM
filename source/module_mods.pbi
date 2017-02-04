@@ -91,6 +91,7 @@ Module mods
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_02_1")
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1")
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1")
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_04_1")
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_05_1")
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_06_1")
       AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_07_1")
@@ -605,7 +606,7 @@ Module mods
         zippedFile$ = misc::Path(GetPathPart(zippedFile$)) + GetFilePart(zippedFile$)
         targetFile$ = path$ + zippedFile$
         misc::CreateDirectoryAll(GetPathPart(targetFile$))
-        debugger::Add("          extract {"+zippedFile$+"}")
+       ;  debugger::Add("          extract {"+zippedFile$+"}")
         If UncompressPackFile(zip, targetFile$) = -1
           debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+targetFile$+"}")
         EndIf
@@ -1089,6 +1090,7 @@ Module mods
     ; *mods() map now contains all mods that where known to TPFMM at last program shutdown
     ; check for new mods and check if mod info has changed since last parsing of mod.lua
     
+    ;{ Scanning
     ; scan /mods and workshop folders
     ClearMap(scanner())
     
@@ -1176,6 +1178,7 @@ Module mods
       FinishDirectory(dir)
     EndIf
     
+    ;}
     ; scanning finished - now check if new mods have been added or mods have been removed
     
     
@@ -1202,13 +1205,12 @@ Module mods
         queue::progressVal(n)
         
         id$ = MapKey(scanner())
-;         debugger::Add("mods::loadList() - scanner: {"+id$+"}")
         
         If FindMapElement(*mods(), id$)
+          ; select existing element or
           *mod = *mods()
-          ; debugger::add("mods::loadList() - found mod {"+id$+"} at address {"+*mod+"}")
         Else
-          ; debugger::add("mods::loadList() - mod {"+id$+"} not found, create new entry")
+          ; create new element
           *mod = addToMap(id$, scanner()\type$)
         EndIf
         
@@ -1402,8 +1404,6 @@ Module mods
     ; try to get ID from folder name
     Protected id$
     id$ = misc::getDirectoryName(modRoot$)
-    Debug id$
-    
     If Not checkID(id$)
       debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
       
@@ -1420,12 +1420,20 @@ Module mods
       EndIf
     EndIf
     
-    ; copy mod to game folder
-    Protected pMods$, modFolder$
-    pMods$ = getModFolder()
-    modFolder$ = misc::path(pMods$ + id$)
     
-    ;- TODO: remove old version if present! (also handle old version in *mods list
+    Protected modFolder$
+    modFolder$ = getModFolder(id$) ;- TODO handle installation of maps and DLCs
+    
+    ; check if mod already installed?
+    If FindMapElement(*mods(), id$)
+      debugger::add("mods::install() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
+      free(*mods(id$))
+    EndIf
+    If FileSize(modFolder$) = -2
+      DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+    EndIf
+    
+    ; copy mod to game folder
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
       debugger::add("mods::install() - ERROR: MoveDirectory() failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
@@ -1433,11 +1441,33 @@ Module mods
     EndIf
     
     
+    ; read info of new mod
+    Protected *mod.mod
+    *mod = addToMap(id$, "mod")
+    loadInfo(*mod)
+    
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     displayMods(GetGadgetText(_gadgetMod))
     debugger::Add("mods::install() - finished")
+    
+    
+    Protected backup, backupFolder$
+    If OpenPreferences(main::settingsFile$) ;- TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
+      backup = ReadPreferenceInteger("autobackup", 0)
+      If backup
+        backupFolder$ = misc::path(main::gameDirectory$+"/TPFMM/backups/")
+        misc::CreateDirectoryAll(backupFolder$)
+        backupFolder$ = ReadPreferenceString("backupFolder", backupFolder$)
+      EndIf
+      ClosePreferences()
+      
+      If backup
+        queue::add(queue::#QueueActionBackup, id$, backupFolder$)
+      EndIf
+    EndIf
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -1517,8 +1547,15 @@ Module mods
     backupFile$ = misc::path(backupFolder$) + backupFile$ + ".zip"
     
     ; start backup now: modFolder$ -> zip -> backupFile$
+    Protected NewMap strings$()
+    strings$("mod") = *mod\name$
+    queue::progressText(locale::getEx("progress", "backup_mod", strings$()))
+    queue::progressStartWait()
+    
     misc::CreateDirectoryAll(backupFolder$)
     misc::packDirectory(modFolder$, backupFile$)
+    
+    queue::progressStopWait()
     
     debugger::add("mods::backup() - finished")
     ProcedureReturn #True

@@ -57,7 +57,9 @@ other           = Weitere Einstellungen
 restore         = Merke Fensterposition
 restore_tip     = TPFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TPFMM
-update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.train-fever.net eigenständig auf neue Versionen überprüft werden.
+update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.transportfevermods.com eigenständig auf neue Versionen überprüft werden.
+backup          = Automatische Sicherheitskopie von neuen Mods
+backup_tip      = TPFMM wird automatisch Sicherheitskopien von neu installierten Mods erstellen.
 locale          = Lokalisierung (Sprache)
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
@@ -96,6 +98,7 @@ install2      = Sollen {count} Modifikationen zu Transport Fever hinzugefügt we
 uninstall     = Lösche '{name}'
 uninstall1    = Soll '{name}' gelöscht werden?
 uninstall2    = Sollen {count} Modifikationen gelöscht werden?
+backup        = Erstelle Sicherheitskopie von Mod
 
 conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Transport Fever hinzugefügt.
 conflict_id   = Konflikt bei der Installation von '{new_name}':\nEs existiert bereits eine Modifikation mit der ID '{id}': '{old_name} v{old_version}'\nSoll '{old_name} v{old_version}' durch '{new_name} v{new_version}' ersetzt werden?
@@ -197,6 +200,8 @@ delete      = Entferne Modifikation
 convert     = Konvertiere Modifikationen
 copy_lib    = Kopiere Modifikation in Bibliothek
 extract     = Entpacke Dateien
+backup      = Erstelle Sicherheitskopie
+backup_mod  = Erstelle Sicherheitskopie von {mod}...
 
 [conversion]
 title       = Konvertierung

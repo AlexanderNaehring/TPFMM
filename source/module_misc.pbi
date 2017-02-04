@@ -338,7 +338,7 @@ Module misc
       entry$ = DirectoryEntryName(dir)
       Select DirectoryEntryType(dir)
         Case #PB_DirectoryEntry_File
-          debugger::Add("misc::addDirToPack() - addPackFile {"+relative$ + entry$+"}")
+;           debugger::Add("misc::addDirToPack() - addPackFile {"+relative$ + entry$+"}")
           AddPackFile(pack, dir$ + entry$, relative$ + entry$)
         Case #PB_DirectoryEntry_Directory
           If entry$ = "." Or entry$ = ".."
@@ -358,7 +358,7 @@ Module misc
     debugger::Add("packDirectory("+dir$+", "+file$+")")
     Protected.i pack, result
     
-    DeleteFile(file$)
+    DeleteFile(file$, #PB_FileSystem_Force)
     pack = CreatePack(#PB_Any, file$, #PB_PackerPlugin_Zip)
     If Not pack
       ProcedureReturn #False

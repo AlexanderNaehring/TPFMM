@@ -55,7 +55,9 @@ other           = Other Settings
 restore         = Restore TPFMM window position upon next start
 restore_tip     = Remember the window location and restore upon next start
 update          = Automatically check for new TPFMM updates
-update_tip      = TPFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting train-fever.net.
+update_tip      = TPFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting www.transportfevermods.com.
+backup          = Automatically backup new mods
+backup_tip      = TPFMM will automatically backup new mods when they are added using the mod manager.
 locale          = Localization (Language)
 cancel          = Cancel
 cancel_tip      = Drop changes and close this dialog
@@ -94,6 +96,7 @@ install2      = Do you want to add {count} modifications to Transport Fever?
 uninstall     = Uninstall '{name}'
 uninstall1    = Do you want to uninstall '{name}'?
 uninstall2    = Do you want to uninstall {count} modifications?
+backup        = Create backup of mod
 
 conflict_hash = Modification '{name}' is already installed and added to Transport Fever.
 conflict_id   = Conflict while installing '{new_name}':\nA mod with id '{id}' already exists: '{old_name} v{old_version}'\nShould '{old_name} v{old_version}' be replaced by '{new_name} v{new_version}'?
@@ -196,6 +199,8 @@ delete      = Permanently delete modification
 convert     = Convert modifications
 copy_lib    = Copying modifications to library
 extract     = Extracting files
+backup      = Create backup
+backup_mod  = Create backup of {mod}...
 
 [conversion]
 title       = Conversion

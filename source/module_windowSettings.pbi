@@ -18,7 +18,7 @@ Module windowSettings
   
   Global parentW
   Global timerSettings = 100
-  Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticUpdate, GadgetFrame, GadgetFrame, GadgetSettingsLocale
+  Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticBackup, GadgetFrame, GadgetFrame, GadgetSettingsLocale
   
   
   ;----------------------------------------------------------------------------
@@ -124,13 +124,13 @@ Module windowSettings
     EndIf
     
     
-    OpenPreferences("TPFMM.ini")
+    OpenPreferences(main::settingsFile$)
     WritePreferenceString("path", main::gameDirectory$)
     WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
     If Not GetGadgetState(GadgetSettingsWindowLocation)
       RemovePreferenceGroup("window")
     EndIf
-    WritePreferenceInteger("update", GetGadgetState(GadgetSettingsAutomaticUpdate))
+    WritePreferenceInteger("autobackup", GetGadgetState(GadgetSettingsAutomaticBackup))
     If locale$ <> ReadPreferenceString("locale", "en")
       restart = #True
     EndIf
@@ -208,8 +208,9 @@ Module windowSettings
     GadgetToolTip(GadgetCancelSettings, locale::l("settings","cancel_tip"))
     GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 20, 170, 280, 25, locale::l("settings","restore"))
     GadgetToolTip(GadgetSettingsWindowLocation, locale::l("settings","restore_tip"))
-    GadgetSettingsAutomaticUpdate = CheckBoxGadget(#PB_Any, 20, 200, 280, 25, locale::l("settings","update"))
-    GadgetToolTip(GadgetSettingsAutomaticUpdate, locale::l("settings","update_tip"))
+    GadgetSettingsAutomaticBackup = CheckBoxGadget(#PB_Any, 20, 200, 280, 25, locale::l("settings","backup"))
+    GadgetToolTip(GadgetSettingsAutomaticBackup, locale::l("settings","backup_tip"))
+    
     GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, locale::l("settings","other"))
     GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, locale::l("settings","locale"))
     GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25, #PB_ComboBox_Image)
@@ -229,10 +230,10 @@ Module windowSettings
   Procedure show()
     Protected locale$
     
-    OpenPreferences("TPFMM.ini")
+    OpenPreferences(main::settingsFile$)
     SetGadgetText(GadgetPath, ReadPreferenceString("path", main::gameDirectory$))
     SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
-    SetGadgetState(GadgetSettingsAutomaticUpdate, ReadPreferenceInteger("update", 1))
+    SetGadgetState(GadgetSettingsAutomaticBackup, ReadPreferenceInteger("autobackup", 1))
     locale$ = ReadPreferenceString("locale", "en")
     ClosePreferences()
     
