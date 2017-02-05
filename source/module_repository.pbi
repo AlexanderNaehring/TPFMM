@@ -48,7 +48,6 @@ DeclareModule repository
   ; main (root level) repository
   Structure repo_main
     repository.repo_info
-    locale.repo_link
     mods.repo_link
   EndStructure
   
@@ -60,24 +59,23 @@ DeclareModule repository
   EndStructure
   
   Structure mod
-    mod_id.i
+    id.i
+    source$
+    remote_id.i
     name$
-    author_id.i
-    author_name$
+    author$
+    authorid.i
+    version$
+    type$
+    url$
     thumbnail$
     views.i
-    downloads.i
-    likes.i
-    created.i
-    changed.i
-    type$
+    timecreated.i
+    timechanged.i
+    lastscan.i
+    List files.files()
     List tags$()
     List tagsLocalized$()
-    tags_string$
-    version$
-    state$
-    url$
-    List files.files()
   EndStructure
   
   ; repository for mods
@@ -141,7 +139,7 @@ Module repository
     Define file
     file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
-      WriteStringN(file, "http://www.transportfevermods.com/repository/")
+      WriteStringN(file, "http://www.transportfevermods.com/repository/repository.json")
       CloseFile(file)
     EndIf
   EndIf
@@ -240,7 +238,7 @@ Module repository
     
     ; Sort list for last modification time
     If ListSize(repo_mods(url$)\mods())
-      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mod\changed), TypeOf(mod\changed))
+      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mod\timechanged), TypeOf(mod\timechanged))
     EndIf
     
     ; postprocess some structure fields
@@ -267,51 +265,11 @@ Module repository
           AddElement(\tagsLocalized$())
           \tagsLocalized$() = locale::l("tags", \tags$())
         Next
-        ; aggregate tag list to string
-        \tags_string$ = ""
-        ForEach \tagsLocalized$()
-          \tags_string$ + \tagsLocalized$() + ", "
-        Next
-        If Len(\tags_string$) >= 2
-          ; cut of ', ' from end of string
-          \tags_string$ = Left(\tags_string$, Len(\tags_string$) - 2)
-        EndIf
       Next
     EndWith
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
     
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure loadRepositoryLocale(url$)
-    Protected file$ ; parameter: URL -> calculate local filename from url
-    file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryLocale("+url$+")")
-    debugger::add("repository::loadRepositoryLocale() - filename: {"+file$+"}")
-    
-    Protected json, value
-    
-    If FileSize(file$) < 0
-      debugger::add("repository::loadRepositoryLocale() - repository file not present, load from server")
-      updateRepository(url$)
-    EndIf
-    
-    
-    json = LoadJSON(#PB_Any, file$)
-    If Not json
-      debugger::add("repository::loadRepositoryLocale() - ERROR: Could not load JSON")
-      ProcedureReturn #False
-    EndIf
-    
-    value = JSONValue(json)
-    ; value is an object
-    If JSONType(value) <> #PB_JSON_Object 
-      debugger::add("repository::loadRepositoryLocale() - ERROR: Locale Repository should be of type JSON Object")
-      FreeJSON(json)
-      ProcedureReturn #False
-    EndIf
-    FreeJSON(json)
     ProcedureReturn #True
   EndProcedure
   
@@ -473,7 +431,6 @@ Module repository
     debugger::add("repository::loadRepository() | URL: "+repo_main\repository\url$)
     debugger::add("repository::loadRepository() |----")
     debugger::add("repository::loadRepository() | Mods Repository URL: "+repo_main\mods\url$)
-    debugger::add("repository::loadRepository() | Locale Repository URL: "+repo_main\locale\url$)
     debugger::add("repository::loadRepository() |----")
     
     If repo_main\mods\url$
@@ -488,17 +445,6 @@ Module repository
       loadRepositoryMods(repo_main\mods\url$, repo_main\mods\enc$)
     EndIf
     
-    If repo_main\locale\url$
-      debugger::add("repository::loadRepository() - load locale repository...")
-      age = Date() - GetFileDate(getRepoFileName(repo_main\locale\url$), #PB_Date_Modified)
-      debugger::add("repository::loadRepository() - local locale repo age: "+Str(age)+", remote locale repo age: "+Str(repo_main\locale\age)+"")
-      If age > repo_main\locale\age
-        debugger::add("repository::loadRepository() - download new version")
-        updateRepository(repo_main\locale\url$)
-      EndIf
-      ; Load locale files from repository file
-      loadRepositoryLocale(repo_main\locale\url$)
-    EndIf
     
   EndProcedure
   
@@ -572,25 +518,21 @@ Module repository
     For col = 0 To ArraySize(columns())
       ; user can specify which columns to display
       ; internal array will save offset for reading value from memory
-      ; as well as other information about column used for display
+      ; and type of value to read (int, string, ...)
       ; TODO use locale to get translation of column header
       With _columns(col)
         ; save name and type depending on offset
         Select columns(col)\name$ ;{
-          Case "mod_id"
-            \offset = OffsetOf(mod\mod_id)
-            \name$ = "Mod ID"
-            \type = #COL_INT
           Case "name"
             \offset = OffsetOf(mod\name$)
             \name$ = "Mod Name"
             \type = #COL_STR
-          Case "author_id"
-            \offset = OffsetOf(mod\author_id)
+          Case "author"
+            \offset = OffsetOf(mod\authorid)
             \name$ = "Author ID"
             \type = #COL_INT
           Case "author_name"
-            \offset = OffsetOf(mod\author_name$)
+            \offset = OffsetOf(mod\author$)
             \name$ = "Author"
             \type = #COL_STR
           Case "thumbnail"
@@ -602,37 +544,29 @@ Module repository
             \offset = OffsetOf(mod\views)
             \name$ = "Views"
             \type = #COL_INT
-          Case "downloads"
-            \offset = OffsetOf(mod\downloads)
-            \name$ = "Downloads"
-            \type = #COL_INT
-          Case "likes"
-            \offset = OffsetOf(mod\likes)
-            \name$ = "Likes"
-            \type = #COL_INT
-          Case "created"
+;           Case "downloads"
+;             \offset = OffsetOf(mod\downloads)
+;             \name$ = "Downloads"
+;             \type = #COL_INT
+;           Case "likes"
+;             \offset = OffsetOf(mod\likes)
+;             \name$ = "Likes"
+;             \type = #COL_INT
+          Case "timecreated"
             Continue
-            \offset = OffsetOf(mod\created)
+            \offset = OffsetOf(mod\timecreated)
             \name$ = "Created"
             \type = #COL_INT
-          Case "changed"
+          Case "timechanged"
             Continue
-            \offset = OffsetOf(mod\changed)
+            \offset = OffsetOf(mod\timechanged)
             \name$ = "Last Modified"
             \type = #COL_INT
           Case "tags" ; list
             Continue
-          Case "tags_string"
-            \offset = OffsetOf(mod\tags_string$)
-            \name$ = "Tags"
-            \type = #COL_STR
           Case "version"
             \offset = OffsetOf(mod\version$)
             \name$ = "Version"
-            \type = #COL_STR
-          Case "state"
-            \offset = OffsetOf(mod\state$)
-            \name$ = "State"
             \type = #COL_STR
           Case "url"
             \offset = OffsetOf(mod\url$)
@@ -751,7 +685,7 @@ Module repository
               str$ = Trim(StringField(search$, k, " "))
               If str$
                 ; search in author, name, tags
-                If FindString(\author_name$, str$, 1, #PB_String_NoCase)
+                If FindString(\author$, str$, 1, #PB_String_NoCase)
                   tmp_ok = 1
                 ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
                   tmp_ok = 1

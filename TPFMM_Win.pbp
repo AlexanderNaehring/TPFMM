@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-04 17:14" user="alexa" host="RIGEL"/>
+    <lastopen date="2017-02-05 20:55" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -80,7 +80,7 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="279"/>
+      <compilecount enable="1" value="282"/>
       <buildcount enable="1" value="2"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
