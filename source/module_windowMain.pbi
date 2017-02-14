@@ -385,10 +385,10 @@ Module windowMain
       backupFolder$ = ReadPreferenceString("backupFolder", backupFolder$)
       ClosePreferences()
       
-      backupFolder$ = PathRequester(locale::l("management", "backup"), backupFolder$)
-      If backupFolder$ = ""
-        ProcedureReturn #False
-      EndIf
+;       backupFolder$ = PathRequester(locale::l("management", "backup"), backupFolder$)
+;       If backupFolder$ = ""
+;         ProcedureReturn #False
+;       EndIf
       
       If FileSize(backupFolder$) <> -2
         debugger::add("windowMain::GadgetButtonBackup() - ERROR: selected folder {"+backupFolder$+"} does not exist")
