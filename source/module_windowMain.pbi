@@ -682,10 +682,8 @@ Module windowMain
     repository::registerThumbGadget(GadgetRepositoryThumbnail)
     repository::registerTypeGadget(GadgetRepositoryFilterType)
     repository::registerFilterGadget(GadgetRepositoryFilterString)
-    ;- disabled until online features are finished
-    ;CreateThread(@loadRepositoryThread(), 0) 
-    ;TODO change this!
     
+    CreateThread(@loadRepositoryThread(), 0)
     
     ; apply sizes
     resize()

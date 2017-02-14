@@ -30,7 +30,6 @@ DeclareModule repository
   
   Structure repo_info
     name$
-    guid$
     description$
     maintainer$
     url$
@@ -40,7 +39,6 @@ DeclareModule repository
   
   Structure repo_link
     url$
-    changed.i
     age.i
     enc$
   EndStructure
@@ -48,7 +46,8 @@ DeclareModule repository
   ; main (root level) repository
   Structure repo_main
     repository.repo_info
-    mods.repo_link
+    build.i
+    List mods.repo_link() ; multiple mod repositories may be linked from a single root repsitory
   EndStructure
   
   Structure files
@@ -139,7 +138,7 @@ Module repository
     Define file
     file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
-      WriteStringN(file, "http://www.transportfevermods.com/repository/repository.json")
+      WriteStringN(file, "http://www.transportfevermods.com/repository/")
       CloseFile(file)
     EndIf
   EndIf
@@ -170,18 +169,18 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure updateRepository(url$)
-    debugger::add("repository::updateRepository("+url$+")")
+  Procedure downloadRepository(url$)
+    debugger::add("repository::downloadRepository("+url$+")")
     Protected file$, time
     
     file$ = getRepoFileName(url$)
     
     time = ElapsedMilliseconds()
     If ReceiveHTTPFile(url$, file$)
-      debugger::add("repository::updateRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
+      debugger::add("repository::downloadRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
       ProcedureReturn #True
     EndIf
-    debugger::add("repository::updateRepository() - ERROR: failed to download repository")
+    debugger::add("repository::downloadRepository() - ERROR: failed to download repository")
     ProcedureReturn #False
     
   EndProcedure
@@ -195,11 +194,11 @@ Module repository
     
     If FileSize(file$) < 0
       debugger::add("repository::loadRepositoryMods() - repository file not present, load from server")
-      updateRepository(url$)
+      downloadRepository(url$)
     EndIf
     
     Select enc$
-      Case "aes"
+      Case "aes_1"
         debugger::add("repository::loadRepositoryMods() - using AES decryption")
         Protected size, file, *buffer
         size = FileSize(file$)
@@ -258,8 +257,6 @@ Module repository
             \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
           Next
         EndIf
-        ; tags are stored without localization here (english)
-        ; only display translated strings but store original strings
         ClearList(\tagsLocalized$())
         ForEach \tags$()
           AddElement(\tagsLocalized$())
@@ -275,18 +272,18 @@ Module repository
   
   Procedure thumbnailThread(*dummy)
     ; waits for new entries in queue and displays them to the registered image gadget
-    debugger::add("repository::thumbnailThread()")
+    ; debugger::add("repository::thumbnailThread()")
     
     Protected url$, file$
     Protected image
     Protected scale.d
     Static NewMap images()
+    Static NewMap downloading()
     
     LockMutex(mutexStackDisplayThumb)
     If ListSize(stackDisplayThumbnail$()) <= 0
       ; no element waiting in stack
       UnlockMutex(mutexStackDisplayThumb)
-      debugger::add("repository::thumbnailThread() - No element in stack")
       ProcedureReturn #False
     EndIf
     
@@ -296,8 +293,13 @@ Module repository
     DeleteElement(stackDisplayThumbnail$())
     UnlockMutex(mutexStackDisplayThumb)
     
+    If FindMapElement(downloading(), url$)
+      ; already downloading, skip here!
+      ProcedureReturn #False
+    EndIf
+    
     file$ = getThumbFileName(url$)
-    debugger::add("repository::thumbnailThread() - display image url={"+url$+"}, file={"+file$+"}")
+    ; debugger::add("repository::thumbnailThread() - display image url={"+url$+"}, file={"+file$+"}")
     If file$ = ""
       debugger::add("repository::thumbnailThread() - ERROR: thumbnail filename not defined")
       ProcedureReturn #False
@@ -309,14 +311,17 @@ Module repository
       image = images(file$)
     Else
       ; try to load file from disk if available
-      image = LoadImage(#PB_Any, file$)
+      If FileSize(file$) > 0
+        image = LoadImage(#PB_Any, file$)
+      Else
+        image = #Null
+      EndIf
       If image And IsImage(image)
         images(file$) = image
       Else ; could not load from disk
         image = #Null
         ; download image
-        ;-TODO keep track of downloads!
-        ; TODO it is possible, that two threads download the same image simultaneously -> maybe keep track of urls$ that are being downloaded at the moment
+        downloading(url$) = #True
         CreateDirectory(GetPathPart(file$))
         ReceiveHTTPFile(url$, file$)
         If FileSize(file$) > 0
@@ -329,6 +334,7 @@ Module repository
         Else
           debugger::add("repository::thumbnailThread() - ERROR: download failed: {"+url$+"} -> {"+file$+"}")
         EndIf
+        DeleteMapElement(downloading(), url$)
       EndIf
     EndIf
     
@@ -401,9 +407,7 @@ Module repository
     Protected json, value
     Protected age
     
-    ; TODO check when to load new file from server!
-    ; currently: reload from server every time
-    updateRepository(url$)
+    downloadRepository(url$)
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
@@ -429,20 +433,25 @@ Module repository
     debugger::add("repository::loadRepository() | Description: "+repo_main\repository\description$)
     debugger::add("repository::loadRepository() | Maintainer: "+repo_main\repository\maintainer$)
     debugger::add("repository::loadRepository() | URL: "+repo_main\repository\url$)
+    debugger::add("repository::loadRepository() | build: "+repo_main\build)
     debugger::add("repository::loadRepository() |----")
-    debugger::add("repository::loadRepository() | Mods Repository URL: "+repo_main\mods\url$)
+    debugger::add("repository::loadRepository() | Mods Repositories: "+ListSize(repo_main\mods()))
     debugger::add("repository::loadRepository() |----")
     
-    If repo_main\mods\url$
-      debugger::add("repository::loadRepository() - load mods repository...")
-      age = Date() - GetFileDate(getRepoFileName(repo_main\mods\url$), #PB_Date_Modified)
-      debugger::add("repository::loadRepository() - local mods repo age: "+Str(age)+", remote mods repo age: "+Str(repo_main\mods\age)+"")
-      If age > repo_main\mods\age
-        debugger::add("repository::loadRepository() - download new version")
-        updateRepository(repo_main\mods\url$)
-      EndIf
-      ; Load mods from repository file
-      loadRepositoryMods(repo_main\mods\url$, repo_main\mods\enc$)
+    If ListSize(repo_main\mods()) > 0
+      ForEach repo_main\mods()
+        debugger::add("repository::loadRepository() - load mods repository {"+repo_main\mods()\url$+"}...")
+        age = Date() - GetFileDate(getRepoFileName(repo_main\mods()\url$), #PB_Date_Modified)
+        debugger::add("repository::loadRepository() - local age: "+Str(age)+", remote age: "+Str(repo_main\mods()\age)+"")
+        If age > repo_main\mods()\age
+          debugger::add("repository::loadRepository() - download new version")
+          downloadRepository(repo_main\mods()\url$)
+        Else
+          debugger::add("repository::loadRepository() - no download required")
+        EndIf
+        ; Load mods from repository file
+        loadRepositoryMods(repo_main\mods()\url$, repo_main\mods()\enc$)
+      Next
     EndIf
     
     
