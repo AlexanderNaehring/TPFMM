@@ -587,7 +587,7 @@ Module repository
             Continue
         EndSelect ;}
         \width = columns(col)\width
-        debugger::add("repository::registerListGadget() - new column: {" + \name$ + "} of width {" + \width + "}")
+        ;debugger::add("repository::registerListGadget() - new column: {" + \name$ + "} of width {" + \width + "}")
       EndWith
     Next
     
@@ -660,12 +660,14 @@ Module repository
   
   Procedure filterMods(type$, search$)
     ; debugger::add("repository::filterMods("+search$+")")
-    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address, *address
+    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
+    Protected NewList *mods_to_display.mod()
     
     If Not IsWindow(_windowID) Or Not IsGadget(_listGadgetID)
       debugger::add("repository::filterMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
+    
     
     StopWindowUpdate(WindowID(_windowID))
     HideGadget(_listGadgetID, 0)
@@ -723,32 +725,59 @@ Module repository
           EndIf
           
           If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-            text$ = ""
-            ; generate text based on specified columns
-            For col = 0 To ArraySize(_columns())
-              *address = *base_address + _columns(col)\offset
-              Select _columns(col)\type
-                Case #COL_INT
-                  text$ + Str(PeekI(*address))
-                Case #COL_STR
-                  *address = PeekI(*address)
-                  If *address
-                    text$ + PeekS(*address)
-                  EndIf
-              EndSelect
-              If col < ArraySize(_columns())
-                text$ + #LF$
-              EndIf
-            Next
+            ; mod will be shown in list
+            ; add to tmp list:
+            AddElement(*mods_to_display())
+            *mods_to_display() = *base_address
             
-            AddGadgetItem(_listGadgetID, item, text$)
-            SetGadgetItemData(_listGadgetID, item, repo_mods()\mods())
-            item + 1
           EndIf
         EndWith
       Next
     Next
     
+    ; sort list of mods-to-be-displayed
+    ; problem: cannot sort pointer list, as the sorting function does not follow the pointer!
+    ; has to be done manually!
+    ;TODO http://www.purebasic.fr/english/viewtopic.php?p=432505#p432505
+    ;-TODO http://www.purebasic.fr/english/viewtopic.php?p=432505#p432505
+    ; SortStructuredList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
+    
+    
+    ; display filtered mods:
+    item = 0
+    ForEach *mods_to_display()
+      *base_address = *mods_to_display() ; current mod
+      
+      ; generate text based on specified columns
+      text$ = ""
+      For col = 0 To ArraySize(_columns())
+        *address = *base_address + _columns(col)\offset
+        Select _columns(col)\type
+          Case #COL_INT
+            text$ + Str(PeekI(*address))
+          Case #COL_STR
+            *address = PeekI(*address)
+            If *address
+              text$ + PeekS(*address)
+            EndIf
+        EndSelect
+        If col < ArraySize(_columns())
+          text$ + #LF$
+        EndIf
+      Next
+      
+      ; display
+      AddGadgetItem(_listGadgetID, item, text$)
+      SetGadgetItemData(_listGadgetID, item, *base_address)
+      If *base_address\source$ = "workshop"
+        SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_workshop")))
+      ElseIf *base_address\source$ = "tpfnet"
+        SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_tpfnet")))
+      EndIf
+      item + 1
+    Next
+    
+          
     HideGadget(_listGadgetID, 0)
     ContinueWindowUpdate(WindowID(_windowID))
     
