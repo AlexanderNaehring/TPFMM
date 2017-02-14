@@ -163,7 +163,7 @@ Module locale
       out$ = localeEN$(key$)
       If out$ = ""
         If group$ = "tags"
-          debugger::add("locale::getEx() - cannot find tag '"+string$+"'")
+          ; debugger::add("locale::getEx() - cannot find tag '"+string$+"'")
           out$ = string$
         Else
           debugger::add("locale::getEx() - failed to load fallback for '"+key$+"'")
