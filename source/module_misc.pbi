@@ -48,6 +48,7 @@
   Declare packDirectory(dir$, file$)
   Declare checkGameDirectory(Dir$)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
+  Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
 EndDeclareModule
 
 Module misc
@@ -441,6 +442,130 @@ Module misc
       debugger::Add("          ERROR: could not examine directory "+path(root$ + path$))
     EndIf
     ProcedureReturn #False
+  EndProcedure
+  
+  
+  Procedure compareIsGreater(*element1, *element2, options, offset, type)
+    Protected doSwap = #False
+    Protected *pointer1, *pointer2
+    
+    *pointer1 = PeekI(*element1) + offset
+    *pointer2 = PeekI(*element2) + offset
+          
+    Select type
+      Case #PB_Byte
+        doSwap = Bool(PeekB(*pointer1) > PeekB(*pointer2))
+      Case #PB_Word
+        doSwap = Bool(PeekW(*pointer1) > PeekW(*pointer2))
+      Case #PB_Long
+        doSwap = Bool(PeekL(*pointer1) > PeekL(*pointer2))
+      Case #PB_String
+        If options & #PB_Sort_NoCase
+          doSwap = Bool(CompareMemoryString(PeekI(*pointer1), PeekI(*pointer2), #PB_String_NoCase) = #PB_String_Greater)
+        Else
+          doSwap = Bool(CompareMemoryString(PeekI(*pointer1), PeekI(*pointer2), #PB_String_CaseSensitive) = #PB_String_Greater)
+        EndIf
+        If doSwap
+        EndIf
+      Case #PB_Float
+        doSwap = Bool(PeekF(*pointer1) > PeekF(*pointer2))
+      Case #PB_Double
+        doSwap = Bool(PeekD(*pointer1) > PeekD(*pointer2))
+      Case #PB_Quad
+        doSwap = Bool(PeekQ(*pointer1) > PeekQ(*pointer2))
+      Case #PB_Character
+        doSwap = Bool(PeekC(*pointer1) > PeekC(*pointer2))
+      Case #PB_Integer
+        doSwap = Bool(PeekI(*pointer1) > PeekI(*pointer2))
+      Case #PB_Ascii
+        doSwap = Bool(PeekA(*pointer1) > PeekA(*pointer2))
+      Case #PB_Unicode
+        doSwap = Bool(PeekU(*pointer1) > PeekU(*pointer2))
+      Default
+        DebuggerError("Sort Type not known")
+    EndSelect
+    If options & #PB_Sort_Descending
+      doSwap = Bool(Not doSwap)
+    EndIf
+    ProcedureReturn doSwap
+  EndProcedure
+  
+  Procedure SortStructuredPointerList_Quicksort(List *pointerlist(), options, offset, type, low, high, level=0)
+    Protected *midElement, *highElement, *iElement, *wallElement
+    Protected wall, i
+    
+    If high - low < 1
+      ProcedureReturn
+    EndIf
+    
+    
+    ; swap mid element and high element to avoid bad performance with already sorted list
+    *midElement = SelectElement(*pointerlist(), low + (high-low)/2)
+    *highElement = SelectElement(*pointerlist(), high)
+    SwapElements(*pointerlist(), *midElement, *highElement)
+    
+    ; find split point for array
+    wall = low
+    *highElement = SelectElement(*pointerlist(), high)
+    For i = low To high -1
+      *iElement = SelectElement(*pointerlist(), i)
+      If compareIsGreater(*highElement, *iElement, options, offset, type)
+        *wallElement = SelectElement(*pointerlist(), wall)
+        SwapElements(*pointerlist(), *iElement, *wallElement)
+        wall +1
+      EndIf
+    Next
+    
+    ; place last (high) value between the two splits
+    
+    *wallElement = SelectElement(*pointerlist(), wall)
+    *highElement = SelectElement(*pointerlist(), high)
+    SwapElements(*pointerlist(), *wallElement, *highElement)
+    
+    ; sort below wall
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, wall-1, level+1)
+    
+    ; sort above wall
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, wall+1, high, level+1)
+    
+  EndProcedure
+  
+  Procedure SortStructuredPointerList_SimpleSort(List *pointerlist(), options, offset, type)
+    Protected finished, doSwap
+    Protected *currentListElement, *pointer1, *pointer2
+    Protected val1, val2, str1$, str2$
+    
+    Repeat
+      finished = #True
+      ForEach *pointerlist()
+        *currentListElement = @*pointerlist()
+        While NextElement(*pointerlist())
+          ;compare the current element with others in the list and swap if required
+          
+          If compareIsGreater(*currentListElement, @*pointerlist(), options, offset, type)
+            SwapElements(*pointerList(), *currentListElement, @*pointerlist())
+            finished = #False
+          EndIf
+        Wend
+        ChangeCurrentElement(*pointerlist(), *currentListElement)
+      Next
+    Until finished
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+    ; options = #PB_Sort_Ascending = 0 (default) | #PB_Sort_Descending = 1 | #PB_Sort_NoCase = 2
+    
+;     ; simple sorting algorithm for small lists?
+;     If #False
+;       ProcedureReturn SortStructuredPointerList_SimpleSort(*pointerlist(), options, offset, type)
+;     EndIf
+    
+    If high = -1
+      high = ListSize(*pointerlist()) -1
+    EndIf
+    ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, high)
+    
   EndProcedure
   
 EndModule
