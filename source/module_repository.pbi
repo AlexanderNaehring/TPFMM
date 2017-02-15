@@ -100,7 +100,7 @@ DeclareModule repository
   Declare registerThumbGadget(gadgetID)
   Declare registerTypeGadget(gadgetID)
   Declare registerFilterGadget(gadgetID)
-  Declare filterMods(type$, search$)
+  Declare displayMods(type$, search$)
   Declare displayThumbnail(url$)
   
   Global NewMap repo_mods.repo_mods()
@@ -221,6 +221,7 @@ Module repository
     
     If Not json
       debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
+      DeleteFile(file$)
       ProcedureReturn #False
     EndIf
     
@@ -368,7 +369,9 @@ Module repository
     If *mod
       Select EventType() 
         Case #PB_EventType_LeftDoubleClick
-          misc::openLink(*mod\url$)
+          If *mod\url$
+            misc::openLink(*mod\url$)
+          EndIf
         Case #PB_EventType_Change
           displayThumbnail(*mod\thumbnail$)
       EndSelect
@@ -388,7 +391,7 @@ Module repository
       If IsGadget(_filterGadgetID)
         filter$ = GetGadgetText(_filterGadgetID)
       EndIf
-      filterMods(type$, filter$)
+      displayMods(type$, filter$)
     EndIf
   EndProcedure
   
@@ -593,6 +596,7 @@ Module repository
     
     ; initialize new columns to gadget
     For col = 0 To ArraySize(_columns())
+      Debug "column: "+_columns(col)\name$+", width = "+ _columns(col)\width
       AddGadgetColumn(_listGadgetID, col, _columns(col)\name$, _columns(col)\width)
     Next
     
@@ -658,16 +662,15 @@ Module repository
     ProcedureReturn _filterGadgetID
   EndProcedure
   
-  Procedure filterMods(type$, search$)
-    ; debugger::add("repository::filterMods("+search$+")")
+  Procedure displayMods(type$, search$)
+    ; debugger::add("repository::displayMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
-    Protected NewList *mods_to_display.mod()
+    Protected NewList *mods_to_display() ; pointer to "mod" structured data
     
     If Not IsWindow(_windowID) Or Not IsGadget(_listGadgetID)
-      debugger::add("repository::filterMods() - ERROR: window or gadget not valid")
+      debugger::add("repository::displayMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
-    
     
     StopWindowUpdate(WindowID(_windowID))
     HideGadget(_listGadgetID, 0)
@@ -696,17 +699,21 @@ Module repository
               str$ = Trim(StringField(search$, k, " "))
               If str$
                 ; search in author, name, tags
+                ; author
                 If FindString(\author$, str$, 1, #PB_String_NoCase)
                   tmp_ok = 1
+                ; name
                 ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
                   tmp_ok = 1
                 Else
+                  ; tags
                   ForEach \tags$()
                     If FindString(\tags$(), str$, 1, #PB_String_NoCase)
                       tmp_ok = 1
                     EndIf
                   Next
-                  If Not tmp_ok ; only check further if not already found a hit
+                  If Not tmp_ok
+                    ; localized tags
                     ForEach \tagsLocalized$()
                       If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
                         tmp_ok = 1
@@ -736,12 +743,7 @@ Module repository
     Next
     
     ; sort list of mods-to-be-displayed
-    ; problem: cannot sort pointer list, as the sorting function does not follow the pointer!
-    ; has to be done manually!
-    ;TODO http://www.purebasic.fr/english/viewtopic.php?p=432505#p432505
-    ;-TODO http://www.purebasic.fr/english/viewtopic.php?p=432505#p432505
-    ; SortStructuredList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
-    
+    misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Descending, OffsetOf(mod\timechanged), #PB_Integer)
     
     ; display filtered mods:
     item = 0
@@ -784,7 +786,7 @@ Module repository
   EndProcedure
   
   Procedure displayThumbnail(url$)
-    debugger::add("repository::displayThumbnail("+url$+")")
+;     debugger::add("repository::displayThumbnail("+url$+")")
     
     LockMutex(mutexStackDisplayThumb)
     LastElement(stackDisplayThumbnail$())

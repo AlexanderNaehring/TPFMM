@@ -235,7 +235,7 @@ Module windowMain
   
   Procedure loadRepositoryThread(*dummy)
     repository::loadRepositoryList()
-    repository::filterMods("", "") ; initially fill list
+    repository::displayMods("", "") ; initially fill list
     
   EndProcedure
   
@@ -569,7 +569,7 @@ Module windowMain
     
     ; Gadgets: Repository
     AddGadgetItem(GadgetMainPanel, -1, l("main","repository"))
-    GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0, #PB_ListIcon_FullRowSelect)
+    GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0,  #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     GadgetRepositoryThumbnail     = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
     GadgetRepositoryFrameFilter   = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
     GadgetRepositoryFilterType    = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
@@ -666,13 +666,8 @@ Module windowMain
     ; register to repository module
     Protected json$, *json
     Protected Dim columns.repository::column(0)
-    json$ = ReplaceString("[{'width':240,'name':'name'},"+
-                          "{'width':60,'name':'version'},"+
-                          "{'width':100,'name':'author_name'},"+
-                          "{'width':60,'name':'state'},"+
-                          "{'width':100,'name':'tags_string'},"+
-                          "{'width':60,'name':'downloads'},"+
-                          "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
+    json$ = ReplaceString("[{'width':320,'name':'name'},"+
+                          "{'width':100,'name':'author_name'}]", "'", #DQUOTE$)
     *json = ParseJSON(#PB_Any, json$)
     ExtractJSONArray(JSONValue(*json), columns())
     FreeJSON(*json)
