@@ -245,17 +245,31 @@ Module repository
     With repo_mods(url$)\mods()
       ForEach repo_mods(url$)\mods()
         ; add base url to mod url
-        If repo_mods(url$)\mod_base_url$
-          \url$ = repo_mods(url$)\mod_base_url$ + \url$
+        If \url$
+          If repo_mods(url$)\mod_base_url$
+            \url$ = repo_mods(url$)\mod_base_url$ + \url$
+          EndIf
+        Else
+          If \url$ = ""
+            If \source$ = "workshop"
+              \url$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+\remote_id
+            ElseIf \source$ = "tpfnet"
+              \url$ = "https://www.transportfever.net/filebase/index.php/Entry/"+\remote_id
+            EndIf
+          EndIf
         EndIf
         ; add base url to mod thumbnail
-        If repo_mods(url$)\thumbnail_base_url$
-          \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
+        If \thumbnail$
+          If repo_mods(url$)\thumbnail_base_url$
+            \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
+          EndIf
         EndIf
         ; add base url to all files
         If repo_mods(url$)\file_base_url$
           ForEach \files()
-            \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
+            If \files()\url$
+              \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
+            EndIf
           Next
         EndIf
         ClearList(\tagsLocalized$())
