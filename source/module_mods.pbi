@@ -1752,6 +1752,7 @@ Module mods
   
   Procedure displayMods(filter$="")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
+    Protected NewList *mods_to_display(), *mod.mod
     
     If Not IsWindow(_window)
       debugger::add("mods::displayMods() - ERROR: window not valid")
@@ -1823,26 +1824,39 @@ Module mods
           Next
         EndIf
         If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-          text$ = \name$ + #LF$ + getAuthors(\authors()) + #LF$ + listToString(\tags$()) + #LF$ + \version$
           
-          ListIcon::AddListItem(_gadgetMod, item, text$)
-          ListIcon::SetListItemData(_gadgetMod, item, *mods())
-          ; ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("yes")))
-          ;- TODO: image based on online update status or something else?
-          If Left(\tpf_id$, 1) = "*"
-            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_workshop")))
-          Else
-            If \aux\isVanilla
-              ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod_official")))
-            Else
-              ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod")))
-            EndIf
-          EndIf
+          AddElement(*mods_to_display())
+          *mods_to_display() = *mods()
           
-          item + 1
         EndIf
       EndWith
     Next
+    
+    misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
+    
+    ForEach *mods_to_display()
+      *mod = *mods_to_display()
+      With *mod
+        text$ = \name$ + #LF$ + getAuthors(\authors()) + #LF$ + listToString(\tags$()) + #LF$ + \version$
+        
+        ListIcon::AddListItem(_gadgetMod, item, text$)
+        ListIcon::SetListItemData(_gadgetMod, item, *mod)
+        ; ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("yes")))
+        ;- TODO: image based on online update status or something else?
+        If Left(\tpf_id$, 1) = "*"
+          ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_workshop")))
+        Else
+          If \aux\isVanilla
+            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod_official")))
+          Else
+            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod")))
+          EndIf
+        EndIf
+        
+        item + 1
+      EndWith
+    Next
+    
     
 ;     HideGadget(_gadgetMod, #False)
 ;     misc::ContinueWindowUpdate(WindowID(_window))
