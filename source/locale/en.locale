@@ -133,6 +133,10 @@ close     = Close
 change    = Change
 save      = Save
 
+[repository]
+all_types   = All Types
+all_sources = All Sources
+
 [tags]
 all         = All
 mod         = Modification

@@ -52,7 +52,7 @@ Module windowMain
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonDelete, GadgetButtonUninstall, GadgetButtonBackup, GadgetButtonInfomation
   Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
   Global GadgetRepositoryList, GadgetRepositoryThumbnail, GadgetRepositoryFrameFilter, GadgetRepositoryFilterType, GadgetRepositoryFilterString, GadgetRepositoryFilterReset
-  Global GadgetRepositoryDownload
+  Global GadgetRepositoryDownload, GadgetRepositoryFilterSource
   Global GadgetProgressText, GadgetProgressBar
   
   ;- Timer
@@ -116,12 +116,13 @@ Module windowMain
     
     ; repository gadgets
     ResizeGadget(GadgetRepositoryList, 0, 0, iwidth-220, iheight)
-    ResizeGadget(GadgetRepositoryFrameFilter, iwidth-215, 0, 210, 75)
-    ResizeGadget(GadgetRepositoryFilterType, iwidth-210, 15, 200, 25)
-    ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 45, 170, 25)
-    ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 45, 25, 25)
-    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 115, 210, 118)
-    ResizeGadget(GadgetRepositoryDownload, iwidth - 215, 80, 210, 30)
+    ResizeGadget(GadgetRepositoryFrameFilter, iwidth-215, 0, 210, 105)
+    ResizeGadget(GadgetRepositoryFilterSource, iwidth-210, 15, 200, 25)
+    ResizeGadget(GadgetRepositoryFilterType, iwidth-210, 45, 200, 25)
+    ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 75, 170, 25)
+    ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 75, 25, 25)
+    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 145, 210, 118)
+    ResizeGadget(GadgetRepositoryDownload, iwidth - 215, 110, 210, 30)
     
     
     ; bottom gadgets
@@ -237,7 +238,7 @@ Module windowMain
   
   Procedure loadRepositoryThread(*dummy)
     repository::loadRepositoryList()
-    repository::displayMods("", "") ; initially fill list
+    repository::displayMods("") ; initially fill list
   EndProcedure
   
   ;-------------------------------------------------
@@ -499,7 +500,7 @@ Module windowMain
     
     If nFiles = 1
       ; start download of file and install automatically
-      repository::download(*mod)
+      repository::downloadMod(*mod)
     Else ; no download url or multiple files
       If *mod\url$
         misc::openLink(*mod\url$) ; open in browser
@@ -608,6 +609,7 @@ Module windowMain
     GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0,  #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     GadgetRepositoryThumbnail     = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
     GadgetRepositoryFrameFilter   = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
+    GadgetRepositoryFilterSource  = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
     GadgetRepositoryFilterType    = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
     GadgetRepositoryFilterString  = StringGadget(#PB_Any, 0, 0, 0, 0, "")
     GadgetRepositoryFilterReset   = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
@@ -713,6 +715,7 @@ Module windowMain
     repository::registerWindow(window)
     repository::registerListGadget(GadgetRepositoryList, columns())
     repository::registerThumbGadget(GadgetRepositoryThumbnail)
+    repository::registerSourceGadget(GadgetRepositoryFilterSource)
     repository::registerTypeGadget(GadgetRepositoryFilterType)
     repository::registerFilterGadget(GadgetRepositoryFilterString)
     

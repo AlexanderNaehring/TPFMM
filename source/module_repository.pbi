@@ -30,6 +30,7 @@ DeclareModule repository
   
   Structure repo_info
     name$
+    source$
     description$
     maintainer$
     url$
@@ -99,10 +100,11 @@ DeclareModule repository
   Declare registerListGadget(gadgetID, Array columns.column(1))
   Declare registerThumbGadget(gadgetID)
   Declare registerTypeGadget(gadgetID)
+  Declare registerSourceGadget(gadgetID)
   Declare registerFilterGadget(gadgetID)
-  Declare displayMods(type$, search$)
+  Declare displayMods(search$, source$ = "", type$="")
   Declare displayThumbnail(url$)
-  Declare download(*mod.mod)
+  Declare downloadMod(*mod.mod)
   
 EndDeclareModule
 
@@ -122,7 +124,7 @@ Module repository
   
   Global NewMap repo_mods.repo_mods()
   Global NewList repositories$()
-  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID
+  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
@@ -171,6 +173,25 @@ Module repository
     Else
       ProcedureReturn ""
     EndIf
+  EndProcedure
+  
+  Procedure updateSourceGadget() ; add currently known sources to the gadget dropdown
+    Protected item
+    If Not _sourceGadgetID Or Not IsGadget(_sourceGadgetID)
+      ProcedureReturn #False
+    EndIf
+    
+    ClearGadgetItems(_sourceGadgetID)
+    AddGadgetItem(_sourceGadgetID, 0, locale::l("repository", "all_sources"))
+    item = 1
+    ForEach repo_mods()
+      AddGadgetItem(_sourceGadgetID, item, repo_mods()\repo_info\name$)
+      SetGadgetItemData(_sourceGadgetID, item, repo_mods()\repo_info)
+      item + 1
+    Next
+    
+    SetGadgetState(_sourceGadgetID, 0)
+    
   EndProcedure
   
   Procedure downloadRepository(url$)
@@ -293,6 +314,8 @@ Module repository
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
     
+    updateSourceGadget(); add this repository as new source
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -384,7 +407,7 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
-  Procedure handleEventList()
+  Procedure handleEventList() ; click on list gadget
     Protected *mod.mod
     Protected selected
     selected = GetGadgetState(EventGadget())
@@ -404,8 +427,9 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure handleEventFilter()
-    Protected n, type$, filter$
+  Procedure handleEventFilter() ; click on any filter gadget
+    Protected n, type$, filter$, source$
+    Protected *repo_info.repo_info
     If EventType() = #PB_EventType_Change Or 
        EventType() = #PB_EventType_Focus
       If IsGadget(_typeGadgetID)
@@ -417,7 +441,14 @@ Module repository
       If IsGadget(_filterGadgetID)
         filter$ = GetGadgetText(_filterGadgetID)
       EndIf
-      displayMods(type$, filter$)
+      If IsGadget(_sourceGadgetID)
+        *repo_info = GetGadgetItemData(_sourceGadgetID, GetGadgetState(_sourceGadgetID))
+        If *repo_info
+          source$ = *repo_info\source$
+        EndIf
+      EndIf
+      
+      displayMods(filter$, source$, type$)
     EndIf
   EndProcedure
   
@@ -515,7 +546,6 @@ Module repository
       debugger::add("repository::loadRepositoryList() - no repositories in list")
       ProcedureReturn #False
     EndIf
-    
   EndProcedure
   
   Procedure registerWindow(window)
@@ -655,7 +685,7 @@ Module repository
     
     ReDim type.type(3)
     type(0)\key$ = ""
-    type(0)\localized$ = locale::l("tags", "all")
+    type(0)\localized$ = locale::l("repository", "all_types")
     type(1)\key$ = "mod"
     type(1)\localized$ = locale::l("tags", "mod")
     type(2)\key$ = "map"
@@ -675,6 +705,21 @@ Module repository
     ProcedureReturn _typeGadgetID
   EndProcedure
   
+  Procedure registerSourceGadget(gadget)
+    Protected i.i
+    debugger::add("repository::registerSourceGadget(" + gadget + ")")
+    
+    _sourceGadgetID = gadget
+    If _sourceGadgetID And IsGadget(_sourceGadgetID)
+      updateSourceGadget()
+      BindGadgetEvent(_sourceGadgetID, @handleEventFilter())
+    Else
+      _sourceGadgetID = #False
+    EndIf
+    
+    ProcedureReturn _sourceGadgetID
+  EndProcedure
+  
   Procedure registerFilterGadget(gadget)
     debugger::add("repository::registerFilterGadget(" + gadget + ")")
     
@@ -688,7 +733,7 @@ Module repository
     ProcedureReturn _filterGadgetID
   EndProcedure
   
-  Procedure displayMods(type$, search$)
+  Procedure displayMods(search$, source$ = "", type$="")
     ; debugger::add("repository::displayMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
     Protected NewList *mods_to_display() ; pointer to "mod" structured data
@@ -715,6 +760,9 @@ Module repository
             Continue
           EndIf
           
+          If source$ And \source$ <> source$
+            Continue
+          EndIf
           
           If search$ = ""
             mod_ok = 1
@@ -825,8 +873,8 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
-  Procedure download(*mod.mod)
-    debugger::add("repository::download()")
+  Procedure downloadMod(*mod.mod)
+    debugger::add("repository::downloadMod()")
     
     If Not *mod
       ProcedureReturn #False
