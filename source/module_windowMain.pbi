@@ -52,6 +52,7 @@ Module windowMain
   Global GadgetFilterMods, GadgetResetFilterMods, GadgetImageLogo, GadgetButtonDelete, GadgetButtonUninstall, GadgetButtonBackup, GadgetButtonInfomation
   Global GadgetDLCLogo, GadgetDLCToggle, GadgetDLCScrollAreaList, GadgetDLCName, GadgetDLCScrollAreaAuthors
   Global GadgetRepositoryList, GadgetRepositoryThumbnail, GadgetRepositoryFrameFilter, GadgetRepositoryFilterType, GadgetRepositoryFilterString, GadgetRepositoryFilterReset
+  Global GadgetRepositoryDownload
   Global GadgetProgressText, GadgetProgressBar
   
   ;- Timer
@@ -119,7 +120,8 @@ Module windowMain
     ResizeGadget(GadgetRepositoryFilterType, iwidth-210, 15, 200, 25)
     ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 45, 170, 25)
     ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 45, 25, 25)
-    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 80, 210, 118)
+    ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 115, 210, 118)
+    ResizeGadget(GadgetRepositoryDownload, iwidth - 215, 80, 210, 30)
     
     
     ; bottom gadgets
@@ -236,7 +238,6 @@ Module windowMain
   Procedure loadRepositoryThread(*dummy)
     repository::loadRepositoryList()
     repository::displayMods("", "") ; initially fill list
-    
   EndProcedure
   
   ;-------------------------------------------------
@@ -472,6 +473,41 @@ Module windowMain
     SetActiveGadget(GadgetRepositoryFilterString)
   EndProcedure
   
+  Procedure GadgetRepositoryDownload()
+    ; download and install mod from source
+    Protected item, nFiles
+    Protected url$
+    Protected *mod.repository::mod
+    
+    ; get selected mod from list:
+    item = GetGadgetState(GadgetRepositoryList)
+    If item = -1
+      ProcedureReturn #False
+    EndIf
+    
+    *mod = GetGadgetItemData(GadgetRepositoryList, item)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    ForEach *mod\files()
+      If *mod\files()\url$
+        nFiles + 1
+        url$ = *mod\files()\url$
+      EndIf
+    Next
+    
+    If nFiles = 1
+      ; start download of file and install automatically
+      debugger::add("mainWindow::GadgetRepositoryDownload() - start download of file {"+url$+"}")
+    Else ; no download url or multiple files
+      If *mod\url$
+        misc::openLink(*mod\url$) ; open in browser
+      EndIf
+    EndIf
+    
+  EndProcedure
+  
   Procedure GadgetDLCToggle()
     ;- todo remove
     
@@ -575,6 +611,7 @@ Module windowMain
     GadgetRepositoryFilterType    = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
     GadgetRepositoryFilterString  = StringGadget(#PB_Any, 0, 0, 0, 0, "")
     GadgetRepositoryFilterReset   = ButtonGadget(#PB_Any, 0, 0, 0, 0, "X")
+    GadgetRepositoryDownload      = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","install"))
     
     ; Gadgets: Maps
 ;     AddGadgetItem(GadgetMainPanel, -1, l("main", "maps"))
@@ -609,6 +646,7 @@ Module windowMain
 ;     BindGadgetEvent(GadgetDLCToggle, @GadgetDLCToggle())
     ;
     BindGadgetEvent(GadgetRepositoryFilterReset, @GadgetResetFilterRepository())
+    BindGadgetEvent(GadgetRepositoryDownload, @GadgetRepositoryDownload())
     
     ; Set window boundaries, timers, events
     WindowBounds(window, 700, 400, #PB_Ignore, #PB_Ignore) 
