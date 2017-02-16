@@ -163,7 +163,10 @@ Module repository
     If url$
       name$ = Fingerprint(@url$, StringByteLength(url$), #PB_Cipher_MD5)
       ext$ = GetExtensionPart(url$)
-      ProcedureReturn #DIRECTORY + "/thumbnails/" + Left(name$, 2) + "/" + name$ + "." + ext$
+      If ext$
+        ext$ = "." + ext$
+      EndIf
+      ProcedureReturn #DIRECTORY + "/thumbnails/" + Left(name$, 2) + "/" + name$ + ext$
     Else
       ProcedureReturn ""
     EndIf
@@ -176,9 +179,16 @@ Module repository
     file$ = getRepoFileName(url$)
     
     time = ElapsedMilliseconds()
-    If ReceiveHTTPFile(url$, file$)
+    If ReceiveHTTPFile(url$, file$+".tmp")
+      If FileSize(file$)
+        DeleteFile(file$)
+      EndIf
+      RenameFile(file$+".tmp", file$)
       debugger::add("repository::downloadRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
       ProcedureReturn #True
+    EndIf
+    If FileSize(file$+".tmp")
+      DeleteFile(file$+".tmp")
     EndIf
     debugger::add("repository::downloadRepository() - ERROR: failed to download repository")
     ProcedureReturn #False
@@ -344,6 +354,7 @@ Module repository
           If image And IsImage(image)
             images(file$) = image
           Else
+            DeleteFile(file$)
             debugger::add("repository::thumbnailThread() - ERROR: could not load image {"+file$+"}")
           EndIf
         Else
