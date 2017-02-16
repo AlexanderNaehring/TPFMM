@@ -499,7 +499,7 @@ Module windowMain
     
     If nFiles = 1
       ; start download of file and install automatically
-      debugger::add("mainWindow::GadgetRepositoryDownload() - start download of file {"+url$+"}")
+      repository::download(*mod)
     Else ; no download url or multiple files
       If *mod\url$
         misc::openLink(*mod\url$) ; open in browser

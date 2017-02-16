@@ -102,8 +102,8 @@ DeclareModule repository
   Declare registerFilterGadget(gadgetID)
   Declare displayMods(type$, search$)
   Declare displayThumbnail(url$)
+  Declare download(*mod.mod)
   
-  Global NewMap repo_mods.repo_mods()
 EndDeclareModule
 
 Module repository
@@ -120,6 +120,7 @@ Module repository
     localized$
   EndStructure
   
+  Global NewMap repo_mods.repo_mods()
   Global NewList repositories$()
   Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID
   Global Dim _columns.column_info(0)
@@ -822,6 +823,16 @@ Module repository
     
     CreateThread(@thumbnailThread(), 0)
     ProcedureReturn #True
+  EndProcedure
+  
+  Procedure download(*mod.mod)
+    debugger::add("repository::download()")
+    
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    
   EndProcedure
   
 EndModule
