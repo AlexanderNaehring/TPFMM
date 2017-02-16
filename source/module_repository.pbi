@@ -8,7 +8,7 @@ DeclareModule repository
   Macro StopWindowUpdate(_winID_)
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        ;SendMessage_(_winID_,#WM_SETREDRAW,0,0)
+;         SendMessage_(_winID_,#WM_SETREDRAW,0,0)
       CompilerCase #PB_OS_Linux
         
       CompilerCase #PB_OS_MacOS
@@ -18,9 +18,9 @@ DeclareModule repository
   Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        ;SendMessage_(_winID_,#WM_SETREDRAW,1,0)
-        InvalidateRect_(_winID_,0,_redrawBackground_)
-        UpdateWindow_(_winID_)
+;         SendMessage_(_winID_,#WM_SETREDRAW,1,0)
+;         InvalidateRect_(_winID_,0,_redrawBackground_)
+;         UpdateWindow_(_winID_)
       CompilerCase #PB_OS_Linux
         
       CompilerCase #PB_OS_MacOS
@@ -736,6 +736,7 @@ Module repository
   Procedure displayMods(search$, source$ = "", type$="")
     ; debugger::add("repository::displayMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
+    Protected *selectedMod.mod
     Protected NewList *mods_to_display() ; pointer to "mod" structured data
     
     If Not IsWindow(_windowID) Or Not IsGadget(_listGadgetID)
@@ -744,7 +745,12 @@ Module repository
     EndIf
     
     StopWindowUpdate(WindowID(_windowID))
-    HideGadget(_listGadgetID, 0)
+    HideGadget(_listGadgetID, 1)
+    
+    If GetGadgetState(_listGadgetID) <> -1
+      *selectedMod = GetGadgetItemData(_listGadgetID, GetGadgetState(_listGadgetID))
+    EndIf
+    
     ClearGadgetItems(_listGadgetID)
     
     count = CountString(search$, " ") + 1
@@ -850,6 +856,10 @@ Module repository
       ElseIf *base_address\source$ = "tpfnet"
         SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_tpfnet")))
       EndIf
+      If *selectedMod And *selectedMod = *base_address
+        SetGadgetState(_listGadgetID, item)
+      EndIf
+      
       item + 1
     Next
     
