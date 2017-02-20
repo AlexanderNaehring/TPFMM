@@ -355,6 +355,7 @@ Module windowMain
           If GetGadgetItemState(GadgetLibraryMods, i) & #PB_ListIcon_Selected
             *mod = ListIcon::GetListItemData(GadgetLibraryMods, i)
             If mods::canUninstall(*mod)
+;               debugger::add("windowMain::GadgetButtonUninstall() - {"+*mod\name$+"}")
               queue::add(queue::#QueueActionUninstall, *mod\tpf_id$)
             EndIf
           EndIf
@@ -479,6 +480,7 @@ Module windowMain
     Protected item, nFiles
     Protected url$
     Protected *mod.repository::mod
+    Protected *download.repository::download
     
     ; get selected mod from list:
     item = GetGadgetState(GadgetRepositoryList)
@@ -491,16 +493,20 @@ Module windowMain
       ProcedureReturn #False
     EndIf
     
+    *download = AllocateStructure(repository::download)
+    *download\mod = *mod
+    
     ForEach *mod\files()
       If *mod\files()\url$
         nFiles + 1
         url$ = *mod\files()\url$
+        *download\file = *mod\files()
       EndIf
     Next
     
     If nFiles = 1
       ; start download of file and install automatically
-      repository::downloadMod(*mod)
+      repository::downloadMod(*download)
     Else ; no download url or multiple files
       If *mod\url$
         misc::openLink(*mod\url$) ; open in browser

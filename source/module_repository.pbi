@@ -51,7 +51,7 @@ DeclareModule repository
     List mods.repo_link() ; multiple mod repositories may be linked from a single root repsitory
   EndStructure
   
-  Structure files
+  Structure file
     file_id.i
     filename$
     downloads.i
@@ -73,7 +73,7 @@ DeclareModule repository
     timecreated.i
     timechanged.i
     lastscan.i
-    List files.files()
+    List files.file()
     List tags$()
     List tagsLocalized$()
   EndStructure
@@ -91,6 +91,13 @@ DeclareModule repository
   Structure column
     name$
     width.i
+  EndStructure
+  
+  Structure download
+    ; each mod can have multiple files
+    ;-> reference mod info And the specific file To be downloaded
+    *mod.mod
+    *file.file
   EndStructure
   
   Declare loadRepository(url$)
@@ -883,13 +890,92 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
-  Procedure downloadMod(*mod.mod)
+  Procedure downloadMod(*download.download)
     debugger::add("repository::downloadMod()")
     
-    If Not *mod
+    If Not *download Or Not *download\mod Or Not *download\file
       ProcedureReturn #False
     EndIf
     
+    Protected connection, size, downloaded, progress, finish
+    Protected target$, file$, header$
+    Protected json
+    Static regExp
+    If Not regExp
+      regExp = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
+    EndIf
+    
+    If *download\file\filename$ = ""
+      *download\file\filename$ = *download\mod\source$+"-"+*download\mod\remote_id+".zip"
+    EndIf
+    target$ = misc::Path(main::gameDirectory$ + "/TPFMM/download/" + Str(*download) + "/")
+    misc::CreateDirectoryAll(target$)
+    RunProgram(target$)
+    file$   = target$ + *download\file\filename$
+    
+    debugger::add("repository::downloadMod() - {"+*download\file\url$+"}")
+    header$ = GetHTTPHeader(*download\file\url$)
+    If header$
+      ExamineRegularExpression(regExp, header$)
+      If NextRegularExpressionMatch(regExp)
+        size = Val(RegularExpressionGroup(regExp, 1))
+      EndIf
+      If size
+        queue::progressVal(0, size)
+      Else
+        queue::progressStartWait()
+      EndIf
+    EndIf
+    
+    connection = ReceiveHTTPFile(*download\file\url$, file$, #PB_HTTP_Asynchronous)
+    Repeat
+      progress = HTTPProgress(connection)
+      Select progress
+        Case #PB_Http_Success
+          downloaded = FinishHTTP(connection)
+          finish = #True
+        Case #PB_Http_Failed
+          Debug "Download failed"
+          finish = #True
+        Case #PB_Http_Aborted
+          Debug "Download aborted"
+          finish = #True
+        Default 
+          ; progess = bytes receiuved
+          If size
+            queue::progressVal(progress, size)
+          EndIf
+      EndSelect
+      Delay(50)
+    Until finish
+    
+    If size
+      queue::progressVal(downloaded, size)
+    Else
+      queue::progressStopWait()
+    EndIf
+    
+    If Not downloaded
+      ; cleanup downlaod folder
+      debugger::add("repository::downloadMod() - download failed")
+      DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+      ProcedureReturn #False
+    EndIf
+    
+    debugger::add("repository::downloadMod() - download complete")
+    
+    ; add some meta data...
+    json = CreateJSON(#PB_Any)
+    If json
+      InsertJSONStructure(JSONValue(json), *download\mod, mod)
+      SaveJSON(json, file$+".meta", #PB_JSON_PrettyPrint)
+      FreeJSON(json)
+    EndIf
+    
+    ; free download structure
+    FreeStructure(*download)
+    
+    queue::add(queue::#QueueActionInstall, file$)
     
   EndProcedure
   
