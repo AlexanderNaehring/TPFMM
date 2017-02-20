@@ -74,6 +74,7 @@ Module updater
   EndProcedure
   
   Procedure checkUpdate(auto)
+    ProcedureReturn #False
     debugger::Add("updater::checkUpdate("+Str(auto)+")")
     Protected URL$, json, *value
     Protected ch$
