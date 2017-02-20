@@ -1502,7 +1502,8 @@ Module mods
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     free(*mod)
     
-    displayMods(GetGadgetText(_gadgetMod))
+    displayMods("")
+    ;-TODO add filter text
     
     ProcedureReturn #True
   EndProcedure
@@ -1753,6 +1754,8 @@ Module mods
   Procedure displayMods(filter$="")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
+    
+    debugger::add("mods::displayMods("+filter$+")")
     
     If Not IsWindow(_window)
       debugger::add("mods::displayMods() - ERROR: window not valid")
