@@ -699,14 +699,16 @@ Module mods
           
           If \url$
             name$ = "<a href='"+ \url$ + "'>" + name$ + "</a>"
-          ElseIf \tfnetId
-            name$ = "<a href='http://www.train-fever.net/filebase/index.php/Entry/" + \tfnetId + "'>" + name$ + "</a>"
+          ElseIf \aux\tpfnetID
+            name$ = "<a href='https://www.transportfever.net/filebase/index.php/Entry/" + \aux\tpfnetID + "'>" + name$ + "</a>"
+          ElseIf \aux\workshopID
+            name$ = "<a href='http://steamcommunity.com/sharedfiles/filedetails/?id=" + \aux\workshopID + "'>" + name$ + "</a>"
           EndIf
           
           ForEach \authors()
             author$ = \authors()\name$
             If \authors()\tfnetId
-              author$ = "<a href='http://www.train-fever.net/index.php/User/" + \authors()\tfnetId + "'>" + author$ + "</a>"
+              author$ = "<a href='https://www.transportfever.net/index.php/User/" + \authors()\tfnetId + "'>" + author$ + "</a>"
             EndIf
             authors$ + author$ + ", "
           Next
@@ -893,163 +895,6 @@ Module mods
       mods::free(*mods())
     Next
     ; displayMods()
-  EndProcedure
-  
-  Procedure new(*data.queue::dat) ; INITIAL STEP: add new mod file from any location
-    ProcedureReturn #False
-;     
-;     Protected file$ = *data\string$
-;     debugger::Add("mods::new("+file$+")")
-;     Protected *mod.mod, id$
-;     Protected gameDirectory$ = main::gameDirectory$
-;     
-;     queue::progressText(locale::l("progress","new"))
-;     queue::progressVal(0, 5)
-;     
-;     ; allocate memory for mod information
-;     *mod = init()
-;     debugger::Add("mods::new() - memory adress of new mod: {"+*mod+"}")
-;     
-;     ; open archive (with password check)
-;     ; openArchive(*mod, file$)
-;     
-;     ; first step: check mod
-;     id$ = CheckModFile(file$, *mod) ; for all archive related functions *mod is passed in order to handle password
-;     If id$ = "false"
-;       debugger::Add("mods::new() - ERROR: check failed, abort")
-;       FreeStructure(*mod)
-;       ProcedureReturn #False
-;     EndIf
-;     queue::progressVal(1, 5)
-;     
-;     ; second step: read information
-;     If Not getInfo(file$, *mod, id$)
-;       debugger::Add("mods::new() - ERROR: failed to retrieve info")
-;       FreeStructure(*mod)
-;       ProcedureReturn #False
-;     EndIf
-;     ; at this point, ID is valid and will not change
-;     *mod\aux\installDate = Date()
-;     queue::progressVal(2, 5)
-;     
-;     
-;     ; third step: check if mod with same ID already installed
-;     Protected sameHash.b = #False, sameID.b = #False
-;     ForEach *mods()
-;       If *mod\aux\archive\md5$ And *mods()\aux\archive\md5$ = *mod\aux\archive\md5$
-;         debugger::Add("mods::new() - MD5 check found match!")
-;         id$ = *mods()\tpf_id$
-;         sameHash = #True
-;         Break
-;       EndIf
-;     Next
-;     
-;     If sameHash
-;       Protected NewMap strings$()
-;       ClearMap(strings$())
-;       strings$("name") = *mods(id$)\name$
-;       MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_hash",strings$()), #PB_MessageRequester_Ok)
-;       debugger::Add("mods::new() - cancel new installation, mod already installed")
-;       ;- TODO: ask user for reinstallation
-;       FreeStructure(*mod)
-;       ProcedureReturn #True
-;     EndIf
-;     
-;     If FindMapElement(*mods(), *mod\tpf_id$)
-;       debugger::Add("mods::new() - Another mod with id {"+id$+"} already in list!")
-;       id$ = *mod\tpf_id$
-;       sameID = #True
-;     EndIf
-;     
-;     If sameID
-;       Protected NewMap strings$()
-;       ClearMap(strings$())
-;       strings$("id") = *mod\tpf_id$
-;       strings$("old_name") = *mods(id$)\name$
-;       strings$("old_version") = *mods(id$)\version$
-;       strings$("new_name") = *mod\name$
-;       strings$("new_version") = *mod\version$
-;       ;- TODO check if this works on linux ( message requester in thread!)
-;       If MessageRequester(locale::l("main","install"), locale::getEx("management","conflict_id",strings$()), #PB_MessageRequester_YesNo) = #PB_MessageRequester_No
-;         ; user does not want to replace
-;         FreeStructure(*mod)
-;         ProcedureReturn #True
-;       Else
-;         ; user wants to replace
-;         queue::add(queue::#QueueActionUninstall, *mod\tpf_id$) 
-;         queue::add(queue::#QueueActionInstall, file$) ; re-schedule this mod
-;         FreeStructure(*mod)
-;         ProcedureReturn #True
-;       EndIf
-;     EndIf
-;     queue::progressVal(3, 5)
-;     
-;     ; fourth step: copy mod to internal TPFMM mod folder and extract all recognised information files
-;     queue::progressText(locale::l("progress","copy_lib"))
-;     id$ = *mod\tpf_id$
-;     Protected dir$ = misc::Path(gameDirectory$+"/TPFMM/library/"+id$)
-;     debugger::Add("mods::new() - add mod to library: {"+dir$+"}")
-;     ; create library entry (subdir)
-;     If Not misc::CreateDirectoryAll(dir$)
-;       debugger::Add("mods::new() - ERROR - failed to create {"+dir$+"}")
-;       FreeStructure(*mod)
-;       ProcedureReturn #False
-;     EndIf
-;     
-;     ; copy file to library
-;     ;     Protected newfile$ = dir$ + id$ + "." + LCase(GetExtensionPart(file$))
-;     ;- TODO - decide to change filename and extension or leave it as original
-;     Protected newfile$ = dir$ + *mod\aux\archive\name$
-;     debugger::Add("mods::new() - copy file to library: {"+file$+"} -> {"+newfile$+"}")
-;     
-;     If Not CopyFile(file$, newfile$)
-;       debugger::Add("mods::new() - ERROR - failed to copy file {"+file$+"} -> {"+dir$+GetFilePart(file$)+"}")
-;       FreeStructure(*mod)
-;       ProcedureReturn #False
-;     EndIf
-;     queue::progressVal(4, 5)
-;     
-;     ; extract files
-;     Protected NewList files$()
-;     Protected i
-;     ClearList(files$())
-;     AddElement(files$()) : files$() = "header.jpg"
-;     AddElement(files$()) : files$() = "preview.png"
-;     For i = 0 To 9
-;       AddElement(files$()) : files$() = "image_0" + i + ".tga"
-;     Next
-;     If Not ExtractFilesZip(newfile$, files$(), dir$)
-;       If Not ExtractFilesRar(newfile$, files$(), dir$, *mod)
-;         debugger::Add("mods::GetModInfo() - failed to open {"+newfile$+"} for extraction")
-;       EndIf
-;     EndIf
-;     
-;     ; images
-;     debugger::Add("mosd::new() - convert images")
-;     Protected image$
-;     ; make sure at least the "image_00.tga" is in the library
-;     image$ = dir$ + "preview.png"
-;     If FileSize(image$) > 0
-;       convertToTGA(image$) ; convert the file to the first "free" image_xx.tga
-;       DeleteFile(image$)
-;     EndIf
-;     image$ = dir$ + "header.jpg"
-;     If FileSize(image$) > 0
-;       convertToTGA(image$)
-;       DeleteFile(image$)
-;     EndIf
-;     
-;     ; fifth step: update lists
-;     addToMap(*mod)
-;     displayMods()
-;     displayDLCs()
-;     queue::progressVal(5, 5)
-;     
-;     ; changed = #True
-;     
-;     ; last step: init install
-;     queue::add(queue::#QueueActionInstall, id$)
-;     ProcedureReturn #True
   EndProcedure
   
   ;### Load and Save
@@ -1422,7 +1267,7 @@ Module mods
     
     
     Protected modFolder$
-    modFolder$ = getModFolder(id$) ;- TODO handle installation of maps and DLCs
+    modFolder$ = getModFolder(id$, "mod") ;- TODO handle installation of maps and DLCs
     
     ; check if mod already installed?
     If FindMapElement(*mods(), id$)
@@ -1440,11 +1285,41 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    
-    ; read info of new mod
+    ; create reference to mod and load info
     Protected *mod.mod
     *mod = addToMap(id$, "mod")
     loadInfo(*mod)
+    *mod\aux\installDate = Date()
+    
+    ; is mod installed from a repository? -> read .meta file
+    If FileSize(file$+".meta") > 0
+      ;-WIP! (load repository meta data...)
+      ;TODO: change to direct passing of information via function parameter?
+      ; pro of using file: information is also used when installing the file manually. (manually drag&drop from "download/" folder)
+      ; read info from meta file and add information to file reference...
+      ; IMPORTANT: tpfnetID / workshop id!
+      Protected json
+      json = LoadJSON(#PB_Any, file$+".meta")
+      If json
+        Protected repo_mod.repository::mod
+        If JSONType(JSONValue(json)) = #PB_JSON_Object
+          ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
+          FreeJSON(json)
+          Select repo_mod\source$
+            Case "tpfnet"
+              *mod\aux\tpfnetID = repo_mod\remote_id
+            Case "workshop"
+              *mod\aux\workshopID = repo_mod\remote_id
+            Default
+              
+          EndSelect
+          ; other idea: mod\repositoryinformation = copy of repo info during time of installation/download
+          ; later: when checking for update: compare repositoryinformation stored in mod with current information in repository.
+        EndIf
+      EndIf
+      ; could read more information... (author, thumbnail, etc...)
+      ; delete files from download directory? -> for now, keep as backup / archive
+    EndIf
     
     ; finish installation
     debugger::Add("mods::install() - finish installation...")
@@ -1685,7 +1560,7 @@ Module mods
         lua$ + #DQUOTE$+misc::luaEscape(\tags$())+#DQUOTE$+", "
       Next
       lua$ + "}," + #CRLF$
-      lua$ + "  tfnetId = "+Str(\tfnetId)+"," + #CRLF$
+      lua$ + "  tfnetId = "+Str(\aux\tpfnetID)+"," + #CRLF$
       lua$ + "  minGameVersion = "+Str(\minGameVersion)+"," + #CRLF$
       lua$ + "  dependencies = {"
       ForEach \dependencies$()

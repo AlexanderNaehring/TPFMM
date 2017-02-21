@@ -482,6 +482,8 @@ Module windowMain
     Protected *mod.repository::mod
     Protected *download.repository::download
     
+    ; currently: only one file at a time!
+    
     ; get selected mod from list:
     item = GetGadgetState(GadgetRepositoryList)
     If item = -1
@@ -506,7 +508,7 @@ Module windowMain
     
     If nFiles = 1
       ; start download of file and install automatically
-      repository::downloadMod(*download)
+      queue::add(queue::#QueueActionDownload, Str(*download)) ; currently, pass *download pointer as string...
     Else ; no download url or multiple files
       If *mod\url$
         misc::openLink(*mod\url$) ; open in browser

@@ -14,6 +14,8 @@
     luaDate.i         ; date of info.lua (reload info when newer version available)
     installDate.i     ; date of first encounter of this file (added to TPFMM)
     archive.archive   ; archive file, type and handle
+    tpfnetID.i        ; entry ID in transportfever.net download section
+    workshopID.i      ; fileID in Steam Workshop
 ;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory
   EndStructure
   
@@ -37,7 +39,6 @@
     List authors.author()   ; information about author(s)
     List tags$()            ; list of tags
     List tagsLocalized$()   ; translated tags
-    tfnetId.i               ; ID (number) on transportfever.net
     minGameVersion.i        ; minimum required build number of game
     List dependencies$()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information

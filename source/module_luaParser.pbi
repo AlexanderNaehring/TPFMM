@@ -274,7 +274,7 @@ Module luaParser
     EndIf
     s = parseLUAnumber(reg_val("tfnetId"), lua$)
     If s
-      *mod\tfnetId = s
+      *mod\aux\tpfnetID = s
     EndIf
     s = parseLUAnumber(reg_val("minGameVersion"), lua$)
     If s

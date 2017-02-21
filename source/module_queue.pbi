@@ -1,4 +1,5 @@
 ﻿XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_repository.h.pbi"
 
 DeclareModule queue
   EnableExplicit
@@ -129,7 +130,6 @@ Module queue
             progressVal(0, 1)
             progressShow()
             
-            
           Case #QueueActionInstall
             debugger::Add("queue::update() - #QueueActionInstall")
             If element\string$
@@ -142,12 +142,12 @@ Module queue
           Case #QueueActionDownload
             debugger::Add("queue::update() - #QueueActionDownload")
             If element\string$
-              dat\string$ = element\string$
-              *thread = CreateThread(mods::@install(), dat)
-              progressText(locale::l("progress","install"))
+              Protected address = Val(element\string$)
+              ; currently, pointer is passed as string... adjust this... (TODO)
+              *thread = CreateThread(repository::@downloadMod(), address)
+              progressText(locale::l("progress","download"))
               progressShow()
             EndIf
-            
             
           Case #QueueActionUninstall
             debugger::Add("queue::update() - #QueueActionUninstall")
