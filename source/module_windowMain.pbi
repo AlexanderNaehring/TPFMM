@@ -90,22 +90,34 @@ Module windowMain
     height = WindowHeight(window)
     ; height - MenuHeight() ; may be needed for OSX?
     
+    
     ; top gadgets
     ResizeGadget(GadgetImageHeader, 0, 0, width, 8)
     ResizeImage(images::Images("headermain"), width, 8, #PB_Image_Raw)
     SetGadgetState(GadgetImageHeader, ImageID(images::Images("headermain")))
     
+;     Debug GadgetHeight(GadgetFrameFilter, #PB_Gadget_ActualSize)
+;     Debug GadgetHeight(GadgetFrameFilter, #PB_Gadget_RequiredSize)
+    
+    
     ; main panel
-    ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 45 - 50)
-    iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
-    iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
+    ; on linux, PanelGadget can not be made smaller if inner gadget occupy the space!
+    ; therefore: resize inner gadgets first before reducing size of PanelGadget!
+    CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+      iwidth = width - 10
+      iheight = height - 45 - 50 - GetGadgetAttribute(GadgetMainPanel, #PB_Panel_TabHeight)
+    CompilerElse
+      ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 45 - 50)
+      iwidth = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemWidth)
+      iheight = GetGadgetAttribute(GadgetMainPanel, #PB_Panel_ItemHeight)
+    CompilerEndIf
     
     ; mod gadgets
     ResizeGadget(GadgetLibraryMods, 0, 0, iwidth-220, iheight)
     
     ResizeGadget(GadgetFrameFilter, iwidth-215, 0, 210, 40)
     ResizeGadget(GadgetFilterMods, iwidth-210, 15, 175, 20)
-    ResizeGadget(GadgetResetFilterMods, iwidth-30, 15, 20, 20)
+;     ResizeGadget(GadgetResetFilterMods, iwidth-30, 15, 20, 20)
     
     ResizeGadget(GadgetImageLogo, iwidth - 215, 45, 210, 118)
     
@@ -120,10 +132,9 @@ Module windowMain
     ResizeGadget(GadgetRepositoryFilterSource, iwidth-210, 15, 200, 25)
     ResizeGadget(GadgetRepositoryFilterType, iwidth-210, 45, 200, 25)
     ResizeGadget(GadgetRepositoryFilterString, iwidth-210, 75, 170, 25)
-    ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 75, 25, 25)
+;     ResizeGadget(GadgetRepositoryFilterReset, iwidth-35, 75, 25, 25)
     ResizeGadget(GadgetRepositoryThumbnail, iwidth - 215, 145, 210, 118)
     ResizeGadget(GadgetRepositoryDownload, iwidth - 215, 110, 210, 30)
-    
     
     ; bottom gadgets
     ResizeGadget(GadgetProgressBar, 10, height - 55 - 25, width - 240, 20)
@@ -133,6 +144,9 @@ Module windowMain
     ResizeGadget(GadgetButtonStartGame, 270, height - 55, width - 500, 25)
     ResizeGadget(GadgetVersionText, width - 220, height - 50, 210, 20)
     
+    CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+      ResizeGadget(GadgetMainPanel, 5, 10, width-10, height - 45 - 50)
+    CompilerEndIf
     
   EndProcedure
   
@@ -545,8 +559,8 @@ Module windowMain
   
   Procedure create()
     Protected width, height
-    width = 750
-    height = 480
+    width = 800
+    height = 450
     
     window = OpenWindow(#PB_Any, 0, 0, width, height, "Transport Fever Mod Manager", #PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered)
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
@@ -590,7 +604,7 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     
     ; Gagets
-    GadgetMainPanel = PanelGadget(#PB_Any, 5, 10, 740, 410)
+    GadgetMainPanel = PanelGadget(#PB_Any, 0, 0, 100, 100)
     
     ; Gadgets: MODs
     AddGadgetItem(GadgetMainPanel, -1, l("main","mods"))
@@ -604,7 +618,7 @@ Module windowMain
     GadgetButtonBackup      = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","backup"))
     GadgetButtonUninstall   = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","uninstall"))
     
-    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, 0, 0, l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    GadgetLibraryMods = ListIconGadget(#PB_Any, 0, 0, 50, 50, l("main","name"), 240, #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     AddGadgetColumn(GadgetLibraryMods, 1, l("main","author"), 90)
     AddGadgetColumn(GadgetLibraryMods, 2, l("main","category"), 90)
     AddGadgetColumn(GadgetLibraryMods, 3, l("main","version"), 60)
@@ -614,7 +628,7 @@ Module windowMain
     
     ; Gadgets: Repository
     AddGadgetItem(GadgetMainPanel, -1, l("main","repository"))
-    GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 0, 0, "", 0,  #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
+    GadgetRepositoryList          = ListIconGadget(#PB_Any, 0, 0, 50, 50, "", 0,  #PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection)
     GadgetRepositoryThumbnail     = ImageGadget(#PB_Any, 0, 0, 0, 0, 0)
     GadgetRepositoryFrameFilter   = FrameGadget(#PB_Any, 0, 0, 0, 0, l("main","filter"))
     GadgetRepositoryFilterSource  = ComboBoxGadget(#PB_Any, 0, 0, 0, 0)
@@ -632,11 +646,11 @@ Module windowMain
     CloseGadgetList()
     
     ; Bottom Gadgets
-    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, 750, 8, 0)
-    GadgetNewMod = ButtonGadget(#PB_Any, 10, 425, 120, 25, l("main","new_mod"))
-    GadgetHomepage = ButtonGadget(#PB_Any, 140, 425, 120, 25, l("main","download"))
-    GadgetButtonStartGame = ButtonGadget(#PB_Any, 270, 425, 250, 25, l("main","start_tf"), #PB_Button_Default)
-    GadgetVersionText = TextGadget(#PB_Any, 530, 430, 210, 20, updater::VERSION$, #PB_Text_Right)
+    GadgetImageHeader = ImageGadget(#PB_Any, 0, 0, width, 8, 0)
+    GadgetNewMod = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","new_mod"))
+    GadgetHomepage = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","download"))
+    GadgetButtonStartGame = ButtonGadget(#PB_Any, 0, 0, 0, 0, l("main","start_tf"), #PB_Button_Default)
+    GadgetVersionText = TextGadget(#PB_Any, 0, 0, 0, 0, updater::VERSION$, #PB_Text_Right)
     GadgetProgressText = TextGadget(#PB_Any, 0, 0, 0, 0, "")
     GadgetProgressBar = ProgressBarGadget(#PB_Any, 0, 0, 0, 0, 0, 100, #PB_ProgressBar_Smooth)
     
@@ -659,7 +673,7 @@ Module windowMain
     BindGadgetEvent(GadgetRepositoryDownload, @GadgetRepositoryDownload())
     
     ; Set window boundaries, timers, events
-    WindowBounds(window, 700, 400, #PB_Ignore, #PB_Ignore) 
+    WindowBounds(window, 750, 450, #PB_Ignore, #PB_Ignore) 
     AddWindowTimer(window, TimerMainGadgets, 100)
     BindEvent(#PB_Event_SizeWindow, @resize(), window)
     BindEvent(#PB_Event_MaximizeWindow, @resize(), window)

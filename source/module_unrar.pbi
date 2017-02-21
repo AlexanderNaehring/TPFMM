@@ -281,7 +281,7 @@ Module unrar
     
   CompilerElse ; Linux / Mac
     
-    Procedure OpenRar(File$, *mod, mode = #RAR_OM_EXTRACT)
+    Procedure OpenRar(File$, *mod.mods::mod = #Null, mode = #RAR_OM_EXTRACT)
       ProcedureReturn #False
     EndProcedure
     

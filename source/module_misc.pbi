@@ -404,7 +404,7 @@ Module misc
             ProcedureReturn 1
           EndIf
         CompilerElse
-          If FileSize(Dir$ + "Transport Fever") > 1
+          If FileSize(Dir$ + "TransportFever") > 1
             If CreateFile(0, Dir$ + "TPFMM.tmp")
               CloseFile(0)
               DeleteFile(Dir$ + "TPFMM.tmp")

@@ -54,7 +54,7 @@ DeclareModule ListIcon
       Declare AutoWidthColumns(GadgetID.i)
       Declare SetFont(GadgetID.i, HeaderFont.i, ListFont.i=#False)
     CompilerCase #PB_OS_Linux
-      Declare JustifyColumn(GadgetID.i, Column.i, Flag.l=#Center)
+      ; Declare JustifyColumn(GadgetID.i, Column.i, Flag.l=#Center)
     CompilerCase #PB_OS_MacOS
       ; ???
   CompilerEndSelect
@@ -314,44 +314,7 @@ Module ListIcon
       
     CompilerCase #PB_OS_Linux
       
-      ;{ used for justify ListIcon columns
-      ImportC ""
-        g_object_set_double(*Object, Property.P-ASCII, Value.D, Null) As "g_object_set"
-      EndImport
-      ;}
-      
-      Procedure JustifyColumn(GadgetID.i, Column.i, Flag.l=#Center)
-        ; based on code from Shardik 
-        Protected *CellRenderers, *Column
-        Protected.d AlignmentFactor
-        Protected.i Count, i
-
-        Select Flag
-          Case #Left
-            AlignmentFactor = 0.0
-          Case #Center
-            AlignmentFactor = 0.5
-          Case #Right
-            AlignmentFactor = 1.0
-        EndSelect
-
-        *Column = gtk_tree_view_get_column_(GadgetID(GadgetID), Column)
-        If *Column
-          gtk_tree_view_column_set_alignment_(*Column, AlignmentFactor)
-          *CellRenderers = gtk_tree_view_column_get_cell_renderers_(*Column)
-          If *CellRenderers
-            Count = g_list_length_(*CellRenderers)
-            For i = 0 To Count - 1
-              g_object_set_double(g_list_nth_data_(*CellRenderers, i), "xalign", AlignmentFactor, #Null)
-            Next i         
-            g_list_free_(*CellRenderers)
-          EndIf
-        EndIf
-        
-      EndProcedure
-      
     CompilerCase #PB_OS_MacOS
-      
       
   CompilerEndSelect
   

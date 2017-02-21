@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.40 LTS (Linux - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Linux - x64)">
   <section name="config">
-    <options closefiles="1" openmode="0" name="TFMM"/>
-    <comment>Train Fever Mod Manager</comment>
+    <options closefiles="1" openmode="0" name="TPFMM"/>
+    <comment>Transport Fever Mod Manager</comment>
   </section>
   <section name="data">
-    <explorer view="/" pattern="0"/>
+    <explorer view="C:/PureBasic/5.30/win64/Examples/" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2015-12-19 21:04" user="alexander" host="mint"/>
+    <lastopen date="2017-02-21 23:30" user="alexander" host="mint-PC"/>
   </section>
   <section name="files">
     <file name="source/main.pb">
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+    </file>
+    <file name="source/module_aes.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source/module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -29,14 +32,17 @@
     <file name="source/module_luaParser.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_misc.pbi">
+    <file name="source/module_maps.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_misc.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source/module_mods.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_mods.pbi">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -44,13 +50,16 @@
     <file name="source/module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
+    <file name="source/module_repository.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source/module_settings.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
     <file name="source/module_unrar.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_updater.pbi">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
-    </file>
-    <file name="source/module_windowInformation.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source/module_windowMain.pbi">
@@ -66,30 +75,26 @@
   <section name="targets">
     <target name="lin64" enabled="1" default="1">
       <inputfile value="source/main.pb"/>
-      <outputfile value="bin/lin64/TFMM"/>
-      <compiler version="PureBasic 5.40 LTS (Linux - x64)"/>
-      <commandline value="-debug -testmode"/>
-      <executable value="bin/lin64/TFMM"/>
-      <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
-      <icon enable="1">source\TFMM.ico</icon>
-      <compilecount enable="1" value="2704"/>
-      <buildcount enable="1" value="160"/>
+      <outputfile value="bin/lin64/TPFMM"/>
+      <executable value="bin/win32/TPFMM.exe"/>
+      <directory value="source\"/>
+      <options unicode="1" thread="1" xpskin="1" user="1" onerror="1"/>
+      <icon enable="1">source\images\TPFMM.ico</icon>
+      <compilecount enable="1" value="292"/>
+      <buildcount enable="1" value="2"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
-        <field0 value="0,9,%BUILDCOUNT,%COMPILECOUNT"/>
-        <field1 value="0,9,%BUILDCOUNT,%COMPILECOUNT"/>
-        <field3 value="Train Fever Mod Manager"/>
+        <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field1 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
+        <field3 value="Transport Fever Mod Manager"/>
         <field4 value="%BUILDCOUNT"/>
         <field5 value="%COMPILECOUNT"/>
         <field7 value="TFMM"/>
         <field8 value="%EXECUTABLE"/>
         <field9 value="Alexander Nähring"/>
         <field16 value="VFT_APP"/>
-        <field17 value="0409 English (United States)"/>
         <field18 value="Homepage"/>
-        <field19 value="Support"/>
         <field21 value="www.alexandernaehring.eu"/>
-        <field22 value="www.train-fever.net"/>
       </versioninfo>
     </target>
   </section>

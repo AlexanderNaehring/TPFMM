@@ -174,3 +174,7 @@ EndModule
 main::init()
 
 End
+; IDE Options = PureBasic 5.51 (Linux - x64)
+; CursorPosition = 17
+; Folding = -
+; EnableXP

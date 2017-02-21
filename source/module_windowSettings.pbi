@@ -58,11 +58,6 @@ Module windowSettings
       CompilerCase #PB_OS_Windows 
         ; try to get Steam install location                         SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800
         path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800", "InstallLocation")
-        Debug "registry: "+path$
-        Debug ""
-        Debug ""
-        Debug ""
-        Debug "filesize("+path$+") = "+FileSize(path$)
         If Not FileSize(path$) = -2
           path$ = registry::Registry_GetString(#HKEY_LOCAL_MACHINE,  "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 446800", "InstallLocation")
         EndIf
@@ -75,7 +70,7 @@ Module windowSettings
         EndIf
         
       CompilerCase #PB_OS_Linux
-        path$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/SteamApps/common/Transport Fever/")
+        path$ = misc::Path(GetHomeDirectory() + "/.local/share/Steam/steamapps/common/Transport Fever/")
         
       CompilerCase #PB_OS_MacOS
         path$ = misc::Path(GetHomeDirectory() + "/Library/Application Support/Steam/SteamApps/common/Transport Fever/")
