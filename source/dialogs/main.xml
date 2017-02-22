@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<dialogs>
+  <window id='#PB_Any' name='main' text='MainWindow' minwidth='780' minheight='450' flags='#PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered'>
+    <vbox expand='item:2' margin='0'>
+      <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
+        <image name='headerMain' height='8' />
+      </singlebox>
+      <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
+        <panel name='panel'>
+          <tab text='Modifications'>
+            <vbox expand='item:1'>
+              <hbox expand='item:1'>
+                <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                <vbox expand='no'>
+                  <frame name='modFilterFrame'>
+                    <hbox expand='item:1'>
+                      <string name='modFilterString'/>
+                      <button name='modFilterReset' text='X' />
+                    </hbox>
+                  </frame>
+                  <image name='modPreviewImage' width='210' height='118' />
+                  <frame name='modManagementFrame'>
+                    <vbox expand='no'>
+                      <button name='modInformation' />
+                      <button name='modBackup' />
+                      <button name='modUninstall' />
+                    </vbox>
+                  </frame>
+                </vbox>
+              </hbox>
+            </vbox>
+          </tab>
+          <tab text='Online Repositories'>
+            <vbox expand='item:1'>
+              <hbox expand='item:1'>
+                <listicon name='repoList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                <vbox expand='no'>
+                  <frame name='repoFilterFrame'>
+                    <vbox expand='no'>
+                      <combobox name='repoFilterSources' />
+                      <combobox name='repoFilterTypes' />
+                      <hbox expand='item:1'>
+                        <string name='repoFilterString'/>
+                        <button name='repoFilterReset' text='X' />
+                      </hbox>
+                    </vbox>
+                  </frame>
+                  <frame name='repoManagementFrame'>
+                    <vbox expand='no'>
+                      <button name='repoInstall' />
+                    </vbox>
+                  </frame>
+                  <image name='repoPreviewImage' width='210' height='118' />
+                </vbox>
+              </hbox>
+            </vbox>
+          </tab>
+        </panel>
+      </singlebox>
+      <singlebox id='placeholder' margin='bottom:0' invisible='yes'></singlebox>
+    </vbox>
+  </window>
+</dialogs>
