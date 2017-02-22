@@ -131,7 +131,7 @@ Module unrar
     CompilerElse
       DataSection
         DataUnrar:
-        IncludeBinary "unrar.dll"
+        IncludeBinary "unrar/unrar.dll"
         DataUnrarEnd:
       EndDataSection
       misc::extractBinary("unrar.dll", ?DataUnrar, ?DataUnrarEnd - ?DataUnrar, #False)
