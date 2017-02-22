@@ -35,6 +35,7 @@ XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
+XIncludeFile "module_archive.pbi"
 
 Module main
   
