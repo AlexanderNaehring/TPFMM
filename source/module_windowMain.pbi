@@ -20,7 +20,6 @@ DeclareModule windowMain
     #MenuItem_AddMod
     #MenuItem_ExportList
     #MenuItem_Homepage
-    #MenuItem_Update
     #MenuItem_License
   EndEnumeration
   
@@ -64,7 +63,6 @@ Module windowMain
   Declare MenuItemHomepage()
   Declare MenuItemLicense()
   Declare MenuItemExport()
-  Declare MenuItemUpdate()
   
   Declare GadgetNewMod()
   Declare GadgetLibraryMods()
@@ -221,10 +219,6 @@ Module windowMain
   
   Procedure MenuItemNewMod()
     GadgetNewMod()
-  EndProcedure
-  
-  Procedure MenuItemUpdate()
-    CreateThread(updater::@checkUpdate(), 0)
   EndProcedure
   
   Procedure MenuItemLicense()
@@ -654,7 +648,6 @@ Module windowMain
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportList)
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
-    AddKeyboardShortcut(window, #PB_Shortcut_F5, #MenuItem_Update)
     
     
     ; Menu
@@ -678,7 +671,6 @@ Module windowMain
     BindMenuEvent(0, #MenuItem_AddMod, @MenuItemNewMod())
     BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
-    BindMenuEvent(0, #MenuItem_Update, @MenuItemUpdate())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     
     
@@ -687,7 +679,7 @@ Module windowMain
     AddStatusBarField(#PB_Ignore)
     AddStatusBarField(240)
     AddStatusBarField(140)
-    AddStatusBarField(160)
+    AddStatusBarField(100)
     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
     StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
     StatusBarText(0, 2, "", #PB_StatusBar_Center)
