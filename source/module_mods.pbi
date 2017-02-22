@@ -5,6 +5,7 @@ XIncludeFile "module_unrar.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
+XIncludeFile "module_archive.pbi"
 
 XIncludeFile "module_mods.h.pbi"
 
@@ -996,13 +997,11 @@ Module mods
     ; create fresh target directory
     misc::CreateDirectoryAll(target$)
     
-    If Not extractZIP(source$, target$)
-      If Not extractRAR(source$, target$)
+    If Not archive::extract(source$, target$)
         debugger::Add("mods::install() - ERROR - failed to extract files")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
         ProcedureReturn #False
-      EndIf
     EndIf
     
     ; archive is extracted to target$
@@ -1211,7 +1210,8 @@ Module mods
     windowMain::progressBar(80, 100, locale::getEx("progress", "backup_mod", strings$()))
     
     misc::CreateDirectoryAll(backupFolder$)
-    misc::packDirectory(modFolder$, backupFile$)
+    archive::pack(backupFile$, modFolder$)
+;     misc::packDirectory(modFolder$, backupFile$)
     
     windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
     
