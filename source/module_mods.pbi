@@ -366,7 +366,7 @@ Module mods
       
       zippedFile$ = PackEntryName(zip)
       zippedFile$ = misc::Path(GetPathPart(zippedFile$), "/")+GetFilePart(zippedFile$) ; zip always uses "/"
-      If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip) > 0
+      If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip)
         zippedFile$ = misc::Path(GetPathPart(zippedFile$)) + GetFilePart(zippedFile$)
         targetFile$ = path$ + zippedFile$
         misc::CreateDirectoryAll(GetPathPart(targetFile$))
@@ -374,6 +374,11 @@ Module mods
         If UncompressPackFile(zip, targetFile$) = -1
           debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+targetFile$+"}")
         EndIf
+      Else
+        ; directory
+        ; create empty dir
+        targetFile$ = path$ + zippedFile$
+        misc::CreateDirectoryAll(targetFile$)
       EndIf
     Wend
     
