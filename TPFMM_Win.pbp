@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-22 21:15" user="alexa" host="RIGEL"/>
+    <lastopen date="2017-02-23 00:34" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -33,7 +33,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_luaParser.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_maps.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -70,6 +70,9 @@
     </file>
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+    </file>
+    <file name="source\module_lua.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
   </section>
   <section name="targets">
