@@ -14,6 +14,7 @@
     luaDate.i         ; date of info.lua (reload info when newer version available)
     installDate.i     ; date of first encounter of this file (added to TPFMM)
     archive.archive   ; archive file, type and handle
+    repoTimeChanged.i ; timechanged value from repository if installed from repo
     tpfnetID.i        ; entry ID in transportfever.net download section
     workshopID.i      ; fileID in Steam Workshop
 ;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory

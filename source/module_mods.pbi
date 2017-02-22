@@ -965,7 +965,6 @@ Module mods
     Protected source$, target$
     Protected i
     
-    ;- idea for handling downloaded files: use a second file in temp dir with same name as zip file to store repository information and load during install
     
     ; check if file exists
     If FileSize(file$) <= 0
@@ -1085,6 +1084,7 @@ Module mods
         If JSONType(JSONValue(json)) = #PB_JSON_Object
           ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
           FreeJSON(json)
+          *mod\aux\repoTimeChanged = repo_mod\timechanged
           Select repo_mod\source$
             Case "tpfnet"
               *mod\aux\tpfnetID = repo_mod\remote_id
