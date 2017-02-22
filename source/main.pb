@@ -18,6 +18,7 @@ DeclareModule main
   Global ready      = #False
   Global gameDirectory$
   Global settingsFile$ = "TPFMM.ini"
+  Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
   
   Declare init()
   Declare exit()
@@ -32,7 +33,6 @@ XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "module_windowProgress.pbi"
 XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_updater.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"

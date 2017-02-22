@@ -722,7 +722,7 @@ Module mods
     Next
     
     WriteString(file, "</table>", #PB_UTF8)
-    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TPFMM</a> "+updater::VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='https://www.transportfevermods.com/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
+    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TPFMM</a> "+main::VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='https://www.transportfevermods.com/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
     
     WriteString(file, "</body></html>", #PB_UTF8)
     CloseFile(file)
@@ -756,7 +756,7 @@ Module mods
       EndWith
     Next
     WriteStringN(file, "", #PB_UTF8)
-    WriteString(file, "Created with TPFMM "+updater::VERSION$, #PB_UTF8)
+    WriteString(file, "Created with TPFMM "+main::VERSION$, #PB_UTF8)
     CloseFile(file)
     
     misc::openLink(File$)

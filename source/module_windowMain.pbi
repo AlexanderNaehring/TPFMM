@@ -2,7 +2,6 @@
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_updater.pbi"
 XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_repository.h.pbi"
 
@@ -225,14 +224,14 @@ Module windowMain
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
       MessageRequester("License",
                        "Transport Fever Mod Manager" + #CRLF$ +
-                       updater::VERSION$ + #CRLF$ +
+                       main::VERSION$ + #CRLF$ +
                        "© "+FormatDate("%yyyy", Date())+" Alexander Nähring" + #CRLF$ +
                        "Distributed on https://www.transportfevermods.com/" +  #CRLF$ +
                        "unrar © Alexander L. Roshal")
     CompilerElse
       MessageRequester("License",
                        "Transport Fever Mod Manager" + #CRLF$ +
-                       updater::VERSION$ + #CRLF$ +
+                       main::VERSION$ + #CRLF$ +
                        "© "+FormatDate("%yyyy", Date())+" Alexander Nähring" + #CRLF$ +
                        "Distributed on https://www.transportfevermods.com/")
     CompilerEndIf
@@ -683,7 +682,7 @@ Module windowMain
     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
     StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
     StatusBarText(0, 2, "", #PB_StatusBar_Center)
-    StatusBarText(0, 3, updater::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
+    StatusBarText(0, 3, main::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
     
     
     ; OS specific
