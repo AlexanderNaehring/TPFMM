@@ -196,15 +196,19 @@ track       = Gleis
 [progress]
 title       = Fortschritt
 load        = Lade Bibliothek
-new         = Füge neue Modifikation hinzu
-install     = Installiere Modifikation
-remove      = Entferne Modifikation aus Transport Fever
-delete      = Entferne Modifikation
-convert     = Konvertiere Modifikationen
-copy_lib    = Kopiere Modifikation in Bibliothek
+loaded      = Bibliothek geladen
+new         = Füge neue Mod hinzu
+install     = Installiere Mod
+installed   = Mod erfolgreich installiert
+install_fail = Konnte Mod nicht installieren
+remove      = Entferne Mod aus Transport Fever
+delete      = Entferne Mod
+convert     = Konvertiere Mod
+copy_lib    = Kopiere Mod in Bibliothek
 extract     = Entpacke Dateien
 backup      = Erstelle Sicherheitskopie
 backup_mod  = Erstelle Sicherheitskopie von {mod}...
+backup_fin  = Sicherheitskopie erstellt
 
 [conversion]
 title       = Konvertierung

@@ -909,8 +909,7 @@ Module mods
     
     defineFolder()
     
-    queue::progressText(locale::l("progress","load"))
-    queue::progressVal(0, 1) ; 0% progress
+    windowMain::progressBar(0, 1, locale::l("progress","load")) ; 0%
     
     ; load list from json file
     json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
@@ -1043,11 +1042,11 @@ Module mods
     n = 0
     debugger::Add("mods::loadList() - found "+MapSize(scanner())+" mods in folders")
     If count > 0
-      queue::progressVal(0, count)
+      windowMain::progressBar(0, count)
       
       ForEach scanner() ; for each mod found in any of the known mod folders:
         n + 1 ; update progress bar
-        queue::progressVal(n)
+        windowMain::progressBar(n)
         
         id$ = MapKey(scanner())
         
@@ -1089,6 +1088,8 @@ Module mods
     Next
     
     debugger::add("mods::loadList() - finished")
+    windowMain::progressBar(-1, -1, locale::l("progress","loaded")) ; 0%
+    
     ; Display mods in list gadget
     displayMods()
     displayDLCs()
@@ -1203,15 +1204,16 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    windowMain::progressBar(1, 5, locale::l("progress", "install"))
     
     ; 1) extract to temp directory (in TPF folder: /Transport Fever/TPFMM/temp/)
     ; 2) check extracted files and format
-    ; 3) if not correc,t delete folder and cancel install
+    ; 3) if not correct, delete folder and cancel install
     ;    if correct, move whole folder to mods/ or dlc/ (depending on type)
     ; 4) save information to list for faster startup of TPFMM
     
     
-    ; extract files to temp
+    ; (1) extract files to temp
     source$ = file$
     target$ = misc::Path(main::gameDirectory$+"/TPFMM/install/"+GetFilePart(file$, #PB_FileSystem_NoExtension)+"/")
     
@@ -1230,18 +1232,21 @@ Module mods
       If Not extractRAR(source$, target$)
         debugger::Add("mods::install() - ERROR - failed to extract files")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+        windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
         ProcedureReturn #False
       EndIf
     EndIf
     
     ; archive is extracted to target$
-    ; try to find mod in target$ (may be in some sub-directory)...
+    ; (2) try to find mod in target$ (may be in some sub-directory)...
+    windowMain::progressBar(2, 5)
     Protected modRoot$
     modRoot$ = getModRoot(target$)
     
     If modRoot$ = ""
       debugger::add("mods::install() - ERROR: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+      windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1261,6 +1266,7 @@ Module mods
         ; required for older mods - but new mods should not require this
         ;-TODO handle mods downloaded from workshop as well!
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+        windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1278,14 +1284,19 @@ Module mods
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     EndIf
     
-    ; copy mod to game folder
+    
+    ; (3) copy mod to game folder
+    windowMain::progressBar(3, 5)
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
       debugger::add("mods::install() - ERROR: MoveDirectory() failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
+      windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
-    ; create reference to mod and load info
+    
+    ; (4) create reference to mod and load info
+    windowMain::progressBar(4, 5)
     Protected *mod.mod
     *mod = addToMap(id$, "mod")
     loadInfo(*mod)
@@ -1322,12 +1333,14 @@ Module mods
     EndIf
     
     ; finish installation
+    windowMain::progressBar(-1, -1, locale::l("progress","installed"))
     debugger::Add("mods::install() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     displayMods(GetGadgetText(_gadgetMod))
     debugger::Add("mods::install() - finished")
     
     
+    ; start backup if required
     Protected backup, backupFolder$
     If OpenPreferences(main::settingsFile$) ;- TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
       backup = ReadPreferenceInteger("autobackup", 0)
@@ -1425,13 +1438,13 @@ Module mods
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
     strings$("mod") = *mod\name$
-    queue::progressText(locale::getEx("progress", "backup_mod", strings$()))
-    queue::progressStartWait()
+    ;TODO show progress
+    windowMain::progressBar(80, 100, locale::getEx("progress", "backup_mod", strings$()))
     
     misc::CreateDirectoryAll(backupFolder$)
     misc::packDirectory(modFolder$, backupFile$)
     
-    queue::progressStopWait()
+    windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
     
     debugger::add("mods::backup() - finished")
     ProcedureReturn #True

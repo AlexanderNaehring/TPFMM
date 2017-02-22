@@ -4,7 +4,7 @@ XIncludeFile "module_windowSettings.pbi"
 XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_updater.pbi"
 XIncludeFile "module_mods.h.pbi"
-XIncludeFile "module_repository.pbi"
+XIncludeFile "module_repository.h.pbi"
 
 DeclareModule windowMain
   EnableExplicit
@@ -31,6 +31,9 @@ DeclareModule windowMain
   Declare getColumnWidth(column)
   
   Declare displayMods()
+  
+  Declare progressBar(value, max=-1, text$=Chr(1))
+  Declare progressDownload(percent.d)
   
 EndDeclareModule
 
@@ -453,7 +456,7 @@ Module windowMain
     
     If nFiles = 1
       ; start download of file and install automatically
-      queue::add(queue::#QueueActionDownload, Str(*download)) ; currently, pass *download pointer as string...
+      repository::downloadMod(*download)
     Else ; no download url or multiple files
       If *mod\url$
         misc::openLink(*mod\url$) ; open in browser
@@ -496,6 +499,39 @@ Module windowMain
     EndIf
     ProcedureReturn height
   EndProcedure
+  
+  Procedure progressBar(value, max=-1, text$=Chr(1))
+    If value = -1
+      ; hide progress bar
+      StatusBarText(0, 0, "", #PB_StatusBar_BorderLess)
+    Else
+      ; show progress
+      If max = -1
+        StatusBarProgress(0, 0, value, #PB_StatusBar_BorderLess)
+      Else
+        StatusBarProgress(0, 0, value, #PB_StatusBar_BorderLess, 0, max)
+      EndIf
+    EndIf
+    
+    If text$ <> Chr(1)
+      StatusBarText(0, 1, text$);, #PB_StatusBar_BorderLess)
+    EndIf
+  EndProcedure
+  
+  Procedure progressDownload(percent.d)
+    Protected text$
+    If percent = 0
+      text$ = "Download started"
+    ElseIf percent = 1
+      text$ = "Download finished"
+    Else
+      text$ = "Download "+Str(percent*100)+"%"
+    EndIf
+    
+    StatusBarText(0, 2, text$, #PB_StatusBar_Center)
+  EndProcedure
+  
+  
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
@@ -649,9 +685,13 @@ Module windowMain
     ; Status bar
     CreateStatusBar(0, WindowID(DialogWindow(dialog)))
     AddStatusBarField(#PB_Ignore)
-    AddStatusBarField(210)
+    AddStatusBarField(240)
+    AddStatusBarField(140)
+    AddStatusBarField(160)
     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
-    StatusBarText(0, 1, updater::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
+    StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
+    StatusBarText(0, 2, "", #PB_StatusBar_Center)
+    StatusBarText(0, 3, updater::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
     
     
     ; OS specific

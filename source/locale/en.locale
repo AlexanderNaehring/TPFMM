@@ -196,15 +196,17 @@ track       = Track
 [progress]
 title       = Progress
 load        = Load library
-new         = Add new modification
-install     = Install modification
-remove      = Remove modification from Transport Fever
-delete      = Permanently delete modification
-convert     = Convert modifications
-copy_lib    = Copying modifications to library
+loaded      = Library loaded
+new         = Add new mod
+install     = Install mod
+installed   = Mod successfully installed
+install_fail = Failed to install mod
+remove      = Remove mod from Transport Fever
+delete      = Permanently delete mod
 extract     = Extracting files
 backup      = Create backup
 backup_mod  = Create backup of {mod}...
+backup_fin  = Backup created
 
 [conversion]
 title       = Conversion

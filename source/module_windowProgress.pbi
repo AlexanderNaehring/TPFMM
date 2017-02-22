@@ -64,8 +64,6 @@ Module windowProgress
     GadgetProgressText = TextGadget(#PB_Any, 0, 10, 400, 25, "", #PB_Text_Center)
     GadgetProgress = ProgressBarGadget(#PB_Any, -10, 40, 410, 30, 0, 100, #PB_ProgressBar_Smooth)
     
-    queue::progressRegister(id, GadgetProgress, GadgetProgressText)
-    
   EndProcedure
   
   Procedure events(event)
