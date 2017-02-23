@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.50 (Windows - x86)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Windows - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TPFMM"/>
     <comment>Transport Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-23 17:03" user="naehring" host="MU732281"/>
+    <lastopen date="2017-02-23 20:02" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -33,6 +33,12 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_lua.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+    </file>
+    <file name="source\module_lua_extern.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+    </file>
+    <file name="source\module_luaParser.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_main.pbi">
@@ -83,7 +89,7 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="474"/>
+      <compilecount enable="1" value="520"/>
       <buildcount enable="1" value="5"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

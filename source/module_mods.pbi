@@ -3,7 +3,7 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_unrar.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
-XIncludeFile "module_lua.pbi"
+XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_archive.pbi"
 
 XIncludeFile "module_mods.h.pbi"
@@ -259,7 +259,7 @@ Module mods
       ; load info from mod.lua
       If FileSize(luaFile$) > 0
 ;         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
-        If lua::parseModLua(modFolder$, *mod) ; current language
+        If luaParser::parseModLua(modFolder$, *mod) ; current language
           ; ok
           *mod\aux\sv = #SCANNER_VERSION
         EndIf

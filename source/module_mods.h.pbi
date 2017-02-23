@@ -1,7 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = 4
+  #SCANNER_VERSION = 6
   
   Structure archive ;-- information about the archive
     name$             ; filename of archive
