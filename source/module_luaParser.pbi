@@ -21,11 +21,28 @@ XIncludeFile "module_debugger.pbi"
 
 Module luaParser
   UseModule lua
-  If Not Lua_Initialize("O:\TPFMM\source\lua\")
+  
+  CreateDirectory("lua")
+  
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      DataSection
+        dataLuaWin32DLL:
+        IncludeBinary "lua/lua53_x86.dll"
+        dataLuaWin32DLLend:
+      EndDataSection
+      misc::extractBinary("lua/lua53_x86.dll", ?dataLuaWin32DLL, ?dataLuaWin32DLLend - ?dataLuaWin32DLL, #False)
+      
+    CompilerDefault
+      CompilerError "no dynamic libary for this OS"
+  CompilerEndSelect
+  
+  
+  
+  If Not Lua_Initialize("lua/")
+    debugger::add("lua::Lua_Initialize() - ERROR: cannot load lua")
     End
   EndIf
-  
-  
   
   Structure language
     Map translation$()
