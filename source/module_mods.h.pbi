@@ -1,7 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = 6
+  #SCANNER_VERSION = 8
   
   Structure archive ;-- information about the archive
     name$             ; filename of archive
@@ -21,6 +21,7 @@
     workshopID.i      ; fileID in Steam Workshop
 ;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory
     sv.i              ; scanner version
+    hidden.b          ; hidden from overview
   EndStructure
   
   
@@ -60,8 +61,7 @@
     aux.aux                 ; auxiliary information
   EndStructure
   
-  Declare registerMainWindow(window)
-  Declare registerModGadget(gadget)
+  Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla)
   
   Declare init()    ; allocate new mod structure, return *mod
   Declare free(*mod.mod) ; free *mod structure
@@ -92,7 +92,7 @@
   Declare exportList(all=#False)
   
   ; display callbacks
-  Declare displayMods(filter$="")
+  Declare displayMods()
   Declare displayDLCs()
   
   Declare getPreviewImage(*mod.mod, original=#False)

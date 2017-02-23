@@ -13,10 +13,16 @@
                 <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
                 <vbox expand='no'>
                   <frame name='modFilterFrame'>
-                    <hbox expand='item:1'>
-                      <string name='modFilterString'/>
-                      <button name='modFilterReset' text='X' />
-                    </hbox>
+                    <vbox expand='no'>
+                      <hbox expand='item:1'>
+                        <string name='modFilterString'/>
+                        <button name='modFilterReset' text='X' />
+                      </hbox>
+                      <hbox expand='equal'>
+                        <checkbox name='modFilterHidden' />
+                        <checkbox name='modFilterVanilla' />
+                      </hbox>
+                    </vbox>
                   </frame>
                   <image name='modPreviewImage' width='210' height='118' />
                   <frame name='modManagementFrame'>

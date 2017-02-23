@@ -246,7 +246,7 @@ Module luaParser
   EndProcedure
   
   Procedure iterateInfoTable(L, index)
-    Protected key$, val$, val
+    Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
     
@@ -262,22 +262,20 @@ Module luaParser
       
       key$    = lua_tostring(L, -1)
       
-      If key$
-        val$ = lua_tostring(L, -2)
-        val = lua_tointeger(L, -2)
-      EndIf
-      
       Select key$
         Case "name"
-          *mod\name$ = val$
+          *mod\name$ = lua_tostring(L, -2)
         Case "description"
-          *mod\description$ = val$
+          *mod\description$ = lua_tostring(L, -2)
         Case "minorVersion"
-          *mod\minorVersion = val
+          *mod\minorVersion = lua_tointeger(L, -2)
         Case "authors"
           getAuthors(L, -2)
         Case "tags"
           getTags(L, -2)
+        Case "visible"
+          *mod\aux\hidden = Bool(Not lua_toboolean(L, -2))
+          
         Default
           
       EndSelect

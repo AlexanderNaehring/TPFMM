@@ -28,8 +28,6 @@ DeclareModule windowMain
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
   
-  Declare displayMods()
-  
   Declare progressBar(value, max=-1, text$=Chr(1))
   Declare progressDownload(percent.d)
   
@@ -408,7 +406,7 @@ Module windowMain
   EndProcedure
   
   Procedure GadgetFilterMods()
-    mods::displayMods(GetGadgetText(gadget("modFilterString")))
+    mods::displayMods()
   EndProcedure
   
   Procedure GadgetResetFilterMods()
@@ -594,6 +592,8 @@ Module windowMain
     getGadget("modFilterFrame")
     getGadget("modFilterString")
     getGadget("modFilterReset")
+    getGadget("modFilterHidden")
+    getGadget("modFilterVanilla")
     getGadget("modPreviewImage")
     getGadget("modManagementFrame")
     getGadget("modInformation")
@@ -622,6 +622,8 @@ Module windowMain
     AddGadgetColumn(gadget("modList"), 2,       l("main","category"), 90)
     AddGadgetColumn(gadget("modList"), 3,       l("main","version"), 60)
     SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
+    SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
+    SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
     SetGadgetText(gadget("modInformation"),     l("main","information"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
@@ -638,6 +640,9 @@ Module windowMain
     BindGadgetEvent(gadget("modList"),          @GadgetLibraryMods())
     BindGadgetEvent(gadget("modFilterString"),  @GadgetFilterMods(), #PB_EventType_Change)
     BindGadgetEvent(gadget("modFilterReset"),   @GadgetResetFilterMods(), #PB_EventType_LeftClick)
+    BindGadgetEvent(gadget("modFilterHidden"),  @GadgetFilterMods())
+    BindGadgetEvent(gadget("modFilterVanilla"),  @GadgetFilterMods())
+    
     
     BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
     BindGadgetEvent(gadget("repoInstall"),      @GadgetRepositoryDownload())
@@ -729,8 +734,7 @@ Module windowMain
     
     
     ; register mods module
-    mods::registerMainWindow(window)
-    mods::registerModGadget(gadget("modList"))
+    mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"))
     
     
     ; register progress module
@@ -789,11 +793,6 @@ Module windowMain
   
   
   ; callbacks from mods module
-  
-  
-  Procedure displayMods()
-    
-  EndProcedure
   
   
   

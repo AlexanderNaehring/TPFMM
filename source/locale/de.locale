@@ -38,7 +38,9 @@ uninstall_pl    = Entferne Modifikationen
 backup          = Erstelle Sicherheitskopie
 backup_pl       = Erstelle Sicherheitskopien
 information     = Informationen
-filter          = Filter Modifikationen
+filter            = Filter Modifikationen
+filterHidden = Zeige Versteckte
+filterVanilla = Zeige Vanilla
 
 [settings]
 title           = TPFMM Einstellungen

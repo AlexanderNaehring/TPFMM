@@ -1,6 +1,5 @@
 ﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_unrar.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -15,7 +14,7 @@ Module mods
   EndStructure
   
   Global NewMap *mods.mod()
-  Global _window, _gadgetMod, _gadgetDLC, _gadgetEventTriggerDLC
+  Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla
   
   
   UseMD5Fingerprint()
@@ -333,91 +332,6 @@ Module mods
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure extractZIP(file$, path$)
-    debugger::Add("mods::extractZIP("+File$+")")
-    Protected zip, error
-    Protected zippedFile$, targetFile$
-    
-    zip = OpenPack(#PB_Any, File$, #PB_PackerPlugin_Zip)
-    If Not zip
-      debugger::Add("mods::extractZIP() - ERROR - failed to open {"+file$+"}")
-      ProcedureReturn #False 
-    EndIf
-    
-    If Not ExaminePack(zip)
-      debugger::Add("mods::ExtractModZip() - ERROR - failed to examining pack")
-      ProcedureReturn #False
-    EndIf
-    
-    path$ = misc::Path(path$)
-    
-    While NextPackEntry(zip)
-      ; filter out Mac OS X bullshit
-      If FindString(PackEntryName(zip), "__MACOSX") Or FindString(PackEntryName(zip), ".DS_Store") Or Left(GetFilePart(PackEntryName(zip)), 2) = "._"
-        Continue
-      EndIf
-      
-      zippedFile$ = PackEntryName(zip)
-      zippedFile$ = misc::Path(GetPathPart(zippedFile$), "/")+GetFilePart(zippedFile$) ; zip always uses "/"
-      If PackEntryType(zip) = #PB_Packer_File And PackEntrySize(zip)
-        zippedFile$ = misc::Path(GetPathPart(zippedFile$)) + GetFilePart(zippedFile$)
-        targetFile$ = path$ + zippedFile$
-        misc::CreateDirectoryAll(GetPathPart(targetFile$))
-       ;  debugger::Add("          extract {"+zippedFile$+"}")
-        If UncompressPackFile(zip, targetFile$) = -1
-          debugger::Add("mods::extractZIP() - ERROR - failed uncrompressing {"+PackEntryName(zip)+"} to {"+targetFile$+"}")
-        EndIf
-      Else
-        ; directory
-        ; create empty dir
-        targetFile$ = path$ + zippedFile$
-        misc::CreateDirectoryAll(targetFile$)
-      EndIf
-    Wend
-    
-    ClosePack(zip)
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure extractRAR(file$, path$, *mod = #Null)
-    debugger::Add("mods::extractRAR("+file$+", "+path$+")")
-    
-    Protected rarheader.unrar::RARHeaderDataEx
-    Protected hRAR
-    Protected entry$
-    
-    hRAR = unrar::OpenRar(file$, *mod, unrar::#RAR_OM_EXTRACT)
-    If Not hRAR
-      debugger::Add("mods::extractRAR() - ERROR - failed to open {"+file$+"}")
-      ProcedureReturn #False
-    EndIf
-    
-    While unrar::RARReadHeader(hRAR, rarheader) = unrar::#ERAR_SUCCESS
-      CompilerIf #PB_Compiler_Unicode
-        Entry$ = PeekS(@rarheader\FileNameW)
-      CompilerElse
-        Entry$ = PeekS(@rarheader\FileName,#PB_Ascii)
-      CompilerEndIf
-      
-      ; filter out Mac OS X bullshit
-      If FindString(Entry$, "__MACOSX") Or FindString(Entry$, ".DS_Store") Or Left(GetFilePart(Entry$), 2) = "._"
-        unrar::RARProcessFile(hRAR, unrar::#RAR_SKIP, #Null$, #Null$) ; skip these files / entries
-        Continue
-      EndIf
-      
-      entry$ = misc::Path(GetPathPart(entry$)) + GetFilePart(entry$) ; translate to correct delimiter: \ or /
-      
-      If unrar::RARProcessFile(hRAR, unrar::#RAR_EXTRACT, #Null$, path$ + entry$) <> unrar::#ERAR_SUCCESS ; uncompress current file to modified tmp path
-        debugger::Add("mods::extractRAR() - ERROR: failed to uncompress {"+entry$+"}")
-      EndIf
-      
-    Wend
-    unrar::RARCloseArchive(hRAR)
-    
-    ProcedureReturn #True
-  EndProcedure
-  
   Procedure exportListHTML(file$)
     debugger::add("mods::exportListHTML("+file$+")")
     Protected file
@@ -605,17 +519,16 @@ Module mods
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure registerMainWindow(window)
-    debugger::Add("registerMainWindow("+Str(window)+")")
-    _window = window
-    ProcedureReturn window
+  Procedure register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla)
+    debugger::Add("mods::register()")
+    _window               = window
+    _gadgetModList        = gadgetModList
+    _gadgetFilterString   = gadgetFilterString
+    _gadgetFilterHidden   = gadgetFilterHidden
+    _gadgetFilterVanilla  = gadgetFilterVanilla
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure registerModGadget(gadget) ; ListIcon Gadget
-    debugger::Add("registerModGadget("+Str(gadget)+")")
-    _gadgetMod = gadget
-    ProcedureReturn gadget
-  EndProcedure
   
   ;### data structure handling
   
@@ -1096,7 +1009,7 @@ Module mods
     windowMain::progressBar(-1, -1, locale::l("progress","installed"))
     debugger::Add("mods::install() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-    displayMods(GetGadgetText(_gadgetMod))
+    displayMods()
     debugger::Add("mods::install() - finished")
     
     
@@ -1150,8 +1063,7 @@ Module mods
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     free(*mod)
     
-    displayMods("")
-    ;-TODO add filter text
+    displayMods()
     
     ProcedureReturn #True
   EndProcedure
@@ -1400,36 +1312,57 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure displayMods(filter$="")
+  Procedure displayMods()
+    Protected filterString$, showHidden, showVanilla
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
     
-    debugger::add("mods::displayMods("+filter$+")")
+    debugger::add("mods::displayMods()")
+    
     
     If Not IsWindow(_window)
       debugger::add("mods::displayMods() - ERROR: window not valid")
       ProcedureReturn #False
     EndIf
-    If Not IsGadget(_gadgetMod)
-      debugger::add("mods::displayMods() - ERROR: gadget not valid")
+    If Not IsGadget(_gadgetModList)
+      debugger::add("mods::displayMods() - ERROR: #gadget not valid")
       ProcedureReturn #False
     EndIf
     
+    If IsGadget(_gadgetFilterString)
+      filterString$ = GetGadgetText(_gadgetFilterString)
+    EndIf
+    If IsGadget(_gadgetFilterHidden)
+      showHidden = GetGadgetState(_gadgetFilterHidden)
+    EndIf
+    If IsGadget(_gadgetFilterVanilla)
+      showVanilla = GetGadgetState(_gadgetFilterVanilla)
+    EndIf
+    
+    
+    
     windowMain::stopGUIupdate() ; do not execute "updateGUI()" timer
 ;     misc::StopWindowUpdate(WindowID(_window)) ; do not repaint window
-;     HideGadget(_gadgetMod, #True)
-    ListIcon::ClearListItems(_gadgetMod)
+    HideGadget(_gadgetModList, #True)
+    ListIcon::ClearListItems(_gadgetModList)
     
     ; count = number of individual parts of search string
     ; only if all parts are found, show result!
-    count = CountString(filter$, " ") + 1 
+    count = CountString(filterString$, " ") + 1 
     ForEach *mods()
       With *mods()
         mod_ok = 0 ; reset ok for every mod entry
         If \aux\type$ = "dlc"
           Continue
         EndIf
-        If filter$ = ""
+        If \aux\hidden And Not showHidden
+          Continue
+        EndIf
+        If \aux\isVanilla And Not showVanilla
+          Continue
+        EndIf
+        
+        If filterString$ = ""
           mod_ok = 1
           count = 1
         Else
@@ -1437,7 +1370,7 @@ Module mods
           For k = 1 To count
             ; tmp_ok = true if this part is found, increase number of total matches by one
             tmp_ok = 0
-            str$ = Trim(StringField(filter$, k, " "))
+            str$ = Trim(StringField(filterstring$, k, " "))
             If str$
               ; search in name, authors, tags
               If FindString(\name$, str$, 1, #PB_String_NoCase)
@@ -1491,26 +1424,31 @@ Module mods
       With *mod
         text$ = \name$ + #LF$ + getAuthors(\authors()) + #LF$ + listToString(\tags$()) + #LF$ + \version$
         
-        ListIcon::AddListItem(_gadgetMod, item, text$)
-        ListIcon::SetListItemData(_gadgetMod, item, *mod)
-        ; ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("yes")))
+        ListIcon::AddListItem(_gadgetModList, item, text$)
+        ListIcon::SetListItemData(_gadgetModList, item, *mod)
+        ; ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("yes")))
         ;- TODO: image based on online update status or something else?
         If Left(\tpf_id$, 1) = "*"
-          ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_workshop")))
+          ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_workshop")))
         Else
           If \aux\isVanilla
-            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod_official")))
+            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod_official")))
           Else
-            ListIcon::SetListItemImage(_gadgetMod, item, ImageID(images::Images("icon_mod")))
+            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod")))
           EndIf
         EndIf
+        
+        If \aux\hidden
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, #Gray)
+        EndIf
+        
         
         item + 1
       EndWith
     Next
     
     
-;     HideGadget(_gadgetMod, #False)
+    HideGadget(_gadgetModList, #False)
 ;     misc::ContinueWindowUpdate(WindowID(_window))
     windowMain::stopGUIupdate(#False)
     
