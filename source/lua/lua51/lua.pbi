@@ -1,4 +1,4 @@
-; http://www.purebasic.fr/english/viewtopic.php?p=491904#p491904
+; initially based on http://www.purebasic.fr/english/viewtopic.php?p=491904#p491904
 
 PrototypeC lua_CFunction 	(L)
 PrototypeC lua_Reader 		(L,ud,sz)
@@ -6,11 +6,15 @@ PrototypeC lua_Writer 		(L,p,sz,ud)
 PrototypeC lua_Alloc 		  (ud,ptr,osize,nsize)
 PrototypeC lua_Hook 			(L,ar)
 
-#LUA_VERSION 					=	"Lua 5.1"
-#LUA_RELEASE 					=	"Lua 5.1.4"
-#LUA_VERSION_NUM 			=	501
-#LUA_COPYRIGHT 				=	"Copyright (C) 1994-2007 Lua.org, PUC-Rio"
-#LUA_AUTHORS					=	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
+#LUA_VERSION_MAJOR    = "5"
+#LUA_VERSION_MINOR    = "2"
+#LUA_VERSION_NUM 			=	502
+#LUA_VERSION_RELEASE  = "0"
+
+#LUA_VERSION 					=	"Lua "+#LUA_VERSION_MAJOR+"."+#LUA_VERSION_MINOR
+#LUA_RELEASE 					=	#LUA_VERSION+"."+#LUA_VERSION_RELEASE
+#LUA_COPYRIGHT 				=	#LUA_RELEASE+" Copyright (C) 1994-2011 Lua.org, PUC-Rio"
+#LUA_AUTHORS					=	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 ;  mark for precompiled code
 #LUA_SIGNATURE 				=	"\033Lua"
@@ -24,11 +28,13 @@ PrototypeC lua_Hook 			(L,ar)
 #LUA_GLOBALSINDEX 		=	(-10002)
 
 ;  thread status; 0 is OK  
+#LUA_OK               = 0
 #LUA_YIELD 						=	1
 #LUA_ERRRUN 					=	2
 #LUA_ERRSYNTAX 				=	3
 #LUA_ERRMEM 					=	4
-#LUA_ERRERR 					=	5
+#LUA_ERRGCMM          = 5
+#LUA_ERRERR 					=	6
 
 ;  basic types 
 #LUA_TNONE						=	-1
@@ -152,7 +158,7 @@ EndMacro
 
 CompilerSelect #PB_Compiler_OS
 	CompilerCase #PB_OS_Windows
-	  ; 	  ImportC "win/lua514.lib"
+; 	  ImportC "win/lua514.lib"
 	  ImportC "win/liblua5.1.a"
 	  EndImport
 	CompilerCase #PB_OS_MacOS
@@ -187,7 +193,7 @@ ImportC ""
 	lua_rawequal(L,idx1,idx2)
 	lua_lessthan(L,idx1,idx2)
 	lua_tonumber.d(L,idx)
-	lua_tointeger(L,idx)
+	lua_tointeger(L, idx)
 	lua_toboolean(L,idx)
 	lua_tolstring(L,idx,len)
 	lua_objlen(L,idx)
@@ -220,11 +226,14 @@ ImportC ""
 	lua_rawseti(L,idx,n)
 	lua_setmetatable(L,objindex)
 	lua_setfenv(L,idx)
+	
+	; load and call functions
 	lua_call(L,nargs,nresults)
 	lua_pcall(L,nargs,nresults,errfunc)
 	lua_cpcall(L,func.l ,ud)
 	lua_load(L,reader,dt,string.p-utf8)
 	lua_dump(L,writer,datas)
+	
 	lua_yield(L,nresults)
 	lua_resume(L,narg)
 	lua_status(L)
