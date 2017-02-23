@@ -258,9 +258,10 @@ Module mods
        *mod\aux\sv <> #SCANNER_VERSION
       ; load info from mod.lua
       If FileSize(luaFile$) > 0
-        debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
+;         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
         If lua::parseModLua(modFolder$, *mod) ; current language
           ; ok
+          *mod\aux\sv = #SCANNER_VERSION
         EndIf
         
       Else
@@ -274,7 +275,6 @@ Module mods
         debugger::add("mods::loadInfo() - ERROR: mod {"+id$+"} has no name")
       EndIf
     EndIf
-    *mod\aux\sv = #SCANNER_VERSION
     
     ; do this always (not only when reading mod.lua)
     localizeTags(*mod)

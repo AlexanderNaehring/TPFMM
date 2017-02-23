@@ -475,6 +475,7 @@ Module lua
     debugger::add("lua::parseModLua() - read {"+language$+"} from {"+modfolder$+"}")
     
     Protected stringsLua$, modLua$
+    Protected string$, tmp$
     modfolder$  = misc::path(modfolder$)
     modLua$     = modfolder$ + "mod.lua"
     stringsLua$ = modfolder$ + "strings.lua"
@@ -488,7 +489,7 @@ Module lua
     Protected L
     L = luaL_newstate()
     
-    luaL_openlibs(L) ; basic libs
+    luaL_openlibs(L) ; basic libs (require, ...)
 ;     luaopen_base(L)	; base lib laden , fuer print usw
     
     ; initialize variable storage for this lua state
@@ -496,28 +497,34 @@ Module lua
     lua(Str(L))\language$ = language$
     lua(Str(L))\mod = *mod
     
-    ; first step: parse strings and save to translation!
-    If FileSize(stringsLua$) > 0
-      openStringsLua(L, stringsLua$)
-    EndIf
+    ; add search path for require function:
+    tmp$ = misc::path(main::gameDirectory$, "/")
+    string$ = "package.path = package.path .. ';"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;res/scripts/?.lua';"
+    luaL_dostring(L, string$)
     
     ; make translation function known to lua global
     lua_pushcfunction(L, @lua_translate())
     lua_setglobal(L, "_")
     
     ; nil some os calls
-    Protected string$
     string$ = "os.execute = nil; os.remove = nil;"
     luaL_dostring(L, string$)
+    
+    
+    ; first step: parse strings and save to translation!
+    If FileSize(stringsLua$) > 0
+      openStringsLua(L, stringsLua$)
+    EndIf
     
     
     Protected success = #False
     
     If openModLua(L, modLua$)
-      debugger::add("lua::parseModLua() - finished")
       *mod\aux\luaDate = GetFileDate(modLua$, #PB_Date_Modified)
       
       success = #True
+    Else
+      debugger::add("lua::parseModLua() - Error: could not read mod.lua")
     EndIf
     
     DeleteMapElement(lua(), Str(L))

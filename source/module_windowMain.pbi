@@ -374,7 +374,13 @@ Module windowMain
     
     Select EventType()
       Case #PB_EventType_LeftDoubleClick
-        
+        position = GetGadgetState(EventGadget())
+        If position <> -1
+          *mod = GetGadgetItemData(EventGadget(), position)
+          If *mod
+            misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
+          EndIf
+        EndIf
       Case #PB_EventType_RightClick
         DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
     EndSelect

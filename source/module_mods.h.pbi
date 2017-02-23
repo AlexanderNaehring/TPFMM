@@ -1,7 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = 3
+  #SCANNER_VERSION = 4
   
   Structure archive ;-- information about the archive
     name$             ; filename of archive
@@ -71,6 +71,8 @@
   
   Declare generateID(*mod.mod, id$ = "")
   Declare.s getLUA(*mod.mod)
+  
+  Declare.s getModFolder(id$ = "", type$ = "mod")
   
   ; required interfaces:
   ; install(*data) - extract an archive to the game folder
