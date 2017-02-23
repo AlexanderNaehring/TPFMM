@@ -3,9 +3,6 @@
 CompilerEndIf
 
 XIncludeFile "module_mods.h.pbi"
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_misc.pbi"
-XIncludeFile "module_debugger.pbi"
 
 DeclareModule lua
   EnableExplicit
@@ -14,6 +11,10 @@ DeclareModule lua
   
 EndDeclareModule
 
+
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_misc.pbi"
+XIncludeFile "module_debugger.pbi"
 
 
 
@@ -34,11 +35,58 @@ Module lua
   
   Global NewMap lua.lua()
   
+  Procedure removeBOM(file$)
+    Protected file, bom
+    Protected content$
+    
+    If FileSize(file$) > 0
+      file = OpenFile(#PB_Any, file$)
+    EndIf
+    
+    If Not file
+      ProcedureReturn #False
+    EndIf
+    
+    bom = ReadStringFormat(file)
+    
+    Select bom
+      Case #PB_Ascii ; no bom found (ASCII or utf-8?)
+        CloseFile(file)
+        ProcedureReturn #True
+        
+      Case #PB_UTF8 ; utf-8 BOM found...
+        content$ = ReadString(file, #PB_UTF8|#PB_File_IgnoreEOL)
+        
+      Case #PB_Unicode ; unicode BOM UTF-16 LE
+        content$ = ReadString(file, #PB_Unicode|#PB_File_IgnoreEOL)
+        
+      Default
+        ; UTF16 BE, UTF32, UTF32 BE not supported...
+        ProcedureReturn #False
+    EndSelect
+    
+    CloseFile(file)
+    file = CreateFile(#PB_Any, file$)
+    If Not file
+      ProcedureReturn #False
+    EndIf
+    
+    WriteString(file, content$, #PB_UTF8)
+    
+    CloseFile(file)
+    ProcedureReturn #True
+  EndProcedure
   
+  ProcedureC lua_dummy(L)
+    lua_pop(L, 1)
+    lua_pushnil(L)
+    ProcedureReturn 1
+  EndProcedure
   
   ProcedureC lua_translate(L)
     Protected *string, string$, lang$
     *string = luaL_checkstring(L, -1)
+    lua_pop(L, 1); pop argument
     
     If Not *string
       debugger::add("lua::lua_translate() - LUA ERROR: no string pointer")
@@ -280,8 +328,9 @@ Module lua
     ; with help of http://stackoverflow.com/questions/6137684/iterate-through-lua-table
     
     ; open and parse mod.lua
+    removeBOM(file$)
     If luaL_dofile(L, file$) <> 0
-      debugger::add("lua::openModLua() - lua_dofile ERROR: "+PeekS(lua_tostring(L, -1), -1, #PB_UTF8))
+      debugger::add("lua::openModLua() - lua_dofile ERROR: {"+PeekS(lua_tostring(L, -1), -1, #PB_UTF8)+"} in file {"+file$+"}")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -316,6 +365,7 @@ Module lua
      
     ; stack is like before table iteration, with original table on top of stack
     lua_pop(L, 1)
+    ProcedureReturn #True
   EndProcedure
   
   
@@ -364,8 +414,9 @@ Module lua
   
   Procedure openStringsLua(L, file$)
     ; open and parse strings.lua
+    removeBOM(file$)
     If luaL_dofile(L, file$) <> 0
-      debugger::add("lua::openStringsLua() - lua_dofile ERROR: "+PeekS(lua_tostring(L, -1), -1, #PB_UTF8))
+      debugger::add("lua::openStringsLua() - lua_dofile ERROR: {"+PeekS(lua_tostring(L, -1), -1, #PB_UTF8)+"} in file {"+file$+"}")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -437,6 +488,9 @@ Module lua
     Protected L
     L = luaL_newstate()
     
+    luaL_openlibs(L) ; basic libs
+;     luaopen_base(L)	; base lib laden , fuer print usw
+    
     ; initialize variable storage for this lua state
     AddMapElement(lua(), Str(L))
     lua(Str(L))\language$ = language$
@@ -451,11 +505,25 @@ Module lua
     lua_pushcfunction(L, @lua_translate())
     lua_setglobal(L, "_")
     
-    openModLua(L, modLua$)
+    ; nil some os calls
+    Protected string$
+    string$ = "os.execute = nil; os.remove = nil;"
+    luaL_dostring(L, string$)
+    
+    
+    Protected success = #False
+    
+    If openModLua(L, modLua$)
+      debugger::add("lua::parseModLua() - finished")
+      *mod\aux\luaDate = GetFileDate(modLua$, #PB_Date_Modified)
+      
+      success = #True
+    EndIf
     
     DeleteMapElement(lua(), Str(L))
     lua_close(L)
     
+    ProcedureReturn success
   EndProcedure
   
   

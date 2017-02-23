@@ -1,6 +1,8 @@
 ﻿DeclareModule mods
   EnableExplicit
   
+  #SCANNER_VERSION = 3
+  
   Structure archive ;-- information about the archive
     name$             ; filename of archive
     md5$              ; md5 file fingerprint of archive file
@@ -18,7 +20,9 @@
     tpfnetID.i        ; entry ID in transportfever.net download section
     workshopID.i      ; fileID in Steam Workshop
 ;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory
+    sv.i              ; scanner version
   EndStructure
+  
   
   Structure author  ;-- information about author
     name$             ; name of author

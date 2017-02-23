@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-23 14:51" user="naehring" host="MU732281"/>
+    <lastopen date="2017-02-23 17:03" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -32,7 +32,10 @@
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
-    <file name="source\module_luaParser.pbi">
+    <file name="source\module_lua.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+    </file>
+    <file name="source\module_main.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_maps.pbi">
@@ -71,9 +74,6 @@
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
-    <file name="source\module_main.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
-    </file>
   </section>
   <section name="targets">
     <target name="win32" enabled="1" default="1">
@@ -83,7 +83,7 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="431"/>
+      <compilecount enable="1" value="474"/>
       <buildcount enable="1" value="5"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

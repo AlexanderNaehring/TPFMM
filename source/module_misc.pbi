@@ -1,4 +1,7 @@
-﻿DeclareModule misc
+﻿XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_main.pbi"
+
+DeclareModule misc
   EnableExplicit
   
   Macro Min(a,b)

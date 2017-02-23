@@ -1,10 +1,9 @@
 ﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_unrar.pbi"
-; XIncludeFile "module_parseLUA.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
-XIncludeFile "module_luaParser.pbi"
+XIncludeFile "module_lua.pbi"
 XIncludeFile "module_archive.pbi"
 
 XIncludeFile "module_mods.h.pbi"
@@ -181,17 +180,6 @@ Module mods
     
   EndProcedure
   
-  Procedure parseInfoLUA(file$, *mod.mod)
-    Protected ret
-    ret = luaParser::parseInfoLUA(file$, *mod)
-    If ret
-      ; everytime when loading info from lua, save lua date to mod
-      ; then, information only has to be reloaded if mod.lua is changed
-      *mod\aux\luaDate = GetFileDate(file$, #PB_Date_Modified)
-    EndIf
-    ProcedureReturn ret
-  EndProcedure
-  
   Procedure localizeTags(*mod.mod)
     With *mod
       ClearList(\tagsLocalized$())
@@ -265,13 +253,16 @@ Module mods
     ;- TODO: mod.lua not used for maps!
     
     ; check if mod.lua was modified and reload mod.lua if required
-    If *mod\name$ = "" Or *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified)
+    If *mod\name$ = "" Or
+       *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified) Or 
+       *mod\aux\sv <> #SCANNER_VERSION
       ; load info from mod.lua
       If FileSize(luaFile$) > 0
         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
-        If Not parseInfoLUA(luaFile$, *mod)
-          debugger::add("mods::loadInfo() - ERROR: failed to parse mod.lua")
+        If lua::parseModLua(modFolder$, *mod) ; current language
+          ; ok
         EndIf
+        
       Else
         ; no mod.lua present -> extract info from ID
         debugger::add("mods::loadInfo() - ERROR: no mod.lua for mod {"+id$+"} found!")
@@ -283,6 +274,7 @@ Module mods
         debugger::add("mods::loadInfo() - ERROR: mod {"+id$+"} has no name")
       EndIf
     EndIf
+    *mod\aux\sv = #SCANNER_VERSION
     
     ; do this always (not only when reading mod.lua)
     localizeTags(*mod)
