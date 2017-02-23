@@ -1439,7 +1439,7 @@ Module mods
         EndIf
         
         If \aux\hidden
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, #Gray)
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB(100, 100, 100))
         EndIf
         
         

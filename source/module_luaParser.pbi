@@ -27,11 +27,20 @@ Module luaParser
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       DataSection
-        dataLuaWin32DLL:
+        dataLua:
         IncludeBinary "lua/lua53_x86.dll"
-        dataLuaWin32DLLend:
+        dataLuaEnd:
       EndDataSection
-      misc::extractBinary("lua/lua53_x86.dll", ?dataLuaWin32DLL, ?dataLuaWin32DLLend - ?dataLuaWin32DLL, #False)
+      misc::extractBinary("lua/lua53_x86.dll", ?dataLua, ?dataLuaEnd - ?dataLua, #False)
+      
+    CompilerCase #PB_OS_Linux
+      DataSection
+        dataLua:
+        IncludeBinary "lua/liblua53.so"
+        dataLuaEnd:
+      EndDataSection
+      
+      misc::extractBinary("lua/liblua53.so", ?dataLua, ?dataLuaEnd - ?dataLua, #False)
       
     CompilerDefault
       CompilerError "no dynamic libary for this OS"

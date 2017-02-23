@@ -49,11 +49,7 @@ Module main
     debugger::DeleteLogFile()
     
     debugger::Add("init() - load plugins")
-    If Not UseZipPacker()
-      debugger::Add("ERROR: UseZipPacker()")
-      MessageRequester("Error", "Could not initialize ZIP.")
-      End
-    EndIf
+    
     If Not InitNetwork()
       debugger::Add("ERROR: InitNetwork()")
     EndIf

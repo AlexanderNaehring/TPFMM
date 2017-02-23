@@ -33,6 +33,11 @@ Module archive
       misc::extractBinary("7z/7z.exe",          ?data7zExe, ?data7zExeEnd - ?data7zExe, #False)
       misc::extractBinary("7z/7z.dll",          ?data7zDll, ?data7zDllEnd - ?data7zDll, #False)
       misc::extractBinary("7z/7z License.txt",  ?data7zLic, ?data7zLicEnd - ?data7zLic, #False)
+      
+    CompilerCase #PB_OS_Linux
+      ; use "unzip"
+      
+      
     CompilerDefault
       CompilerError "No unpacker defined for this OS"
   CompilerEndSelect
@@ -59,6 +64,16 @@ Module archive
       CompilerCase #PB_OS_Windows
         program$ = "7z/7z.exe"
         parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" -o"+#DQUOTE$+directory$+#DQUOTE$
+        
+      CompilerCase #PB_OS_Linux
+        If LCase(GetExtensionPart(archive$)) = "rar"
+          program$ = "unrar"
+          parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+        Else
+          program$ = "unzip"
+          parameter$ = #DQUOTE$+archive$+#DQUOTE$+" -d "+#DQUOTE$+directory$+#DQUOTE$
+        EndIf
+        
     CompilerEndSelect
     
     ; start program
@@ -102,13 +117,17 @@ Module archive
     directory$  = misc::path(directory$) ; single / at the end
     root$       = GetPathPart(Left(directory$, Len(directory$)-1))
     directory$  = GetFilePart(Left(directory$, Len(directory$)-1))
-    directory$  = misc::path(directory$)+"*"
     
     ; define program
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         program$ = "7z/7z.exe"
-        parameter$ = "a "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+        parameter$ = "a "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+misc::path(directory$)+"*"+#DQUOTE$
+        
+      CompilerCase #PB_OS_Linux
+        program$ = "zip"
+        parameter$ = "-r "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+        
     CompilerEndSelect
     
     ; start program
