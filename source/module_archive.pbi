@@ -28,7 +28,8 @@ Module archive
           IncludeBinary "7z/7z License.txt"
         data7zLicEnd:
       EndDataSection
-    
+      
+      CreateDirectory("7z")
       misc::extractBinary("7z/7z.exe",          ?data7zExe, ?data7zExeEnd - ?data7zExe, #False)
       misc::extractBinary("7z/7z.dll",          ?data7zDll, ?data7zDllEnd - ?data7zDll, #False)
       misc::extractBinary("7z/7z License.txt",  ?data7zLic, ?data7zLicEnd - ?data7zLic, #False)
@@ -62,26 +63,20 @@ Module archive
     
     ; start program
     debugger::add("archive::extract() - {"+program$+" "+parameter$+"}")
-    program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open)
+    program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
     If Not program
       debugger::add("archive::extract() - Error: could not start program")
       ProcedureReturn #False
     EndIf
     
-    ; wait for program to finish and check result
-    WaitProgram(program) ;TODO add timeout?
-    If ProgramRunning(program)
-      KillProgram(program)
-    EndIf
+    While ProgramRunning(program)
+      If AvailableProgramOutput(program)
+        debugger::add("archive::extract() -| "+ReadProgramString(program))
+      EndIf
+      Delay(1)
+    Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    ; error codes 7z.exe:
-    ; 0    No error
-    ; 1    Warning (Non fatal error(s)). For example, one or more files were locked by some other application, so they were not compressed.
-    ; 2    Fatal error
-    ; 7    Command line error
-    ; 8    Not enough memory for operation
-    ; 255  User stopped the process
     If exit = 0
       ProcedureReturn #True
     Else
@@ -91,8 +86,53 @@ Module archive
   EndProcedure
   
   Procedure pack(archive$, directory$)
-    ; not yet implemented
-    Debug "packing not yet implemented"
+    
+    Protected root$
+    Protected program$, parameter$
+    Protected program, exit
+    
+    DeleteFile(archive$, #PB_FileSystem_Force)
+    
+    If FileSize(directory$) <> -2
+      debugger::add("archive::pack() - Error: Cannot find source directory {"+directory$+"}")
+      ProcedureReturn #False
+    EndIf
+    
+    ; 7z will put files in subdir with respect to current working dir!
+    directory$  = misc::path(directory$) ; single / at the end
+    root$       = GetPathPart(Left(directory$, Len(directory$)-1))
+    directory$  = GetFilePart(Left(directory$, Len(directory$)-1))
+    directory$  = misc::path(directory$)+"*"
+    
+    ; define program
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        program$ = "7z/7z.exe"
+        parameter$ = "a "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+    CompilerEndSelect
+    
+    ; start program
+    debugger::add("archive::pack() - {"+program$+" "+parameter$+"}")
+    program = RunProgram(program$, parameter$, root$, #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
+    If Not program
+      debugger::add("archive::pack() - Error: could not start program")
+      ProcedureReturn #False
+    EndIf
+    
+    While ProgramRunning(program)
+      If AvailableProgramOutput(program)
+        debugger::add("archive::pack() -| "+ReadProgramString(program))
+      EndIf
+      Delay(1)
+    Wend
+    exit = ProgramExitCode(program)
+    CloseProgram(program)
+    If exit = 0
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+    
   EndProcedure
   
   

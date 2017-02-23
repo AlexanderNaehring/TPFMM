@@ -5,6 +5,7 @@ XIncludeFile "module_unrar.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
+XIncludeFile "module_archive.pbi"
 
 XIncludeFile "module_mods.h.pbi"
 
@@ -965,7 +966,6 @@ Module mods
     Protected source$, target$
     Protected i
     
-    ;- idea for handling downloaded files: use a second file in temp dir with same name as zip file to store repository information and load during install
     
     ; check if file exists
     If FileSize(file$) <= 0
@@ -997,13 +997,11 @@ Module mods
     ; create fresh target directory
     misc::CreateDirectoryAll(target$)
     
-    If Not extractZIP(source$, target$)
-      If Not extractRAR(source$, target$)
+    If Not archive::extract(source$, target$)
         debugger::Add("mods::install() - ERROR - failed to extract files")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
         ProcedureReturn #False
-      EndIf
     EndIf
     
     ; archive is extracted to target$
@@ -1085,6 +1083,7 @@ Module mods
         If JSONType(JSONValue(json)) = #PB_JSON_Object
           ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
           FreeJSON(json)
+          *mod\aux\repoTimeChanged = repo_mod\timechanged
           Select repo_mod\source$
             Case "tpfnet"
               *mod\aux\tpfnetID = repo_mod\remote_id
@@ -1211,7 +1210,8 @@ Module mods
     windowMain::progressBar(80, 100, locale::getEx("progress", "backup_mod", strings$()))
     
     misc::CreateDirectoryAll(backupFolder$)
-    misc::packDirectory(modFolder$, backupFile$)
+    archive::pack(backupFile$, modFolder$)
+;     misc::packDirectory(modFolder$, backupFile$)
     
     windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
     
