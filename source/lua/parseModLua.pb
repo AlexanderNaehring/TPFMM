@@ -52,6 +52,13 @@ ProcedureC LUA_Translate(L)
   
   If FindMapElement(language(_language$)\translate$(), string$)
     string$ = language(_language$)\translate$(string$)
+  Else
+    ; cannot find translation for _language$, try fallback to en
+    If _language$ <> "en"
+      If FindMapElement(language("en")\translate$(), string$)
+        string$ = language("en")\translate$(string$)
+      EndIf
+    EndIf
   EndIf
   
 	lua_pushstring(L, string$)
@@ -212,7 +219,6 @@ Procedure iterateInfoTable(L, index)
    lua_pop(L, 1)
 EndProcedure
 
-
 Procedure iterateModDataTable(L, index)
   lua_pushvalue(L, index) ; push data-table to top of stack (copy)
   ; stack now contains: -1 => table
@@ -245,6 +251,7 @@ Procedure iterateModDataTable(L, index)
    ; Pop table (copy)
    lua_pop(L, 1)
 EndProcedure
+
 
 Procedure readStringsTranslations(L, index, language$)
   ; comments in iterateModDataTable()
@@ -385,7 +392,7 @@ EndProcedure
 
 Global L = luaL_newstate()
 
-luaL_openlibs(L)
+; luaL_openlibs(L) ; basic libs
 ; luaopen_base(L)	; base lib laden , fuer print usw
 
 ; first step: parse strings and save to translation!

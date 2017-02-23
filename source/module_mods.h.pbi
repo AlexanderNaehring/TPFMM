@@ -24,8 +24,17 @@
     name$             ; name of author
     role$             ; CREATOR, CO_CREATOR, TESTER, BASED_ON, OTHER
     text$             ; optional, additional text to display
-    steamProfile$     ; Stream profile link
-    tfnetId.i         ; user ID (number) on train-fever.net
+    tfnetId.i         ; user ID on transportfever.net
+    steamId.i         ; SteamID
+    steamProfile$     ; Steam profile link
+  EndStructure
+  
+  Structure dependency ;-- dependency information
+    mod$            ; folder name
+    version.i       ; minorVersion
+    steamId.i       ; steam workshop ID
+    tfnetId.i       ; transportfever.net ID
+    exactMatch.b    ; is only exact version match allowed?
   EndStructure
   
   Structure mod           ;-- information about mod/dlc
