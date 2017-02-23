@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Windows - x86)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.50 (Windows - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TPFMM"/>
     <comment>Transport Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\PureBasic\5.30\win64\Examples\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-22 21:15" user="alexa" host="RIGEL"/>
+    <lastopen date="2017-02-23 14:51" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -48,7 +48,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_queue.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
@@ -63,13 +63,16 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_unrar.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
     </file>
     <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="++"/>
+    </file>
+    <file name="source\module_main.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="++"/>
     </file>
   </section>
   <section name="targets">
@@ -80,8 +83,8 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="400"/>
-      <buildcount enable="1" value="4"/>
+      <compilecount enable="1" value="431"/>
+      <buildcount enable="1" value="5"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
