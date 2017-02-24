@@ -459,9 +459,7 @@ Module windowMain
     Protected selected, *repoMod.repository::mod
     Static menuID
     
-    Debug "showmenu"
-    
-    If IsMenu(MenuID)
+    If menuID And IsMenu(MenuID)
       FreeMenu(MenuID)
     EndIf
     
