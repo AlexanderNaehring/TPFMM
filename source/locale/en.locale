@@ -138,6 +138,7 @@ save      = Save
 [repository]
 all_types   = All Types
 all_sources = All Sources
+more_author = Show all mods by {author}
 
 [mods]
 filter_all      = Show All Folders

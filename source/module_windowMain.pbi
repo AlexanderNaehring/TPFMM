@@ -438,10 +438,47 @@ Module windowMain
   EndProcedure
   
   Procedure GadgetRepoList()
-    
     updateRepoButtons()
   EndProcedure
   
+  Procedure MenuRepoListAuthor()
+    Protected selected, *repoMod.repository::mod
+    
+    selected = GetGadgetState(gadget("repoList"))
+    If selected <> -1
+      *repoMod = GetGadgetItemData(gadget("repoList"), selected)
+    EndIf
+    
+    If *repoMod
+      SetGadgetText(gadget("repoFilterString"), *repoMod\author$)
+      SetActiveGadget(gadget("repoFilterString"))
+    EndIf
+  EndProcedure
+  
+  Procedure GadgetRepoListShowMenu()
+    Protected selected, *repoMod.repository::mod
+    Static menuID
+    
+    Debug "showmenu"
+    
+    If IsMenu(MenuID)
+      FreeMenu(MenuID)
+    EndIf
+    
+    selected = GetGadgetState(gadget("repoList"))
+    If selected <> -1
+      *repoMod = GetGadgetItemData(gadget("repoList"), selected)
+    EndIf
+    
+    If *repoMod
+      menuID = CreatePopupMenu(#PB_Any)
+      Protected NewMap strings$()
+      strings$("author") = *repoMod\author$
+      MenuItem(5000, locale::getEx("repository", "more_author", strings$()))
+      BindMenuEvent(menuID, 5000, @MenuRepoListAuthor())
+      DisplayPopupMenu(menuID, WindowID(window))
+    EndIf
+  EndProcedure
   
   Procedure GadgetResetFilterRepository()
     SetGadgetText(gadget("repoFilterString"), "")
@@ -668,6 +705,7 @@ Module windowMain
     
     
     BindGadgetEvent(gadget("repoList"),         @GadgetRepoList())
+    BindGadgetEvent(gadget("repoList"),         @GadgetRepoListShowMenu(), #PB_EventType_RightClick)
     BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
     BindGadgetEvent(gadget("repoInstall"),      @GadgetRepositoryDownload())
     
