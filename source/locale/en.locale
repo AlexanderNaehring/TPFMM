@@ -215,6 +215,7 @@ extract     = Extracting files
 backup      = Create backup
 backup_mod  = Create backup of {mod}...
 backup_fin  = Backup created
+backup_fail = Backup failed
 
 [conversion]
 title       = Conversion

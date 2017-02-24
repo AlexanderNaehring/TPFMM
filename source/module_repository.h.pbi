@@ -102,6 +102,7 @@
   Declare registerFilterGadget(gadgetID)
   Declare displayMods(search$, source$ = "", type$="")
   Declare displayThumbnail(url$)
+  Declare canDownload(*repoMod.mod)
   Declare downloadMod(*download.download)
   
 EndDeclareModule

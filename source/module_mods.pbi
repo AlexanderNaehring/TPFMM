@@ -1040,15 +1040,9 @@ Module mods
     Protected backup, backupFolder$
     If OpenPreferences(main::settingsFile$) ;- TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
       backup = ReadPreferenceInteger("autobackup", 0)
-      If backup
-        backupFolder$ = misc::path(main::gameDirectory$+"/TPFMM/backups/")
-        misc::CreateDirectoryAll(backupFolder$)
-        backupFolder$ = ReadPreferenceString("backupFolder", backupFolder$)
-      EndIf
       ClosePreferences()
-      
       If backup
-        queue::add(queue::#QueueActionBackup, id$, backupFolder$)
+        queue::add(queue::#QueueActionBackup, id$)
       EndIf
     EndIf
     
@@ -1097,7 +1091,11 @@ Module mods
     
     id$           = *data\string$
     backupFolder$ = *data\option$
-    debugger::add("mods::backup("+id$+", "+backupFolder$+")")
+    ; overwrite backupFolder
+    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    misc::CreateDirectoryAll(backupFolder$)
+    
+    debugger::add("mods::backup("+id$+")")
     
     If FindMapElement(*mods(), id$)
       *mod = *mods(id$)
@@ -1128,22 +1126,26 @@ Module mods
     EndIf
     
     ; add backupPath
-    backupFile$ = misc::path(backupFolder$) + backupFile$ + ".zip"
+    backupFile$ = backupFolder$ + backupFile$ + ".zip"
     
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
     strings$("mod") = *mod\name$
-    ;TODO show progress
+    
     windowMain::progressBar(80, 100, locale::getEx("progress", "backup_mod", strings$()))
     
-    misc::CreateDirectoryAll(backupFolder$)
-    archive::pack(backupFile$, modFolder$)
-;     misc::packDirectory(modFolder$, backupFile$)
+    If archive::pack(backupFile$, modFolder$)
+      debugger::add("mods::backup() - success")
+      *mod\aux\backup\date = Date()
+      *mod\aux\backup\filename$ = GetFilePart(backupFile$)
+      windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
+      ProcedureReturn #True
+    Else
+      debugger::add("mods::backup() - failed")
+      windowMain::progressBar(-1, -1, locale::l("progress", "backup_fail"))
+      ProcedureReturn #False
+    EndIf
     
-    windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
-    
-    debugger::add("mods::backup() - finished")
-    ProcedureReturn #True
   EndProcedure
   
   Procedure generateID(*mod.mod, id$ = "")

@@ -92,9 +92,8 @@ Module queue
             
           Case #QueueActionBackup
             debugger::add("queue::update() - #QueueActionBackup")
-            If element\string$ And element\option$
+            If element\string$
               dat\string$ = element\string$
-              dat\option$ = element\option$
               *thread = CreateThread(mods::@backup(), dat)
             EndIf
             

@@ -218,6 +218,7 @@ extract     = Entpacke Dateien
 backup      = Erstelle Sicherheitskopie
 backup_mod  = Erstelle Sicherheitskopie von {mod}...
 backup_fin  = Sicherheitskopie erstellt
+backup_fail = Sicherheitskopie fehlgeschlagen
 
 [conversion]
 title       = Konvertierung

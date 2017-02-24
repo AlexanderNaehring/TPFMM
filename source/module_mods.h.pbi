@@ -10,6 +10,11 @@
     password$         ; password used for decrypting the archive
   EndStructure
   
+  Structure backup  ;-- information about last backup if available
+    date.i
+    filename$
+  EndStructure
+  
   Structure aux     ;-- additional information about mod
     type$             ; "mod", "map", "dlc", ...
     isVanilla.b       ; pre-installed mods should not be uninstalled
@@ -22,6 +27,7 @@
 ;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory
     sv.i              ; scanner version
     hidden.b          ; hidden from overview
+    backup.backup     ; backup information (local)
   EndStructure
   
   

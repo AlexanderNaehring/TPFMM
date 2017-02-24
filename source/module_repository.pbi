@@ -353,6 +353,10 @@ Module repository
       ProcedureReturn #False
     EndIf
     
+    If canDownload(*download\mod) <> *download\file
+      ProcedureReturn #False
+    EndIf
+    
     ; wait for other instances to finish download...
     Static running
     While running
@@ -424,6 +428,7 @@ Module repository
       ; cleanup downlaod folder
       debugger::add("repository::downloadModThread() - download failed")
       DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
+      FreeStructure(*download)
       running = #False
       ProcedureReturn #False
     EndIf
@@ -869,6 +874,27 @@ Module repository
     
     CreateThread(@thumbnailThread(), 0)
     ProcedureReturn #True
+  EndProcedure
+  
+  Procedure canDownload(*repoMod.mod)
+    Protected nFiles
+    Protected *file.file
+    
+    ; currently, only mods with single file can be downloaded automatically
+    ForEach *repoMod\files()
+      If *repoMod\files()\url$
+        If *repoMod\type$ = "mod"
+          nFiles + 1
+          *file = *repoMod\files()
+        EndIf
+      EndIf
+    Next
+    
+    If nFiles = 1
+      ; start download of file and install automatically
+      ProcedureReturn *file
+    EndIf
+    ProcedureReturn #Null
   EndProcedure
   
   Procedure downloadMod(*download.download)

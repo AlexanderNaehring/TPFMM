@@ -54,7 +54,6 @@ Module windowMain
   Global _noUpdate
   
   Declare resize()
-  Declare updateGUI()
   
   Declare MenuItemSettings()
   Declare MenuItemHomepage()
@@ -62,11 +61,9 @@ Module windowMain
   Declare MenuItemExport()
   
   Declare GadgetNewMod()
-  Declare GadgetLibraryMods()
   Declare GadgetImageMain()
   Declare GadgetButtonStartGame()
   Declare GadgetButtonTrainFeverNetDownloads()
-  Declare GadgetButtonInstall()
   Declare GadgetButtonUninstall()
   
   ;----------------------------------------------------------------------------
@@ -79,7 +76,7 @@ Module windowMain
     SetGadgetState(gadget("headerMain"), ImageID(images::Images("headermain")))
   EndProcedure
   
-  Procedure updateGUI()
+  Procedure updateModButtons()
     Protected i, numSelected, numCanUninstall, numCanBackup
     Protected *mod.mods::mod
     Protected text$, author$
@@ -87,6 +84,7 @@ Module windowMain
     If _noUpdate
       ProcedureReturn #False
     EndIf
+    
     
     numSelected     = 0
     numCanUninstall = 0
@@ -110,10 +108,10 @@ Module windowMain
     Next
     
     DisableGadget(gadget("modInformation"), #True) ;- not yet implemented
-;     If numSelected = 0
-;       DisableGadget(GadgetButtonInfomation, #True)
-;     Else
+;     If numSelected = 1
 ;       DisableGadget(GadgetButtonInfomation, #False)
+;     Else
+;       DisableGadget(GadgetButtonInfomation, #True)
 ;     EndIf
     
     If numCanBackup = 0
@@ -172,7 +170,42 @@ Module windowMain
       EndIf
     EndIf
     
+    
   EndProcedure
+  
+  Procedure updateRepoButtons()
+    Protected numSelected, numCanDownload
+    Protected *repoMod.repository::mod
+    Protected i
+    
+    If _noUpdate
+      ProcedureReturn #False
+    EndIf
+    
+    numSelected = 0
+    numCanDownload = 0
+    
+    For i = 0 To CountGadgetItems(gadget("repoList")) - 1
+      *repoMod = GetGadgetItemData(gadget("repoList"), i)
+      If Not *repoMod
+        Continue
+      EndIf
+      
+      If GetGadgetItemState(gadget("repoList"), i) & #PB_ListIcon_Selected
+        numSelected + 1
+        If repository::canDownload(*repoMod)
+          numCanDownload + 1
+        EndIf
+      EndIf
+    Next
+    
+    If numCanDownload = 1
+      DisableGadget(gadget("repoInstall"), #False)
+    Else
+      DisableGadget(gadget("repoInstall"), #True)
+    EndIf
+  EndProcedure
+  
   
   Procedure close()
     HideWindow(window, #True)
@@ -272,11 +305,6 @@ Module windowMain
       file$ = NextSelectedFileName()
     Wend
   EndProcedure
-
-  Procedure GadgetButtonInstall() ; install new mod from repository (online)
-    debugger::Add("windowMain::GadgetButtonInstall")
-    
-  EndProcedure
   
   Procedure GadgetButtonUninstall() ; Uninstall selected mods (delete from HDD)
     debugger::Add("windowMain::GadgetButtonUninstall()")
@@ -334,32 +362,12 @@ Module windowMain
       EndIf
     Next i
     If count > 0
-      backupFolder$ = misc::path(main::gameDirectory$+"/TPFMM/backups/")
-      misc::CreateDirectoryAll(backupFolder$)
-      
-      OpenPreferences(main::settingsFile$)
-      backupFolder$ = ReadPreferenceString("backupFolder", backupFolder$)
-      ClosePreferences()
-      
-;       backupFolder$ = PathRequester(locale::l("management", "backup"), backupFolder$)
-;       If backupFolder$ = ""
-;         ProcedureReturn #False
-;       EndIf
-      
-      If FileSize(backupFolder$) <> -2
-        debugger::add("windowMain::GadgetButtonBackup() - ERROR: selected folder {"+backupFolder$+"} does not exist")
-        ProcedureReturn #False
-      EndIf
-      
-      OpenPreferences(main::settingsFile$)
-      WritePreferenceString("backupFolder", backupFolder$)
-      ClosePreferences()
       
       For i = 0 To CountGadgetItems(gadget("modList")) - 1
         If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(gadget("modList"), i)
           If mods::canBackup(*mod)
-            queue::add(queue::#QueueActionBackup, *mod\tpf_id$, backupFolder$)
+            queue::add(queue::#QueueActionBackup, *mod\tpf_id$)
           EndIf
         EndIf
       Next i
@@ -378,11 +386,11 @@ Module windowMain
     debugger::add("windowMain::GadgetButtonInformation() - show information of mod {"+*mod\tpf_id$+"}")
   EndProcedure
   
-  Procedure GadgetLibraryMods()
+  Procedure GadgetModList()
     Protected *mod.mods::mod
     Protected position, event
     
-    updateGUI()
+    updateModButtons()
     
     Select EventType()
       Case #PB_EventType_LeftDoubleClick
@@ -429,6 +437,12 @@ Module windowMain
     mods::displayMods()
   EndProcedure
   
+  Procedure GadgetRepoList()
+    
+    updateRepoButtons()
+  EndProcedure
+  
+  
   Procedure GadgetResetFilterRepository()
     SetGadgetText(gadget("repoFilterString"), "")
     SetActiveGadget(gadget("repoFilterString"))
@@ -436,12 +450,11 @@ Module windowMain
   
   Procedure GadgetRepositoryDownload()
     ; download and install mod from source
-    Protected item, nFiles
-    Protected url$
-    Protected *mod.repository::mod
+    Protected item, url$
+    Protected *mod.repository::mod, *file.repository::file
     Protected *download.repository::download
     
-    ; currently: only one file at a time!
+    ; currently: only one file at a time! -> only get first selected
     
     ; get selected mod from list:
     item = GetGadgetState(gadget("repoList"))
@@ -454,19 +467,13 @@ Module windowMain
       ProcedureReturn #False
     EndIf
     
-    *download = AllocateStructure(repository::download)
-    *download\mod = *mod
+    *file = repository::canDownload(*mod)
     
-    ForEach *mod\files()
-      If *mod\files()\url$
-        nFiles + 1
-        url$ = *mod\files()\url$
-        *download\file = *mod\files()
-      EndIf
-    Next
-    
-    If nFiles = 1
+    If *file
       ; start download of file and install automatically
+      *download = AllocateStructure(repository::download)
+      *download\mod = *mod
+      *download\file = *file
       repository::downloadMod(*download)
     Else ; no download url or multiple files
       If *mod\url$
@@ -652,7 +659,7 @@ Module windowMain
     BindGadgetEvent(gadget("modInformation"),   @GadgetButtonInfomation())
     BindGadgetEvent(gadget("modBackup"),        @GadgetButtonBackup())
     BindGadgetEvent(gadget("modUninstall"),     @GadgetButtonUninstall())
-    BindGadgetEvent(gadget("modList"),          @GadgetLibraryMods())
+    BindGadgetEvent(gadget("modList"),          @GadgetModList())
     BindGadgetEvent(gadget("modFilterString"),  @GadgetFilterMods(), #PB_EventType_Change)
     BindGadgetEvent(gadget("modFilterReset"),   @GadgetResetFilterMods())
     BindGadgetEvent(gadget("modFilterHidden"),  @GadgetFilterMods())
@@ -660,6 +667,7 @@ Module windowMain
     BindGadgetEvent(gadget("modFilterFolder"),  @GadgetFilterMods(), #PB_EventType_Change)
     
     
+    BindGadgetEvent(gadget("repoList"),         @GadgetRepoList())
     BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
     BindGadgetEvent(gadget("repoInstall"),      @GadgetRepositoryDownload())
     
@@ -753,15 +761,12 @@ Module windowMain
     mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"), gadget("modFilterFolder"))
     
     
-    ; register progress module
-    ; queue::progressRegister(0, GadgetProgressBar, GadgetProgressText)
-    
-    
     ; register to repository module
     Protected json$, *json
     Protected Dim columns.repository::column(0)
-    json$ = ReplaceString("[{'width':320,'name':'name'},"+
-                          "{'width':100,'name':'author_name'}]", "'", #DQUOTE$)
+    json$ = ReplaceString("[{'name':'name','width':320},"+
+                          "{'name':'author_name','width':100},"+
+                          "{'name':'version','width':60}]", "'", #DQUOTE$)
     *json = ParseJSON(#PB_Any, json$)
     ExtractJSONArray(JSONValue(*json), columns())
     FreeJSON(*json)
@@ -782,7 +787,8 @@ Module windowMain
     
     
     ; init gui texts and button states
-    updateGUI()
+    updateModButtons()
+    updateRepoButtons()
     
     
     UnuseModule locale
