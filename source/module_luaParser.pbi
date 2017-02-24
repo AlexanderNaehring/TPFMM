@@ -216,6 +216,9 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
+    ; authors found, delete old authors
+    ClearList(lua(Str(L))\mod\authors())
+    
     lua_pushnil(L)
     While lua_next(L, -2)
       lua_pushvalue(L, -2)

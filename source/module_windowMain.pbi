@@ -219,20 +219,34 @@ Module windowMain
   EndProcedure
   
   Procedure MenuItemLicense()
-    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-      MessageRequester("License",
-                       "Transport Fever Mod Manager" + #CRLF$ +
-                       main::VERSION$ + #CRLF$ +
-                       "© "+FormatDate("%yyyy", Date())+" Alexander Nähring" + #CRLF$ +
-                       "Distributed on https://www.transportfevermods.com/" +  #CRLF$ +
-                       "unrar © Alexander L. Roshal")
-    CompilerElse
-      MessageRequester("License",
-                       "Transport Fever Mod Manager" + #CRLF$ +
-                       main::VERSION$ + #CRLF$ +
-                       "© "+FormatDate("%yyyy", Date())+" Alexander Nähring" + #CRLF$ +
-                       "Distributed on https://www.transportfevermods.com/")
-    CompilerEndIf
+    Protected TPFMM$, ThirdParty$, About$
+    
+    TPFMM$ = "Transport Fever Mod Manager (" + main::VERSION$ + ")" + #CRLF$ +
+             "Copyright © 2014-"+FormatDate("%yyyy", Date())+" Alexander Nähring" + #CRLF$ +
+             "Distributed on https://www.transportfevermods.com/" + #CRLF$ +
+             "  and https://www.transportfever.net/"
+    
+    CompilerSelect #PB_Compiler_OS 
+      CompilerCase #PB_OS_Windows
+        ThirdParty$ = "Used Third-Party Software:" + #CRLF$ + 
+                      "7-Zip Copyright © 1999-2016 Igor Pavlov." + #CRLF$ +
+                      "  License: GNU LGPL http://www.gnu.org/" + #CRLF$ +
+                      "  unRAR © Alexander Roshal" + #CRLF$ + 
+                      "LUA Copyright © 1994-2017 Lua.org, PUC-Rio." + #CRLF$ + 
+                      "  License: MIT http://www.opensource.org/licenses/mit-license.html"
+        
+      CompilerCase #PB_OS_Linux
+        ThirdParty$ = "Used Third-Party Software:" + #CRLF$ + 
+                      "LUA Copyright © 1994-2017 Lua.org, PUC-Rio." + #CRLF$ + 
+                      "  License: MIT http://www.opensource.org/licenses/mit-license.html" + #CRLF$ + 
+                      #CRLF$ + 
+                      "Additional required packages: zip, unzip, unrar"
+        
+    CompilerEndSelect
+    
+    About$ = TPFMM$ + #CRLF$ + #CRLF$ + ThirdParty$
+      
+    MessageRequester("About", About$, #PB_MessageRequester_Info)
   EndProcedure
   
   Procedure MenuItemSettings() ; open settings window
@@ -594,6 +608,7 @@ Module windowMain
     getGadget("modFilterReset")
     getGadget("modFilterHidden")
     getGadget("modFilterVanilla")
+    getGadget("modFilterFolder")
     getGadget("modPreviewImage")
     getGadget("modManagementFrame")
     getGadget("modInformation")
@@ -639,9 +654,10 @@ Module windowMain
     BindGadgetEvent(gadget("modUninstall"),     @GadgetButtonUninstall())
     BindGadgetEvent(gadget("modList"),          @GadgetLibraryMods())
     BindGadgetEvent(gadget("modFilterString"),  @GadgetFilterMods(), #PB_EventType_Change)
-    BindGadgetEvent(gadget("modFilterReset"),   @GadgetResetFilterMods(), #PB_EventType_LeftClick)
+    BindGadgetEvent(gadget("modFilterReset"),   @GadgetResetFilterMods())
     BindGadgetEvent(gadget("modFilterHidden"),  @GadgetFilterMods())
-    BindGadgetEvent(gadget("modFilterVanilla"),  @GadgetFilterMods())
+    BindGadgetEvent(gadget("modFilterVanilla"), @GadgetFilterMods())
+    BindGadgetEvent(gadget("modFilterFolder"),  @GadgetFilterMods(), #PB_EventType_Change)
     
     
     BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
@@ -734,7 +750,7 @@ Module windowMain
     
     
     ; register mods module
-    mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"))
+    mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"), gadget("modFilterFolder"))
     
     
     ; register progress module

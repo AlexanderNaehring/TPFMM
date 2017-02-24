@@ -53,9 +53,8 @@
   EndStructure
   
   Structure mod
-    id.i
     source$
-    remote_id.i
+    id.i
     name$
     author$
     authorid.i
@@ -63,10 +62,8 @@
     type$
     url$
     thumbnail$
-    views.i
     timecreated.i
     timechanged.i
-    lastscan.i
     List files.file()
     List tags$()
     List tagsLocalized$()

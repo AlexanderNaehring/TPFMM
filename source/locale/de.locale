@@ -38,9 +38,9 @@ uninstall_pl    = Entferne Modifikationen
 backup          = Erstelle Sicherheitskopie
 backup_pl       = Erstelle Sicherheitskopien
 information     = Informationen
-filter            = Filter Modifikationen
-filterHidden = Zeige Versteckte
-filterVanilla = Zeige Vanilla
+filter          = Filter Modifikationen
+filterHidden    = Zeige Versteckte
+filterVanilla   = Zeige Vanilla
 
 [settings]
 title           = TPFMM Einstellungen
@@ -139,6 +139,13 @@ save      = Speichern
 [repository]
 all_types   = Alle Typen
 all_sources = Alle Quellen
+
+[mods]
+filter_all      = Zeige Alle Ordner
+filter_manual   = Zeige nur "mods" Ordner
+filter_steam    = Zeige nur Steam Workshop
+filter_staging  = Zeige nur StagingArea
+
 
 [tags]
 mod         = Modifikation

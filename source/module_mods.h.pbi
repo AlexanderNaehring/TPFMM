@@ -1,7 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = 8
+  #SCANNER_VERSION = 9
   
   Structure archive ;-- information about the archive
     name$             ; filename of archive
@@ -61,7 +61,7 @@
     aux.aux                 ; auxiliary information
   EndStructure
   
-  Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla)
+  Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
   
   Declare init()    ; allocate new mod structure, return *mod
   Declare free(*mod.mod) ; free *mod structure

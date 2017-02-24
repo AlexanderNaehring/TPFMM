@@ -180,9 +180,9 @@ Module repository
         Else
           If \url$ = ""
             If \source$ = "workshop"
-              \url$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+\remote_id
+              \url$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+\id
             ElseIf \source$ = "tpfnet"
-              \url$ = "https://www.transportfever.net/filebase/index.php/Entry/"+\remote_id
+              \url$ = "https://www.transportfever.net/filebase/index.php/Entry/"+\id
             EndIf
           EndIf
         EndIf
@@ -370,7 +370,7 @@ Module repository
     EndIf
     
     If *download\file\filename$ = ""
-      *download\file\filename$ = *download\mod\source$+"-"+*download\mod\remote_id+".zip"
+      *download\file\filename$ = *download\mod\source$+"-"+*download\mod\id+".zip"
     EndIf
     target$ = misc::Path(main::gameDirectory$ + "/TPFMM/download/")
     misc::CreateDirectoryAll(target$)
@@ -600,10 +600,6 @@ Module repository
             \offset = OffsetOf(mod\thumbnail$)
             \name$ = "Thumbnail"
             \type = #COL_STR
-          Case "views"
-            \offset = OffsetOf(mod\views)
-            \name$ = "Views"
-            \type = #COL_INT
 ;           Case "downloads"
 ;             \offset = OffsetOf(mod\downloads)
 ;             \name$ = "Downloads"

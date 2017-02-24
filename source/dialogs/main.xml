@@ -18,6 +18,7 @@
                         <string name='modFilterString'/>
                         <button name='modFilterReset' text='X' />
                       </hbox>
+                      <combobox name='modFilterFolder' />
                       <hbox expand='equal'>
                         <checkbox name='modFilterHidden' />
                         <checkbox name='modFilterVanilla' />

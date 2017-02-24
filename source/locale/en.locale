@@ -37,8 +37,8 @@ backup          = Create Backup
 backup_pl       = Create Backups
 information     = Mod Information
 filter          = Filter modifications
-filter_hidden = Show Hidden
-filter_vanilla = Show Vanilla
+filter_hidden   = Show Hidden
+filter_vanilla  = Show Vanilla
 
 [settings]
 title           = TPFMM Settings
@@ -138,6 +138,12 @@ save      = Save
 [repository]
 all_types   = All Types
 all_sources = All Sources
+
+[mods]
+filter_all      = Show All Folders
+filter_manual   = Show "mods" Folder only
+filter_steam    = Show Steam Workshop only
+filter_staging  = Show StagingArea only
 
 [tags]
 all         = All

@@ -14,8 +14,15 @@ Module mods
   EndStructure
   
   Global NewMap *mods.mod()
-  Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla
+  Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
   
+  Enumeration
+    #FILTER_FOLDER_ALL = 0
+    #FILTER_FOLDER_MANUAL
+    #FILTER_FOLDER_STEAM
+    #FILTER_FOLDER_STAGING
+  EndEnumeration
+    
   
   UseMD5Fingerprint()
   
@@ -519,13 +526,29 @@ Module mods
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla)
+  Procedure register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
     debugger::Add("mods::register()")
     _window               = window
     _gadgetModList        = gadgetModList
     _gadgetFilterString   = gadgetFilterString
     _gadgetFilterHidden   = gadgetFilterHidden
     _gadgetFilterVanilla  = gadgetFilterVanilla
+    _gadgetFilterFolder   = gadgetFilterFolder
+    
+    If IsGadget(_gadgetFilterFolder)
+      ClearGadgetItems(_gadgetFilterFolder)
+      AddGadgetItem(_gadgetFilterFolder,      0, locale::l("mods","filter_all"))
+      SetGadgetItemData(_gadgetFilterFolder,  0, #FILTER_FOLDER_ALL)
+      AddGadgetItem(_gadgetFilterFolder,      1, locale::l("mods","filter_manual"))
+      SetGadgetItemData(_gadgetFilterFolder,  1, #FILTER_FOLDER_MANUAL)
+      AddGadgetItem(_gadgetFilterFolder,      2, locale::l("mods","filter_steam"))
+      SetGadgetItemData(_gadgetFilterFolder,  2, #FILTER_FOLDER_STEAM)
+      AddGadgetItem(_gadgetFilterFolder,      3, locale::l("mods","filter_staging"))
+      SetGadgetItemData(_gadgetFilterFolder,  3, #FILTER_FOLDER_STAGING)
+      SetGadgetState(_gadgetFilterFolder, 0)
+    EndIf
+    
+    
     ProcedureReturn #True
   EndProcedure
   
@@ -991,9 +1014,9 @@ Module mods
           *mod\aux\repoTimeChanged = repo_mod\timechanged
           Select repo_mod\source$
             Case "tpfnet"
-              *mod\aux\tpfnetID = repo_mod\remote_id
+              *mod\aux\tpfnetID = repo_mod\id
             Case "workshop"
-              *mod\aux\workshopID = repo_mod\remote_id
+              *mod\aux\workshopID = repo_mod\id
             Default
               
           EndSelect
@@ -1313,7 +1336,7 @@ Module mods
   EndProcedure
   
   Procedure displayMods()
-    Protected filterString$, showHidden, showVanilla
+    Protected filterString$, showHidden, showVanilla, filterFolder
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
     
@@ -1338,6 +1361,9 @@ Module mods
     If IsGadget(_gadgetFilterVanilla)
       showVanilla = GetGadgetState(_gadgetFilterVanilla)
     EndIf
+    If IsGadget(_gadgetFilterFolder)
+      filterFolder = GetGadgetItemData(_gadgetFilterFolder, GetGadgetState(_gadgetFilterFolder))
+    EndIf
     
     
     
@@ -1360,6 +1386,21 @@ Module mods
         EndIf
         If \aux\isVanilla And Not showVanilla
           Continue
+        EndIf
+        If filterFolder ; 0 = show all
+          If Left(\tpf_id$, 1) = "*"
+            If filterFolder <> #FILTER_FOLDER_STEAM
+              Continue
+            EndIf
+          ElseIf Left(\tpf_id$, 1) = "?"
+            If filterFolder <> #FILTER_FOLDER_STAGING
+              Continue
+            EndIf
+          Else
+            If filterFolder <> #FILTER_FOLDER_MANUAL
+              Continue
+            EndIf
+          EndIf
         EndIf
         
         If filterString$ = ""
