@@ -76,7 +76,6 @@
   Declare saveList()
   
   Declare generateID(*mod.mod, id$ = "")
-  Declare.s getLUA(*mod.mod)
   
   Declare.s getModFolder(id$ = "", type$ = "mod")
   

@@ -204,6 +204,13 @@ Module windowMain
     Else
       DisableGadget(gadget("repoInstall"), #True)
     EndIf
+    
+    If numSelected = 1
+      DisableGadget(gadget("repoWebsite"), #False)
+    Else
+      DisableGadget(gadget("repoWebsite"), #True)
+    EndIf
+    
   EndProcedure
   
   
@@ -483,6 +490,28 @@ Module windowMain
     SetActiveGadget(gadget("repoFilterString"))
   EndProcedure
   
+  Procedure GadgetRepoWebsite()
+    Protected item
+    Protected *mod.repository::mod
+    
+    ; currently: only one file at a time! -> only get first selected
+    
+    ; get selected mod from list:
+    item = GetGadgetState(gadget("repoList"))
+    If item = -1
+      ProcedureReturn #False
+    EndIf
+    
+    *mod = GetGadgetItemData(gadget("repoList"), item)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\url$
+      misc::openLink(*mod\url$) ; open in browser
+    EndIf
+  EndProcedure
+  
   Procedure GadgetRepositoryDownload()
     ; download and install mod from source
     Protected item, url$
@@ -664,6 +693,7 @@ Module windowMain
     getGadget("repoFilterString")
     getGadget("repoFilterReset")
     getGadget("repoManagementFrame")
+    getGadget("repoWebsite")
     getGadget("repoInstall")
     getGadget("repoPreviewImage")
     
@@ -687,6 +717,8 @@ Module windowMain
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
     
     SetGadgetText(gadget("repoFilterFrame"),    l("main","filter"))
+    SetGadgetText(gadget("repoManagementFrame"), l("main","management"))
+    SetGadgetText(gadget("repoWebsite"),        l("main","mod_website"))
     SetGadgetText(gadget("repoInstall"),        l("main","install"))
     
     
@@ -705,6 +737,7 @@ Module windowMain
     BindGadgetEvent(gadget("repoList"),         @GadgetRepoList())
     BindGadgetEvent(gadget("repoList"),         @GadgetRepoListShowMenu(), #PB_EventType_RightClick)
     BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
+    BindGadgetEvent(gadget("repoWebsite"),      @GadgetRepoWebsite())
     BindGadgetEvent(gadget("repoInstall"),      @GadgetRepositoryDownload())
     
     

@@ -41,6 +41,7 @@ information     = Informationen
 filter          = Filter Modifikationen
 filterHidden    = Zeige Versteckte
 filterVanilla   = Zeige Vanilla
+mod_website     = Öffne Website
 
 [settings]
 title           = TPFMM Einstellungen

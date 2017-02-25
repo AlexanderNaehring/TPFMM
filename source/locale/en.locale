@@ -39,6 +39,7 @@ information     = Mod Information
 filter          = Filter modifications
 filter_hidden   = Show Hidden
 filter_vanilla  = Show Vanilla
+mod_website     = Open website
 
 [settings]
 title           = TPFMM Settings

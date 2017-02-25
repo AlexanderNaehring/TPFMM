@@ -54,6 +54,7 @@
                   </frame>
                   <frame name='repoManagementFrame'>
                     <vbox expand='no'>
+                      <button name='repoWebsite' />
                       <button name='repoInstall' />
                     </vbox>
                   </frame>

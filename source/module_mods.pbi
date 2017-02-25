@@ -289,13 +289,7 @@ Module mods
     
     ; after loading: write back mod.lua if not present
     If FileSize(luaFile$) <= 0
-      Protected file
-      file = CreateFile(#PB_Any, luaFile$)
-      If file
-        WriteString(file, getLUA(*mod), #PB_UTF8)
-        CloseFile(file)
-        *mod\aux\luaDate = GetFileDate(luaFile$, #PB_Date_Modified)
-      EndIf
+      debugger::add("some problem here: no lua file present?")
     EndIf
   EndProcedure
   
@@ -1205,6 +1199,8 @@ Module mods
   EndProcedure
   
   Procedure.s getLUA(*mod.mod)
+    Debug "veraltet"
+    ProcedureReturn ""
     Protected lua$
     
     ; severity = "NONE", "WARNING", "CRITICAL"

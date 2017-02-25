@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.50 (Windows - x86)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Windows - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TPFMM"/>
     <comment>Transport Fever Mod Manager</comment>
@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="C:\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-24 16:35" user="NAEHRING" host="MU732281"/>
+    <lastopen date="2017-02-25 19:09" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -86,7 +86,7 @@
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="632"/>
+      <compilecount enable="1" value="637"/>
       <buildcount enable="1" value="10"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
