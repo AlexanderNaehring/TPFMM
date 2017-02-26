@@ -30,6 +30,12 @@ XIncludeFile "module_repository.pbi"
 
 Module main
   
+  Procedure handleError()
+    MessageRequester("ERROR", ErrorMessage(ErrorCode()), #PB_MessageRequester_Error)
+    End
+  EndProcedure
+  
+  
   Procedure handleParameter(parameter$)
     Debug debugger::add("main::handleParameter() - "+parameter$)
     Select LCase(parameter$)
@@ -68,6 +74,8 @@ Module main
       debugger::SetLogFile("tpfmm.log")
     EndIf
     debugger::DeleteLogFile()
+    
+    OnErrorCall(@handleError())
     
     
     ; parameter handling
