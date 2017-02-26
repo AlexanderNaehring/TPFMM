@@ -22,7 +22,8 @@ Module repository
   EndStructure
   
   Global NewMap repo_mods.repo_mods()
-  Global NewList repositories$()
+  Global NewList repositories.repository()
+  
   Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
@@ -30,7 +31,7 @@ Module repository
   Global Dim type.type(0) ; type information (for filtering)
   Global _DISABLED = #False
   
-  Global _windowUpdate
+  Global NewMap settingsGadget()
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -519,13 +520,13 @@ Module repository
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure loadRepository(url$)
+  Procedure loadRepository(*repository.repository)
     Protected file$ ; parameter: URL -> calculate local filename from url
-    file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepository("+url$+")")
+    
+    file$ = getRepoFileName(*repository\url$)
+    debugger::add("repository::loadRepository("+*repository\url$+")")
     debugger::add("repository::loadRepository() - filename: {"+file$+"}")
     
-    Protected repo_main.repo_main
     Protected json, value
     Protected age
     
@@ -533,8 +534,7 @@ Module repository
       ProcedureReturn #False 
     EndIf
     
-    
-    downloadRepository(url$)
+    downloadRepository(*repository\url$)
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
@@ -548,27 +548,28 @@ Module repository
       ProcedureReturn #False
     EndIf
     
-    ExtractJSONStructure(value, repo_main, repo_main) ; no return value
+    InitializeStructure(*repository\main_json, main_json)
+    ExtractJSONStructure(value, *repository\main_json, main_json) ; no return value
     
-    If repo_main\repository\name$ = ""
+    If *repository\main_json\repository\name$ = ""
       debugger::add("repository::loadRepository() - Basic information missing (name) -> Skip repository")
       ProcedureReturn #False
     EndIf
     
     debugger::add("repository::loadRepository() |---- Main Repository Info:")
-    debugger::add("repository::loadRepository() | Name: "+repo_main\repository\name$)
-    debugger::add("repository::loadRepository() | Description: "+repo_main\repository\description$)
-    debugger::add("repository::loadRepository() | Maintainer: "+repo_main\repository\maintainer$)
-    debugger::add("repository::loadRepository() | URL: "+repo_main\repository\url$)
+    debugger::add("repository::loadRepository() | Name: "+*repository\main_json\repository\name$)
+    debugger::add("repository::loadRepository() | Description: "+*repository\main_json\repository\description$)
+    debugger::add("repository::loadRepository() | Maintainer: "+*repository\main_json\repository\maintainer$)
+    debugger::add("repository::loadRepository() | URL: "+*repository\main_json\repository\url$)
     debugger::add("repository::loadRepository() |----")
-    debugger::add("repository::loadRepository() | Mods Repositories: "+ListSize(repo_main\mods()))
+    debugger::add("repository::loadRepository() | Mods Repositories: "+ListSize(*repository\main_json\mods()))
     debugger::add("repository::loadRepository() |----")
     
-    If url$ = #OFFICIAL_REPOSITORY$
+    If *repository\url$ = #OFFICIAL_REPOSITORY$
       ; in main repository, check for update of TPFMM
-      If repo_main\TPFMM\build And 
-         repo_main\TPFMM\build > #PB_Editor_BuildCount
-        debugger::add("repository::loadRepository() - TPFMM update available: "+repo_main\TPFMM\version$)
+      If *repository\main_json\TPFMM\build And 
+         *repository\main_json\TPFMM\build > #PB_Editor_BuildCount
+        debugger::add("repository::loadRepository() - TPFMM update available: "+*repository\main_json\TPFMM\version$)
         
         ; debugger::add("repository::loadRepository() - post event to main window!")
         ; PostEvent(#EventShowUpdate, _windowMain, 0)
@@ -583,19 +584,19 @@ Module repository
     EndIf
     
     
-    If ListSize(repo_main\mods()) > 0
-      ForEach repo_main\mods()
-        debugger::add("repository::loadRepository() - load mods repository {"+repo_main\mods()\url$+"}...")
-        age = Date() - GetFileDate(getRepoFileName(repo_main\mods()\url$), #PB_Date_Modified)
-        debugger::add("repository::loadRepository() - local age: "+Str(age)+", remote age: "+Str(repo_main\mods()\age)+"")
-        If age > repo_main\mods()\age
+    If ListSize(*repository\main_json\mods()) > 0
+      ForEach *repository\main_json\mods()
+        debugger::add("repository::loadRepository() - load mods repository {"+*repository\main_json\mods()\url$+"}...")
+        age = Date() - GetFileDate(getRepoFileName(*repository\main_json\mods()\url$), #PB_Date_Modified)
+        debugger::add("repository::loadRepository() - local age: "+Str(age)+", remote age: "+Str(*repository\main_json\mods()\age)+"")
+        If age > *repository\main_json\mods()\age
           debugger::add("repository::loadRepository() - download new version")
-          downloadRepository(repo_main\mods()\url$)
+          downloadRepository(*repository\main_json\mods()\url$)
         Else
           debugger::add("repository::loadRepository() - no download required")
         EndIf
         ; Load mods from repository file
-        loadRepositoryMods(repo_main\mods()\url$, repo_main\mods()\enc$)
+        loadRepositoryMods(*repository\main_json\mods()\url$, *repository\main_json\mods()\enc$)
       Next
     EndIf
     
@@ -608,25 +609,29 @@ Module repository
     
     time = ElapsedMilliseconds()
     
-    ClearList(repositories$())
+    ClearList(repositories())
+    ClearMap(repo_mods())
+    
     ; always use official repository
-    AddElement(repositories$())
-    repositories$() = #OFFICIAL_REPOSITORY$
+    AddElement(repositories())
+    repositories()\url$ = #OFFICIAL_REPOSITORY$
+    
     ; add user defined repositories from file
     file = ReadFile(#PB_Any, #DIRECTORY+"/repositories.list", #PB_File_SharedRead)
     If file
       While Not Eof(file)
-        AddElement(repositories$())
-        repositories$() = ReadString(file)
+        AddElement(repositories())
+        repositories()\url$ = ReadString(file)
       Wend
       CloseFile(file)
     Else
       debugger::add("repository::loadRepositoryList() - cannot read repositories.list")
     EndIf
+    ;-TODO: save repos as json as well?
     
-    If ListSize(repositories$())
-      ForEach repositories$()
-        repository::loadRepository(repositories$())
+    If ListSize(repositories())
+      ForEach repositories()
+        loadRepository(repositories())
       Next
       
       debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
@@ -1000,6 +1005,54 @@ Module repository
     
     CreateThread(@downloadModThread(), *download)
   EndProcedure
+  
+  ; list all available repos in settings gadget
+  
+  Procedure infoCallback()
+    Protected item, *repository.repository
+    
+    SetGadgetText(settingsGadget("repositoryName"), "")
+    SetGadgetText(settingsGadget("repositoryCurator"), "")
+    SetGadgetText(settingsGadget("repositoryDescription"), "")
+    DisableGadget(settingsGadget("repositoryRemove"), #True)
+        
+    item = GetGadgetState(settingsGadget("repositoryList"))
+    If item <> -1
+      *repository = GetGadgetItemData(settingsGadget("repositoryList"), item)
+      If *repository
+        SetGadgetText(settingsGadget("repositoryName"), *repository\main_json\repository\name$)
+        SetGadgetText(settingsGadget("repositoryCurator"), *repository\main_json\repository\maintainer$)
+        SetGadgetText(settingsGadget("repositoryDescription"), *repository\main_json\repository\description$)
+        If *repository\url$ <> #OFFICIAL_REPOSITORY$
+          DisableGadget(settingsGadget("repositoryRemove"), #False)
+        EndIf
+      EndIf
+    EndIf
+    
+  EndProcedure
+  
+  Procedure listRepositories(Map gadgets())
+    Protected item
+    
+    If settingsGadget("repositoryList") And IsGadget(settingsGadget("repositoryList"))
+      UnbindGadgetEvent(settingsGadget("repositoryList"), @infoCallback())
+    EndIf
+    
+    CopyMap(gadgets(), settingsGadget())
+    
+    
+    BindGadgetEvent(settingsGadget("repositoryList"), @infoCallback())
+    
+    ClearGadgetItems(settingsGadget("repositoryList"))
+    
+    ForEach repositories()
+      AddGadgetItem(settingsGadget("repositoryList"), item, repositories()\url$)
+      SetGadgetItemData(settingsGadget("repositoryList"), item, repositories())
+      item + 1
+    Next
+    
+  EndProcedure
+  
   
 EndModule
 

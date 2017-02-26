@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <dialogs>
-  <window id='#PB_Any' name='settings' text='Settings' minwidth='600' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu'>
+  <window id='#PB_Any' name='settings' text='Settings' minwidth='600' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered | #PB_Window_Invisible'>
     <vbox expand='item:1'>
       <panel name='panelSettings'>
-      
+
         <tab text='General Settings'>
           <vbox expand='no'>
             <frame name='installationFrame' text='Transport Fever Installation Location'>
@@ -12,33 +12,59 @@
                 <button name='installationAutodetect' text='Autodetect' />
                 <string name='installationPath' />
                 <button name='installationBrowse' text='Browse' />
-                <text name='installationTextStatus' text='Path ok?' colspan='2' />
+                <text name='installationTextStatus' text='' colspan='2' />
               </gridbox>
             </frame>
-            <frame name='languageFrame' text='Language'>
-              <combobox name='language' />
-            </frame>
+            <hbox expand='equal'>
+              <frame name='miscFrame' text='Miscellaneous'>
+                <vbox expand='no'>
+                  <checkbox name='miscAutoBackup' text='Automatically backup mods after installation' />
+
+                </vbox>
+              </frame>
+              <frame name='languageFrame' text='Language'>
+                <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+              </frame>
+            </hbox>
+
           </vbox>
         </tab>
-        
-        <tab text='Miscellaneous'>
-          <vbox expand='no'>
-            <frame name='onlineFrame' text='Online Repositories'>
-            </frame>
-            <frame name='miscFrame' text='Miscellaneous'>
-              <vbox expand='no'>
-                <checkbox name='miscWindowPosition' text='Remember Window Position' />
-                <checkbox name='miscAutoBackup' text='Automatically backup mods after installation' />
-              </vbox>
-            </frame>
-          </vbox>
+
+        <tab text='Online Repositories'>
+          <hbox expand='equal'>
+            <vbox expand='item:1'>
+              <listview name='repositoryList' />
+              <hbox expand='item:2'>
+                <button name='repositoryAdd' text='Add new Repository' disabled='yes' />
+                <empty />
+                <button name='repositoryRemove' text='Remove selected' disabled='yes' />
+              </hbox>
+
+            </vbox>
+            <gridbox colexpand='item:2' rowexpand='item:3'>
+              <text   name='repositoryNameLabel' />
+              <string name='repositoryName' flags='#PB_String_ReadOnly' />
+              <text   name='repositoryCuratorLabel' />
+              <string name='repositoryCurator' flags='#PB_String_ReadOnly' />
+              <text   name='repositoryDescriptionLabel' />
+              <editor name='repositoryDescription' flags='#PB_Editor_ReadOnly|#PB_Editor_WordWrap' />
+            </gridbox>
+          </hbox>
         </tab>
-        
+
+        <!--
+          <tab text='Licenses'>
+            <vbox expand='no'>
+
+            </vbox>
+          </tab>
+        -->
+
       </panel>
       <hbox expand='equal'>
-        <button text='Cancel' />
+        <button name='cancel' text='Cancel' />
         <empty />
-        <button text='Save' />
+        <button name='save' text='Save' />
       </hbox>
     </vbox>
   </window>

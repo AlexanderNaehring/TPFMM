@@ -3,34 +3,8 @@
   
   #OFFICIAL_REPOSITORY$ = "https://www.transportfevermods.com/repository/"
   
-  Structure tpfmm
-    build.i
-    version$
-    url$
-  EndStructure
   
-  Structure repo_info
-    name$
-    source$
-    description$
-    maintainer$
-    url$
-    info_url$
-    changed.i
-  EndStructure
-  
-  Structure repo_link
-    url$
-    age.i
-    enc$
-  EndStructure
-  
-  ; main (root level) repository
-  Structure repo_main
-    repository.repo_info
-    TPFMM.tpfmm
-    List mods.repo_link() ; multiple mod repositories may be linked from a single root repsitory
-  EndStructure
+  ; mod strucutres
   
   Structure file
     filename$
@@ -54,8 +28,43 @@
     List tagsLocalized$()
   EndStructure
   
-  ; repository for mods
-  Structure repo_mods
+  
+  ; repository structres
+  
+  Structure tpfmm
+    build.i
+    version$
+    url$
+  EndStructure
+  
+  Structure repo_info     ; information about any repository
+    name$                 ; name
+    source$
+    description$
+    maintainer$
+    url$
+    info_url$
+    changed.i
+  EndStructure
+  
+  Structure repo_link     ; link to a sub-repository (e.g. a mod repo)
+    url$                  ; location of repo
+    age.i                 ; age in seconds
+    enc$                  ; encoding scheme
+  EndStructure
+  
+  Structure main_json     ; main (root level) repository json data
+    repository.repo_info  ; information about this repository
+    TPFMM.tpfmm           ; TPFMM update information (if official repository)
+    List mods.repo_link() ; list of mod repos linked by this repository
+  EndStructure
+  
+  Structure repository    ; lowest level: list of "repository"
+    url$                  ; location
+    main_json.main_json   ; data from json
+  EndStructure
+  
+  Structure repo_mods     ; repository for mods
     repo_info.repo_info
     mod_base_url$
     file_base_url$
@@ -63,8 +72,8 @@
     List mods.mod()
   EndStructure
   
-  ; public column identifier
-  Structure column
+  
+  Structure column         ; public column identifier
     name$
     width.i
   EndStructure
@@ -76,7 +85,6 @@
     *file.file
   EndStructure
   
-  Declare loadRepository(url$)
   Declare loadRepositoryList()
   
   Declare registerWindow(windowID)
@@ -89,5 +97,7 @@
   Declare displayThumbnail(url$)
   Declare canDownload(*repoMod.mod)
   Declare downloadMod(*download.download)
+  
+  Declare listRepositories(Map gadgets())
   
 EndDeclareModule

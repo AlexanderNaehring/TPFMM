@@ -43,6 +43,8 @@ mod_website     = Open website
 
 [settings]
 title           = TPFMM Settings
+general         = General Settings
+repository      = Online Repository
 path            = Transport Fever Path
 text            = Select the path to your Transport Fever installation.\nPlease make sure TPFMM has the required rights to write to this directory.
 browse          = Browse
@@ -66,6 +68,11 @@ cancel          = Cancel
 cancel_tip      = Drop changes and close this dialog
 save            = Save
 save_tip        = Save settings and close this dialog
+repository_add          = Add new repository
+repository_remove       = Remove selected repository
+repository_name         = Name:
+repository_curator      = Curator:
+repository_description  = Description:
 
 [update]
 title   = Update TPFMM
@@ -189,7 +196,7 @@ script      = Script Mod
 script_mod  = Script Mod
 repaint     = Repaint
 europe      = Europe
-north america = North America
+north_america = North America
 usa         = USA
 asia        = Asia
 australia   = Australia

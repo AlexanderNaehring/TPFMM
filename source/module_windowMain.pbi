@@ -663,7 +663,6 @@ Module windowMain
     ; get all gadgets
     Macro getGadget(name)
       gadget(name) = DialogGadget(dialog, name)
-      Debug "Gadget "+name+":"+gadget(name)
       If Not IsGadget(gadget(name))
         MessageRequester("Critical Error", "Could not create gadget "+name+"!", #PB_MessageRequester_Error)
         End

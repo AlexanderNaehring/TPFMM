@@ -12,33 +12,28 @@ XIncludeFile "module_misc.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_queue.pbi"
+XIncludeFile "module_repository.h.pbi"
 
 
 Module windowSettings
   
-  Global parentW
-  Global timerSettings = 100
-  Global GadgetPath, GadgetButtonAutodetect, GadgetButtonBrowse, GadgetFrame, GadgetRights, GadgetSettingsInfo, GadgetOpenPath, GadgetSaveSettings, GadgetCancelSettings, GadgetSettingsWindowLocation, GadgetSettingsAutomaticBackup, GadgetFrame, GadgetFrame, GadgetSettingsLocale
+  Global _parentW, _dialog
+  Global NewMap gadget()
   
+  Declare updateGadgets()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
   
   Procedure resize()
-    Protected width, height
-    width = WindowWidth(window)
-    height = WindowHeight(window)
-    ResizeGadget(GadgetPath, 20, 70, width - 150, 25)
-    ResizeGadget(GadgetButtonAutodetect, width - 120, 30, 100, 30)
-    ResizeGadget(GadgetButtonBrowse, width - 120, 70, 100, 25)
+    ; nothing to do
   EndProcedure
   
   Procedure GadgetCloseSettings() ; close settings window and apply settings
-    RemoveWindowTimer(window, timerSettings)
     HideWindow(window, #True)
-    DisableWindow(parentW, #False)
-    SetActiveWindow(parentW)
+    DisableWindow(_parentW, #False)
+    SetActiveWindow(_parentW)
     
     If misc::checkGameDirectory(main::gameDirectory$) <> 0
       main::ready = #False
@@ -78,7 +73,8 @@ Module windowSettings
     
     If path$ And FileSize(path$) = -2
       debugger::add("windowSettings::GadgetButtonAutodetect() - found {"+path$+"}")
-      SetGadgetText(GadgetPath, path$)
+      SetGadgetText(gadget("installationPath"), path$)
+      updateGadgets()
       ProcedureReturn #True
     EndIf
     
@@ -88,20 +84,21 @@ Module windowSettings
   
   Procedure GadgetButtonBrowse()
     Protected Dir$
-    Dir$ = GetGadgetText(GadgetPath)
+    Dir$ = GetGadgetText(gadget("installationPath"))
     Dir$ = PathRequester("Transport Fever Installation Path", Dir$)
     If Dir$
-      SetGadgetText(GadgetPath, Dir$)
+      SetGadgetText(gadget("installationPath"), Dir$)
     EndIf
+    updateGadgets()
   EndProcedure
   
   Procedure GadgetButtonOpenPath()
-    misc::openLink(GetGadgetText(GadgetPath))
+    misc::openLink(GetGadgetText(gadget("installationPath")))
   EndProcedure
   
   Procedure GadgetSaveSettings()
     Protected Dir$, locale$, restart.i = #False
-    Dir$ = GetGadgetText(GadgetPath)
+    Dir$ = GetGadgetText(gadget("installationPath"))
     Dir$ = misc::Path(Dir$)
     
     If misc::checkGameDirectory(Dir$) = 0
@@ -113,7 +110,7 @@ Module windowSettings
     EndIf
     
     
-    locale$ = StringField(StringField(GetGadgetText(GadgetSettingsLocale), 1, ">"), 2, "<") ; extract string between < and >
+    locale$ = StringField(StringField(GetGadgetText(gadget("languageSelection")), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
       locale$ = "en"
     EndIf
@@ -121,11 +118,7 @@ Module windowSettings
     
     OpenPreferences(main::settingsFile$)
     WritePreferenceString("path", main::gameDirectory$)
-    WritePreferenceInteger("windowlocation", GetGadgetState(GadgetSettingsWindowLocation))
-    If Not GetGadgetState(GadgetSettingsWindowLocation)
-      RemovePreferenceGroup("window")
-    EndIf
-    WritePreferenceInteger("autobackup", GetGadgetState(GadgetSettingsAutomaticBackup))
+    WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
     If locale$ <> ReadPreferenceString("locale", "en")
       restart = #True
     EndIf
@@ -146,18 +139,18 @@ Module windowSettings
     GadgetCloseSettings()
   EndProcedure
   
-  Procedure TimerSettingsGadgets()
+  Procedure updateGadgets()
     ; check gadgets etc
     Protected ret
     Static LastDir$
     
-    If LastDir$ <> GetGadgetText(GadgetPath)
-      LastDir$ = GetGadgetText(GadgetPath)
+    If LastDir$ <> GetGadgetText(gadget("installationPath"))
+      LastDir$ = GetGadgetText(gadget("installationPath"))
       
       If FileSize(LastDir$) = -2
-        DisableGadget(GadgetOpenPath, #False)
+        ; DisableGadget(, #False)
       Else
-        DisableGadget(GadgetOpenPath, #True)
+        ; DisableGadget(, #True)
       EndIf
       
       ret = misc::checkGameDirectory(LastDir$)
@@ -165,16 +158,16 @@ Module windowSettings
       ; 1   = path okay, executable found but cannot write
       ; 2   = path not okay
       If ret = 0
-        SetGadgetText(GadgetRights, locale::l("settings","success"))
-        SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(0,100,0))
-        DisableGadget(GadgetSaveSettings, #False)
+        SetGadgetText(gadget("installationTextStatus"), locale::l("settings","success"))
+        SetGadgetColor(gadget("installationTextStatus"), #PB_Gadget_FrontColor, RGB(0,100,0))
+        DisableGadget(gadget("save"), #False)
       Else
-        SetGadgetColor(GadgetRights, #PB_Gadget_FrontColor, RGB(255,0,0))
-        DisableGadget(GadgetSaveSettings, #True)
+        SetGadgetColor(gadget("installationTextStatus"), #PB_Gadget_FrontColor, RGB(255,0,0))
+        DisableGadget(gadget("save"), #True)
         If ret = 1
-          SetGadgetText(GadgetRights, locale::l("settings","failed"))
+          SetGadgetText(gadget("installationTextStatus"), locale::l("settings","failed"))
         Else
-          SetGadgetText(GadgetRights, locale::l("settings","not_found"))
+          SetGadgetText(gadget("installationTextStatus"), locale::l("settings","not_found"))
         EndIf
       EndIf
     EndIf
@@ -185,63 +178,154 @@ Module windowSettings
   ;----------------------------------------------------------------------------
   
   Procedure create(parentWindow)
-    parentW = parentWindow
-    window = OpenWindow(#PB_Any, #PB_Ignore, #PB_Ignore, 580, 240, locale::l("settings","title"), #PB_Window_SystemMenu | #PB_Window_Invisible | #PB_Window_WindowCentered, WindowID(parentWindow))
-    GadgetPath = StringGadget(#PB_Any, 20, 70, 430, 25, "[Train Fever Path]")
-    GadgetButtonAutodetect = ButtonGadget(#PB_Any, 460, 30, 100, 30, locale::l("settings","autodetect"))
-    GadgetToolTip(GadgetButtonAutodetect, locale::l("settings","autodetect_tip"))
-    GadgetButtonBrowse = ButtonGadget(#PB_Any, 460, 70, 100, 25, locale::l("settings","browse"))
-    GadgetToolTip(GadgetButtonBrowse, locale::l("settings","browse_tip"))
-    GadgetFrame = FrameGadget(#PB_Any, 10, 10, 560, 135, locale::l("settings","path"))
-    GadgetRights = TextGadget(#PB_Any, 20, 105, 430, 30, "")
-    GadgetSettingsInfo = TextGadget(#PB_Any, 20, 30, 430, 35, locale::l("settings","text"))
-    GadgetOpenPath = ButtonGadget(#PB_Any, 460, 105, 100, 30, locale::l("settings","open"))
-    GadgetToolTip(GadgetOpenPath, locale::l("settings","open_tip"))
-    GadgetSaveSettings = ButtonGadget(#PB_Any, 450, 210, 120, 25, locale::l("settings","save"))
-    GadgetToolTip(GadgetSaveSettings, locale::l("settings","save_tip"))
-    GadgetCancelSettings = ButtonGadget(#PB_Any, 320, 210, 120, 25, locale::l("settings","cancel"))
-    GadgetToolTip(GadgetCancelSettings, locale::l("settings","cancel_tip"))
-    GadgetSettingsWindowLocation = CheckBoxGadget(#PB_Any, 20, 170, 280, 25, locale::l("settings","restore"))
-    GadgetToolTip(GadgetSettingsWindowLocation, locale::l("settings","restore_tip"))
-    GadgetSettingsAutomaticBackup = CheckBoxGadget(#PB_Any, 20, 200, 280, 25, locale::l("settings","backup"))
-    GadgetToolTip(GadgetSettingsAutomaticBackup, locale::l("settings","backup_tip"))
+    _parentW = parentWindow
     
-    GadgetFrame = FrameGadget(#PB_Any, 10, 150, 300, 80, locale::l("settings","other"))
-    GadgetFrame = FrameGadget(#PB_Any, 320, 150, 250, 50, locale::l("settings","locale"))
-    GadgetSettingsLocale = ComboBoxGadget(#PB_Any, 330, 170, 230, 25, #PB_ComboBox_Image)
+    UseModule locale ; import namespace "locale" for shorthand "l()" access
     
-    BindGadgetEvent(GadgetButtonAutodetect, @GadgetButtonAutodetect())
-    BindGadgetEvent(GadgetButtonBrowse, @GadgetButtonBrowse())
-    BindGadgetEvent(GadgetOpenPath, @GadgetButtonOpenPath())
-    BindGadgetEvent(GadgetSaveSettings, @GadgetSaveSettings())
-    BindGadgetEvent(GadgetCancelSettings, @GadgetCloseSettings())
+    DataSection
+      dataDialogXML:
+      IncludeBinary "dialogs/settings.xml"
+      dataDialogXMLend:
+    EndDataSection
     
-    BindEvent(#PB_Event_Timer, @TimerSettingsGadgets(), window)
+    ; open dialog
+    Protected xml 
+    xml = CatchXML(#PB_Any, ?dataDialogXML, ?dataDialogXMLend - ?dataDialogXML)
+    If Not xml Or XMLStatus(xml) <> #PB_XML_Success
+      MessageRequester("Critical Error", "Could not read window definition!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    
+    _dialog = CreateDialog(#PB_Any)
+     
+    If Not OpenXMLDialog(_dialog, xml, "settings", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(parentWindow))
+      MessageRequester("Critical Error", "Could not open settings window!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    FreeXML(xml)
+    
+    window = DialogWindow(_dialog)
+    
+    
+    ; get gadgets
+    Macro getGadget(name)
+      gadget(name) = DialogGadget(_dialog, name)
+      If Not IsGadget(gadget(name))
+        MessageRequester("Critical Error", "Could not create gadget "+name+"!", #PB_MessageRequester_Error)
+        End
+      EndIf
+    EndMacro
+    
+    
+    getGadget("panelSettings")
+    
+    getGadget("save")
+    getGadget("cancel")
+    
+    getGadget("installationFrame")
+    getGadget("installationTextSelect")
+    getGadget("installationAutodetect")
+    getGadget("installationPath")
+    getGadget("installationBrowse")
+    getGadget("installationTextStatus")
+    
+    getGadget("miscFrame")
+    getGadget("miscAutoBackup")
+    
+    getGadget("languageFrame")
+    getGadget("languageSelection")
+    
+    
+    getGadget("repositoryList")
+    getGadget("repositoryAdd")
+    getGadget("repositoryRemove")
+    getGadget("repositoryNameLabel")
+    getGadget("repositoryName")
+    getGadget("repositoryCuratorLabel")
+    getGadget("repositoryCurator")
+    getGadget("repositoryDescriptionLabel")
+    getGadget("repositoryDescription")
+    
+    
+    ; set texts
+    SetWindowTitle(window, l("settings","title"))
+    
+    SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
+    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "repository"))
+    
+    SetGadgetText(gadget("save"),                   l("settings","save"))
+    GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
+    SetGadgetText(gadget("cancel"),                 l("settings","cancel"))
+    GadgetToolTip(gadget("cancel"),                 l("settings","cancel_tip"))
+    
+    SetGadgetText(gadget("installationFrame"),      l("settings","path"))
+    SetGadgetText(gadget("installationTextSelect"), l("settings","text"))
+    SetGadgetText(gadget("installationAutodetect"), l("settings","autodetect"))
+    GadgetToolTip(gadget("installationAutodetect"), l("settings","autodetect_tip"))
+    SetGadgetText(gadget("installationPath"),       "")
+    SetGadgetText(gadget("installationBrowse"),     l("settings","browse"))
+    GadgetToolTip(gadget("installationBrowse"),     l("settings","browse_tip"))
+    SetGadgetText(gadget("installationTextStatus"), "")
+               
+    SetGadgetText(gadget("miscFrame"),              l("settings","other"))
+    SetGadgetText(gadget("miscAutoBackup"),         l("settings","backup"))
+    GadgetToolTip(gadget("miscAutoBackup"),         l("settings","backup_tip"))
+    
+    SetGadgetText(gadget("languageFrame"),          l("settings","locale"))
+    SetGadgetText(gadget("languageSelection"),      "")
+    
+    
+    SetGadgetText(gadget("repositoryList"),         "")
+    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
+    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
+    SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
+    SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
+    SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
+    SetGadgetText(gadget("repositoryDescriptionLabel"), l("settings", "repository_description"))
+    
+    
+    ; bind events
     BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
     BindEvent(#PB_Event_SizeWindow, @resize(), window)
     
+    ; bind gadget events
+    BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())
+    BindGadgetEvent(gadget("installationBrowse"), @GadgetButtonBrowse())
+    ;BindGadgetEvent(, @GadgetButtonOpenPath())
+    BindGadgetEvent(gadget("save"), @GadgetSaveSettings())
+    BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
+    BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
+    
+    RefreshDialog(_dialog)
+    
+    ProcedureReturn #True
   EndProcedure
   
   Procedure show()
     Protected locale$
     
-    OpenPreferences(main::settingsFile$)
-    SetGadgetText(GadgetPath, ReadPreferenceString("path", main::gameDirectory$))
-    SetGadgetState(GadgetSettingsWindowLocation, ReadPreferenceInteger("windowlocation", 0))
-    SetGadgetState(GadgetSettingsAutomaticBackup, ReadPreferenceInteger("autobackup", 1))
-    locale$ = ReadPreferenceString("locale", "en")
-    ClosePreferences()
+    debugger::add("windowSettings::show()")
     
-    If GetGadgetText(GadgetPath) = ""
+    If OpenPreferences(main::settingsFile$)
+      SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
+      SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
+      locale$ = ReadPreferenceString("locale", "en")
+      ClosePreferences()
+    EndIf
+  
+    If GetGadgetText(gadget("installationPath")) = ""
       GadgetButtonAutodetect()
     EndIf
     
-    Protected NewMap locale$(), count.i = 0
-    locale::listAvailable(GadgetSettingsLocale, locale$)
+    locale::listAvailable(gadget("languageSelection"), locale$)
     
-    AddWindowTimer(window, timerSettings, 100)
+    repository::listRepositories(gadget())
+    
+    updateGadgets()
+    
+    RefreshDialog(_dialog)
     HideWindow(window, #False, #PB_Window_WindowCentered)
-    DisableWindow(parentW, #True)
+    DisableWindow(_parentW, #True)
     SetActiveWindow(window)
   EndProcedure
   

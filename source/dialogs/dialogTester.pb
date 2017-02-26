@@ -1,7 +1,7 @@
 ﻿EnableExplicit
 
-Define file$   = "repository"
-Define dialog$ = "update"
+Define file$   = "settings"
+Define dialog$ = "settings"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False
@@ -28,6 +28,7 @@ If xml And XMLStatus(xml) = #PB_XML_Success
       StatusBarText(0, 1, "Version")
     EndIf
     
+    HideWindow(DialogWindow(dialog), #False, #PB_Window_ScreenCentered)
     
     Repeat
       
