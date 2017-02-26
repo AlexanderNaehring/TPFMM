@@ -7,7 +7,7 @@
           <text name='head' text='Welcome to Train Fever Mod Manager' flags='#PB_Text_Center'/>
           <text text='This wizard will guide you through the first start of TFMM' />
           <empty/>
-          <button text='Setup TFMM' onevent='firstStart::eShowInstallation()'/>
+          <button text='Setup TFMM'/>
         </vbox>
       </container>
       <container name='installation' invisible='yes'>
@@ -15,7 +15,7 @@
           <text text='Define Train Fever Installation Folder' flags='#PB_Text_Center'/>
           <text text='Autodetecting Train Fever Installations...' />
           <empty/>
-          <button text='Save and Continue' onevent='firstStart::eFinish()'/>
+          <button text='Save and Continue' />
         </vbox>
       </container>
     </multibox>

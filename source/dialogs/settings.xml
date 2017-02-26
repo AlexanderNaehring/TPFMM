@@ -1,61 +1,45 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <dialogs>
-  <window id='#PB_Any' name='settings' text='Settings' minwidth='480' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu | #PB_Window_SizeGadget'>
+  <window id='#PB_Any' name='settings' text='Settings' minwidth='600' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu'>
     <vbox expand='item:1'>
-      <panel>
-        <tab text='Train Fever Installation'>
+      <panel name='panelSettings'>
+      
+        <tab text='General Settings'>
           <vbox expand='no'>
-          <text text='Please select the Train Fever installation that TFMM should operate on:' />
-          <hbox expand='item:1'>
-            <combobox />
-            <button name='manage' text='Manage Installations' onevent='settings::eManage()' />
-          </hbox>
-          <gridbox colexpand='item:2'>
-            <text text='Train Fever Version' />
-            <string flags='#PB_String_ReadOnly' text='Build 1000' />
-            <text text='Size of Train Fever Folder' />
-            <string flags='#PB_String_ReadOnly' text='x GB' />
-            <text text='TFMM Lib' />
-            <string flags='#PB_String_ReadOnly' text='Found (x Mods)/ Not Found' />
-          </gridbox>
+            <frame name='installationFrame' text='Transport Fever Installation Location'>
+              <gridbox columns='2' colexpand='item:1' rowexpand='no'>
+                <text name='installationTextSelect' text='Select path to Transport Fever' />
+                <button name='installationAutodetect' text='Autodetect' />
+                <string name='installationPath' />
+                <button name='installationBrowse' text='Browse' />
+                <text name='installationTextStatus' text='Path ok?' colspan='2' />
+              </gridbox>
+            </frame>
+            <frame name='languageFrame' text='Language'>
+              <combobox name='language' />
+            </frame>
           </vbox>
         </tab>
-        <tab text='Online Repositories'>
-        </tab>
+        
         <tab text='Miscellaneous'>
+          <vbox expand='no'>
+            <frame name='onlineFrame' text='Online Repositories'>
+            </frame>
+            <frame name='miscFrame' text='Miscellaneous'>
+              <vbox expand='no'>
+                <checkbox name='miscWindowPosition' text='Remember Window Position' />
+                <checkbox name='miscAutoBackup' text='Automatically backup mods after installation' />
+              </vbox>
+            </frame>
+          </vbox>
         </tab>
+        
       </panel>
       <hbox expand='equal'>
         <button text='Cancel' />
         <empty />
         <button text='Save' />
       </hbox>
-    </vbox>
-  </window>
-  
-  <window id='#PB_Any' name='settings_manage' text='Manage Installations' minwidth='auto' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu | #PB_Window_SizeGadget'>
-    <vbox expand='item:1'>
-      <frame text='Current installations'>
-        <vbox expand='item:1' >
-        <listicon width='320' height='80' />
-        <hbox expand='equal' >
-          <button text='Autodetect' />
-          <button text='Remove selected' />
-        </hbox>
-        </vbox>
-      </frame>
-      <frame text='Add a new installation'>
-        <vbox expand='no' >
-          <hbox expand='item:1' >
-            <string />
-            <button text='Browse' width='80' />
-          </hbox>
-          <hbox expand='item:1' >
-            <text name='valid' text='Path not valid'/>
-            <button text='Add' width='80' />
-          </hbox>
-        </vbox>
-      </frame>
     </vbox>
   </window>
 </dialogs>

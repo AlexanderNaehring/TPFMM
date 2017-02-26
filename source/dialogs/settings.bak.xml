@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<dialogs>
+  <window id='#PB_Any' name='settings' text='Settings' minwidth='480' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu | #PB_Window_SizeGadget'>
+    <vbox expand='item:1'>
+      <panel>
+        <tab text='Train Fever Installation'>
+          <vbox expand='no'>
+          <text text='Please select the Train Fever installation that TFMM should operate on:' />
+          <hbox expand='item:1'>
+            <combobox />
+            <button name='manage' text='Manage Installations' onevent='settings::eManage()' />
+          </hbox>
+          <gridbox colexpand='item:2'>
+            <text text='Train Fever Version' />
+            <string flags='#PB_String_ReadOnly' text='Build 1000' />
+            <text text='Size of Train Fever Folder' />
+            <string flags='#PB_String_ReadOnly' text='x GB' />
+            <text text='TFMM Lib' />
+            <string flags='#PB_String_ReadOnly' text='Found (x Mods)/ Not Found' />
+          </gridbox>
+          </vbox>
+        </tab>
+        <tab text='Online Repositories'>
+        </tab>
+        <tab text='Miscellaneous'>
+        </tab>
+      </panel>
+      <hbox expand='equal'>
+        <button text='Cancel' />
+        <empty />
+        <button text='Save' />
+      </hbox>
+    </vbox>
+  </window>
+  
+  <window id='#PB_Any' name='settings_manage' text='Manage Installations' minwidth='auto' minheight='auto' flags='#PB_Window_ScreenCentered | #PB_Window_SystemMenu | #PB_Window_SizeGadget'>
+    <vbox expand='item:1'>
+      <frame text='Current installations'>
+        <vbox expand='item:1' >
+        <listicon width='320' height='80' />
+        <hbox expand='equal' >
+          <button text='Autodetect' />
+          <button text='Remove selected' />
+        </hbox>
+        </vbox>
+      </frame>
+      <frame text='Add a new installation'>
+        <vbox expand='no' >
+          <hbox expand='item:1' >
+            <string />
+            <button text='Browse' width='80' />
+          </hbox>
+          <hbox expand='item:1' >
+            <text name='valid' text='Path not valid'/>
+            <button text='Add' width='80' />
+          </hbox>
+        </vbox>
+      </frame>
+    </vbox>
+  </window>
+</dialogs>
