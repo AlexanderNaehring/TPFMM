@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="..\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-26 23:21" user="alexa" host="RIGEL"/>
+    <lastopen date="2017-02-26 23:51" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -87,7 +87,7 @@
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <purifier enable="0" granularity="-12566464,-12566464,-12566464,-12566464"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="836"/>
+      <compilecount enable="1" value="846"/>
       <buildcount enable="1" value="12"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
@@ -112,7 +112,7 @@
       <options unicode="1" thread="1" xpskin="1" user="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="835"/>
+      <compilecount enable="1" value="840"/>
       <buildcount enable="1" value="11"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

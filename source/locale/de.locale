@@ -219,6 +219,7 @@ new         = Füge neue Mod hinzu
 install     = Installiere Mod
 installed   = Mod erfolgreich installiert
 install_fail = Konnte Mod nicht installieren
+install_fail_id = Mod ID nicht korrekt
 remove      = Entferne Mod aus Transport Fever
 delete      = Entferne Mod
 convert     = Konvertiere Mod

@@ -72,7 +72,7 @@ Module windowMain
   
   
   Procedure resize()
-    ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), 8, #PB_Image_Raw)
+    ResizeImage(images::Images("headermain"), WindowWidth(window), 8, #PB_Image_Raw)
     SetGadgetState(gadget("headerMain"), ImageID(images::Images("headermain")))
   EndProcedure
   
@@ -778,10 +778,10 @@ Module windowMain
     
     ; Status bar
     CreateStatusBar(0, WindowID(DialogWindow(dialog)))
-    AddStatusBarField(#PB_Ignore)
-    AddStatusBarField(240)
-    AddStatusBarField(140)
-    AddStatusBarField(100)
+    AddStatusBarField(#PB_Ignore) ; progressbar
+    AddStatusBarField(250) ; progress text
+    AddStatusBarField(150) ; download 
+    AddStatusBarField(100) ; version 
     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
     StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
     StatusBarText(0, 2, "", #PB_StatusBar_Center)

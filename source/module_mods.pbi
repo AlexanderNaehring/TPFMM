@@ -71,7 +71,7 @@ Module mods
       ; DLC: name_version
       ; general: (alphanum_)*num
       ; regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$") ; at least one author name
-      regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_)+[0-9]+$") ; no author name required
+      regexp = CreateRegularExpression(#PB_Any, "^([A-Za-z0-9]+_)+[0-9]+$") ; no author name required
     EndIf
     
     ProcedureReturn MatchRegularExpression(regexp, id$)
@@ -955,7 +955,7 @@ Module mods
         ; required for older mods - but new mods should not require this
         ;-TODO handle mods downloaded from workshop as well!
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
+        windowMain::progressBar(-1, -1, locale::l("progress","install_fail_id"))
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1337,8 +1337,6 @@ Module mods
     Protected filterString$, showHidden, showVanilla, filterFolder
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
-    
-    debugger::add("mods::displayMods()")
     
     
     If Not IsWindow(_window)
