@@ -35,9 +35,8 @@ Module main
     End
   EndProcedure
   
-  
   Procedure handleParameter(parameter$)
-    Debug debugger::add("main::handleParameter() - "+parameter$)
+    debugger::add("main::handleParameter() - "+parameter$)
     Select LCase(parameter$)
       Case "-testmode"
         debugger::add("main::handleParameter() - enable testing mode")
@@ -75,7 +74,9 @@ Module main
     EndIf
     debugger::DeleteLogFile()
     
-    OnErrorCall(@handleError())
+    CompilerIf Not #PB_Compiler_Debugger
+      OnErrorCall(@handleError())
+    CompilerEndIf
     
     
     ; parameter handling
@@ -242,8 +243,8 @@ Module main
     If OpenPreferences(settingsFile$)
       PreferenceGroup("window")
       ;TODO: Check: linux does not seem to read the location correctly?
-      WritePreferenceInteger("x", WindowX(windowMain::window, #PB_Window_InnerCoordinate))
-      WritePreferenceInteger("y", WindowY(windowMain::window, #PB_Window_InnerCoordinate))
+      WritePreferenceInteger("x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
+      WritePreferenceInteger("y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
       WritePreferenceInteger("width", WindowWidth(windowMain::window))
       WritePreferenceInteger("height", WindowHeight(windowMain::window))
       PreferenceGroup("columns")
