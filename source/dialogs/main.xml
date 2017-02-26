@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <dialogs>
-  <window id='#PB_Any' name='main' text='Transport Fever Mod Manager' minwidth='780' minheight='450' flags='#PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_TitleBar | #PB_Window_ScreenCentered'>
+  <window id='#PB_Any' name='main' text='Transport Fever Mod Manager' minwidth='780' minheight='480' flags='#PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_ScreenCentered'>
     <vbox expand='item:2' margin='0'>
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
         <image name='headerMain' height='8' />

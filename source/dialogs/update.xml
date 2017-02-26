@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<dialogs>
+  <window id='#PB_Any' name='update' text='Update' minwidth='200' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Invisible'>
+    <vbox expand='item:1'>
+      <text name='updateText' text='New Version Available' />
+      <hbox expand='item:1'>
+        <empty/>
+        <button name='updateWebsite' text='Open Website' />
+      </hbox>
+    </vbox>
+  </window>
+</dialogs>

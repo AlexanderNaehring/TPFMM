@@ -1,7 +1,7 @@
 ﻿EnableExplicit
 
-Define file$   = "setup"
-Define dialog$ = "first_start"
+Define file$   = "repository"
+Define dialog$ = "update"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False
