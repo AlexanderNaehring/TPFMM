@@ -122,9 +122,10 @@ Module main
     ; user init...
     
     debugger::Add("init() - read locale")
-    OpenPreferences(settingsFile$)
-    locale::use(ReadPreferenceString("locale","en"))
-    ClosePreferences()
+    If OpenPreferences(settingsFile$)
+      locale::use(ReadPreferenceString("locale","en"))
+      ClosePreferences()
+    EndIf
     
     ;-TODO: First: Check path, etc.. then open required windows.
     ; only if everything is fine: show main window...
@@ -135,34 +136,81 @@ Module main
 ;     windowProgress::create(windowMain::id)
 ;     updater::create(windowMain::id)
     
-    debugger::Add("init() - load settings")
-    OpenPreferences(settingsFile$)
-    gameDirectory$ = ReadPreferenceString("path", "")
-    If misc::checkGameDirectory(gameDirectory$) <> 0
-      gameDirectory$ = ""
+    
+    If OpenPreferences(settingsFile$)
+      gameDirectory$ = ReadPreferenceString("path", "")
+      If misc::checkGameDirectory(gameDirectory$) <> 0
+        gameDirectory$ = ""
+      EndIf
+      ClosePreferences()
     EndIf
     
     
+    
     ; Window Location
-    If ReadPreferenceInteger("windowlocation", #False)
+    ; (For testing purposes, may be solved more easy using #PB_Window_ScreenCentered and OS functions.....)
+    Protected nDesktops, desktop, locationOK
+    Protected windowX, windowY, windowWidth, windowHeight
+    If OpenPreferences(settingsFile$)
+      debugger::add("main::init() - Set main window location")
       PreferenceGroup("window")
-      ResizeWindow(windowMain::window,
-                   ReadPreferenceInteger("x", #PB_Ignore),
-                   ReadPreferenceInteger("y", #PB_Ignore),
-                   ReadPreferenceInteger("width", #PB_Ignore),
-                   ReadPreferenceInteger("height", #PB_Ignore))
+      windowX = ReadPreferenceInteger("x", #PB_Ignore)
+      windowY = ReadPreferenceInteger("y", #PB_Ignore)
+      windowWidth   = ReadPreferenceInteger("width", WindowWidth(windowMain::window))
+      windowHeight  = ReadPreferenceInteger("height", WindowHeight(windowMain::window))
+      ClosePreferences()
+      
+      ; get desktops
+      nDesktops = ExamineDesktops()
+      If Not nDesktops
+        debugger::add("main::init() - Error: Cannot find Desktop!")
+        End
+      EndIf
+      
+      ; check if location is valid
+      locationOK = #False
+      For desktop = 0 To nDesktops - 1
+        ; location is okay, if whole window is in desktop!
+        If windowX                > DesktopX(desktop)                         And ; left
+           windowX + windowHeight < DesktopX(desktop) + DesktopWidth(desktop) And ; right
+           windowY                > DesktopY(desktop)                         And ; top
+           windowY + windowHeight < DesktopY(desktop) + DesktopHeight(desktop)    ; bottom
+          locationOK = #True
+          debugger::add("main::init() - window location valid on desktop #"+desktop)
+          Break
+        EndIf
+      Next
+      If Not locationOK 
+        debugger::add("main::init() - window location not valid")
+        windowX = #PB_Ignore
+        windowY = #PB_Ignore
+        windowWidth = #PB_Ignore
+        windowHeight = #PB_Ignore
+      EndIf
+      
+      ; search for new location if required
+      If windowX = #PB_Ignore Or windowY = #PB_Ignore
+        debugger::add("main::init() - center main window on primary desktop")
+        windowX = (DesktopWidth(0)  - windowWidth ) /2
+        windowY = (DesktopHeight(0) - windowHeight) /2
+      EndIf
+      
+      ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
       PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
-      PreferenceGroup("")
-      ; reload column sizing
+    EndIf
+    
+    
+    
+    ; column sizes
+    If OpenPreferences(settingsFile$)
       PreferenceGroup("columns")
       Protected Dim widths(5)
       For i = 0 To 5
         widths(i) = ReadPreferenceInteger(Str(i), 0)
       Next
-      
-      PreferenceGroup("")
+      ClosePreferences()
     EndIf
-    ClosePreferences()
+    
     
 ;     ; start update in background
 ;     debugger::Add("init() - start updater")
@@ -190,21 +238,22 @@ Module main
   Procedure exit()
     Protected i.i
     
-    HideWindow(windowMain::window, 1)
     
-    OpenPreferences(settingsFile$)
-    If ReadPreferenceInteger("windowlocation", #False)
+    If OpenPreferences(settingsFile$)
       PreferenceGroup("window")
-      WritePreferenceInteger("x", WindowX(windowMain::window))
-      WritePreferenceInteger("y", WindowY(windowMain::window))
+      ;TODO: Check: linux does not seem to read the location correctly?
+      WritePreferenceInteger("x", WindowX(windowMain::window, #PB_Window_InnerCoordinate))
+      WritePreferenceInteger("y", WindowY(windowMain::window, #PB_Window_InnerCoordinate))
       WritePreferenceInteger("width", WindowWidth(windowMain::window))
       WritePreferenceInteger("height", WindowHeight(windowMain::window))
+      PreferenceGroup("columns")
+      For i = 0 To 5
+        WritePreferenceInteger(Str(i), windowMain::getColumnWidth(i))
+      Next
+      ClosePreferences()
+    Else
+      debugger::add("main::exit() - Error: could not open preferences file")
     EndIf
-    PreferenceGroup("columns")
-    For i = 0 To 5
-      WritePreferenceInteger(Str(i), windowMain::getColumnWidth(i))
-    Next
-    ClosePreferences()
     
     mods::saveList()
     mods::freeAll()
