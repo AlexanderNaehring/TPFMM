@@ -218,9 +218,3 @@ backup      = Create backup
 backup_mod  = Create backup of {mod}...
 backup_fin  = Backup created
 backup_fail = Backup failed
-
-[conversion]
-title       = Conversion
-start       = Starting of February 27, 2015, Transport Fever has native modding support.\nTransport Fever can now recognise installed modifications and the player can manage modification for each save game individually.\n\nDo you want to convert all activated modification now?
-finish      = Conversion of modifications is finished.\nPlease clean yout Transport Fever installation by deleting the "res" folder in your Transport Fever directory\nand afterwards verify the game cache via Steam.\n\nIf you need help with this, visit www.train-fever.net for further instructions.
-legacy      = Please use a previous version of TPFMM if you do not want to use the new modding system.

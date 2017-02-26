@@ -221,9 +221,3 @@ backup      = Erstelle Sicherheitskopie
 backup_mod  = Erstelle Sicherheitskopie von {mod}...
 backup_fin  = Sicherheitskopie erstellt
 backup_fail = Sicherheitskopie fehlgeschlagen
-
-[conversion]
-title       = Konvertierung
-start       = Seit dem 27. Februar 2015 benutzt Transport Fever ein neues Modding System.\nTransport Fever erkennt nun die Modifikationen und diese können im Spiel für jeden Speicherstand einzeln verwaltet werden.\n\nSollen die Modifikationen jetzt in das neue Format umgewandelt werden?
-finish      = Die Umwandlung ist abgeschlossen.\n\nBitte lösche nun manuell den "res/" Ordner im Transport Fever Verzeichnis\nund führe danach eine Verifizierung des lokalen Spielordners mittels Steam durch.\nHilfe dazu findest Du auf www.train-fever.net.
-legacy      = Um das alte Modding System zu nutzen, muss eine alte Version von TPFMM verwendet werden.
