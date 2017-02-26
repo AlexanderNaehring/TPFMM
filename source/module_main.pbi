@@ -180,23 +180,23 @@ Module main
           Break
         EndIf
       Next
-      If Not locationOK 
+      
+      
+      If locationOK 
+        debugger::add("main::init() - set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
+        ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
+        PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
+      Else
+        
         debugger::add("main::init() - window location not valid")
-        windowX = #PB_Ignore
-        windowY = #PB_Ignore
         windowWidth = #PB_Ignore
         windowHeight = #PB_Ignore
-      EndIf
-      
-      ; search for new location if required
-      If windowX = #PB_Ignore Or windowY = #PB_Ignore
+        
         debugger::add("main::init() - center main window on primary desktop")
         windowX = (DesktopWidth(0)  - windowWidth ) /2
         windowY = (DesktopHeight(0) - windowHeight) /2
       EndIf
       
-      ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
-      PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
     EndIf
     
     
