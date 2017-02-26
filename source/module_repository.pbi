@@ -5,6 +5,8 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_repository.h.pbi"
 
 Module repository
+  ;TODO: event number has to be unique in windowMain... 
+  #EventShowUpdate = #PB_Event_FirstCustomValue+10
   
   Enumeration ; column data type
     #COL_INT
@@ -21,12 +23,14 @@ Module repository
   
   Global NewMap repo_mods.repo_mods()
   Global NewList repositories$()
-  Global _windowID, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID
+  Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
   Global Dim type.type(0) ; type information (for filtering)
   Global _DISABLED = #False
+  
+  Global _windowUpdate
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -451,6 +455,66 @@ Module repository
     running = #False
   EndProcedure
   
+  
+  ; update window functions
+;   
+;   Procedure updateOpenWebsite()
+;     
+;   EndProcedure
+;   
+;   Procedure updateWindowClose()
+;     DisableWindow(_windowMain, #False)
+;     If _windowUpdate And IsWindow(_windowUpdate)
+;       HideWindow(_windowUpdate, #True)
+;     EndIf
+;     SetActiveWindow(_windowMain)
+;   EndProcedure
+;   
+;   Procedure updateWindowShow()
+;     
+;     debugger::add("repository::updateWindowShow()")
+;     If _windowUpdate And IsWindow(_windowUpdate)
+;       HideWindow(_windowUpdate, #False, #PB_Window_WindowCentered)
+;       DisableWindow(_windowMain, #True)
+;     EndIf
+;   EndProcedure
+;   
+;   Procedure updateWindowCreate(parentWindow)
+;     DataSection
+;       dataDialogXML:
+;       IncludeBinary "dialogs/update.xml"
+;       dataDialogXMLend:
+;     EndDataSection
+;     
+;     ; open dialog
+;     Protected xml, dialog
+;     
+;     xml = CatchXML(#PB_Any, ?dataDialogXML, ?dataDialogXMLend - ?dataDialogXML)
+;     If Not xml Or XMLStatus(xml) <> #PB_XML_Success
+;       debugger::add("repository::showUpdateWindow() - Error: could not read xml")
+;     EndIf
+;     
+;     dialog = CreateDialog(#PB_Any)
+;      
+;     If Not OpenXMLDialog(dialog, xml, "update", #PB_Any, #PB_Any, #PB_Any, #PB_Any, WindowID(parentWindow))
+;       debugger::add("repository::showUpdateWindow() - Error: could not open update window")
+;     EndIf
+;     
+;     _windowUpdate = DialogWindow(dialog)
+;     
+;     
+;     ; problem: Linux cannot unhide window from thread -> send event to main window which then will show the update window.
+;     ; bind event to main window: user event is send when update window should be shown. main window received and is passed to bound function
+;     ; BindEvent(#EventShowUpdate, @updateWindowShow(), parentWindow)
+;     
+;     BindEvent(#PB_Event_CloseWindow, @updateWindowClose(), _windowUpdate)
+; ;     BindGadgetEvent(DialogGadget(dialog, "updateWebsite"), @updateOpenWebsite())
+;     
+;     ; has to be created by main thread?
+;     
+;   EndProcedure
+;   
+  
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
@@ -505,7 +569,12 @@ Module repository
       If repo_main\TPFMM\build And 
          repo_main\TPFMM\build > #PB_Editor_BuildCount
         debugger::add("repository::loadRepository() - TPFMM update available: "+repo_main\TPFMM\version$)
-        ; TODO show window for update.
+        
+        ; debugger::add("repository::loadRepository() - post event to main window!")
+        ; PostEvent(#EventShowUpdate, _windowMain, 0)
+        ; updateWindowShow()
+        
+        
         ; disable repository features for outdated versions?
 ;         _DISABLED = #True
 ;         ClearMap(repo_mods())
@@ -568,12 +637,16 @@ Module repository
     EndIf
   EndProcedure
   
+  ; register functions
+  
   Procedure registerWindow(window)
-    _windowID = window
-    If Not IsWindow(_windowID)
-      _windowID = #False
+    _windowMain = window
+    If IsWindow(_windowMain)
+      ; updateWindowCreate(_windowMain)
+    Else
+      _windowMain = #False
     EndIf
-    ProcedureReturn _windowID
+    ProcedureReturn _windowMain
   EndProcedure
   
   Procedure registerListGadget(gadget, Array columns.column(1))
@@ -749,13 +822,15 @@ Module repository
     ProcedureReturn _filterGadgetID
   EndProcedure
   
+  ; display functions
+  
   Procedure displayMods(search$, source$ = "", type$="")
     ; debugger::add("repository::displayMods("+search$+")")
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
     Protected *selectedMod.mod
     Protected NewList *mods_to_display() ; pointer to "mod" structured data
     
-    If Not IsWindow(_windowID) Or Not IsGadget(_listGadgetID)
+    If Not IsWindow(_windowMain) Or Not IsGadget(_listGadgetID)
       debugger::add("repository::displayMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
@@ -896,6 +971,8 @@ Module repository
     CreateThread(@thumbnailThread(), 0)
     ProcedureReturn #True
   EndProcedure
+  
+  ; check functions
   
   Procedure canDownload(*repoMod.mod)
     Protected nFiles

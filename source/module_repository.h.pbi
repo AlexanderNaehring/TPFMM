@@ -6,6 +6,7 @@
   Structure tpfmm
     build.i
     version$
+    url$
   EndStructure
   
   Structure repo_info
