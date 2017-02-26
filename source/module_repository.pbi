@@ -5,6 +5,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_repository.h.pbi"
 
 Module repository
+  
   Enumeration ; column data type
     #COL_INT
     #COL_STR
@@ -25,6 +26,7 @@ Module repository
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
   Global Dim type.type(0) ; type information (for filtering)
+  Global _DISABLED = #False
   
   #DIRECTORY = "repositories"
   CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
@@ -37,7 +39,6 @@ Module repository
     Define file
     file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
     If file
-      WriteStringN(file, "http://www.transportfevermods.com/repository/")
       CloseFile(file)
     EndIf
   EndIf
@@ -464,6 +465,11 @@ Module repository
     Protected json, value
     Protected age
     
+    If _DISABLED
+      ProcedureReturn #False 
+    EndIf
+    
+    
     downloadRepository(url$)
     
     json = LoadJSON(#PB_Any, file$)
@@ -490,10 +496,23 @@ Module repository
     debugger::add("repository::loadRepository() | Description: "+repo_main\repository\description$)
     debugger::add("repository::loadRepository() | Maintainer: "+repo_main\repository\maintainer$)
     debugger::add("repository::loadRepository() | URL: "+repo_main\repository\url$)
-    debugger::add("repository::loadRepository() | build: "+repo_main\build)
     debugger::add("repository::loadRepository() |----")
     debugger::add("repository::loadRepository() | Mods Repositories: "+ListSize(repo_main\mods()))
     debugger::add("repository::loadRepository() |----")
+    
+    If url$ = #OFFICIAL_REPOSITORY$
+      ; in main repository, check for update of TPFMM
+      If repo_main\TPFMM\build And 
+         repo_main\TPFMM\build > #PB_Editor_BuildCount
+        debugger::add("repository::loadRepository() - TPFMM update available: "+repo_main\TPFMM\version$)
+        ; TODO show window for update.
+        ; disable repository features for outdated versions?
+;         _DISABLED = #True
+;         ClearMap(repo_mods())
+;         ProcedureReturn #False
+      EndIf
+    EndIf
+    
     
     If ListSize(repo_main\mods()) > 0
       ForEach repo_main\mods()
@@ -521,6 +540,10 @@ Module repository
     time = ElapsedMilliseconds()
     
     ClearList(repositories$())
+    ; always use official repository
+    AddElement(repositories$())
+    repositories$() = #OFFICIAL_REPOSITORY$
+    ; add user defined repositories from file
     file = ReadFile(#PB_Any, #DIRECTORY+"/repositories.list", #PB_File_SharedRead)
     If file
       While Not Eof(file)
@@ -529,7 +552,7 @@ Module repository
       Wend
       CloseFile(file)
     Else
-    debugger::add("repository::loadRepositoryList() - cannot read repositories.list")
+      debugger::add("repository::loadRepositoryList() - cannot read repositories.list")
     EndIf
     
     If ListSize(repositories$())
@@ -737,7 +760,6 @@ Module repository
       ProcedureReturn #False
     EndIf
     
-    StopWindowUpdate(WindowID(_windowID))
     HideGadget(_listGadgetID, 1)
     
     If GetGadgetState(_listGadgetID) <> -1
@@ -858,7 +880,6 @@ Module repository
     
           
     HideGadget(_listGadgetID, 0)
-    ContinueWindowUpdate(WindowID(_windowID))
     
   EndProcedure
   

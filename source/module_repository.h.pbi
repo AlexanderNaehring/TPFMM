@@ -1,28 +1,12 @@
 ﻿DeclareModule repository
   EnableExplicit
   
-  Macro StopWindowUpdate(_winID_)
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-;         SendMessage_(_winID_,#WM_SETREDRAW,0,0)
-      CompilerCase #PB_OS_Linux
-        
-      CompilerCase #PB_OS_MacOS
-        CocoaMessage(0,_winID_,"disableFlushWindow")
-    CompilerEndSelect
-  EndMacro
-  Macro ContinueWindowUpdate(_winID_, _redrawBackground_ = 0)
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-;         SendMessage_(_winID_,#WM_SETREDRAW,1,0)
-;         InvalidateRect_(_winID_,0,_redrawBackground_)
-;         UpdateWindow_(_winID_)
-      CompilerCase #PB_OS_Linux
-        
-      CompilerCase #PB_OS_MacOS
-        CocoaMessage(0,_winID_,"enableFlushWindow")
-    CompilerEndSelect
-  EndMacro
+  #OFFICIAL_REPOSITORY$ = "https://www.transportfevermods.com/repository/"
+  
+  Structure tpfmm
+    build.i
+    version$
+  EndStructure
   
   Structure repo_info
     name$
@@ -43,7 +27,7 @@
   ; main (root level) repository
   Structure repo_main
     repository.repo_info
-    build.i
+    TPFMM.tpfmm
     List mods.repo_link() ; multiple mod repositories may be linked from a single root repsitory
   EndStructure
   
