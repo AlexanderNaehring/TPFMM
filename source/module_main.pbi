@@ -8,6 +8,8 @@
   Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
   
+  #PORT = 14123
+  
   Declare init()
   Declare exit()
   Declare loop()
@@ -18,6 +20,7 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
+XIncludeFile "module_instance.pbi"
 
 
 XIncludeFile "module_mods.pbi"
@@ -27,26 +30,70 @@ XIncludeFile "module_repository.pbi"
 
 Module main
   
+  Procedure handleParameter(parameter$)
+    Debug debugger::add("main::handleParameter() - "+parameter$)
+    Select LCase(parameter$)
+      Case "-testmode"
+        debugger::add("main::handleParameter() - enable testing mode")
+        _TESTMODE = #True
+        
+      Case "-show"
+        If windowMain::window And IsWindow(windowMain::window)
+          ; normal/maximize may behave differently on linux (linux mint 18.1: maximze = normal and normal = on left edge)
+          ; catch this behaviour??
+          Select GetWindowState(windowMain::window)
+            Case #PB_Window_Maximize
+              SetWindowState(windowMain::window, #PB_Window_Minimize)
+              SetWindowState(windowMain::window, #PB_Window_Maximize)
+            Default
+              SetWindowState(windowMain::window, #PB_Window_Minimize)
+              SetWindowState(windowMain::window, #PB_Window_Normal)
+          EndSelect
+        EndIf
+        
+      Default
+        If FileSize(parameter$) > 0
+          ; install mod... (this function is called, before the main window is created ....
+          ; Todo: Check if thisworks at program start.
+          queue::add(queue::#QueueActionInstall, parameter$)
+        EndIf
+        
+    EndSelect
+  EndProcedure
+  
   Procedure init()
     Protected i
-    ; program parameter
-    For i = 0 To CountProgramParameters() - 1
-      Debug "Parameter: "+ProgramParameter(i)
-      Select LCase(ProgramParameter(i)) 
-        Case "-testmode"
-          Debug "enable testing mode"
-          _TESTMODE = #True
-        Default
-          If FileSize(ProgramParameter(i))
-            ; install mod?
-          EndIf
-      EndSelect
-    Next
     
     If _DEBUG
       debugger::SetLogFile("tpfmm.log")
     EndIf
     debugger::DeleteLogFile()
+    
+    
+    ; parameter handling
+    For i = 0 To CountProgramParameters() - 1
+      handleParameter(ProgramParameter(i))
+    Next
+    
+    
+    
+    ; check if TPFMM instance is already running
+    If Not instance::create(#PORT, @handleParameter())
+      ; could not create instance. most likely, another instance is running
+      ; try to send message to other instance
+      Debug "main::init() - could not create new instance. Try to send message to other instance..."
+      If instance::sendString("-show")
+        For i = 0 To CountProgramParameters() - 1
+          instance::sendString(ProgramParameter(i))
+        Next
+        Debug "main::init() - send all parameters. exit now"
+        End
+      Else
+        Debug "main::init() - could not send message to other instance... Continue with this instance!"
+      EndIf
+    EndIf
+    
+    
     
     debugger::Add("init() - load plugins")
     
@@ -64,10 +111,15 @@ Module main
     
     images::LoadImages()
     
+    ; user init...
+    
     debugger::Add("init() - read locale")
     OpenPreferences(settingsFile$)
     locale::use(ReadPreferenceString("locale","en"))
     ClosePreferences()
+    
+    ;-TODO: First: Check path, etc.. then open required windows.
+    ; only if everything is fine: show main window...
     
     ; open all windows
     windowMain::create()
@@ -78,6 +130,10 @@ Module main
     debugger::Add("init() - load settings")
     OpenPreferences(settingsFile$)
     gameDirectory$ = ReadPreferenceString("path", "")
+    If misc::checkGameDirectory(gameDirectory$) <> 0
+      gameDirectory$ = ""
+    EndIf
+    
     
     ; Window Location
     If ReadPreferenceInteger("windowlocation", #False)
@@ -114,8 +170,12 @@ Module main
       windowSettings::show()
     EndIf
     
+    
+    
+    ; finish
     debugger::Add("init complete")
     
+    ; main loop...
     loop()
   EndProcedure
   
@@ -150,7 +210,7 @@ Module main
   
   Procedure loop()
     Repeat
-      WaitWindowEvent(100)
+      WaitWindowEvent()
     ForEver
   EndProcedure
   
