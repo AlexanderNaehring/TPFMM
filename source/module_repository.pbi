@@ -456,6 +456,17 @@ Module repository
     running = #False
   EndProcedure
   
+  Procedure checkInstalled()
+    Protected source$, id.i
+    ForEach repo_mods()
+      ForEach repo_mods()\mods()
+        source$ = repo_mods()\mods()\source$
+        id      = repo_mods()\mods()\id
+        
+        repo_mods()\mods()\installed = mods::isInstalled(source$, id)
+      Next
+    Next
+  EndProcedure
   
   ; update window functions
 ;   
@@ -724,8 +735,6 @@ Module repository
             \offset = OffsetOf(mod\timechanged)
             \name$ = "Last Modified"
             \type = #COL_INT
-          Case "tags" ; list
-            Continue
           Case "version"
             \offset = OffsetOf(mod\version$)
             \name$ = "Version"
@@ -734,8 +743,11 @@ Module repository
             \offset = OffsetOf(mod\url$)
             \name$ = "URL"
             \type = #COL_STR
-          Case "files" ; list
-            Continue
+          Case "installed"
+            \offset = OffsetOf(mod\installed)
+            \name$ = "Status"
+            \type = #COL_INT
+            
           Default
             Continue
         EndSelect ;}
@@ -847,6 +859,8 @@ Module repository
     EndIf
     
     ClearGadgetItems(_listGadgetID)
+    
+    checkInstalled()
     
     count = CountString(search$, " ") + 1
     

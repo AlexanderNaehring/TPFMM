@@ -22,7 +22,7 @@ Module mods
     #FILTER_FOLDER_STEAM
     #FILTER_FOLDER_STAGING
   EndEnumeration
-    
+  
   
   UseMD5Fingerprint()
   
@@ -249,6 +249,7 @@ Module mods
     
     Protected id$ = *mod\tpf_id$
     Protected modFolder$, luaFile$
+    Protected file
     
     ; debugger::add("mods::loadInfo() - {"+id$+"}");
     
@@ -258,10 +259,11 @@ Module mods
     luaFile$ = modFolder$ + "mod.lua"
     ;- TODO: mod.lua not used for maps!
     
-    ; check if mod.lua was modified and reload mod.lua if required
-    If *mod\name$ = "" Or
-       *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified) Or 
-       *mod\aux\sv <> #SCANNER_VERSION
+    ; read mod.lua if required
+    If *mod\name$ = "" Or                                                 ; no name
+       *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified) Or     ; mod.lua modified
+       *mod\aux\sv <> #SCANNER_VERSION Or                                 ; new program version
+       *mod\aux\luaLanguage$ <> locale::getCurrentLocale()                ; language changed
       ; load info from mod.lua
       If FileSize(luaFile$) > 0
 ;         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
@@ -269,7 +271,6 @@ Module mods
           ; ok
           *mod\aux\sv = #SCANNER_VERSION
         EndIf
-        
       Else
         ; no mod.lua present -> extract info from ID
         debugger::add("mods::loadInfo() - ERROR: no mod.lua for mod {"+id$+"} found!")
@@ -282,14 +283,32 @@ Module mods
       EndIf
     EndIf
     
-    ; do this always (not only when reading mod.lua)
+    
+    ; do this always
     localizeTags(*mod)
     *mod\aux\isVanilla = isVanillaMod(id$)
     
     
-    ; after loading: write back mod.lua if not present
+    If Left(id$, 1) = "*"
+      ; workshop mod, read workshop file id directly from id
+      *mod\aux\workshopID = Val(Mid(id$, 2, Len(id$)-3))
+      
+    Else
+      ; not workshop mod, but "workshop_fileid.txt" present
+      If FileSize(modFolder$ + "workshop_fileid.txt")
+        file = ReadFile(#PB_Any, modFolder$ + "workshop_fileid.txt")
+        If file
+          ReadStringFormat(file) ; skip BOM if present
+          *mod\aux\workshopID = Val(ReadString(file))
+          CloseFile(file)
+        EndIf
+      EndIf
+    EndIf
+    
+    
     If FileSize(luaFile$) <= 0
       debugger::add("some problem here: no lua file present?")
+      ; maybe write a lua file?
     EndIf
   EndProcedure
   
@@ -376,8 +395,8 @@ Module mods
           
           If \url$
             name$ = "<a href='"+ \url$ + "'>" + name$ + "</a>"
-          ElseIf \aux\tpfnetID
-            name$ = "<a href='https://www.transportfever.net/filebase/index.php/Entry/" + \aux\tpfnetID + "'>" + name$ + "</a>"
+          ElseIf \aux\tfnetID
+            name$ = "<a href='https://www.transportfever.net/filebase/index.php/Entry/" + \aux\tfnetID + "'>" + name$ + "</a>"
           ElseIf \aux\workshopID
             name$ = "<a href='http://steamcommunity.com/sharedfiles/filedetails/?id=" + \aux\workshopID + "'>" + name$ + "</a>"
           EndIf
@@ -879,6 +898,37 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure isInstalled(source$, id)
+    
+    If Not id
+      ProcedureReturn #False
+    EndIf
+    If source$ <> "tfnet" And
+       source$ <> "tpfnet" And
+       source$ <> "workshop"
+      ProcedureReturn #False
+    EndIf
+    
+    ; search for mod in list of installed mods
+    If source$ = "tfnet" Or source$ = "tpfnet"
+      ForEach *mods()
+        If *mods()\aux\tfnetID = id
+          ProcedureReturn #True
+        EndIf
+      Next
+    ElseIf source$ = "workshop"
+      ForEach *mods()
+        If *mods()\aux\workshopID = id
+          ProcedureReturn #True
+        EndIf
+      Next
+    EndIf
+    
+    ProcedureReturn #False
+    
+  EndProcedure
+  
+  
   Procedure install(*data.queue::dat) ; install mod from file (archive)
     debugger::Add("mods::install("+Str(*data)+")")
     Protected file$ = *data\string$
@@ -1008,7 +1058,7 @@ Module mods
           *mod\aux\repoTimeChanged = repo_mod\timechanged
           Select repo_mod\source$
             Case "tpfnet"
-              *mod\aux\tpfnetID = repo_mod\id
+              *mod\aux\tfnetID = repo_mod\id
             Case "workshop"
               *mod\aux\workshopID = repo_mod\id
             Default
@@ -1199,88 +1249,7 @@ Module mods
   EndProcedure
   
   Procedure.s getLUA(*mod.mod)
-    Debug "veraltet"
-    ProcedureReturn ""
-    Protected lua$
     
-    ; severity = "NONE", "WARNING", "CRITICAL"
-    ; author role = "CREATOR", "CO_CREATOR", "TESTER", "BASED_ON", "OTHER"
-    
-    With *mod
-      Select LCase(\severityAdd$)
-        Case "none"
-          \severityAdd$ = "NONE"
-        Case "warning"
-          \severityAdd$ = "WARNING"
-        Case "critical"
-          \severityAdd$ = "CRITICAL"
-        Default
-          \severityAdd$ = "NONE"
-      EndSelect
-      Select LCase(\severityRemove$)
-        Case "none"
-          \severityRemove$ = "NONE"
-        Case "warning"
-          \severityRemove$ = "WARNING"
-        Case "critical"
-          \severityRemove$ = "CRITICAL"
-        Default
-          \severityRemove$ = "WARNING"
-      EndSelect
-      ForEach \authors()
-        Select UCase(\authors()\role$)
-          Case "CREATOR"
-            \authors()\role$ = "CREATOR"
-          Case "CO_CREATOR"
-            \authors()\role$ = "CO_CREATOR"
-          Case "TESTER"
-            \authors()\role$ = "TESTER"
-          Case "BASED_ON"
-            \authors()\role$ = "BASED_ON"
-          Case "OTHER"
-            \authors()\role$ = "OTHER"
-          Default
-            \authors()\role$ = "CREATOR"
-        EndSelect
-      Next
-      
-      lua$ = "function data()" + #CRLF$ +
-             "return {" + #CRLF$
-      lua$ + "  minorVersion = "+Str(\minorVersion)+"," + #CRLF$
-      lua$ + "  severityAdd = "+#DQUOTE$+misc::luaEscape(\severityAdd$)+#DQUOTE$+"," + #CRLF$
-      lua$ + "  severityRemove = "+#DQUOTE$+misc::luaEscape(\severityRemove$)+#DQUOTE$+"," + #CRLF$
-      lua$ + "  name = _("+#DQUOTE$+misc::luaEscape(\name$)+#DQUOTE$+")," + #CRLF$
-      lua$ + "  description = _("+#DQUOTE$+" "+#DQUOTE$+")," + #CRLF$
-      lua$ + "  authors = {" + #CRLF$
-      ForEach \authors()
-        lua$ +  "    {" + #CRLF$ +
-                "      name = "+#DQUOTE$+""+misc::luaEscape(\authors()\name$)+""+#DQUOTE$+"," + #CRLF$ +
-                "      role = "+#DQUOTE$+""+\authors()\role$+""+#DQUOTE$+"," + #CRLF$ +
-                "      text = "+#DQUOTE$+""+#DQUOTE$+"," + #CRLF$ +
-                "      steamProfile = "+#DQUOTE$+""+#DQUOTE$+"," + #CRLF$ +
-                "      tfnetId = "+Str(\authors()\tfnetId)+"," + #CRLF$ +
-                "    }," + #CRLF$
-      Next
-      lua$ + "  }," + #CRLF$
-      lua$ + "  tags = {"
-      ForEach \tags$()
-        lua$ + #DQUOTE$+misc::luaEscape(\tags$())+#DQUOTE$+", "
-      Next
-      lua$ + "}," + #CRLF$
-      lua$ + "  tfnetId = "+Str(\aux\tpfnetID)+"," + #CRLF$
-      lua$ + "  minGameVersion = "+Str(\minGameVersion)+"," + #CRLF$
-      lua$ + "  dependencies = {"
-      ForEach \dependencies$()
-        lua$ + #DQUOTE$+\dependencies$()+#DQUOTE$+", "
-      Next
-      lua$ + "}," + #CRLF$
-      lua$ + "  url = "+#DQUOTE$+misc::luaEscape(\url$)+#DQUOTE$+"," + #CRLF$
-      lua$ + "}" + #CRLF$ +
-           "end"
-    EndWith
-    
-;     *mod\aux\lua$ = lua$
-    ProcedureReturn lua$
   EndProcedure
   
   Procedure exportList(all=#False)

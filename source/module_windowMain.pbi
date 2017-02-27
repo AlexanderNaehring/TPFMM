@@ -834,7 +834,8 @@ Module windowMain
     Protected Dim columns.repository::column(0)
     json$ = ReplaceString("[{'name':'name','width':320},"+
                           "{'name':'author_name','width':100},"+
-                          "{'name':'version','width':60}]", "'", #DQUOTE$)
+                          "{'name':'version','width':60},"+
+                          "{'name':'installed','width':30}]", "'", #DQUOTE$)
     *json = ParseJSON(#PB_Any, json$)
     ExtractJSONArray(JSONValue(*json), columns())
     FreeJSON(*json)

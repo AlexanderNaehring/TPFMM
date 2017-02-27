@@ -245,6 +245,8 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
+    ClearList(lua(Str(L))\mod\tags$())
+    
     lua_pushnil(L)
     While lua_next(L, -2)
       val$ = lua_tostring(L, -1) ; value at -1
@@ -287,7 +289,13 @@ Module luaParser
           getTags(L, -2)
         Case "visible"
           *mod\aux\hidden = Bool(Not lua_toboolean(L, -2))
-          
+        Case "tfnetId"
+          *mod\aux\tfnetID = lua_tointeger(L, -2)
+        Case "steamId"
+          *mod\aux\workshopID = lua_tointeger(L, -2)
+        Case "workshop"
+          *mod\aux\workshopID = lua_tointeger(L, -2)
+        
         Default
           
       EndSelect
@@ -521,6 +529,7 @@ Module luaParser
     
     If openModLua(L, modLua$)
       *mod\aux\luaDate = GetFileDate(modLua$, #PB_Date_Modified)
+      *mod\aux\luaLanguage$ = locale::getCurrentLocale()
       
       success = #True
     Else

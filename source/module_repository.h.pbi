@@ -26,6 +26,8 @@
     List files.file()
     List tags$()
     List tagsLocalized$()
+    
+    installed.i
   EndStructure
   
   

@@ -1,14 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = 9
-  
-  Structure archive ;-- information about the archive
-    name$             ; filename of archive
-    md5$              ; md5 file fingerprint of archive file
-;     type.i            ; #TYPE_ZIP or #TYPE_RAR
-    password$         ; password used for decrypting the archive
-  EndStructure
+  #SCANNER_VERSION = #pb_editor_buildcount
   
   Structure backup  ;-- information about last backup if available
     date.i
@@ -19,14 +12,13 @@
     type$             ; "mod", "map", "dlc", ...
     isVanilla.b       ; pre-installed mods should not be uninstalled
     luaDate.i         ; date of info.lua (reload info when newer version available)
+    luaLanguage$      ; language of currently loaded info from mod.lua -> reload mod.lua when language changes
     installDate.i     ; date of first encounter of this file (added to TPFMM)
-    archive.archive   ; archive file, type and handle
-    repoTimeChanged.i ; timechanged value from repository if installed from repo
-    tpfnetID.i        ; entry ID in transportfever.net download section
+    repoTimeChanged.i ; timechanged value from repository if installed from repo (if timechanged in repo > timechanged in mod: update available
+    tfnetID.i         ; entry ID in transportfever.net download section
     workshopID.i      ; fileID in Steam Workshop
-;     isDLC.b            ; true (1) if mod is a DLC and has to be installed to "dlc" directory
-    sv.i              ; scanner version
-    hidden.b          ; hidden from overview
+    sv.i              ; scanner version, rescan if newer scanner version is used
+    hidden.b          ; hidden from overview ("visible" in mod.lua)
     backup.backup     ; backup information (local)
   EndStructure
   
@@ -59,9 +51,9 @@
     description$            ; optional description
     List authors.author()   ; information about author(s)
     List tags$()            ; list of tags
-    List tagsLocalized$()   ; translated tags
+    List tagsLocalized$()   ; 
     minGameVersion.i        ; minimum required build number of game
-    List dependencies$()    ; list of required mods (folder name of required mod)
+    List dependencies.dependency()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
     
     aux.aux                 ; auxiliary information
@@ -85,8 +77,11 @@
   ; 
   ; download(*data) - provided by repository module! -> dowloads file to temp dir and calls install procedure
   
+  ; check mod functions:
+  
   Declare canUninstall(*mod.mod)
   Declare canBackup(*mod.mod)
+  Declare isInstalled(source$, id)
   
   ; queue callbacks:
   Declare install(*data)    ; check and extract archive to game folder
