@@ -1515,7 +1515,7 @@ Module mods
       ; mod images: 210x118 (original: 320x180)
       ; dlc images: 120x80
       previewImagesOriginal(*mod\tpf_id$) = im
-      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 210, 118)
+      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 240, 135)
     EndIf
     
     If original
