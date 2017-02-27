@@ -507,7 +507,7 @@ Module luaParser
     
     ; add search path for require function:
     tmp$ = misc::path(main::gameDirectory$, "/")
-    string$ = "package.path = package.path .. ';"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;res/scripts/?.lua';"
+    string$ = "package.path = package.path .. ';"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;"+modfolder$+"res/scripts/?.lua';"
     luaL_dostring(L, string$)
     
     ; make translation function known to lua global
