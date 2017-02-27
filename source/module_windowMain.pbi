@@ -18,6 +18,8 @@ DeclareModule windowMain
     CompilerEndIf
     #MenuItem_AddMod
     #MenuItem_ExportList
+    #MenuItem_ShowBackups
+    #MenuItem_ShowDownloads
     #MenuItem_Homepage
     #MenuItem_License
   EndEnumeration
@@ -453,6 +455,14 @@ Module windowMain
     mods::displayMods()
   EndProcedure
   
+  Procedure modShowBackupFolder()
+    misc::openLink(main::gameDirectory$+"TPFMM/backups/")
+  EndProcedure
+  
+  Procedure modShowDownloadFolder()
+    misc::openLink(main::gameDirectory$+"TPFMM/download/")
+  EndProcedure
+  
   Procedure repoList()
     updateRepoButtons()
   EndProcedure
@@ -815,12 +825,11 @@ Module windowMain
     ; create shortcuts
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       ; Mac OS X has predefined shortcuts
-      AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_S, #PB_Menu_Preferences)
+      AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_P, #PB_Menu_Preferences)
       AddKeyboardShortcut(window, #PB_Shortcut_Alt | #PB_Shortcut_F4, #PB_Menu_Quit)
       AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_L, #PB_Menu_About)
     CompilerEndIf
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
-    AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_E, #MenuItem_ExportList)
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
     
     
@@ -829,11 +838,14 @@ Module windowMain
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       MenuTitle(l("menu","file"))
     CompilerEndIf
-    MenuItem(#PB_Menu_Preferences, l("menu","settings") + Chr(9) + "Ctrl + S")
+    MenuItem(#PB_Menu_Preferences, l("menu","settings") + Chr(9) + "Ctrl + P")
     MenuItem(#PB_Menu_Quit, l("menu","close") + Chr(9) + "Alt + F4")
     MenuTitle(l("menu","mods"))
     MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
-    MenuItem(#MenuItem_ExportList, l("menu","mod_export") + Chr(9) + "Ctrl + E")
+    MenuItem(#MenuItem_ExportList, l("menu","mod_export"))
+    MenuBar()
+    MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
+    MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
     CloseSubMenu()
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
@@ -844,6 +856,8 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
     BindMenuEvent(0, #MenuItem_AddMod, @modAddNewMod())
     BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
+    BindMenuEvent(0, #MenuItem_ShowBackups, @modShowBackupFolder())
+    BindMenuEvent(0, #MenuItem_ShowDownloads, @modShowDownloadFolder())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     

@@ -110,4 +110,6 @@
   ; other
   Declare listRepositories(Map gadgets()) ; used by settings window
   
+  Global TPFMM_UPDATE.tpfmm
+  
 EndDeclareModule

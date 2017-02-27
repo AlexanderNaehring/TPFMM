@@ -30,6 +30,7 @@
           </vbox>
         </tab>
 
+<!--
         <tab text='Online Repositories'>
           <hbox expand='equal'>
             <vbox expand='item:1'>
@@ -51,6 +52,7 @@
             </gridbox>
           </hbox>
         </tab>
+-->
 
         <!--
           <tab text='Licenses'>

@@ -444,6 +444,15 @@ Module repository
   EndProcedure
   
   ; update window functions
+  
+  Procedure showUpdate()
+    If MessageRequester(locale::l("repository","update"), locale::l("repository","update_text"), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+      misc::openLink(main::WEBSITE$)
+      main::exit()
+    EndIf
+    
+  EndProcedure
+  
 ;   
 ;   Procedure updateOpenWebsite()
 ;     
@@ -554,8 +563,12 @@ Module repository
     If *repository\url$ = #OFFICIAL_REPOSITORY$
       ; in main repository, check for update of TPFMM
       If *repository\main_json\TPFMM\build And 
-         *repository\main_json\TPFMM\build > #PB_Editor_BuildCount
+         *repository\main_json\TPFMM\build > #PB_Editor_CompileCount
         debugger::add("repository::loadRepository() - TPFMM update available: "+*repository\main_json\TPFMM\version$)
+        
+        CopyStructure(*repository\main_json\TPFMM, TPFMM_UPDATE, tpfmm)
+        BindEvent(#EventShowUpdate, @showUpdate(), _windowMain)
+        PostEvent(#EventShowUpdate, _windowMain, 0)
         
         ; debugger::add("repository::loadRepository() - post event to main window!")
         ; PostEvent(#EventShowUpdate, _windowMain, 0)
@@ -563,9 +576,11 @@ Module repository
         
         
         ; disable repository features for outdated versions?
-;         _DISABLED = #True
-;         ClearMap(repo_mods())
-;         ProcedureReturn #False
+        _DISABLED = #True
+        ClearMap(repo_mods())
+        ProcedureReturn #False
+      Else
+        debugger::add("repository::loadRepository() - TPFMM is up to date")
       EndIf
     EndIf
     
@@ -839,6 +854,13 @@ Module repository
       debugger::add("repository::displayMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
+    
+    If _DISABLED
+      AddGadgetItem(_listGadgetID, 0, locale::l("repository","disabled_update"))
+      SetGadgetItemColor(_listGadgetID, 0, #PB_Gadget_FrontColor, RGB($A0, $00, $00))
+      ProcedureReturn #False
+    EndIf
+    
     
     ; get filter parameters
     If _filterGadgetID And IsGadget(_filterGadgetID)

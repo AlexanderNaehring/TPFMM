@@ -236,15 +236,15 @@ Module windowSettings
     getGadget("languageSelection")
     
     
-    getGadget("repositoryList")
-    getGadget("repositoryAdd")
-    getGadget("repositoryRemove")
-    getGadget("repositoryNameLabel")
-    getGadget("repositoryName")
-    getGadget("repositoryCuratorLabel")
-    getGadget("repositoryCurator")
-    getGadget("repositoryDescriptionLabel")
-    getGadget("repositoryDescription")
+;     getGadget("repositoryList")
+;     getGadget("repositoryAdd")
+;     getGadget("repositoryRemove")
+;     getGadget("repositoryNameLabel")
+;     getGadget("repositoryName")
+;     getGadget("repositoryCuratorLabel")
+;     getGadget("repositoryCurator")
+;     getGadget("repositoryDescriptionLabel")
+;     getGadget("repositoryDescription")
     
     
     ; set texts
@@ -275,13 +275,13 @@ Module windowSettings
     SetGadgetText(gadget("languageSelection"),      "")
     
     
-    SetGadgetText(gadget("repositoryList"),         "")
-    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-    SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
-    SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
-    SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
-    SetGadgetText(gadget("repositoryDescriptionLabel"), l("settings", "repository_description"))
+;     SetGadgetText(gadget("repositoryList"),         "")
+;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
+;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
+;     SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
+;     SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
+;     SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
+;     SetGadgetText(gadget("repositoryDescriptionLabel"), l("settings", "repository_description"))
     
     
     ; bind events
@@ -319,7 +319,7 @@ Module windowSettings
     
     locale::listAvailable(gadget("languageSelection"), locale$)
     
-    repository::listRepositories(gadget())
+;     repository::listRepositories(gadget())
     
     updateGadgets()
     

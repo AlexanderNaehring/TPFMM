@@ -7,6 +7,7 @@
   Global gameDirectory$
   Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
+  Global WEBSITE$ = "https://www.transportfever.net/"
   
   #PORT = 14123
   

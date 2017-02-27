@@ -1,7 +1,7 @@
 ﻿DeclareModule mods
   EnableExplicit
   
-  #SCANNER_VERSION = #pb_editor_buildcount
+  #SCANNER_VERSION = #PB_Editor_CompileCount
   
   Structure backup  ;-- information about last backup if available
     date.i
