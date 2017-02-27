@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="..\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-27 14:20" user="naehring" host="MU732281"/>
+    <lastopen date="2017-02-27 15:51" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -87,8 +87,8 @@
       <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
       <purifier enable="0" granularity="-12566464,-12566464,-12566464,-12566464"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="925"/>
-      <buildcount enable="1" value="15"/>
+      <compilecount enable="1" value="948"/>
+      <buildcount enable="1" value="16"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
@@ -96,12 +96,13 @@
         <field3 value="Transport Fever Mod Manager"/>
         <field4 value="%BUILDCOUNT"/>
         <field5 value="%COMPILECOUNT"/>
-        <field7 value="TFMM"/>
+        <field7 value="TPFMM"/>
         <field8 value="%EXECUTABLE"/>
         <field9 value="Alexander Nähring"/>
+        <field15 value="VOS_NT_WINDOWS32"/>
         <field16 value="VFT_APP"/>
         <field18 value="Homepage"/>
-        <field21 value="www.alexandernaehring.eu"/>
+        <field21 value="https://www.transportfevermods.com/"/>
       </versioninfo>
     </target>
     <target name="lin64" enabled="1" default="0">
@@ -112,7 +113,7 @@
       <options unicode="1" thread="1" xpskin="1" user="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="924"/>
+      <compilecount enable="1" value="947"/>
       <buildcount enable="1" value="14"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
