@@ -199,8 +199,16 @@ Module windowMain
       EndIf
     Next
     
+    SetGadgetText(gadget("repoInstall"), locale::l("main", "install"))
+    
     If numCanDownload = 1
       DisableGadget(gadget("repoInstall"), #False)
+      
+      *repoMod = GetGadgetItemData(gadget("repoList"), GetGadgetState(gadget("repoList")))
+      If *repoMod\installed
+        SetGadgetText(gadget("repoInstall"), locale::l("main", "install_update"))
+      EndIf
+      
     Else
       DisableGadget(gadget("repoInstall"), #True)
     EndIf
@@ -462,6 +470,8 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Declare GadgetRepositoryDownload()
+  
   Procedure GadgetRepoListShowMenu()
     Protected selected, *repoMod.repository::mod
     Static menuID
@@ -478,9 +488,21 @@ Module windowMain
     If *repoMod
       menuID = CreatePopupMenu(#PB_Any)
       Protected NewMap strings$()
+      If *repoMod\installed
+        MenuItem(5000, locale::l("main", "install_update"))
+      Else
+        MenuItem(5000, locale::l("main", "install"))
+      EndIf
+      If Not repository::canDownload(*repoMod)
+        DisableMenuItem(menuID, 5000, #True)
+      EndIf
+      BindMenuEvent(menuID, 5000, @GadgetRepositoryDownload())
+      
+      MenuBar()
+      
       strings$("author") = *repoMod\author$
-      MenuItem(5000, locale::getEx("repository", "more_author", strings$()))
-      BindMenuEvent(menuID, 5000, @MenuRepoListAuthor())
+      MenuItem(5001, locale::getEx("repository", "more_author", strings$()))
+      BindMenuEvent(menuID, 5001, @MenuRepoListAuthor())
       DisplayPopupMenu(menuID, WindowID(window))
     EndIf
   EndProcedure
