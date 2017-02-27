@@ -221,7 +221,7 @@ Module windowMain
   
   Procedure loadRepositoryThread(*dummy)
     repository::loadRepositoryList()
-    repository::displayMods("") ; initially fill list
+    repository::displayMods() ; initially fill list
   EndProcedure
   
   ;-------------------------------------------------
@@ -687,10 +687,11 @@ Module windowMain
     
     getGadget("repoList")
     getGadget("repoFilterFrame")
-    getGadget("repoFilterSources")
-    getGadget("repoFilterTypes")
     getGadget("repoFilterString")
     getGadget("repoFilterReset")
+    getGadget("repoFilterSources")
+    getGadget("repoFilterTypes")
+    getGadget("repoFilterInstalled")
     getGadget("repoManagementFrame")
     getGadget("repoWebsite")
     getGadget("repoInstall")
@@ -834,8 +835,7 @@ Module windowMain
     Protected Dim columns.repository::column(0)
     json$ = ReplaceString("[{'name':'name','width':320},"+
                           "{'name':'author_name','width':100},"+
-                          "{'name':'version','width':60},"+
-                          "{'name':'installed','width':30}]", "'", #DQUOTE$)
+                          "{'name':'version','width':60}]", "'", #DQUOTE$)
     *json = ParseJSON(#PB_Any, json$)
     ExtractJSONArray(JSONValue(*json), columns())
     FreeJSON(*json)
@@ -843,9 +843,7 @@ Module windowMain
     repository::registerWindow(window)
     repository::registerListGadget(gadget("repoList"), columns())
     repository::registerThumbGadget(gadget("repoPreviewImage"))
-    repository::registerSourceGadget(gadget("repoFilterSources"))
-    repository::registerTypeGadget(gadget("repoFilterTypes"))
-    repository::registerFilterGadget(gadget("repoFilterString"))
+    repository::registerFilterGadgets(gadget("repoFilterString"), gadget("repoFilterTypes"), gadget("repoFilterSources"), gadget("repoFilterInstalled"))
     
     CreateThread(@loadRepositoryThread(), 0)
     

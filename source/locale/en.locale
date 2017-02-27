@@ -147,6 +147,9 @@ save      = Save
 all_types   = All Types
 all_sources = All Sources
 more_author = Show all mods by {author}
+installed_all = Installed or installed
+installed_yes = Show only installed
+installed_no  = Show only not installed
 
 [mods]
 filter_all      = Show All Folders

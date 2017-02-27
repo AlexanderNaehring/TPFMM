@@ -24,7 +24,7 @@ Module repository
   Global NewMap repo_mods.repo_mods()
   Global NewList repositories.repository()
   
-  Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID
+  Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID, _installedGadgetID
   Global Dim _columns.column_info(0)
   Global currentImageURL$
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
@@ -326,31 +326,6 @@ Module repository
         Case #PB_EventType_Change
           displayThumbnail(*mod\thumbnail$)
       EndSelect
-    EndIf
-  EndProcedure
-  
-  Procedure handleEventFilter() ; click on any filter gadget
-    Protected n, type$, filter$, source$
-    Protected *repo_info.repo_info
-    If EventType() = #PB_EventType_Change Or 
-       EventType() = #PB_EventType_Focus
-      If IsGadget(_typeGadgetID)
-        n = GetGadgetState(_typeGadgetID)
-        If n >= 0 And n <= ArraySize(type())
-          type$ = type(n)\key$
-        EndIf
-      EndIf
-      If IsGadget(_filterGadgetID)
-        filter$ = GetGadgetText(_filterGadgetID)
-      EndIf
-      If IsGadget(_sourceGadgetID)
-        *repo_info = GetGadgetItemData(_sourceGadgetID, GetGadgetState(_sourceGadgetID))
-        If *repo_info
-          source$ = *repo_info\source$
-        EndIf
-      EndIf
-      
-      displayMods(filter$, source$, type$)
     EndIf
   EndProcedure
   
@@ -780,11 +755,21 @@ Module repository
     ProcedureReturn _thumbGadgetID
   EndProcedure
   
-  Procedure registerTypeGadget(gadget)
+  Procedure registerFilterGadgets(gadgetString, gadgetType, gadgetSource, gadgetInstalled)
     Protected i.i
-    debugger::add("repository::registerTypeGadget(" + gadget + ")")
     
-    _typeGadgetID = gadget
+    ; string gadget
+    
+    _filterGadgetID = gadgetString
+    If Not IsGadget(_filterGadgetID)
+      _filterGadgetID = #False
+    EndIf
+    BindGadgetEvent(_filterGadgetID, @displayMods())
+    
+    
+    ; combobox: type
+    
+    _typeGadgetID = gadgetType
     If Not IsGadget(_typeGadgetID)
       _typeGadgetID = #False
     EndIf
@@ -806,43 +791,46 @@ Module repository
     Next
     SetGadgetState(_typeGadgetID, 0)
     
-    BindGadgetEvent(_typeGadgetID, @handleEventFilter())
+    BindGadgetEvent(_typeGadgetID, @displayMods())
     
-    ProcedureReturn _typeGadgetID
-  EndProcedure
-  
-  Procedure registerSourceGadget(gadget)
-    Protected i.i
-    debugger::add("repository::registerSourceGadget(" + gadget + ")")
     
-    _sourceGadgetID = gadget
+    ; combobox: source
+    
+    _sourceGadgetID = gadgetSource
     If _sourceGadgetID And IsGadget(_sourceGadgetID)
       updateSourceGadget()
-      BindGadgetEvent(_sourceGadgetID, @handleEventFilter())
+      BindGadgetEvent(_sourceGadgetID, @displayMods())
     Else
       _sourceGadgetID = #False
     EndIf
     
-    ProcedureReturn _sourceGadgetID
-  EndProcedure
-  
-  Procedure registerFilterGadget(gadget)
-    debugger::add("repository::registerFilterGadget(" + gadget + ")")
     
-    _filterGadgetID = gadget
-    If Not IsGadget(_filterGadgetID)
-      _filterGadgetID = #False
+    ; combobox: installed
+    
+    _installedGadgetID = gadgetInstalled
+    If Not IsGadget(_installedGadgetID)
+      _installedGadgetID = #False
     EndIf
     
-    BindGadgetEvent(_filterGadgetID, @handleEventFilter())
+    ClearGadgetItems(_installedGadgetID)
+    AddGadgetItem(_installedGadgetID, 0, locale::l("repository", "installed_all"))
+    AddGadgetItem(_installedGadgetID, 1, locale::l("repository", "installed_yes"))
+    AddGadgetItem(_installedGadgetID, 2, locale::l("repository", "installed_no"))
+    SetGadgetState(_installedGadgetID, 0)
     
-    ProcedureReturn _filterGadgetID
+    BindGadgetEvent(_installedGadgetID, @displayMods())
+    
+    
+    ProcedureReturn #True
   EndProcedure
+  
   
   ; display functions
   
-  Procedure displayMods(search$, source$ = "", type$="")
+  Procedure displayMods()
     ; debugger::add("repository::displayMods("+search$+")")
+    Protected search$, type$, source$, installed.i
+    Protected *repo_info.repo_info, n.i
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
     Protected *selectedMod.mod
     Protected NewList *mods_to_display() ; pointer to "mod" structured data
@@ -851,6 +839,31 @@ Module repository
       debugger::add("repository::displayMods() - ERROR: window or gadget not valid")
       ProcedureReturn #False
     EndIf
+    
+    ; get filter parameters
+    If _filterGadgetID And IsGadget(_filterGadgetID)
+      search$ = GetGadgetText(_filterGadgetID)
+    EndIf
+    If _typeGadgetID And IsGadget(_typeGadgetID)
+      n = GetGadgetState(_typeGadgetID)
+      If n >= 0 And n <= ArraySize(type())
+        type$ = type(n)\key$
+      EndIf
+    EndIf
+    If _sourceGadgetID And IsGadget(_sourceGadgetID)
+      *repo_info = GetGadgetItemData(_sourceGadgetID, GetGadgetState(_sourceGadgetID))
+      If *repo_info
+        source$ = *repo_info\source$
+      EndIf
+    EndIf
+    If _installedGadgetID And IsGadget(_installedGadgetID)
+      installed = GetGadgetState(_installedGadgetID)
+      ; 0 = all, 1 = installed, 2 = not installed
+    EndIf
+    
+    
+    
+    
     
     HideGadget(_listGadgetID, 1)
     
@@ -878,6 +891,15 @@ Module repository
           If source$ And \source$ <> source$
             Continue
           EndIf
+          
+          If installed ; 1 = only show installed, 2 = only show not installed
+            If installed = 1 And \installed = 0
+              Continue
+            ElseIf installed = 2 And \installed = 1
+              Continue
+            EndIf
+          EndIf
+          
           
           If search$ = ""
             mod_ok = 1
@@ -964,6 +986,10 @@ Module repository
         SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_workshop")))
       ElseIf *base_address\source$ = "tpfnet"
         SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_tpfnet")))
+      EndIf
+      If *base_address\installed
+        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
+        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_BackColor, RGB($F0, $F0, $F0))
       EndIf
       If *selectedMod And *selectedMod = *base_address
         SetGadgetState(_listGadgetID, item)

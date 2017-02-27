@@ -46,6 +46,7 @@
                     <vbox expand='no'>
                       <combobox name='repoFilterSources' />
                       <combobox name='repoFilterTypes' />
+                      <combobox name='repoFilterInstalled' />
                       <hbox expand='item:1'>
                         <string name='repoFilterString'/>
                         <button name='repoFilterReset' text='X' />

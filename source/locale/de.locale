@@ -145,9 +145,12 @@ change    = Anpassen
 save      = Speichern
 
 [repository]
-all_types   = Alle Typen
-all_sources = Alle Quellen
-more_author = Zeige alle Mods von {author}
+all_types     = Alle Typen
+all_sources   = Alle Quellen
+more_author   = Zeige alle Mods von {author}
+installed_all = Zeige Alle
+installed_yes = Zeige nur installierte
+installed_no  = Zeige nur nicht installierte
 
 [mods]
 filter_all      = Zeige Alle Ordner
