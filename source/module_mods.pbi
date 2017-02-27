@@ -1425,8 +1425,11 @@ Module mods
     
     misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
     
+    Protected *repo_mod.repository::mod
+    
     ForEach *mods_to_display()
       *mod = *mods_to_display()
+      
       With *mod
         text$ = \name$ + #LF$ + getAuthors(\authors()) + #LF$ + listToString(\tags$()) + #LF$ + \version$
         
@@ -1446,6 +1449,23 @@ Module mods
         
         If \aux\hidden
           SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB(100, 100, 100))
+        EndIf
+        
+        \aux\repo_mod = repository::findModOnline(*mod)
+        If \aux\repo_mod
+          ; link to online mod exists
+          *repo_mod = \aux\repo_mod
+          ; try to find indication that repo mod is newer than local version
+          ; do not use "version" for now, as it may not be realiable
+          If (\aux\repoTimeChanged And *repo_mod\timechanged > \aux\repoTimeChanged) Or
+             (\aux\installDate And *repo_mod\timechanged > \aux\installDate)
+            ; update available (most likely)
+            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($FF, $99, $00))
+          Else
+            ; no update available (most likely)
+            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
+            
+          EndIf
         EndIf
         
         

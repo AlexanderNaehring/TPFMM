@@ -1017,6 +1017,58 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
+  Procedure selectModInList(*mod.mod)
+    ; remove all filters
+    Protected item, *mod_in_list.mod
+    If _listGadgetID And IsGadget(_listGadgetID)
+      If _filterGadgetID And IsGadget(_filterGadgetID)
+        SetGadgetText(_filterGadgetID, "")
+      EndIf
+      If _typeGadgetID And IsGadget(_typeGadgetID)
+        SetGadgetState(_typeGadgetID, 0)
+      EndIf
+      If _sourceGadgetID And IsGadget(_sourceGadgetID)
+        SetGadgetState(_sourceGadgetID, 0)
+      EndIf
+      If _installedGadgetID And IsGadget(_installedGadgetID)
+        SetGadgetState(_installedGadgetID, 0)
+      EndIf
+      displayMods()
+      ; trigger "change" event on list for thumbnail preview, button update, etc...
+      PostEvent(#PB_Event_Gadget, _windowMain, _listGadgetID, #PB_EventType_Change)
+      
+      For item = 0 To CountGadgetItems(_listGadgetID) -1
+        *mod_in_list = GetGadgetItemData(_listGadgetID, item)
+        If *mod_in_list = *mod
+          SetGadgetState(_listGadgetID, item)
+          ProcedureReturn #True
+        EndIf
+      Next
+    EndIf
+    
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure searchMod(name$, author$="")
+    ; set filters to search for mod
+    If author$
+      name$ + " " + author$
+    EndIf
+    
+    If _listGadgetID And IsGadget(_listGadgetID)
+      If _filterGadgetID And IsGadget(_filterGadgetID)
+        SetGadgetText(_filterGadgetID, name$)
+        displayMods()
+        ; trigger "change" event on list for thumbnail preview, button update, etc...
+        PostEvent(#PB_Event_Gadget, _windowMain, _listGadgetID, #PB_EventType_Change)
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    
+    ProcedureReturn #False
+  EndProcedure
+  
+  
   ; check functions
   
   Procedure canDownload(*repoMod.mod)
@@ -1045,6 +1097,36 @@ Module repository
     
     CreateThread(@downloadModThread(), *download)
   EndProcedure
+  
+  Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
+    If *mod\aux\tfnetID
+      ForEach repo_mods()
+        If repo_mods()\repo_info\source$ <> "tpfnet"
+          Continue
+        EndIf
+        ForEach repo_mods()\mods()
+          If repo_mods()\mods()\id = *mod\aux\tfnetID
+            ProcedureReturn repo_mods()\mods()
+          EndIf
+        Next
+      Next
+      
+    ElseIf *mod\aux\workshopID
+      ForEach repo_mods()
+        If repo_mods()\repo_info\source$ <> "workshop"
+          Continue
+        EndIf
+        ForEach repo_mods()\mods()
+          If repo_mods()\mods()\id = *mod\aux\workshopID
+            ProcedureReturn repo_mods()\mods()
+          EndIf
+        Next
+      Next
+      
+    EndIf
+    ProcedureReturn #Null
+  EndProcedure
+  
   
   ; list all available repos in settings gadget
   

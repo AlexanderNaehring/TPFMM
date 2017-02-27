@@ -37,9 +37,13 @@ backup          = Create Backup
 backup_pl       = Create Backups
 information     = Mod Information
 filter          = Filter modifications
-filter_hidden   = Show Hidden
-filter_vanilla  = Show Vanilla
+filter_hidden   = Show hidden
+filter_vanilla  = Show vanilla
 mod_website     = Open website
+search_online   = Search mod in repository
+show_online     = Show mod in repository
+load_update     = Download and install current version
+open_folder     = Open mod folder
 
 [settings]
 title           = TPFMM Settings

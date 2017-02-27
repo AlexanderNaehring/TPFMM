@@ -42,6 +42,10 @@ filter          = Filter Modifikationen
 filterHidden    = Zeige Versteckte
 filterVanilla   = Zeige Vanilla
 mod_website     = Öffne Website
+search_online   = Suche Mod in Repository
+show_online     = Zeige Mod in Repository
+load_update     = Lade und installiere aktuelle Version
+open_folder     = Öffne Mod Ordner
 
 [settings]
 title           = TPFMM Einstellungen
@@ -70,7 +74,7 @@ cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
 save            = Speichern
 save_tip        = Speichere Änderungen und schließe Einstellungen
-repository_add          = Füge Repository hinzug
+repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
 repository_name         = Name:
 repository_curator      = Verwalter:

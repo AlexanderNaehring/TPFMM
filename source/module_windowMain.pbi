@@ -41,6 +41,9 @@ Module windowMain
     #MenuItem_Information
     #MenuItem_Backup
     #MenuItem_Uninstall
+    #MenuItem_SearchModOnline
+    #MenuItem_ModWebsite
+    #MenuItem_ModFolder
   EndEnumeration
   
   ;- Gadgets
@@ -53,18 +56,8 @@ Module windowMain
   Global NewMap PreviewImages.i()
   Global _noUpdate
   
-  Declare resize()
-  
-  Declare MenuItemSettings()
-  Declare MenuItemHomepage()
-  Declare MenuItemLicense()
-  Declare MenuItemExport()
-  
-  Declare GadgetNewMod()
-  Declare GadgetImageMain()
-  Declare GadgetButtonStartGame()
-  Declare GadgetButtonTrainFeverNetDownloads()
-  Declare GadgetButtonUninstall()
+  Declare repoDownload()
+  Declare modOpenModFolder()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -164,10 +157,34 @@ Module windowMain
           SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
         EndIf
       EndIf
+      
+      ; link to mod in repo
+      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
+      If *mod\aux\repo_mod ; link to online mod known
+        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
+      Else ; link unknown
+        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "search_online"))
+      EndIf
+      
+      ; website 
+      If *mod\url$ Or *mod\aux\tfnetID Or *mod\aux\workshopID
+        DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #False)
+      Else
+        DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
+      EndIf
+      
+      
     Else
+      ; multiple mods selected
+      
       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
       EndIf
+      
+      
+      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
+      DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
+      
     EndIf
     
     
@@ -227,9 +244,10 @@ Module windowMain
     main::exit()
   EndProcedure
   
-  Procedure loadRepositoryThread(*dummy)
+  Procedure loadRepositoryThread(*dummy) ; first load
     repository::loadRepositoryList()
     repository::displayMods() ; initially fill list
+    mods::displayMods() ; update mod list to show remote links
   EndProcedure
   
   ;-------------------------------------------------
@@ -260,10 +278,6 @@ Module windowMain
   
   Procedure MenuItemHomepage()
     misc::openLink("https://www.transportfevermods.com/") ; Download Page TFMM (Train-Fever.net)
-  EndProcedure
-  
-  Procedure MenuItemNewMod()
-    GadgetNewMod()
   EndProcedure
   
   Procedure MenuItemLicense()
@@ -307,7 +321,7 @@ Module windowMain
   
   ;- GADGETS
       
-  Procedure GadgetNewMod()
+  Procedure modAddNewMod()
     Protected file$
     If FileSize(main::gameDirectory$) <> -2
       ProcedureReturn #False
@@ -321,7 +335,7 @@ Module windowMain
     Wend
   EndProcedure
   
-  Procedure GadgetButtonUninstall() ; Uninstall selected mods (delete from HDD)
+  Procedure modUninstall() ; Uninstall selected mods (delete from HDD)
     debugger::Add("windowMain::GadgetButtonUninstall()")
     Protected *mod.mods::mod
     Protected i, count, result
@@ -360,7 +374,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonBackup()
+  Procedure modBackup()
     debugger::Add("windowMain::GadgetButtonBackup()")
     
     Protected *mod.mods::mod
@@ -390,7 +404,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetButtonInfomation()
+  Procedure modInfomation()
     Protected *mod.mods::mod
     
     *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
@@ -401,58 +415,45 @@ Module windowMain
     debugger::add("windowMain::GadgetButtonInformation() - show information of mod {"+*mod\tpf_id$+"}")
   EndProcedure
   
-  Procedure GadgetModList()
-    Protected *mod.mods::mod
-    Protected position, event
-    
+  Procedure modList()
     updateModButtons()
     
     Select EventType()
       Case #PB_EventType_LeftDoubleClick
-        position = GetGadgetState(EventGadget())
-        If position <> -1
-          *mod = GetGadgetItemData(EventGadget(), position)
-          If *mod
-            misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
-          EndIf
-        EndIf
+        modOpenModFolder()
       Case #PB_EventType_RightClick
         DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
     EndSelect
   EndProcedure
   
-  Procedure GadgetButtonStartGame()
-    misc::openLink("steam://run/304730/")
-  EndProcedure
-  
-  Procedure GadgetButtonTrainFeverNet()
+  Procedure websiteTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetButtonTrainFeverNetDownloads()
+  Procedure websiteTrainFeverNetDownloads()
     misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
   EndProcedure
   
-  Procedure GadgetImageMain()
+  Procedure modPreviewImage()
     Protected event = EventType()
     If event = #PB_EventType_LeftClick
       If GetGadgetState(gadget("modPreviewImage")) = ImageID(images::Images("logo"))
-        GadgetButtonTrainFeverNet()
+        websiteTrainFeverNet()
       EndIf
     EndIf
   EndProcedure
   
-  Procedure GadgetFilterMods()
+  Procedure modFilterMods()
     mods::displayMods()
   EndProcedure
   
-  Procedure GadgetResetFilterMods()
+  Procedure modResetFilterMods()
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
     mods::displayMods()
   EndProcedure
   
-  Procedure GadgetRepoList()
+  Procedure repoList()
     updateRepoButtons()
   EndProcedure
   
@@ -470,9 +471,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Declare GadgetRepositoryDownload()
-  
-  Procedure GadgetRepoListShowMenu()
+  Procedure repoListShowMenu()
     Protected selected, *repoMod.repository::mod
     Static menuID
     
@@ -496,7 +495,7 @@ Module windowMain
       If Not repository::canDownload(*repoMod)
         DisableMenuItem(menuID, 5000, #True)
       EndIf
-      BindMenuEvent(menuID, 5000, @GadgetRepositoryDownload())
+      BindMenuEvent(menuID, 5000, @repoDownload())
       
       MenuBar()
       
@@ -507,12 +506,12 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetResetFilterRepository()
+  Procedure repoResetFilter()
     SetGadgetText(gadget("repoFilterString"), "")
     SetActiveGadget(gadget("repoFilterString"))
   EndProcedure
   
-  Procedure GadgetRepoWebsite()
+  Procedure repoWebsite()
     Protected item
     Protected *mod.repository::mod
     
@@ -534,7 +533,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure GadgetRepositoryDownload()
+  Procedure repoDownload()
     ; download and install mod from source
     Protected item, url$
     Protected *mod.repository::mod, *file.repository::file
@@ -569,9 +568,59 @@ Module windowMain
     
   EndProcedure
   
-  Procedure GadgetDLCToggle()
-    ;- todo remove
+  Procedure searchModOnline()
+    ; get selected mod from list
     
+    Protected *mod.mods::mod
+    Protected item
+    
+    item = GetGadgetState(gadget("modList"))
+    If item <> -1
+      *mod = GetGadgetItemData(gadget("modList"), item)
+      If *mod
+        If *mod\aux\repo_mod
+          repository::selectModInList(*mod\aux\repo_mod)
+          SetGadgetState(gadget("panel"), 1)
+        Else
+          repository::searchMod(*mod\name$) ; todo search author?
+          SetGadgetState(gadget("panel"), 1)
+        EndIf
+      EndIf
+    EndIf
+    
+  EndProcedure
+  
+  Procedure modShowWebsite()
+    Protected item, *mod.mods::mod
+    item = GetGadgetState(gadget("modList"))
+    If item <> -1
+      *mod = GetGadgetItemData(gadget("modList"), item)
+      If *mod
+        If *mod\url$
+          misc::openLink(*mod\url$)
+        ElseIf *mod\aux\tfnetID
+          misc::openLink("https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID)
+        ElseIf *mod\aux\workshopID
+          misc::openLink("http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID)
+        EndIf
+        
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modOpenModFolder()
+    Protected item, *mod.mods::mod
+    item = GetGadgetState(gadget("modList"))
+    If item <> -1
+      *mod = GetGadgetItemData(gadget("modList"), item)
+      If *mod 
+        misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    ProcedureReturn #True
   EndProcedure
   
   ; DRAG & DROP
@@ -745,22 +794,22 @@ Module windowMain
     
     
     ; Bind Gadget Events
-    BindGadgetEvent(gadget("modInformation"),   @GadgetButtonInfomation())
-    BindGadgetEvent(gadget("modBackup"),        @GadgetButtonBackup())
-    BindGadgetEvent(gadget("modUninstall"),     @GadgetButtonUninstall())
-    BindGadgetEvent(gadget("modList"),          @GadgetModList())
-    BindGadgetEvent(gadget("modFilterString"),  @GadgetFilterMods(), #PB_EventType_Change)
-    BindGadgetEvent(gadget("modFilterReset"),   @GadgetResetFilterMods())
-    BindGadgetEvent(gadget("modFilterHidden"),  @GadgetFilterMods())
-    BindGadgetEvent(gadget("modFilterVanilla"), @GadgetFilterMods())
-    BindGadgetEvent(gadget("modFilterFolder"),  @GadgetFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("modInformation"),   @modInfomation())
+    BindGadgetEvent(gadget("modBackup"),        @modBackup())
+    BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
+    BindGadgetEvent(gadget("modList"),          @modList())
+    BindGadgetEvent(gadget("modFilterString"),  @modFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
+    BindGadgetEvent(gadget("modFilterHidden"),  @modFilterMods())
+    BindGadgetEvent(gadget("modFilterVanilla"), @modFilterMods())
+    BindGadgetEvent(gadget("modFilterFolder"),  @modFilterMods(), #PB_EventType_Change)
     
     
-    BindGadgetEvent(gadget("repoList"),         @GadgetRepoList())
-    BindGadgetEvent(gadget("repoList"),         @GadgetRepoListShowMenu(), #PB_EventType_RightClick)
-    BindGadgetEvent(gadget("repoFilterReset"),  @GadgetResetFilterRepository())
-    BindGadgetEvent(gadget("repoWebsite"),      @GadgetRepoWebsite())
-    BindGadgetEvent(gadget("repoInstall"),      @GadgetRepositoryDownload())
+    BindGadgetEvent(gadget("repoList"),         @repoList())
+    BindGadgetEvent(gadget("repoList"),         @repoListShowMenu(), #PB_EventType_RightClick)
+    BindGadgetEvent(gadget("repoFilterReset"),  @repoResetFilter())
+    BindGadgetEvent(gadget("repoWebsite"),      @repoWebsite())
+    BindGadgetEvent(gadget("repoInstall"),      @repoDownload())
     
     
     ; create shortcuts
@@ -793,7 +842,7 @@ Module windowMain
     ; Menu Events
     BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
     BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
-    BindMenuEvent(0, #MenuItem_AddMod, @MenuItemNewMod())
+    BindMenuEvent(0, #MenuItem_AddMod, @modAddNewMod())
     BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
@@ -837,11 +886,18 @@ Module windowMain
     
     ; right click menu on mod item
     MenuLibrary = CreatePopupImageMenu(#PB_Any)
+    MenuItem(#MenuItem_ModFolder, l("main","open_folder"))
     MenuItem(#MenuItem_Backup, l("main","backup"), ImageID(images::Images("icon_backup")))
     MenuItem(#MenuItem_Uninstall, l("main","uninstall"), ImageID(images::Images("no")))
+    MenuBar()
+    MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
+    MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
-    BindMenuEvent(MenuLibrary, #MenuItem_Backup, @GadgetButtonBackup())
-    BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @GadgetButtonUninstall())
+    BindMenuEvent(MenuLibrary, #MenuItem_ModFolder, @modOpenModFolder())
+    BindMenuEvent(MenuLibrary, #MenuItem_Backup, @modBackup())
+    BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
+    BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
+    BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
     
     
     ; Drag & Drop

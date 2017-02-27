@@ -87,17 +87,27 @@
     *file.file
   EndStructure
   
+  ; start repository loading
   Declare loadRepositoryList()
   
+  ; register functions
   Declare registerWindow(windowID)
   Declare registerListGadget(gadgetID, Array columns.column(1))
   Declare registerThumbGadget(gadgetID)
   Declare registerFilterGadgets(gadgetString, gadgetType, gadgetSource, gadgetInstalled)
+  
+  ; display fucntions
   Declare displayMods()
   Declare displayThumbnail(url$)
+  Declare selectModInList(*mod.mod)
+  Declare searchMod(name$, author$="")
+  
+  ; check functions
   Declare canDownload(*repoMod.mod)
   Declare downloadMod(*download.download)
+  Declare findModOnline(*mod.mods::mod)
   
-  Declare listRepositories(Map gadgets())
+  ; other
+  Declare listRepositories(Map gadgets()) ; used by settings window
   
 EndDeclareModule
