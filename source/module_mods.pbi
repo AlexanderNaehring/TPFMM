@@ -1331,11 +1331,16 @@ Module mods
     EndIf
     
     
-    
-    windowMain::stopGUIupdate() ; do not execute "updateGUI()" timer
-;     misc::StopWindowUpdate(WindowID(_window)) ; do not repaint window
+    windowMain::stopGUIupdate()
     HideGadget(_gadgetModList, #True)
     ListIcon::ClearListItems(_gadgetModList)
+    
+    Protected compareVersion
+    If OpenPreferences(main::settingsFile$)
+      compareVersion = ReadPreferenceInteger("compareVersion", #False)
+      ClosePreferences()
+    EndIf
+    
     
     ; count = number of individual parts of search string
     ; only if all parts are found, show result!
@@ -1457,8 +1462,17 @@ Module mods
           *repo_mod = \aux\repo_mod
           ; try to find indication that repo mod is newer than local version
           ; do not use "version" for now, as it may not be realiable
-          If (\aux\repoTimeChanged And *repo_mod\timechanged > \aux\repoTimeChanged) Or
-             (\aux\installDate And *repo_mod\timechanged > \aux\installDate)
+          Protected compare
+          If compareVersion And *repo_mod\version$
+            ; use alternative comparison method: version check
+            compare = Bool(*repo_mod\version$ And \version$ And ValD(\version$) < ValD(*repo_mod\version$))
+          Else
+            ; default compare: date check
+            compare =  Bool((\aux\repoTimeChanged And *repo_mod\timechanged > \aux\repoTimeChanged) Or
+                            (\aux\installDate And *repo_mod\timechanged > \aux\installDate))
+          EndIf
+          
+          If compare
             ; update available (most likely)
             SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($FF, $99, $00))
           Else
@@ -1475,7 +1489,6 @@ Module mods
     
     
     HideGadget(_gadgetModList, #False)
-;     misc::ContinueWindowUpdate(WindowID(_window))
     windowMain::stopGUIupdate(#False)
     
   EndProcedure
