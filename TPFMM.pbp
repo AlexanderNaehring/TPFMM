@@ -8,7 +8,7 @@
   <section name="data">
     <explorer view="..\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-02-28 15:08" user="naehring" host="MU732281"/>
+    <lastopen date="2017-03-02 11:50" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -51,7 +51,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_mods.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -75,7 +75,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_windowSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
   </section>
   <section name="targets">
@@ -84,11 +84,11 @@
       <outputfile value="bin\win32\TPFMM.exe"/>
       <executable value="bin\win32\TPFMM.exe"/>
       <directory value="source\"/>
-      <options unicode="1" thread="1" xpskin="1" user="1" debug="1"/>
+      <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <purifier enable="0" granularity="-12566464,-12566464,-12566464,-12566464"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="954"/>
-      <buildcount enable="1" value="17"/>
+      <compilecount enable="1" value="1034"/>
+      <buildcount enable="1" value="18"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
@@ -110,11 +110,11 @@
       <outputfile value="bin\lin64\TPFMM"/>
       <executable value="bin\lin64\TPFMM"/>
       <directory value="source\"/>
-      <options unicode="1" thread="1" xpskin="1" user="1"/>
+      <options unicode="1" thread="1" xpskin="1" user="1" onerror="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="952"/>
-      <buildcount enable="1" value="16"/>
+      <compilecount enable="1" value="1034"/>
+      <buildcount enable="1" value="18"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
