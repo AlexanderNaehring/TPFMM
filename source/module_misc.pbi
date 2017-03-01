@@ -51,6 +51,7 @@ DeclareModule misc
   Declare checkGameDirectory(Dir$)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+  Declare.s getOSVersion()
 EndDeclareModule
 
 Module misc
@@ -513,6 +514,57 @@ Module misc
     EndIf
     ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, high)
     
+  EndProcedure
+  
+  
+  Procedure.s getOSVersion()
+    Protected os$
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        Select OSVersion()
+          Case #PB_OS_Windows_XP
+            os$ = "Windows XP"
+          Case #PB_OS_Windows_Server_2003
+            os$ = "Windows Server 2003"
+          Case #PB_OS_Windows_Vista
+            os$ = "Windows Vista"
+          Case #PB_OS_Windows_Server_2008
+            os$ = "Windows Server 2008"
+          Case #PB_OS_Windows_7
+            os$ = "Windows 7"
+          Case #PB_OS_Windows_Server_2008_R2
+            os$ = "Windows Server 2008 R2"
+          Case #PB_OS_Windows_8
+            os$ = "Windows 8"
+          Case #PB_OS_Windows_Server_2012
+            os$ = "Windows Server 2012"
+          Case #PB_OS_Windows_8_1
+            os$ = "Windows 8.1"
+          Case #PB_OS_Windows_Server_2012_R2
+            os$ = "Windows Server 2012 R2"
+          Case #PB_OS_Windows_10
+            os$ = "Windows 10"
+          Default 
+            os$ = "Windows"
+        EndSelect
+      CompilerCase #PB_OS_Linux
+        Select OSVersion()
+          Case #PB_OS_Linux_2_2
+            os$ = "Linux 2.2"
+          Case #PB_OS_Linux_2_4
+            os$ = "Linux 2.4"
+          Case #PB_OS_Linux_2_6
+            os$ = "Linux 2.6"
+          Default
+            os$ = "Linux"
+        EndSelect
+      CompilerCase #PB_OS_MacOS
+        Select OSVersion()
+          Default 
+            os$ = "Mac OSX"
+        EndSelect
+    CompilerEndSelect
+    ProcedureReturn os$
   EndProcedure
   
 EndModule

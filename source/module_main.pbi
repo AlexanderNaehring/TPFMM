@@ -7,7 +7,8 @@
   Global gameDirectory$
   Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
-  Global WEBSITE$ = "https://www.transportfever.net/"
+  Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/6886-TPFMM-Transport-Fever-Mod-Manager/"
+  Global WEBSITE_DOWNLOAD$ = "https://www.transportfever.net/"
   
   #PORT = 14123
   
@@ -32,7 +33,42 @@ XIncludeFile "module_repository.pbi"
 Module main
   
   Procedure handleError()
-    MessageRequester("ERROR", ErrorMessage(ErrorCode()), #PB_MessageRequester_Error)
+    Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss", Date())
+    Protected file, file$ = "crash/dump-"+date$+".txt"
+    CreateDirectory("crash")
+    
+    
+    file = CreateFile(#PB_Any, file$, #PB_File_NoBuffering)
+    
+    ; Error and System Information
+    WriteStringN(file, "Please provide the following information at")
+    WriteStringN(file, main::WEBSITE$)
+    WriteStringN(file, "")
+    WriteStringN(file, "################################################################################")
+    WriteStringN(file, "ERROR @ "+date$)
+    WriteStringN(file, "Error #"+ErrorCode()+" at address "+ErrorAddress()+">"+ErrorTargetAddress()+" in <"+ErrorFile()+"> line "+ErrorLine())
+    WriteStringN(file, ErrorMessage(ErrorCode()))
+    WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" ("+CountCPUs()+" CPUs)")
+    WriteStringN(file, "Available Physical Memory: "+Str(MemoryStatus(#PB_System_FreePhysical)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalPhysical)/1024/1024)+" MiB")
+    If MemoryStatus(#PB_System_TotalVirtual) > 0
+      WriteStringN(file, "Available Virtual Memory:  "+Str(MemoryStatus(#PB_System_FreeVirtual)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalVirtual)/1024/1024)+" MiB")
+    EndIf
+    If MemoryStatus(#PB_System_TotalSwap) > 0
+      WriteStringN(file, "Available Swap:            "+Str(MemoryStatus(#PB_System_FreeSwap)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalSwap)/1024/1024)+" MiB")
+    EndIf
+    WriteStringN(file, "################################################################################")
+    WriteStringN(file, "")
+    
+    
+    ; copy log
+    WriteStringN(file, "log:")
+    WriteString(file, debugger::getLog())
+    
+    ; close file
+    CloseFile(file)
+    
+    MessageRequester("ERROR", ErrorMessage(ErrorCode())+#CRLF$+#CRLF$+"created "+GetFilePart(file$), #PB_MessageRequester_Error)
+    misc::openLink(file$)
     End
   EndProcedure
   
@@ -263,7 +299,7 @@ Module main
     Debug "close main window"
     CloseWindow(windowMain::window)
     
-    Debug "Shutdown now"
+    debugger::add("Goodbye!")
     End
   EndProcedure
   
