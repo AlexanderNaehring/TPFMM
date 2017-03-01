@@ -307,7 +307,6 @@ Module mods
     
     
     If FileSize(luaFile$) <= 0
-      debugger::add("some problem here: no lua file present?")
       ; maybe write a lua file?
     EndIf
   EndProcedure

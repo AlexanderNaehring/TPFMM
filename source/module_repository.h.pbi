@@ -7,8 +7,9 @@
   ; mod strucutres
   
   Structure file
-    filename$
-    url$
+    filename$         ; 
+    url$              ; url to downlaod this file
+    timechanged.i     ; last time this file was changed
   EndStructure
   
   Structure mod
