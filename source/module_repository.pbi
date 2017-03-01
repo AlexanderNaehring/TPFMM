@@ -256,8 +256,8 @@ Module repository
       ProcedureReturn #False
     EndIf
     
-    ; map access is threadsafe - no need for mutex here
-    If images(file$) And IsImage(images(file$))
+    
+    If FindMapElement(images(), file$) And images(file$) And IsImage(images(file$))
       ; image already loaded in memory
       image = images(file$)
     Else
@@ -450,66 +450,8 @@ Module repository
       misc::openLink(main::WEBSITE$)
       main::exit()
     EndIf
-    
   EndProcedure
   
-;   
-;   Procedure updateOpenWebsite()
-;     
-;   EndProcedure
-;   
-;   Procedure updateWindowClose()
-;     DisableWindow(_windowMain, #False)
-;     If _windowUpdate And IsWindow(_windowUpdate)
-;       HideWindow(_windowUpdate, #True)
-;     EndIf
-;     SetActiveWindow(_windowMain)
-;   EndProcedure
-;   
-;   Procedure updateWindowShow()
-;     
-;     debugger::add("repository::updateWindowShow()")
-;     If _windowUpdate And IsWindow(_windowUpdate)
-;       HideWindow(_windowUpdate, #False, #PB_Window_WindowCentered)
-;       DisableWindow(_windowMain, #True)
-;     EndIf
-;   EndProcedure
-;   
-;   Procedure updateWindowCreate(parentWindow)
-;     DataSection
-;       dataDialogXML:
-;       IncludeBinary "dialogs/update.xml"
-;       dataDialogXMLend:
-;     EndDataSection
-;     
-;     ; open dialog
-;     Protected xml, dialog
-;     
-;     xml = CatchXML(#PB_Any, ?dataDialogXML, ?dataDialogXMLend - ?dataDialogXML)
-;     If Not xml Or XMLStatus(xml) <> #PB_XML_Success
-;       debugger::add("repository::showUpdateWindow() - Error: could not read xml")
-;     EndIf
-;     
-;     dialog = CreateDialog(#PB_Any)
-;      
-;     If Not OpenXMLDialog(dialog, xml, "update", #PB_Any, #PB_Any, #PB_Any, #PB_Any, WindowID(parentWindow))
-;       debugger::add("repository::showUpdateWindow() - Error: could not open update window")
-;     EndIf
-;     
-;     _windowUpdate = DialogWindow(dialog)
-;     
-;     
-;     ; problem: Linux cannot unhide window from thread -> send event to main window which then will show the update window.
-;     ; bind event to main window: user event is send when update window should be shown. main window received and is passed to bound function
-;     ; BindEvent(#EventShowUpdate, @updateWindowShow(), parentWindow)
-;     
-;     BindEvent(#PB_Event_CloseWindow, @updateWindowClose(), _windowUpdate)
-; ;     BindGadgetEvent(DialogGadget(dialog, "updateWebsite"), @updateOpenWebsite())
-;     
-;     ; has to be created by main thread?
-;     
-;   EndProcedure
-;   
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------

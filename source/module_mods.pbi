@@ -14,6 +14,7 @@ Module mods
   EndStructure
   
   Global NewMap *mods.mod()
+  Global mutexMods = CreateMutex()
   Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
   
   Enumeration
@@ -340,11 +341,13 @@ Module mods
     *mod\tpf_id$    = id$
     *mod\aux\type$  = type$
     
-    If FindMapElement(*mods(), id$)
+    LockMutex(mutexMods)
+    If FindMapElement(*mods(), id$) 
       debugger::Add("mods::addToMap() - WARNING: mod {"+*mod\tpf_id$+"} already in hash table -> delete old mod and overwrite with new")
       FreeStructure(*mods())
       DeleteMapElement(*mods(), *mod\tpf_id$)
     EndIf
+    UnlockMutex(mutexMods)
     
     *mods(id$) = *mod ; add (or overwrite) mod to/in map
     
@@ -386,6 +389,7 @@ Module mods
     WriteString(file, "List of Modifications", #PB_UTF8)
     WriteString(file, "</h1><table><tr><th>Modification</th><th>Version</th><th>Author</th></tr>", #PB_UTF8)
     
+    LockMutex(mutexMods)
     ForEach *mods()
       *modinfo = *mods()
       With *modinfo
@@ -415,6 +419,7 @@ Module mods
           WriteString(file, "<tr><td>" + name$ + "</td><td>" + \version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
       EndWith
     Next
+    UnlockMutex(mutexMods)
     
     WriteString(file, "</table>", #PB_UTF8)
     WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TPFMM</a> "+main::VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='https://www.transportfevermods.com/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
@@ -436,6 +441,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    LockMutex(mutexMods)
     ForEach *mods()
       *modinfo = *mods()
       With *modinfo
@@ -450,6 +456,7 @@ Module mods
         WriteStringN(file, \name$ + Chr(9) + "v" + \version$ + Chr(9) + authors$, #PB_UTF8)
       EndWith
     Next
+    UnlockMutex(mutexMods)
     WriteStringN(file, "", #PB_UTF8)
     WriteString(file, "Created with TPFMM "+main::VERSION$, #PB_UTF8)
     CloseFile(file)
@@ -586,13 +593,16 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    LockMutex(mutexMods)
     If FindMapElement(*mods(), id$)
       *mod = *mods()
 ;       debugger::Add("mods::free() - free mod "+Str(*mod)+" ("+id$+")")
       DeleteMapElement(*mods())
       FreeStructure(*mod)
+      UnlockMutex(mutexMods)
       ProcedureReturn #True
     EndIf
+    UnlockMutex(mutexMods)
     
     debugger::Add("mods::freeMod() - WARNING: could not find mod {"+id$+"} in hash table")
     ProcedureReturn #False
@@ -601,6 +611,7 @@ Module mods
   
   Procedure freeAll()
     debugger::Add("mods::freeAll()")
+    ; cannot lock mutex here, is locked in "free"
     ForEach *mods()
       mods::free(*mods())
     Next

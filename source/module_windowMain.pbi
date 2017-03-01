@@ -247,6 +247,7 @@ Module windowMain
   EndProcedure
   
   Procedure loadRepositoryThread(*dummy) ; first load
+    Delay(1000)
     repository::loadRepositoryList()
     repository::displayMods() ; initially fill list
     mods::displayMods() ; update mod list to show remote links
@@ -937,6 +938,9 @@ Module windowMain
     repository::registerThumbGadget(gadget("repoPreviewImage"))
     repository::registerFilterGadgets(gadget("repoFilterString"), gadget("repoFilterTypes"), gadget("repoFilterSources"), gadget("repoFilterInstalled"))
     
+    ; move @loadRepositoryThread to mods -> load repo after all mods have been loaded. 
+    ; common error: mods and repository access the "mods" list simultaneously...
+    ; use mutex for all list access...
     CreateThread(@loadRepositoryThread(), 0)
     
     
