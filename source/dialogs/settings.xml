@@ -19,12 +19,15 @@
               <frame name='miscFrame' text='Miscellaneous'>
                 <vbox expand='no'>
                   <checkbox name='miscAutoBackup' text='Automatically backup mods after installation' />
+                  <checkbox name='miscVersionCheck' />
 
                 </vbox>
               </frame>
-              <frame name='languageFrame' text='Language'>
-                <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
-              </frame>
+              <vbox expand='no'>
+                <frame name='languageFrame' text='Language'>
+                  <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+                </frame>
+              </vbox>
             </hbox>
 
           </vbox>

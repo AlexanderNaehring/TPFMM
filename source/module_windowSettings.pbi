@@ -123,6 +123,7 @@ Module windowSettings
       restart = #True
     EndIf
     WritePreferenceString("locale", locale$)
+    WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     ClosePreferences()
     
     If restart
@@ -231,6 +232,7 @@ Module windowSettings
     
     getGadget("miscFrame")
     getGadget("miscAutoBackup")
+    getGadget("miscVersionCheck")
     
     getGadget("languageFrame")
     getGadget("languageSelection")
@@ -270,6 +272,8 @@ Module windowSettings
     SetGadgetText(gadget("miscFrame"),              l("settings","other"))
     SetGadgetText(gadget("miscAutoBackup"),         l("settings","backup"))
     GadgetToolTip(gadget("miscAutoBackup"),         l("settings","backup_tip"))
+    SetGadgetText(gadget("miscVersionCheck"),       l("settings","versioncheck"))
+    GadgetToolTip(gadget("miscVersionCheck"),       l("settings","versioncheck_tip"))
     
     SetGadgetText(gadget("languageFrame"),          l("settings","locale"))
     SetGadgetText(gadget("languageSelection"),      "")
@@ -310,9 +314,10 @@ Module windowSettings
       SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
       SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
       locale$ = ReadPreferenceString("locale", "en")
+      SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #False))
       ClosePreferences()
     EndIf
-  
+    
     If GetGadgetText(gadget("installationPath")) = ""
       GadgetButtonAutodetect()
     EndIf
