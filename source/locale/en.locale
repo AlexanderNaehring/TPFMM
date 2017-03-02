@@ -28,7 +28,6 @@ author          = Author
 category        = Category
 version         = Version
 new_mod         = Add New Mod
-download        = Download Mods
 start_tf        = Start Transport Fever
 management      = Mod Management
 install         = Lade und installiere Mod
@@ -49,6 +48,7 @@ open_folder     = Open mod folder
 select_files    = Select Files
 select_files_text = Which files should be downloaded and installed?
 cancel          = Cancel
+download        = Download
 
 [settings]
 title           = TPFMM Settings
@@ -82,31 +82,6 @@ repository_remove       = Remove selected repository
 repository_name         = Name:
 repository_curator      = Curator:
 repository_description  = Description:
-
-[update]
-title   = Update TPFMM
-update  = A new version of TPFMM is available.\nDo you want to access the download page?
-current = You already have the newest version of TPFMM.
-failed  = Failed to retrieve version info from server.
-
-[updater]
-title         = Update TPFMM
-channel       = Release Channel
-check         = Check for new version
-download      = Download
-checking      = Checking for new version...
-retrieved     = Retrieved version information
-errorchannel  = Error: No release channels found
-errorjson     = Error parsing json
-warningtesting  = Testing version may have bugs
-current       = Used Version
-information   = Version Information
-version       = Version:
-filename      = Filename:
-date          = Release Date:
-newversion    = New version available
-nonewversion  = No new version available
-errordownload = Failed to retrieve info from server
 
 [management]
 install       = Add '{name}' to Transport Fever
