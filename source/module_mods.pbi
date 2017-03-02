@@ -247,6 +247,11 @@ Module mods
   Procedure loadInfo(*mod.mod) ; load all (missing) information for this mod
                                ; first: read mod.lua if stored information is not up to date
                                ; second: update all volatile information (localized tags, etc...)
+    If Not *mod
+      debugger::add("mods::loadInfo() - Error: passed null pointer")
+      ProcedureReturn
+    EndIf
+    
     
     Protected id$ = *mod\tpf_id$
     Protected modFolder$, luaFile$
