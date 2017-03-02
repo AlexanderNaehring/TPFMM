@@ -270,9 +270,9 @@ Module windowMain
         Debug "Working Directory Changed"
         LastDir$ = main::gameDirectory$
         If misc::checkGameDirectory(main::gameDirectory$) = 0
-          main::ready = #True
+          ; ok
         Else
-          main::ready = #False  ; flag for mod management
+          main::gameDirectory$ = ""
           windowSettings::show()
         EndIf
       EndIf
@@ -285,7 +285,7 @@ Module windowMain
   ;- MENU
   
   Procedure MenuItemHomepage()
-    misc::openLink("https://www.transportfevermods.com/") ; Download Page TFMM (Train-Fever.net)
+    misc::openLink(main::WEBSITE$) ; Download Page TFMM (Train-Fever.net)
   EndProcedure
   
   Procedure MenuItemLicense()

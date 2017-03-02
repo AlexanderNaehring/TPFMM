@@ -36,10 +36,7 @@ Module windowSettings
     SetActiveWindow(_parentW)
     
     If misc::checkGameDirectory(main::gameDirectory$) <> 0
-      main::ready = #False
-      End
-      ; TODO  - call exit routine (not available currently)
-      ; exit()
+      main::exit()
     EndIf
     
   EndProcedure

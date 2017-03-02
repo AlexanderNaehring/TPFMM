@@ -3,12 +3,10 @@
   
   Global _DEBUG     = #True ; write debug messages to log file
   Global _TESTMODE  = #False
-  Global ready      = #False
   Global gameDirectory$
   Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
   Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/6886-TPFMM-Transport-Fever-Mod-Manager/"
-  Global WEBSITE_DOWNLOAD$ = "https://www.transportfever.net/"
   
   #PORT = 14123
   
