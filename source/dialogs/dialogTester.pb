@@ -1,7 +1,7 @@
 ﻿EnableExplicit
 
-Define file$   = "settings"
-Define dialog$ = "settings"
+Define file$   = "main"
+Define dialog$ = "selectFiles"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False

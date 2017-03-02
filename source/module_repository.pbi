@@ -339,7 +339,7 @@ Module repository
     *file = *download\file
     FreeStructure(*download)
     
-    If canDownload(*mod) <> *file
+    If Not canDownload(*mod)
       ProcedureReturn #False
     EndIf
     
@@ -1070,17 +1070,23 @@ Module repository
       Next
     EndIf
     
-    If nFiles = 1
+    If nFiles > 0
       ; start download of file and install automatically
-      ProcedureReturn *file
+      ProcedureReturn #True
     EndIf
-    ProcedureReturn #Null
+    ProcedureReturn #False
   EndProcedure
   
   Procedure downloadMod(*download.download)
     debugger::add("repository::downloadMod()")
+    Protected *buffer
     
-    CreateThread(@downloadModThread(), *download)
+    ; copy structure so that data stays available in thread
+    *buffer = AllocateStructure(download) ; memory is freed in thread function!
+    CopyStructure(*download, *buffer, download)
+    
+    ; call thread
+    CreateThread(@downloadModThread(), *buffer)
   EndProcedure
   
   Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod

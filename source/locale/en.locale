@@ -46,6 +46,9 @@ search_online   = Search mod in repository
 show_online     = Show mod in repository
 load_update     = Download and install current version
 open_folder     = Open mod folder
+select_files    = Select Files
+select_files_text = Which files should be downloaded and installed?
+cancel          = Cancel
 
 [settings]
 title           = TPFMM Settings
@@ -153,7 +156,7 @@ save      = Save
 all_types   = All Types
 all_sources = All Sources
 more_author = Show all mods by {author}
-installed_all = Installed or installed
+installed_all = Installed or not installed
 installed_yes = Show only installed
 installed_no  = Show only not installed
 update        = Update

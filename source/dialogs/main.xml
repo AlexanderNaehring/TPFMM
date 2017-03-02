@@ -69,4 +69,18 @@
       <singlebox id='placeholder' margin='bottom:0' invisible='yes'></singlebox>
     </vbox>
   </window>
+  <window id='#PB_Any' name='selectFiles' text='Select File' minwidth='300' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
+    <vbox expand='no'>
+      <text name='selectText' text='Select the files to install' />
+
+        <vbox expand='no' id='selectBox'>
+        </vbox>
+
+      <hbox expand='equal'>
+        <button name='selectCancel' text='cancel' />
+        <empty />
+        <button name='selectDownload' text='Download' />
+      </hbox>
+    </vbox>
+  </window>
 </dialogs>

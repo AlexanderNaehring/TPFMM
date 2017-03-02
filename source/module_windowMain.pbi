@@ -48,6 +48,8 @@ Module windowMain
     #MenuItem_ModFolder
   EndEnumeration
   
+  Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
+  
   ;- Gadgets
   Global NewMap gadget()
   
@@ -547,11 +549,61 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Global dialogSelectFiles
+  Global NewMap repoSelectFilesGadget()
+  
+  Procedure repoSelectFilesClose()
+    DisableWindow(window, #False)
+    SetActiveWindow(window)
+    If dialogSelectFiles And IsDialog(dialogSelectFiles)
+      CloseWindow(DialogWindow(dialogSelectFiles))
+      FreeDialog(dialogSelectFiles)
+    EndIf
+  EndProcedure
+  
+  Procedure repoSelectFilesDownload()
+    Protected *file.repository::file
+    Protected *repo_mod.repository::mod
+    Protected download.repository::download
+    If dialogSelectFiles And IsDialog(dialogSelectFiles)
+      ; find selected 
+    ForEach repoSelectFilesGadget()
+      If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
+        If GetGadgetState(repoSelectFilesGadget()) ; selected?
+                                                   ; init download
+          
+          *file = GetGadgetData(repoSelectFilesGadget())
+          *repo_mod = GetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"))
+          
+          download\mod = *repo_mod
+          download\file = *file
+          repository::downloadMod(download)
+          
+        EndIf
+      EndIf
+    Next
+    EndIf
+    repoSelectFilesClose()
+  EndProcedure
+  
+  Procedure repoSelectFilesUpdateButtons()
+    ForEach repoSelectFilesGadget()
+      If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
+        If GetGadgetState(repoSelectFilesGadget())
+          DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #False)
+          ProcedureReturn #True
+        EndIf
+      EndIf
+    Next
+    DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #True)
+    ProcedureReturn #False
+  EndProcedure
+  
   Procedure repoDownload()
     ; download and install mod from source
     Protected item, url$
-    Protected *mod.repository::mod, *file.repository::file
-    Protected *download.repository::download
+    Protected *repo_mod.repository::mod, *file.repository::file
+    Protected NewList files.repository::file()
     
     ; currently: only one file at a time! -> only get first selected
     
@@ -561,25 +613,70 @@ Module windowMain
       ProcedureReturn #False
     EndIf
     
-    *mod = GetGadgetItemData(gadget("repoList"), item)
-    If Not *mod
+    *repo_mod = GetGadgetItemData(gadget("repoList"), item)
+    If Not *repo_mod
       ProcedureReturn #False
     EndIf
     
-    *file = repository::canDownload(*mod)
-    
-    If *file
-      ; start download of file and install automatically
-      *download = AllocateStructure(repository::download)
-      *download\mod = *mod
-      *download\file = *file
-      repository::downloadMod(*download)
-    Else ; no download url or multiple files
-      If *mod\url$
-        misc::openLink(*mod\url$) ; open in browser
-      EndIf
+    ; check if download is available!
+    If Not repository::canDownload(*repo_mod)
+      ProcedureReturn
     EndIf
     
+    ; manipulate xml before opening dialog
+    Protected *nodeBase, *node
+    If IsXML(xml)
+      *nodeBase = XMLNodeFromID(xml, "selectBox")
+      If *nodeBase
+        ; clear all previous nodes in selectBox
+        *node = ChildXMLNode(*nodeBase)
+        While *node
+          DeleteXMLNode(*node)
+          *node = ChildXMLNode(*nodeBase)
+        Wend
+        ; selectBox is now empty
+        
+        ; add a checkbox for each file in mod
+        ForEach *repo_mod\files()
+          *node = CreateXMLNode(*nodeBase, "checkbox", -1)
+          If *node
+            SetXMLAttribute(*node, "name", Str(*repo_mod\files()))
+            SetXMLAttribute(*node, "text", *repo_mod\files()\filename$)
+          EndIf
+        Next
+        
+        ; show window now
+        dialogSelectFiles = CreateDialog(#PB_Any)
+        If dialogSelectFiles And OpenXMLDialog(dialogSelectFiles, xml, "selectFiles")
+          
+          ; get gadgets
+          ClearMap(repoSelectFilesGadget())
+          ForEach *repo_mod\files()
+            *file = *repo_mod\files()
+            repoSelectFilesGadget(Str(*file)) = DialogGadget(dialogSelectFiles, Str(*file))
+            SetGadgetData(repoSelectFilesGadget(Str(*file)), *file)
+            BindGadgetEvent(repoSelectFilesGadget(Str(*file)), @repoSelectFilesUpdateButtons())
+          Next
+          
+          SetWindowTitle(DialogWindow(dialogSelectFiles), locale::l("main","select_files"))
+          SetGadgetText(DialogGadget(dialogSelectFiles, "selectText"), locale::l("main","select_files_text"))
+          SetGadgetText(DialogGadget(dialogSelectFiles, "selectCancel"), locale::l("main","cancel"))
+          SetGadgetText(DialogGadget(dialogSelectFiles, "selectDownload"), locale::l("main","download"))
+          
+          BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectCancel"), @repoSelectFilesClose())
+          BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectDownload"), @repoSelectFilesDownload())
+          SetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"), *repo_mod)
+          
+          DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #True)
+          
+          BindEvent(#PB_Event_CloseWindow, @repoSelectFilesClose(), DialogWindow(dialogSelectFiles))
+          
+          DisableWindow(window, #True)
+          ProcedureReturn #True
+        EndIf
+      EndIf
+    EndIf
+    ProcedureReturn #False
   EndProcedure
   
   Procedure searchModOnline()
@@ -716,7 +813,6 @@ Module windowMain
     EndDataSection
     
     ; open dialog
-    Protected xml
     xml = CatchXML(#PB_Any, ?mainDialogXML, ?mainDialogXMLend - ?mainDialogXML)
     If Not xml Or XMLStatus(xml) <> #PB_XML_Success
       MessageRequester("Critical Error", "Could not read window definition!", #PB_MessageRequester_Error)
