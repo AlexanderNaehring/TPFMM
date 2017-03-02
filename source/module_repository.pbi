@@ -334,7 +334,12 @@ Module repository
       ProcedureReturn #False
     EndIf
     
-    If canDownload(*download\mod) <> *download\file
+    Protected *mod.mod, *file.file
+    *mod = *download\mod
+    *file = *download\file
+    FreeStructure(*download)
+    
+    If canDownload(*mod) <> *file
       ProcedureReturn #False
     EndIf
     
@@ -346,28 +351,47 @@ Module repository
     running = #True
     windowMain::progressDownload(0)
     
+    ; start process...
     Protected connection, size, downloaded, progress, finish
     Protected target$, file$, header$
     Protected json
-    Static regExp
-    If Not regExp
-      regExp = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
+    Protected HTTPstatus
+    Static regExpContentLength, regExpHTTPstatus
+    If Not regExpContentLength
+      regExpContentLength = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
+    EndIf
+    If Not regExpHTTPstatus
+      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/1.\d (\d\d\d)")
     EndIf
     
-    If *download\file\filename$ = ""
-      *download\file\filename$ = *download\mod\source$+"-"+*download\mod\id+".zip"
+    
+    If *file\filename$ = ""
+      *file\filename$ = *mod\source$+"-"+*mod\id+".zip"
     EndIf
+    
     target$ = misc::Path(main::gameDirectory$ + "/TPFMM/download/")
     misc::CreateDirectoryAll(target$)
 ;     RunProgram(target$)
-    file$   = target$ + *download\file\filename$
+    file$   = target$ + *file\filename$
     
-    debugger::add("repository::downloadModThread() - {"+*download\file\url$+"}")
-    header$ = GetHTTPHeader(*download\file\url$)
+    debugger::add("repository::downloadModThread() - {"+*file\url$+"}")
+    header$ = GetHTTPHeader(*file\url$)
     If header$
-      ExamineRegularExpression(regExp, header$)
-      If NextRegularExpressionMatch(regExp)
-        size = Val(RegularExpressionGroup(regExp, 1))
+      
+      ExamineRegularExpression(regExpHTTPstatus, header$)
+      If NextRegularExpressionMatch(regExpHTTPstatus)
+        HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
+        If HTTPstatus = 404
+          debugger::add("repository::downloadModThread() - server response: 404 File Not Found")
+          windowMain::progressDownload(-2)
+          running = #False
+          ProcedureReturn #False
+        EndIf
+      EndIf
+      
+      ExamineRegularExpression(regExpContentLength, header$)
+      If NextRegularExpressionMatch(regExpContentLength)
+        size = Val(RegularExpressionGroup(regExpContentLength, 1))
       EndIf
       If size
         
@@ -376,7 +400,7 @@ Module repository
       EndIf
     EndIf
       
-    connection = ReceiveHTTPFile(*download\file\url$, file$, #PB_HTTP_Asynchronous)
+    connection = ReceiveHTTPFile(*file\url$, file$, #PB_HTTP_Asynchronous)
     Repeat
       progress = HTTPProgress(connection)
       Select progress
@@ -384,10 +408,10 @@ Module repository
           downloaded = FinishHTTP(connection)
           finish = #True
         Case #PB_Http_Failed
-          debugger::add("repository::downloadModThread() - Error: download failed {"+*download\file\url$+"}")
+          debugger::add("repository::downloadModThread() - Error: download failed {"+*file\url$+"}")
           finish = #True
         Case #PB_Http_Aborted
-          debugger::add("repository::downloadModThread() - Error: download aborted {"+*download\file\url$+"}")
+          debugger::add("repository::downloadModThread() - Error: download aborted {"+*file\url$+"}")
           finish = #True
         Default 
           ; progess = bytes receiuved
@@ -408,8 +432,8 @@ Module repository
     If Not downloaded
       ; cleanup downlaod folder
       debugger::add("repository::downloadModThread() - download failed")
+      windowMain::progressDownload(-2)
       DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
-      FreeStructure(*download)
       running = #False
       ProcedureReturn #False
     EndIf
@@ -419,13 +443,10 @@ Module repository
     ; add some meta data...
     json = CreateJSON(#PB_Any)
     If json
-      InsertJSONStructure(JSONValue(json), *download\mod, mod)
+      InsertJSONStructure(JSONValue(json), *mod, mod)
       SaveJSON(json, file$+".meta", #PB_JSON_PrettyPrint)
       FreeJSON(json)
     EndIf
-    
-    ; free download structure
-    FreeStructure(*download)
     
     queue::add(queue::#QueueActionInstall, file$)
     running = #False
@@ -953,7 +974,7 @@ Module repository
       EndIf
       If *base_address\installed
         SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
-        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_BackColor, RGB($F0, $F0, $F0))
+;         SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_BackColor, RGB($F0, $F0, $F0))
       EndIf
       If *selectedMod And *selectedMod = *base_address
         SetGadgetState(_listGadgetID, item)
@@ -1040,14 +1061,14 @@ Module repository
     Protected *file.file
     
     ; currently, only mods with single file can be downloaded automatically
-    ForEach *repoMod\files()
-      If *repoMod\files()\url$
-        If *repoMod\type$ = "mod"
+    If *repoMod\type$ = "mod"
+      ForEach *repoMod\files()
+        If *repoMod\files()\url$
           nFiles + 1
           *file = *repoMod\files()
         EndIf
-      EndIf
-    Next
+      Next
+    EndIf
     
     If nFiles = 1
       ; start download of file and install automatically

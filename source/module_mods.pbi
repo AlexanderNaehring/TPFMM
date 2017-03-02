@@ -623,6 +623,8 @@ Module mods
   Procedure loadList(*dummy) ; load mod list from file and scan for installed mods
     debugger::Add("mods::loadList("+main::gameDirectory$+")")
     
+    isLoaded = #False
+    
     Protected json, NewMap mods_json.mod(), *mod.mod
     Protected dir, entry$
     Protected NewMap scanner.scanner()
@@ -815,6 +817,7 @@ Module mods
     displayMods()
     displayDLCs()
     
+    isLoaded = #True
   EndProcedure
   
   Procedure saveList()

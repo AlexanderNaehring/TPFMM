@@ -247,7 +247,10 @@ Module windowMain
   EndProcedure
   
   Procedure loadRepositoryThread(*dummy) ; first load
-    Delay(1000)
+    While Not mods::isLoaded
+      ; do not start repository update while mods are loading
+      Delay(100)
+    Wend
     repository::loadRepositoryList()
     repository::displayMods() ; initially fill list
     mods::displayMods() ; update mod list to show remote links
@@ -688,6 +691,8 @@ Module windowMain
       text$ = "Download started"
     ElseIf percent = 1
       text$ = "Download finished"
+    ElseIf percent = -2
+      text$ = "Download failed"
     Else
       text$ = "Download "+Str(percent*100)+"%"
     EndIf

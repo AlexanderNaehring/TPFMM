@@ -60,6 +60,8 @@
     aux.aux                 ; auxiliary information
   EndStructure
   
+  Global isLoaded.b
+  
   Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
   
   Declare init()    ; allocate new mod structure, return *mod
