@@ -462,11 +462,17 @@ Module windowMain
   EndProcedure
   
   Procedure modShowBackupFolder()
-    misc::openLink(main::gameDirectory$+"TPFMM/backups/")
+    If main::gameDirectory$
+      misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/backups/")
+      misc::openLink(main::gameDirectory$+"TPFMM/backups/")
+    EndIf
   EndProcedure
   
   Procedure modShowDownloadFolder()
-    misc::openLink(main::gameDirectory$+"TPFMM/download/")
+    If main::gameDirectory$
+      misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/download/")
+      misc::openLink(main::gameDirectory$+"TPFMM/download/")
+    EndIf
   EndProcedure
   
   Procedure repoList()
