@@ -1,80 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Linux - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.51 (Windows - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="TPFMM"/>
     <comment>Transport Fever Mod Manager</comment>
   </section>
   <section name="data">
-    <explorer view="../" pattern="0"/>
+    <explorer view="..\" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-03-02 18:16" user="alexander" host="mint-PC"/>
+    <lastopen date="2017-03-02 17:40" user="alexa" host="RIGEL"/>
   </section>
   <section name="files">
-    <file name="source/main.pb">
+    <file name="source\main.pb">
       <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_aes.pbi">
+    <file name="source\module_aes.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_archive.pbi">
+    <file name="source\module_archive.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_debugger.pbi">
+    <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_images.pbi">
+    <file name="source\module_images.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_instance.pbi">
+    <file name="source\module_instance.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_ListIcon.pbi">
+    <file name="source\module_ListIcon.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_locale.pbi">
+    <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_lua.pbi">
+    <file name="source\module_lua.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_lua_extern.pbi">
+    <file name="source\module_lua_extern.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_luaParser.pbi">
+    <file name="source\module_luaParser.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_main.pbi">
+    <file name="source\module_main.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_maps.pbi">
+    <file name="source\module_maps.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_misc.pbi">
+    <file name="source\module_misc.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_mods.h.pbi">
+    <file name="source\module_mods.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_mods.pbi">
+    <file name="source\module_mods.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_queue.pbi">
+    <file name="source\module_queue.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_registry.pbi">
+    <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source/module_repository.h.pbi">
+    <file name="source\module_repository.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_repository.pbi">
+    <file name="source\module_repository.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_windowMain.pbi">
+    <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
-    <file name="source/module_windowSettings.pbi">
+    <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
   </section>
@@ -82,12 +82,12 @@
     <target name="win32" enabled="1" default="1">
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\win32\TPFMM.exe"/>
-      <executable value="bin/win32/TPFMM.exe"/>
+      <executable value="bin\win32\TPFMM.exe"/>
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <purifier enable="0" granularity="-12566464,-12566464,-12566464,-12566464"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
-      <compilecount enable="1" value="1075"/>
+      <compilecount enable="1" value="1078"/>
       <buildcount enable="1" value="19"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
@@ -108,12 +108,12 @@
     <target name="lin64" enabled="1" default="0">
       <inputfile value="source\main.pb"/>
       <outputfile value="bin\lin64\TPFMM"/>
-      <executable value="bin/lin64/TPFMM"/>
+      <executable value="bin\lin64\TPFMM"/>
       <directory value="source\"/>
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="1075"/>
+      <compilecount enable="1" value="1078"/>
       <buildcount enable="1" value="19"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

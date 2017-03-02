@@ -669,7 +669,7 @@ Module windowMain
         
         ; show window now
         dialogSelectFiles = CreateDialog(#PB_Any)
-        If dialogSelectFiles And OpenXMLDialog(dialogSelectFiles, xml, "selectFiles")
+        If dialogSelectFiles And OpenXMLDialog(dialogSelectFiles, xml, "selectFiles", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
           
           ; get gadgets
           ClearMap(repoSelectFilesGadget())
@@ -686,6 +686,9 @@ Module windowMain
           SetGadgetText(DialogGadget(dialogSelectFiles, "selectText"), locale::l("main","select_files_text"))
           SetGadgetText(DialogGadget(dialogSelectFiles, "selectCancel"), locale::l("main","cancel"))
           SetGadgetText(DialogGadget(dialogSelectFiles, "selectDownload"), locale::l("main","download"))
+          
+          RefreshDialog(dialogSelectFiles)
+          HideWindow(DialogWindow(dialogSelectFiles), #False, #PB_Window_WindowCentered)
           
           BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectCancel"), @repoSelectFilesClose())
           BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectDownload"), @repoSelectFilesDownload())
