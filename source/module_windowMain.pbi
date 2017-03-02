@@ -214,7 +214,7 @@ Module windowMain
       
       If GetGadgetItemState(gadget("repoList"), i) & #PB_ListIcon_Selected
         numSelected + 1
-        If repository::canDownload(*repoMod)
+        If repository::canDownloadMod(*repoMod)
           numCanDownload + 1
         EndIf
       EndIf
@@ -514,7 +514,7 @@ Module windowMain
       Else
         MenuItem(5000, locale::l("main", "install"))
       EndIf
-      If Not repository::canDownload(*repoMod)
+      If Not repository::canDownloadMod(*repoMod)
         DisableMenuItem(menuID, 5000, #True)
       EndIf
       BindMenuEvent(menuID, 5000, @repoDownload())
@@ -607,9 +607,9 @@ Module windowMain
   
   Procedure repoDownload()
     ; download and install mod from source
-    Protected item, url$
+    Protected item, url$, nFiles
     Protected *repo_mod.repository::mod, *file.repository::file
-    Protected NewList files.repository::file()
+    Protected download.repository::download
     
     ; currently: only one file at a time! -> only get first selected
     
@@ -625,9 +625,25 @@ Module windowMain
     EndIf
     
     ; check if download is available!
-    If Not repository::canDownload(*repo_mod)
+    nFiles = repository::canDownloadMod(*repo_mod)
+    If Not nFiles
       ProcedureReturn
     EndIf
+    
+    ; single file? start download!
+    If nFiles = 1
+      ForEach *repo_mod\files()
+        *file = *repo_mod\files()
+        If repository::canDownloadFile(*file)
+          download\mod  = *repo_mod
+          download\file = *file
+          repository::downloadMod(download)
+          ProcedureReturn #True
+        EndIf
+      Next
+    EndIf
+    
+    ; more files? show selection window
     
     ; manipulate xml before opening dialog
     Protected *nodeBase, *node
@@ -659,9 +675,11 @@ Module windowMain
           ClearMap(repoSelectFilesGadget())
           ForEach *repo_mod\files()
             *file = *repo_mod\files()
-            repoSelectFilesGadget(Str(*file)) = DialogGadget(dialogSelectFiles, Str(*file))
-            SetGadgetData(repoSelectFilesGadget(Str(*file)), *file)
-            BindGadgetEvent(repoSelectFilesGadget(Str(*file)), @repoSelectFilesUpdateButtons())
+            If repository::canDownloadFile(*file)
+              repoSelectFilesGadget(Str(*file)) = DialogGadget(dialogSelectFiles, Str(*file))
+              SetGadgetData(repoSelectFilesGadget(Str(*file)), *file)
+              BindGadgetEvent(repoSelectFilesGadget(Str(*file)), @repoSelectFilesUpdateButtons())
+            EndIf
           Next
           
           SetWindowTitle(DialogWindow(dialogSelectFiles), locale::l("main","select_files"))

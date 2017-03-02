@@ -339,7 +339,8 @@ Module repository
     *file = *download\file
     FreeStructure(*download)
     
-    If Not canDownload(*mod)
+    If Not canDownloadMod(*mod) Or Not canDownloadFile(*file)
+      debugger::add("repository::downloadModThread() - Error: cannot download mod/file")
       ProcedureReturn #False
     EndIf
     
@@ -1055,24 +1056,27 @@ Module repository
   
   
   ; check functions
+  Procedure canDownloadFile(*file.file)
+    If *file\url$
+      ProcedureReturn #True
+    EndIf
+  EndProcedure
   
-  Procedure canDownload(*repoMod.mod)
+  Procedure canDownloadMod(*repoMod.mod)
     Protected nFiles
-    Protected *file.file
     
     ; currently, only mods with single file can be downloaded automatically
     If *repoMod\type$ = "mod"
       ForEach *repoMod\files()
-        If *repoMod\files()\url$
+        If canDownloadFile(*repoMod\files())
           nFiles + 1
-          *file = *repoMod\files()
         EndIf
       Next
     EndIf
     
     If nFiles > 0
       ; start download of file and install automatically
-      ProcedureReturn #True
+      ProcedureReturn nFiles
     EndIf
     ProcedureReturn #False
   EndProcedure

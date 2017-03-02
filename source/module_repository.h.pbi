@@ -104,7 +104,8 @@
   Declare searchMod(name$, author$="")
   
   ; check functions
-  Declare canDownload(*repoMod.mod)
+  Declare canDownloadMod(*repoMod.mod)
+  Declare canDownloadFile(*file.file)
   Declare downloadMod(*download.download)
   Declare findModOnline(*mod.mods::mod)
   
