@@ -83,4 +83,38 @@
       </hbox>
     </vbox>
   </window>
+  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='520' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
+    <vbox expand='no'>
+      <text name='infoName' text='Mod Name' flags='' />
+      <hbox expand='item:2'>
+        <canvas width='240' height='135' />
+        <vbox expand='no'>
+          <gridbox colexpand='item:2' rowexpand='no' columns='2'>
+            <text name='infoAuthors' text='Authors:' />
+            <hbox id='infoBoxAuthors' expand='no'></hbox>
+            <text text='Globally Unique ID:' />
+            <string text='{GUID}' flags='#PB_String_BorderLess|#PB_String_ReadOnly' />
+            <text text='Folder Name (ingame ID):' />
+            <string text='xanos_mod_1' flags='#PB_String_BorderLess|#PB_String_ReadOnly' />
+            <text text='online sources:' />
+            <hbox id='infoBoxSources' expand='no'></hbox>
+            <text text='Tags:' />
+            <hbox id='infoBoxTags' expand='no' maxwidth='10'></hbox>
+            <!--
+              <text text='Dependencies:' />
+              <hbox id='infoBoxDependencies' expand='no'></hbox>
+            -->
+            <text text='Files:' />
+            <text text='87' />
+            <text text='Size:' />
+            <text text='10 MiB' />
+          </gridbox>
+        </vbox>
+      </hbox>
+      <hbox expand='item:1'>
+        <empty />
+        <button name='infoClose' text='Close' />
+      </hbox>
+    </vbox>
+  </window>
 </dialogs>

@@ -475,6 +475,138 @@ Module windowMain
     EndIf
   EndProcedure
   
+  
+  Procedure clearXMLchildren(*node)
+    Protected *child
+    *child = ChildXMLNode(*node)
+    While *child
+      DeleteXMLNode(*child)
+      *child = ChildXMLNode(*node)
+    Wend
+  EndProcedure
+  
+  ; mod info window
+  Structure modInfoGadget
+    gadget.i
+    gadgetName$
+  EndStructure
+  Structure modInfoAuthors Extends modInfoGadget
+    name$
+    role$
+    text$
+    url$
+  EndStructure
+  Structure modInfoSources Extends modInfoGadget
+    name$
+    url$
+  EndStructure
+  Structure modInfoTags Extends modInfoGadget
+    tag$
+  EndStructure
+  Structure modInfoWindow
+    dialog.i
+    window.i
+    Map gadgets.i() ; standard gadgets
+    ; dynamic gadgets:
+    List authors.modInfoAuthors()
+    List sources.modInfoSources()
+    List tags.modInfoTags()
+  EndStructure
+  
+  Procedure ModInfoClose()
+    Protected *data.modInfoWindow
+    *data = GetWindowData(EventWindow())
+    If *data
+      CloseWindow(*data\window)
+      FreeDialog(*data\dialog)
+      FreeStructure(*data)
+    EndIf
+  EndProcedure
+  
+  Procedure modInfoAuthor()
+    
+  EndProcedure
+  
+  Procedure modInfoShow(*mod.mods::mod)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    Protected *data.modInfoWindow
+    *data = AllocateStructure(modInfoWindow)
+    
+    ; manipulate xml before opening dialog
+    Protected *nodeBase, *node
+    If IsXML(xml)
+      ; fill authos
+      *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
+      If *nodeBase
+        clearXMLchildren(*nodeBase)
+        ; todo create new functions "getAuthors" and make threadsafe access!
+        ; the function copies the data to new list and returns new list.
+        ; or: get authorCount() and getAuthor(n)
+        ForEach *mod\authors()
+          AddElement(*data\authors())
+          *data\authors()\gadgetName$ = "author-"+Str(*data\authors()) ; use pointer as unique name
+          *data\authors()\name$       = *mod\authors()\name$
+          *data\authors()\role$       = *mod\authors()\role$
+          *data\authors()\text$       = *mod\authors()\text$
+          If *mod\authors()\tfnetId
+            *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(*mod\authors()\tfnetId)+"/"
+          ElseIf *mod\authors()\steamId
+            *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(*mod\authors()\steamId)+"/"
+          EndIf
+          If *data\authors()\url$
+            *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+          Else
+            *node = CreateXMLNode(*nodeBase, "text", -1)
+          EndIf
+          If *node
+            SetXMLAttribute(*node, "name", *data\authors()\gadgetName$)
+            SetXMLAttribute(*node, "text", *data\authors()\name$)
+          EndIf
+        Next
+      EndIf
+      
+      ; sources, tags, ...
+      
+      
+      
+      ; show window
+      *data\dialog = CreateDialog(#PB_Any)
+      If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo")
+        *data\window = DialogWindow(*data\dialog)
+        
+        
+        ; set text
+        SetWindowTitle(*data\window, locale::l("modinfo","title"))
+        
+        ; bind events
+        BindEvent(#PB_Event_CloseWindow, @ModInfoClose(), *data\window)
+        
+        ; get dynamic gadgets for event binding...
+        ForEach *data\authors()
+          *data\authors()\gadget = DialogGadget(*data\dialog, *data\authors()\gadgetName$)
+          SetGadgetData(*data\authors()\gadget, *data\authors())
+          BindGadgetEvent(*data\authors()\gadget, @modInfoAuthor())
+        Next
+        
+        
+        ; store all information attached to the window:
+        ; todo - create structure for modInfoWindow
+        SetWindowData(*data\window, *data)
+        
+        
+        ;show.
+        DisableWindow(window, #True)
+        ProcedureReturn #True
+      EndIf
+    EndIf
+    ; failed to open window -> free data
+    FreeStructure(*data)
+  EndProcedure
+  
+  
   Procedure repoList()
     updateRepoButtons()
   EndProcedure
@@ -554,6 +686,8 @@ Module windowMain
       misc::openLink(*mod\url$) ; open in browser
     EndIf
   EndProcedure
+  
+  ; repo download file selection window...
   
   Global dialogSelectFiles
   Global NewMap repoSelectFilesGadget()
@@ -650,14 +784,7 @@ Module windowMain
     If IsXML(xml)
       *nodeBase = XMLNodeFromID(xml, "selectBox")
       If *nodeBase
-        ; clear all previous nodes in selectBox
-        *node = ChildXMLNode(*nodeBase)
-        While *node
-          DeleteXMLNode(*node)
-          *node = ChildXMLNode(*nodeBase)
-        Wend
-        ; selectBox is now empty
-        
+        clearXMLchildren(*nodeBase)
         ; add a checkbox for each file in mod
         ForEach *repo_mod\files()
           *node = CreateXMLNode(*nodeBase, "checkbox", -1)
@@ -705,6 +832,8 @@ Module windowMain
     EndIf
     ProcedureReturn #False
   EndProcedure
+  
+  
   
   Procedure searchModOnline()
     ; get selected mod from list

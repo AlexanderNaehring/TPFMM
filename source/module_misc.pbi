@@ -52,6 +52,8 @@ DeclareModule misc
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
   Declare.s getOSVersion()
+  Declare.s FontName(FontID)
+  Declare FontSize(FontID)
 EndDeclareModule
 
 Module misc
@@ -565,6 +567,51 @@ Module misc
         EndSelect
     CompilerEndSelect
     ProcedureReturn os$
+  EndProcedure
+  
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    #G_TYPE_STRING = 64
+    
+    ImportC ""
+      g_object_get_property(*widget.GtkWidget, property.p-utf8, *gval)
+    EndImport
+  CompilerEndIf
+  
+  Procedure.S FontName( FontID )
+    CompilerSelect #PB_Compiler_OS 
+      CompilerCase #PB_OS_Windows 
+        Protected sysFont.LOGFONT
+        GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+        ProcedureReturn PeekS(@sysFont\lfFaceName[0])
+        
+      CompilerCase #PB_OS_Linux
+        Protected gVal.GValue
+        Protected StdFnt$
+        g_value_init_(@gval, #G_TYPE_STRING)
+        g_object_get_property(gtk_settings_get_default_(), "gtk-font-name", @gval)
+        StdFnt$ = PeekS(g_value_get_string_( @gval ), -1, #PB_UTF8)
+        g_value_unset_(@gval)
+        ProcedureReturn StdFnt 
+        
+    CompilerEndSelect
+  EndProcedure
+    
+  Procedure FontSize( FontID )
+    CompilerSelect #PB_Compiler_OS 
+      CompilerCase #PB_OS_Windows 
+        Protected sysFont.LOGFONT
+        GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+        ProcedureReturn MulDiv_(-sysFont\lfHeight, 72, GetDeviceCaps_(GetDC_(#NUL), #LOGPIXELSY))
+        
+      CompilerCase #PB_OS_Linux
+        Protected gVal.GValue
+        Protected StdFnt$
+        g_value_init_(@gval, #G_TYPE_STRING)
+        g_object_get_property( gtk_settings_get_default_(), "gtk-font-name", @gval)
+        StdFnt$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
+        g_value_unset_(@gval)
+        ProcedureReturn Val(StringField((StdFnt$), 2, " "))
+    CompilerEndSelect
   EndProcedure
   
 EndModule

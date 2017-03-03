@@ -16,7 +16,7 @@
     installDate.i     ; date of first encounter of this file (added to TPFMM)
     repoTimeChanged.i ; timechanged value from repository if installed from repo (if timechanged in repo > timechanged in mod: update available
     tfnetID.i         ; entry ID in transportfever.net download section
-    workshopID.i      ; fileID in Steam Workshop
+    workshopID.q      ; fileID in Steam Workshop
     *repo_mod         ; (temp) link to mod in repository
     sv.i              ; scanner version, rescan if newer scanner version is used
     hidden.b          ; hidden from overview ("visible" in mod.lua)
@@ -29,14 +29,14 @@
     role$             ; CREATOR, CO_CREATOR, TESTER, BASED_ON, OTHER
     text$             ; optional, additional text to display
     tfnetId.i         ; user ID on transportfever.net
-    steamId.i         ; SteamID
+    steamId.q         ; SteamID
     steamProfile$     ; Steam profile link
   EndStructure
   
   Structure dependency ;-- dependency information
     mod$            ; folder name
     version.i       ; minorVersion
-    steamId.i       ; steam workshop ID
+    steamId.q       ; steam workshop ID
     tfnetId.i       ; transportfever.net ID
     exactMatch.b    ; is only exact version match allowed?
   EndStructure
