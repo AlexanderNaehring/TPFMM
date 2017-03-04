@@ -52,8 +52,8 @@ DeclareModule misc
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
   Declare.s getOSVersion()
-  Declare.s FontName(FontID)
-  Declare FontSize(FontID)
+  Declare.s getDefaultFontName()
+  Declare getDefaultFontSize()
 EndDeclareModule
 
 Module misc
@@ -577,41 +577,47 @@ Module misc
     EndImport
   CompilerEndIf
   
-  Procedure.S FontName( FontID )
+
+  Procedure.S getDefaultFontName()
     CompilerSelect #PB_Compiler_OS 
       CompilerCase #PB_OS_Windows 
         Protected sysFont.LOGFONT
-        GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+        GetObject_(GetGadgetFont(#PB_Default), SizeOf(LOGFONT), @sysFont)
         ProcedureReturn PeekS(@sysFont\lfFaceName[0])
         
       CompilerCase #PB_OS_Linux
         Protected gVal.GValue
-        Protected StdFnt$
+        Protected font$, size$
         g_value_init_(@gval, #G_TYPE_STRING)
         g_object_get_property(gtk_settings_get_default_(), "gtk-font-name", @gval)
-        StdFnt$ = PeekS(g_value_get_string_( @gval ), -1, #PB_UTF8)
+        font$ = PeekS(g_value_get_string_( @gval ), -1, #PB_UTF8)
         g_value_unset_(@gval)
-        ProcedureReturn StdFnt 
+        size$ = StringField(font$, CountString(font$, " ")+1, " ")
+        font$ = Left(font$, Len(font$)-Len(size$)-1)
+        Debug "'"+font$+"'"
         
+        ProcedureReturn font$
     CompilerEndSelect
   EndProcedure
-    
-  Procedure FontSize( FontID )
+  
+  Procedure getDefaultFontSize()
     CompilerSelect #PB_Compiler_OS 
       CompilerCase #PB_OS_Windows 
         Protected sysFont.LOGFONT
-        GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+        GetObject_(GetGadgetFont(#PB_Default), SizeOf(LOGFONT), @sysFont)
         ProcedureReturn MulDiv_(-sysFont\lfHeight, 72, GetDeviceCaps_(GetDC_(#NUL), #LOGPIXELSY))
         
       CompilerCase #PB_OS_Linux
         Protected gVal.GValue
-        Protected StdFnt$
+        Protected font$, size
         g_value_init_(@gval, #G_TYPE_STRING)
         g_object_get_property( gtk_settings_get_default_(), "gtk-font-name", @gval)
-        StdFnt$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
+        font$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
         g_value_unset_(@gval)
-        ProcedureReturn Val(StringField((StdFnt$), 2, " "))
+        size = Val(StringField(font$, CountString(font$, " ")+1, " "))
+        ProcedureReturn size
     CompilerEndSelect
   EndProcedure
+  
   
 EndModule
