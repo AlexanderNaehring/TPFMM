@@ -68,7 +68,7 @@ Module aes
       If encrypt(*buffer, len)
         *out = AllocateMemory(len*2)
         If *out
-          If Base64Encoder(*buffer, len, *out, len*2)
+          If Base64EncoderBuffer(*buffer, len, *out, len*2)
             out$ = PeekS(*out, len*2, #PB_Ascii)
             FreeMemory(*out)
           Else
@@ -99,7 +99,7 @@ Module aes
       *out = AllocateMemory(len)
       If *out
         ; *buffer contains Base64 (ASCII)
-        len = Base64Decoder(*buffer, len, *out, len)
+        len = Base64DecoderBuffer(*buffer, len, *out, len)
         ; *out points to memory area with AES encrypted data
         If decrypt(*out, len)
           out$ = PeekS(*out, len)
