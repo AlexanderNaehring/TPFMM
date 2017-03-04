@@ -187,16 +187,6 @@ Module mods
     
   EndProcedure
   
-  Procedure localizeTags(*mod.mod)
-    With *mod
-      ClearList(\tagsLocalized$())
-      ForEach \tags$()
-        AddElement(\tagsLocalized$())
-        \tagsLocalized$() = locale::l("tags", LCase(\tags$()))
-      Next
-    EndWith
-  EndProcedure
-  
   Procedure infoPP(*mod.mod)    ; post processing
 ;     debugger::Add("mods::infoPP("+Str(*mod)+")")
     
@@ -220,7 +210,7 @@ Module mods
           \authors()\name$ = "unknown"
         Else ; author, name and version in ID
           \authors()\name$ = StringField(\tpf_id$, 1, "_")
-          \authors()\role$ = ""
+          \authors()\role$ = "CREATOR"
         EndIf
       EndIf
       ; get name from ID
@@ -291,7 +281,7 @@ Module mods
     
     
     ; do this always
-    localizeTags(*mod)
+;     localizeTags(*mod)
     *mod\aux\isVanilla = isVanillaMod(id$)
     
     
@@ -362,8 +352,9 @@ Module mods
   Procedure exportListHTML(file$)
     debugger::add("mods::exportListHTML("+file$+")")
     Protected file
-    Protected *modinfo.mod
+    Protected *mod.mod
     Protected name$, author$, authors$
+    Protected count, i, author.author
     
     file = CreateFile(#PB_Any, file$)
     If Not file
@@ -396,8 +387,8 @@ Module mods
     
     LockMutex(mutexMods)
     ForEach *mods()
-      *modinfo = *mods()
-      With *modinfo
+      *mod = *mods()
+      With *mod
           name$ = \name$
           authors$ = ""
           
@@ -409,12 +400,15 @@ Module mods
             name$ = "<a href='http://steamcommunity.com/sharedfiles/filedetails/?id=" + \aux\workshopID + "'>" + name$ + "</a>"
           EndIf
           
-          ForEach \authors()
-            author$ = \authors()\name$
-            If \authors()\tfnetId
-              author$ = "<a href='https://www.transportfever.net/index.php/User/" + \authors()\tfnetId + "'>" + author$ + "</a>"
+          count = modCountAuthors(*mod)
+          For i = 0 To count-1
+            If modGetAuthor(*mod, i, @author)
+              author$ = author\name$
+              If author\tfnetId
+                author$ = "<a href='https://www.transportfever.net/index.php/User/" + author\tfnetId + "'>" + author$ + "</a>"
+              EndIf
+              authors$ + author$ + ", "
             EndIf
-            authors$ + author$ + ", "
           Next
           If Len(authors$) >= 2 ; cut off ", " at the end of the string
             authors$ = Mid(authors$, 1, Len(authors$) -2)
@@ -438,7 +432,8 @@ Module mods
   Procedure exportListTXT(File$)
     debugger::add("mods::exportListTXT("+file$+")")
     Protected file, i, authors$
-    Protected *modinfo.mod
+    Protected *mod.mod
+    Protected count, author.author
     
     file = CreateFile(#PB_Any, File$)
     If Not file
@@ -448,11 +443,14 @@ Module mods
     
     LockMutex(mutexMods)
     ForEach *mods()
-      *modinfo = *mods()
-      With *modinfo
+      *mod = *mods()
+      With *mod
         authors$ = ""
-        ForEach \authors()
-          authors$ + \authors()\name$ + ", "
+        count = modCountAuthors(*mod)
+        For i = 0 To count-1
+          If modGetAuthor(*mod, i, @author)
+            authors$ + author\name$ + ", "
+          EndIf
         Next
         If Len(authors$) >= 2 ; cut off ", " at the end of the string
           authors$ = Mid(authors$, 1, Len(authors$) -2)
@@ -524,25 +522,42 @@ Module mods
     ProcedureReturn entry$
   EndProcedure
   
-  Procedure.s getAuthors(List authors.author())
+  Procedure.s getAuthorsString(*mod.mod)
     Protected authors$
-    ForEach authors()
-      authors$ + authors()\name$ + ", "
-    Next
-    If Len(authors$) > 2
-      authors$ = Left(authors$, Len(authors$)-2)
+    Protected count, i
+    Protected author.author
+    count = modCountAuthors(*mod)
+    
+    If count
+      For i = 0 To count-1
+        If modGetAuthor(*mod, i, @author)
+          authors$ + author\name$ + ", "
+        EndIf
+      Next
+      If Len(authors$) > 2 ; remove lat ", "
+        authors$ = Left(authors$, Len(authors$)-2)
+      EndIf
     EndIf
     ProcedureReturn authors$
   EndProcedure
   
-  Procedure.s listToString(List strings$())
-    Protected str$
-    ForEach strings$()
-      str$ + strings$() + ", "
-    Next
-    If Len(str$) > 2
-      str$ = Left(str$, Len(str$)-2)
+  Procedure.s getTags(*mod.mod)
+    Protected str$, tag$
+    Protected count, i
+    
+    count = modCountTags(*mod)
+    If count
+      For i = 0 To count-1
+        tag$ = modGetTag(*mod, i)
+        If tag$
+          str$ + tag$ + ", "
+        EndIf
+      Next
+      If Len(str$) > 2
+        str$ = Left(str$, Len(str$)-2)
+      EndIf
     EndIf
+    
     ProcedureReturn str$
   EndProcedure
   
@@ -577,6 +592,56 @@ Module mods
   EndProcedure
   
   
+  ; functions working on individual mods
+  
+  Global mutexModAuthors  = CreateMutex()
+  Global mutexModTags     = CreateMutex()
+  
+  Procedure modCountAuthors(*mod.mod)
+    Protected count.i
+    LockMutex(mutexModAuthors)
+    count = ListSize(*mod\authors())
+    UnlockMutex(mutexModAuthors)
+    ProcedureReturn count
+  EndProcedure
+  
+  Procedure modGetAuthor(*mod.mod, n.i, *author.author)
+    ; extract author #n from the list and save in *author
+    Protected valid.i
+    LockMutex(mutexModAuthors)
+    If n <= ListSize(*mod\authors()) - 1
+      SelectElement(*mod\authors(), n)
+      CopyStructure(*mod\authors(), *author, author)
+      valid = #True
+    Else
+      valid = #False
+    EndIf
+    UnlockMutex(mutexModAuthors)
+    ProcedureReturn valid
+  EndProcedure
+  
+  Procedure modCountTags(*mod.mod)
+    Protected count.i
+    LockMutex(mutexModTags)
+    count = ListSize(*mod\tags$())
+    UnlockMutex(mutexModTags)
+    ProcedureReturn count
+  EndProcedure
+  
+  Procedure.s modGetTag(*mod.mod, n.i)
+    ; extract author #n from the list and save in *author
+    Protected tag$
+    LockMutex(mutexModTags)
+    If n <= ListSize(*mod\tags$()) - 1
+      SelectElement(*mod\tags$(), n)
+      tag$ = *mod\tags$()
+    EndIf
+    UnlockMutex(mutexModTags)
+    ProcedureReturn tag$
+  EndProcedure
+  
+  
+  
   ;### data structure handling
   
   Procedure init() ; allocate mod structure
@@ -598,16 +663,11 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    LockMutex(mutexMods)
     If FindMapElement(*mods(), id$)
-      *mod = *mods()
-;       debugger::Add("mods::free() - free mod "+Str(*mod)+" ("+id$+")")
-      DeleteMapElement(*mods())
+      DeleteMapElement(*mods(), id$)
       FreeStructure(*mod)
-      UnlockMutex(mutexMods)
       ProcedureReturn #True
     EndIf
-    UnlockMutex(mutexMods)
     
     debugger::Add("mods::freeMod() - WARNING: could not find mod {"+id$+"} in hash table")
     ProcedureReturn #False
@@ -616,11 +676,13 @@ Module mods
   
   Procedure freeAll()
     debugger::Add("mods::freeAll()")
-    ; cannot lock mutex here, is locked in "free"
+    
+    LockMutex(mutexMods)
     ForEach *mods()
       mods::free(*mods())
     Next
-    ; displayMods()
+    UnlockMutex(mutexMods)
+    
   EndProcedure
   
   ;### Load and Save
@@ -638,6 +700,8 @@ Module mods
     defineFolder()
     
     windowMain::progressBar(0, 1, locale::l("progress","load")) ; 0%
+    
+    LockMutex(mutexMods)
     
     ; load list from json file
     json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
@@ -818,6 +882,8 @@ Module mods
     debugger::add("mods::loadList() - finished")
     windowMain::progressBar(-1, -1, locale::l("progress","loaded")) ; 0%
     
+    UnlockMutex(mutexMods)
+    
     ; Display mods in list gadget
     displayMods()
     displayDLCs()
@@ -834,10 +900,14 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    ; *mods() only holds pointer values, not the real data
+    ; -> copy data to mods_tmp
     Protected NewMap mods_tmp.mod()
+    LockMutex(mutexMods)
     ForEach *mods()
       CopyStructure(*mods(), mods_tmp(MapKey(*mods())), mod)
     Next
+    UnlockMutex(mutexMods)
     
     defineFolder()
     
@@ -860,6 +930,7 @@ Module mods
   
   Procedure.s generateNewID(*mod.mod) ; return new ID as string
     Protected author$, name$, version$
+    Protected author.author
     ; ID = author_mod_version
     
     Static RegExpNonAlphaNum
@@ -869,9 +940,9 @@ Module mods
     EndIf
     
     With *mod
-      If ListSize(\authors()) > 0
-        FirstElement(\authors()) ; LastElement ?
-        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\authors()\name$), "") ; remove all non alphanum + make lowercase
+      If modCountAuthors(*mod) > 0
+        modGetAuthor(*mod, 0, @author)
+        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(author\name$), "") ; remove all non alphanum + make lowercase
       Else
         author$ = ""
       EndIf
@@ -1324,6 +1395,7 @@ Module mods
     Protected filterString$, showHidden, showVanilla, filterFolder
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
+    Protected i, n, author.author
     
     
     If Not IsWindow(_window)
@@ -1334,6 +1406,9 @@ Module mods
       debugger::add("mods::displayMods() - ERROR: #gadget not valid")
       ProcedureReturn #False
     EndIf
+    
+    
+    LockMutex(mutexMods)
     
     If IsGadget(_gadgetFilterString)
       filterString$ = GetGadgetText(_gadgetFilterString)
@@ -1364,7 +1439,8 @@ Module mods
     ; only if all parts are found, show result!
     count = CountString(filterString$, " ") + 1 
     ForEach *mods()
-      With *mods()
+      *mod = *mods()
+      With *mod
         mod_ok = 0 ; reset ok for every mod entry
         If \aux\type$ = "dlc"
           Continue
@@ -1405,26 +1481,30 @@ Module mods
               If FindString(\name$, str$, 1, #PB_String_NoCase)
                 tmp_ok = 1
               Else
-                ForEach \authors()
-                  If FindString(\authors()\name$, str$, 1, #PB_String_NoCase)
-                    tmp_ok = 1
-                    Break
+                n = modCountAuthors(*mod)
+                For i = 0 To n-1
+                  If modGetAuthor(*mod, i, @author)
+                    If FindString(author\name$, str$, 1, #PB_String_NoCase)
+                      tmp_ok = 1
+                      Break
+                    EndIf
                   EndIf
                 Next
                 If Not tmp_ok
-                  ForEach \tags$()
-                    If FindString(\tags$(), str$, 1, #PB_String_NoCase)
+                  n = modCountTags(*mod)
+                  For i = 0 To n-1
+                    If FindString(modGetTag(*mod, i), str$, 1, #PB_String_NoCase)
                       tmp_ok = 1
                       Break
                     EndIf
                   Next
                   If Not tmp_ok
-                    ForEach \tagsLocalized$()
-                      If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
-                        tmp_ok = 1
-                        Break
-                      EndIf
-                    Next
+;                     ForEach \tagsLocalized$()
+;                       If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
+;                         tmp_ok = 1
+;                         Break
+;                       EndIf
+;                     Next
                   EndIf
                 EndIf
               EndIf
@@ -1454,7 +1534,7 @@ Module mods
       *mod = *mods_to_display()
       
       With *mod
-        text$ = \name$ + #LF$ + getAuthors(\authors()) + #LF$ + listToString(\tags$()) + #LF$ + \version$
+        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + getTags(*mod) + #LF$ + \version$
         
         ListIcon::AddListItem(_gadgetModList, item, text$)
         ListIcon::SetListItemData(_gadgetModList, item, *mod)
@@ -1505,6 +1585,7 @@ Module mods
       EndWith
     Next
     
+    UnlockMutex(mutexMods)
     
     HideGadget(_gadgetModList, #False)
     windowMain::stopGUIupdate(#False)

@@ -42,17 +42,17 @@
   EndStructure
   
   Structure mod           ;-- information about mod/dlc
-    tpf_id$                 ; folder name in game: author_name_version or steam workshop ID
+    tpf_id$              ; folder name in game: author_name_version or steam workshop ID
+    uuid$                   ; Universally unique identifier for a single mod (all versions of mod on all online sources)
     name$                   ; name of mod
     majorVersion.i          ; first part of version number, identical to version in ID string
     minorVersion.i          ; latter part of version number
-    version$
+    version$                ; version string: major.minor(.build)
     severityAdd$            ; potential impact to game when adding mod
     severityRemove$         ; potential impact to game when removeing mod
     description$            ; optional description
     List authors.author()   ; information about author(s)
     List tags$()            ; list of tags
-    List tagsLocalized$()   ; 
     minGameVersion.i        ; minimum required build number of game
     List dependencies.dependency()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
@@ -61,6 +61,17 @@
   EndStructure
   
   Global isLoaded.b
+  
+  
+  ; mod functions:
+  
+  Declare modCountAuthors(*mod.mod)
+  Declare modGetAuthor(*mod.mod, n.i, *author.author)
+  Declare modCountTags(*mod.mod)
+  Declare.s modGetTag(*mod.mod, n.i)
+  
+  ; mod-list functions:
+  
   
   Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
   

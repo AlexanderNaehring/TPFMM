@@ -485,7 +485,8 @@ Module windowMain
     gadgetImage.modInfoGadget
     gadgetAuthor.modInfoGadget
     gadgetRole.modInfoGadget
-    author$
+    name$
+    role$
     url$
   EndStructure
   Structure modInfoSource Extends modInfoGadget
@@ -538,15 +539,19 @@ Module windowMain
     Protected *nodeBase, *node, *nodeBox
     If IsXML(xml)
       ; fill authors
+      Protected count, i, author.mods::author
       debugger::add("windowMain::modInfoShow() - create author gadgets...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
       If *nodeBase
         clearXMLchildren(*nodeBase)
-        ; todo create new functions "getAuthors" and make threadsafe access to *mod!
-        ; the function copies the data to new list and returns new list.
-        ; or: get authorCount() and getAuthor(n)
-        ForEach *mod\authors()
+        count = mods::modCountAuthors(*mod)
+        For i = 0 To count-1
+          If Not mods::modGetAuthor(*mod, i, @author)
+            Continue
+          EndIf
           AddElement(*data\authors())
+          *data\authors()\name$ = author\name$
+          *data\authors()\role$ = author\role$
           
           ; new container
           *node = CreateXMLNode(*nodeBase, "container", -1)
@@ -568,16 +573,18 @@ Module windowMain
           *node = CreateXMLNode(*nodeBox, "text", -1)
           *data\authors()\gadgetAuthor\name$ = "author-"+Str(*data\authors())
           SetXMLAttribute(*node, "name", "author-"+Str(*data\authors()))
+          SetXMLAttribute(*node, "text", author\name$)
           
           *node = CreateXMLNode(*nodeBox, "text", -1)
           *data\authors()\gadgetRole\name$ = "role-"+Str(*data\authors())
           SetXMLAttribute(*node, "name", "role-"+Str(*data\authors()))
+          SetXMLAttribute(*node, "text", author\role$)
           
           
-          If *mod\authors()\tfnetId
-            *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(*mod\authors()\tfnetId)+"/"
-          ElseIf *mod\authors()\steamId
-            *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(*mod\authors()\steamId)+"/"
+          If author\tfnetId
+            *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(author\tfnetId)+"/"
+          ElseIf author\steamId
+            *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(author\steamId)+"/"
           EndIf
         Next
       EndIf
