@@ -69,6 +69,8 @@
       <singlebox id='placeholder' margin='bottom:0' invisible='yes'></singlebox>
     </vbox>
   </window>
+
+
   <window id='#PB_Any' name='selectFiles' text='Select File' minwidth='300' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='no'>
       <text name='selectText' text='Select the files to install' />
@@ -83,38 +85,52 @@
       </hbox>
     </vbox>
   </window>
-  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='520' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
+
+
+  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='480' minheight='240' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='no'>
-      <text name='infoName' text='Mod Name' flags='' />
-      <hbox expand='item:2'>
-        <canvas width='240' height='135' />
-        <vbox expand='no'>
-          <gridbox colexpand='item:2' rowexpand='no' columns='2'>
-            <text name='infoAuthors' text='Authors:' />
-            <hbox id='infoBoxAuthors' expand='no'></hbox>
-            <text text='Globally Unique ID:' />
-            <string text='{GUID}' flags='#PB_String_BorderLess|#PB_String_ReadOnly' />
-            <text text='Folder Name (ingame ID):' />
-            <string text='xanos_mod_1' flags='#PB_String_BorderLess|#PB_String_ReadOnly' />
-            <text text='online sources:' />
-            <hbox id='infoBoxSources' expand='no'></hbox>
-            <text text='Tags:' />
-            <hbox id='infoBoxTags' expand='no' maxwidth='10'></hbox>
-            <!--
-              <text text='Dependencies:' />
+      <text name='name' text='Mod Name (v1.0)' flags='' />
+      <multibox id='infoBoxAuthors'>
+      </multibox>
+      <!--
+        <hbox expand='no' align='center'>
+          <canvas width='240' height='135' />
+        </hbox>
+      -->
+      <frame name='descriptionLabel'>
+        <editor name='description' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' />
+      </frame>
+      <frame name='info'>
+        <hbox expand='item:2'>
+          <vbox expand='no'>
+            <gridbox colexpand='item:2' rowexpand='no' columns='2'>
+              <text name='uuidLabel' text='UUID:'/>
+              <text name='uuid' />
+              <text name='folderLabel' />
+              <text name='folder' />
+              <text name='tagsLabel' />
+              <hbox id='infoBoxTags' expand='no' maxwidth='10'></hbox>
+              <text name='dependenciesLabel' />
               <hbox id='infoBoxDependencies' expand='no'></hbox>
-            -->
-            <text text='Files:' />
-            <text text='87' />
-            <text text='Size:' />
-            <text text='10 MiB' />
-          </gridbox>
-        </vbox>
+              <text name='filesLabel' />
+              <text name='files' />
+              <text name='sizeLabel' />
+              <text name='size' />
+            </gridbox>
+          </vbox>
+        </hbox>
+      </frame>
+      <empty />
+      <hbox expand='item:2'>
+        <text name='sourcesLabel' text='Soures:'/>
+        <hbox id='infoBoxSources' expand='no'></hbox>
       </hbox>
-      <hbox expand='item:1'>
-        <empty />
-        <button name='infoClose' text='Close' />
-      </hbox>
+      <!--
+        <hbox expand='item:1'>
+          <empty />
+          <button name='infoClose' text='Close' />
+        </hbox>
+      -->
     </vbox>
   </window>
 </dialogs>

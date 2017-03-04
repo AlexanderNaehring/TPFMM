@@ -62,6 +62,7 @@ Module windowMain
   
   Declare repoDownload()
   Declare modOpenModFolder()
+  Declare modInformation()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -412,23 +413,12 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modInfomation()
-    Protected *mod.mods::mod
-    
-    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
-    If Not *mod
-      ProcedureReturn #False
-    EndIf
-    
-    debugger::add("windowMain::GadgetButtonInformation() - show information of mod {"+*mod\tpf_id$+"}")
-  EndProcedure
-  
   Procedure modList()
     updateModButtons()
     
     Select EventType()
       Case #PB_EventType_LeftDoubleClick
-        modOpenModFolder()
+        modInformation()
       Case #PB_EventType_RightClick
         DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
     EndSelect
@@ -487,20 +477,22 @@ Module windowMain
   
   ; mod info window
   Structure modInfoGadget
-    gadget.i
-    gadgetName$
-  EndStructure
-  Structure modInfoAuthors Extends modInfoGadget
+    id.i
     name$
-    role$
+  EndStructure
+  Structure modInfoAuthor
+    gadgetContainer.modInfoGadget
+    gadgetImage.modInfoGadget
+    gadgetAuthor.modInfoGadget
+    gadgetRole.modInfoGadget
+    author$
+    url$
+  EndStructure
+  Structure modInfoSource Extends modInfoGadget
     text$
     url$
   EndStructure
-  Structure modInfoSources Extends modInfoGadget
-    name$
-    url$
-  EndStructure
-  Structure modInfoTags Extends modInfoGadget
+  Structure modInfoTag Extends modInfoGadget
     tag$
   EndStructure
   Structure modInfoWindow
@@ -508,9 +500,9 @@ Module windowMain
     window.i
     Map gadgets.i() ; standard gadgets
     ; dynamic gadgets:
-    List authors.modInfoAuthors()
-    List sources.modInfoSources()
-    List tags.modInfoTags()
+    List authors.modInfoAuthor()
+    List sources.modInfoSource()
+    List tags.modInfoTag()
   EndStructure
   
   Procedure ModInfoClose()
@@ -527,68 +519,139 @@ Module windowMain
     
   EndProcedure
   
+  Procedure modInfoAuthorImage(*author.modInfoAuthor)
+    ; download avatar and set in imagegadget
+    
+    ; 1st: set to loading
+  EndProcedure
+  
   Procedure modInfoShow(*mod.mods::mod)
     If Not *mod
       ProcedureReturn #False
     EndIf
+    debugger::add("windowMain::modInfoShow()")
     
     Protected *data.modInfoWindow
     *data = AllocateStructure(modInfoWindow)
     
     ; manipulate xml before opening dialog
-    Protected *nodeBase, *node
+    Protected *nodeBase, *node, *nodeBox
     If IsXML(xml)
-      ; fill authos
+      ; fill authors
+      debugger::add("windowMain::modInfoShow() - create author gadgets...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
       If *nodeBase
         clearXMLchildren(*nodeBase)
-        ; todo create new functions "getAuthors" and make threadsafe access!
+        ; todo create new functions "getAuthors" and make threadsafe access to *mod!
         ; the function copies the data to new list and returns new list.
         ; or: get authorCount() and getAuthor(n)
         ForEach *mod\authors()
           AddElement(*data\authors())
-          *data\authors()\gadgetName$ = "author-"+Str(*data\authors()) ; use pointer as unique name
-          *data\authors()\name$       = *mod\authors()\name$
-          *data\authors()\role$       = *mod\authors()\role$
-          *data\authors()\text$       = *mod\authors()\text$
+          
+          ; new container
+          *node = CreateXMLNode(*nodeBase, "container", -1)
+          *data\authors()\gadgetContainer\name$ = Str(*node)
+          SetXMLAttribute(*node, "name", Str(*node))
+          
+          *nodeBox = CreateXMLNode(*node, "hbox", -1)
+          SetXMLAttribute(*nodeBox, "expand", "item:2")
+          
+          *node = CreateXMLNode(*nodeBox, "image", -1)
+          *data\authors()\gadgetImage\name$ = "image-"+Str(*data\authors())
+          SetXMLAttribute(*node, "name", "image-"+Str(*data\authors()))
+          SetXMLAttribute(*node, "width", "80")
+          SetXMLAttribute(*node, "height", "80")
+          
+          *nodeBox = CreateXMLNode(*nodeBox, "vbox", -1)
+          SetXMLAttribute(*nodeBox, "expand", "no")
+          
+          *node = CreateXMLNode(*nodeBox, "text", -1)
+          *data\authors()\gadgetAuthor\name$ = "author-"+Str(*data\authors())
+          SetXMLAttribute(*node, "name", "author-"+Str(*data\authors()))
+          
+          *node = CreateXMLNode(*nodeBox, "text", -1)
+          *data\authors()\gadgetRole\name$ = "role-"+Str(*data\authors())
+          SetXMLAttribute(*node, "name", "role-"+Str(*data\authors()))
+          
+          
           If *mod\authors()\tfnetId
             *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(*mod\authors()\tfnetId)+"/"
           ElseIf *mod\authors()\steamId
             *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(*mod\authors()\steamId)+"/"
           EndIf
-          If *data\authors()\url$
-            *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
-          Else
-            *node = CreateXMLNode(*nodeBase, "text", -1)
-          EndIf
-          If *node
-            SetXMLAttribute(*node, "name", *data\authors()\gadgetName$)
-            SetXMLAttribute(*node, "text", *data\authors()\name$)
-          EndIf
         Next
       EndIf
       
+      debugger::add("windowMain::modInfoShow() - create tags gadgets...")
       ; sources, tags, ...
       
       
       
       ; show window
+      debugger::add("windowMain::modInfoShow() - open window...")
       *data\dialog = CreateDialog(#PB_Any)
-      If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo")
+      If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
         *data\window = DialogWindow(*data\dialog)
         
+        ; get gadgets
+        Macro getGadget(gadget)
+          *data\gadgets(gadget) = DialogGadget(*data\dialog, gadget)
+          If Not *data\gadgets(gadget)
+            debugger::add("windowMain::modInfoShow() - Error: could not get gadget '"+gadget+"'")
+          EndIf
+        EndMacro
+          
+        getGadget("name")
+        getGadget("descriptionLabel")
+        getGadget("description")
+        getGadget("info")
+        getGadget("uuidLabel")
+        getGadget("uuid")
+        getGadget("folderLabel")
+        getGadget("folder")
+        getGadget("tagsLabel")
+        getGadget("dependenciesLabel")
+        getGadget("filesLabel")
+        getGadget("files")
+        getGadget("sizeLabel")
+        getGadget("size")
+        getGadget("sourcesLabel")
+        
+        UndefineMacro getGadget
         
         ; set text
-        SetWindowTitle(*data\window, locale::l("modinfo","title"))
+        SetWindowTitle(*data\window, locale::l("info","title"))
+        SetGadgetText(*data\gadgets("descriptionLabel"),  locale::l("info", "description"))
+        SetGadgetText(*data\gadgets("info"),              locale::l("info", "info"))
+        SetGadgetText(*data\gadgets("uuidLabel"),         locale::l("info", "uuid"))
+        SetGadgetText(*data\gadgets("folderLabel"),       locale::l("info", "folder"))
+        SetGadgetText(*data\gadgets("tagsLabel"),         locale::l("info", "tags"))
+        SetGadgetText(*data\gadgets("dependenciesLabel"), locale::l("info", "dependencies"))
+        SetGadgetText(*data\gadgets("filesLabel"),        locale::l("info", "files"))
+        SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
+        SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
+        
+        
+        
+        Protected font
+        font = LoadFont(#PB_Any, misc::getDefaultFontName(), misc::getDefaultFontSize()*1.2, #PB_Font_Bold)
+        SetGadgetFont(*data\gadgets("name"), FontID(font))
+        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_FrontColor, RGB($FF, $FF, $FF))
+        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_BackColor, RGB(47, 71, 99))
+        
         
         ; bind events
         BindEvent(#PB_Event_CloseWindow, @ModInfoClose(), *data\window)
         
         ; get dynamic gadgets for event binding...
         ForEach *data\authors()
-          *data\authors()\gadget = DialogGadget(*data\dialog, *data\authors()\gadgetName$)
-          SetGadgetData(*data\authors()\gadget, *data\authors())
-          BindGadgetEvent(*data\authors()\gadget, @modInfoAuthor())
+          *data\authors()\gadgetContainer\id  = DialogGadget(*data\dialog, *data\authors()\gadgetContainer\name$)
+          *data\authors()\gadgetImage\id      = DialogGadget(*data\dialog, *data\authors()\gadgetImage\name$)
+          *data\authors()\gadgetAuthor\id     = DialogGadget(*data\dialog, *data\authors()\gadgetAuthor\name$)
+          *data\authors()\gadgetRole\id       = DialogGadget(*data\dialog, *data\authors()\gadgetRole\name$)
+          SetGadgetData(*data\authors()\gadgetContainer\id, *data\authors())
+          ;BindGadgetEvent(, @modInfoAuthor())
+          CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
         
         
@@ -597,14 +660,27 @@ Module windowMain
         SetWindowData(*data\window, *data)
         
         
-        ;show.
-        DisableWindow(window, #True)
+        ;show
+        ; DisableWindow(window, #True)
+        RefreshDialog(dialog)
         ProcedureReturn #True
       EndIf
     EndIf
     ; failed to open window -> free data
     FreeStructure(*data)
   EndProcedure
+  
+  Procedure modInformation()
+    Protected *mod.mods::mod
+    
+    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    modInfoShow(*mod)
+  EndProcedure
+  
   
   
   Procedure repoList()
@@ -1062,7 +1138,7 @@ Module windowMain
     
     
     ; Bind Gadget Events
-    BindGadgetEvent(gadget("modInformation"),   @modInfomation())
+    BindGadgetEvent(gadget("modInformation"),   @modInformation())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())

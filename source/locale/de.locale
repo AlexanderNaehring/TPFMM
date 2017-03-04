@@ -52,6 +52,19 @@ select_files_text = Welche Dateien sollen heruntergeladen und installiert werden
 cancel          = Abbrechen
 download        = Herunterladen
 
+[info]
+title           = Mod Informationen
+description     = Mod Beschreibung
+info            = Mod Informationen
+uuid            = Universell einzigartige ID:
+folder          = Ordnername:
+tags            = Tags:
+dependencies    = Abhängigkeiten:
+files           = Dateien:
+size            = Größe:
+sources         = Quellen:
+
+
 [settings]
 title           = TPFMM Einstellungen
 general         = Allgemeine Einstellungen

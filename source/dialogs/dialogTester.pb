@@ -8,40 +8,43 @@ CompilerIf #PB_Compiler_OS = #PB_OS_Linux
   EndImport
 CompilerEndIf
 
-Procedure.S FontName( FontID )
+Procedure.S getDefaultFontName()
   CompilerSelect #PB_Compiler_OS 
     CompilerCase #PB_OS_Windows 
       Protected sysFont.LOGFONT
-      GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+      GetObject_(GetGadgetFont(#PB_Default), SizeOf(LOGFONT), @sysFont)
       ProcedureReturn PeekS(@sysFont\lfFaceName[0])
       
     CompilerCase #PB_OS_Linux
       Protected gVal.GValue
-      Protected StdFnt$
+      Protected font$, size$
       g_value_init_(@gval, #G_TYPE_STRING)
       g_object_get_property(gtk_settings_get_default_(), "gtk-font-name", @gval)
-      StdFnt$ = PeekS(g_value_get_string_( @gval ), -1, #PB_UTF8)
+      font$ = PeekS(g_value_get_string_( @gval ), -1, #PB_UTF8)
       g_value_unset_(@gval)
-      ProcedureReturn StdFnt 
+      size$ = StringField(font$, CountString(font$, " ")+1, " ")
+      font$ = Left(font$, Len(font$)-Len(size$)-1)
       
+      ProcedureReturn font$
   CompilerEndSelect
 EndProcedure
   
-Procedure FontSize( FontID )
+Procedure getDefaultFontSize()
   CompilerSelect #PB_Compiler_OS 
     CompilerCase #PB_OS_Windows 
       Protected sysFont.LOGFONT
-      GetObject_(FontID, SizeOf(LOGFONT), @sysFont)
+      GetObject_(GetGadgetFont(#PB_Default), SizeOf(LOGFONT), @sysFont)
       ProcedureReturn MulDiv_(-sysFont\lfHeight, 72, GetDeviceCaps_(GetDC_(#NUL), #LOGPIXELSY))
       
     CompilerCase #PB_OS_Linux
       Protected gVal.GValue
-      Protected StdFnt$
+      Protected font$, size
       g_value_init_(@gval, #G_TYPE_STRING)
       g_object_get_property( gtk_settings_get_default_(), "gtk-font-name", @gval)
-      StdFnt$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
+      font$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
       g_value_unset_(@gval)
-      ProcedureReturn Val(StringField((StdFnt$), 2, " "))
+      size = Val(StringField(font$, CountString(font$, " ")+1, " "))
+      ProcedureReturn size
   CompilerEndSelect
 EndProcedure
   
@@ -78,7 +81,7 @@ If xml And XMLStatus(xml) = #PB_XML_Success
     
     CompilerIf #FONTBIG$ <> ""
       Define font
-      font = LoadFont(#PB_Any, FontName(GetGadgetFont(#PB_Default)), Round(FontSize(GetGadgetFont(#PB_Default))*1.5, #PB_Round_Nearest), #PB_Font_Bold)
+      font = LoadFont(#PB_Any, getDefaultFontName(), Round(getDefaultFontSize()*1.2, #PB_Round_Nearest), #PB_Font_Bold)
       SetGadgetFont(DialogGadget(dialog, #FONTBIG$), FontID(font))
       RefreshDialog(dialog)
     CompilerEndIf

@@ -50,6 +50,18 @@ select_files_text = Which files should be downloaded and installed?
 cancel          = Cancel
 download        = Download
 
+[info]
+title           = Mod Information
+description     = Mod Description
+info            = Mod Information
+uuid            = Universal Unique ID:
+folder          = Folder Name:
+tags            = Tags:
+dependencies    = Dependencies:
+files           = Files:
+size            = Size on Disk:
+sources         = Sources:
+
 [settings]
 title           = TPFMM Settings
 general         = General Settings
