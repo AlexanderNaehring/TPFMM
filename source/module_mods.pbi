@@ -307,17 +307,6 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure debugInfo(*mod.mod)
-    Protected json, json$
-    
-    json = CreateJSON(#PB_Any)
-    InsertJSONStructure(JSONValue(json), *mod, mod)
-    json$ = ComposeJSON(json, #PB_JSON_PrettyPrint)
-    FreeJSON(json)
-    debugger::add("mods::debugInfo(): "+json$)
-    ProcedureReturn #True
-  EndProcedure
-  
   Procedure clearModInfo(*mod.mod)
     ; clean info
     ClearStructure(*mod, mod)
@@ -541,7 +530,7 @@ Module mods
     ProcedureReturn authors$
   EndProcedure
   
-  Procedure.s getTags(*mod.mod)
+  Procedure.s modGetTags(*mod.mod)
     Protected str$, tag$
     Protected count, i
     
@@ -1534,7 +1523,7 @@ Module mods
       *mod = *mods_to_display()
       
       With *mod
-        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + getTags(*mod) + #LF$ + \version$
+        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$
         
         ListIcon::AddListItem(_gadgetModList, item, text$)
         ListIcon::SetListItemData(_gadgetModList, item, *mod)

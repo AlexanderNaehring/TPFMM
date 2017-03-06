@@ -69,6 +69,7 @@
   Declare modGetAuthor(*mod.mod, n.i, *author.author)
   Declare modCountTags(*mod.mod)
   Declare.s modGetTag(*mod.mod, n.i)
+  Declare.s modGetTags(*mod.mod)
   
   ; mod-list functions:
   

@@ -507,6 +507,8 @@ Module windowMain
     List authors.modInfoAuthor()
     List sources.modInfoSource()
     List tags.modInfoTag()
+    ; other data
+    modFolder$
   EndStructure
   
   Procedure ModInfoClose()
@@ -527,6 +529,15 @@ Module windowMain
   Procedure modInfoAuthor()
     
   EndProcedure
+  
+  Procedure modInfoFolder()
+    Protected *data.modInfoWindow
+    *data = GetWindowData(EventWindow())
+    If *data
+      misc::openLink(*data\modFolder$)
+    EndIf
+  EndProcedure
+  
   
   Procedure modInfoAuthorImage(*author.modInfoAuthor)
     ; download avatar and set in imagegadget
@@ -549,9 +560,9 @@ Module windowMain
       avatarDefault = CopyImage(images::Images("avatar"), #PB_Any)
       ResizeImage(avatarDefault, GadgetWidth(gadget), GadgetHeight(gadget), #PB_Image_Smooth)
     EndIf
+    UnlockMutex(mutex)
     
     SetGadgetState(gadget, ImageID(avatarDefault))
-    UnlockMutex(mutex)
     
     ; check if author has an avatar
     If *author\tfnetId Or *author\steamId
@@ -561,7 +572,7 @@ Module windowMain
         image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
         FreeMemory(*buffer)
       Else
-        Debug "ERROR: could not load image from "+URLEncoder("https://www.transportfevermods.com/repository/avatar/?tfnetId="+*author\tfnetId+"&steamId="+*author\steamId)
+        ProcedureReturn #False
       EndIf
     EndIf
     
@@ -587,6 +598,8 @@ Module windowMain
     
     Protected *data.modInfoWindow
     *data = AllocateStructure(modInfoWindow)
+    
+    *data\modFolder$ = mods::getModFolder(*mod\tpf_id$, *mod\aux\type$)
     
     ; manipulate xml before opening dialog
     Protected *nodeBase, *node, *nodeBox
@@ -680,6 +693,7 @@ Module windowMain
         getGadget("folderLabel")
         getGadget("folder")
         getGadget("tagsLabel")
+        getGadget("tags")
         getGadget("dependenciesLabel")
         getGadget("filesLabel")
         getGadget("files")
@@ -701,10 +715,12 @@ Module windowMain
         SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
         SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
         
+        
         SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
         SetGadgetText(*data\gadgets("description"),       *mod\description$)
         SetGadgetText(*data\gadgets("uuid"),              *mod\uuid$)
         SetGadgetText(*data\gadgets("folder"),            *mod\tpf_id$)
+        SetGadgetText(*data\gadgets("tags"),              mods::modGetTags(*mod))
         
         
         
@@ -723,6 +739,9 @@ Module windowMain
         
         ; bind events
         BindEvent(#PB_Event_CloseWindow, @ModInfoClose(), *data\window)
+        AddKeyboardShortcut(*data\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
+        BindEvent(#PB_Event_Menu, @ModInfoClose(), *data\window, #PB_Event_CloseWindow)
+        BindGadgetEvent(*data\gadgets("folder"), @modInfoFolder(), #PB_EventType_LeftClick)
         
         ; get dynamic gadgets for event binding...
         ForEach *data\authors()
@@ -758,6 +777,8 @@ Module windowMain
         
         
         ProcedureReturn #True
+      Else
+        debugger::add("windowMain::modInfoShow() - Error: "+DialogError(*data\dialog))
       EndIf
     EndIf
     ; failed to open window -> free data
@@ -1335,11 +1356,15 @@ Module windowMain
     MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
     MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
+    
+    ;AddKeyboardShortcut(window, #PB_Shortcut_Delete, #MenuItem_Uninstall) ; should only work when gadget is active!
+    
     BindMenuEvent(MenuLibrary, #MenuItem_ModFolder, @modOpenModFolder())
     BindMenuEvent(MenuLibrary, #MenuItem_Backup, @modBackup())
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
     BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
+    
     
     
     ; Drag & Drop
@@ -1375,7 +1400,6 @@ Module windowMain
     RefreshDialog(dialog)
     resize()
     
-    
     ; init gui texts and button states
     updateModButtons()
     updateRepoButtons()
@@ -1392,7 +1416,7 @@ Module windowMain
     Protected i
     For i = 0 To ArraySize(widths())
       If widths(i)
-        SetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, ReadPreferenceInteger(Str(i), 0), i)
+        SetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, widths(i), i)
         ; Sorting
         ListIcon::SetColumnFlag(gadget("modList"), i, ListIcon::#String)
       EndIf

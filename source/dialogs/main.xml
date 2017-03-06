@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <dialogs>
-  <window id='#PB_Any' name='main' text='Transport Fever Mod Manager' minwidth='780' minheight='480' flags='#PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_ScreenCentered'>
+  <window id='#PB_Any' name='main' text='Transport Fever Mod Manager' minwidth='780' minheight='480' flags='#PB_Window_SystemMenu | #PB_Window_MinimizeGadget | #PB_Window_MaximizeGadget | #PB_Window_SizeGadget | #PB_Window_ScreenCentered | #PB_Window_Invisible'>
     <vbox expand='item:2' margin='0'>
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
         <image name='headerMain' height='8' />
@@ -40,7 +40,7 @@
           <tab text='Online Repositories'>
             <vbox expand='item:1'>
               <hbox expand='item:1'>
-                <listicon name='repoList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
                 <vbox expand='no'>
                   <frame name='repoFilterFrame'>
                     <vbox expand='no'>
@@ -73,22 +73,22 @@
 
   <window id='#PB_Any' name='selectFiles' text='Select File' minwidth='300' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='no'>
-      <text name='selectText' text='Select the files to install' />
+      <text name='selectText' />
 
         <vbox expand='no' id='selectBox'>
         </vbox>
 
       <hbox expand='equal'>
-        <button name='selectCancel' text='cancel' />
+        <button name='selectCancel' />
         <empty />
-        <button name='selectDownload' text='Download' />
+        <button name='selectDownload' />
       </hbox>
     </vbox>
   </window>
 
 
-  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='480' minheight='240' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
-    <vbox expand='no' spacing='0'>
+  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='400' minheight='400' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
+    <vbox expand='item:3' spacing='2'> <!-- item:3 = description -->
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0'>
         <vbox colums='2' spacing='0' expand='no'>
           <canvas name='top' height='5' />
@@ -100,24 +100,20 @@
         <hbox id='infoBoxAuthors' expand='equal' spacing='15'>
         </hbox>
       </scrollarea>
-      <!--
-        <hbox expand='no' align='center'>
-          <canvas width='240' height='135' />
-        </hbox>
-      -->
+
       <frame name='descriptionLabel'>
-        <editor name='description' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' />
+        <editor name='description' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' height='100' />
       </frame>
       <frame name='info'>
         <hbox expand='item:2'>
           <vbox expand='no'>
             <gridbox colexpand='item:2' rowexpand='no' columns='2'>
-              <text name='uuidLabel' text='UUID:'/>
+              <text name='uuidLabel'/>
               <text name='uuid' />
               <text name='folderLabel' />
-              <text name='folder' />
+              <hyperlink name='folder' />
               <text name='tagsLabel' />
-              <hbox id='infoBoxTags' expand='no' maxwidth='10'></hbox>
+              <text name='tags' />
               <text name='dependenciesLabel' />
               <hbox id='infoBoxDependencies' expand='no'></hbox>
               <text name='filesLabel'   invisible='yes'/>

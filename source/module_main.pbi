@@ -248,6 +248,8 @@ Module main
         widths(i) = ReadPreferenceInteger(Str(i), 0)
       Next
       ClosePreferences()
+      
+      windowMain::setColumnWidths(widths())
     EndIf
     
     
@@ -257,6 +259,8 @@ Module main
 ;       CreateThread(updater::@checkUpdate(), 1)
 ;     EndIf
     
+    
+    HideWindow(windowMain::window, #False)
     
     If gameDirectory$
       queue::add(queue::#QueueActionLoad)
