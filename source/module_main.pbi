@@ -282,7 +282,7 @@ Module main
     If OpenPreferences(settingsFile$)
       PreferenceGroup("proxy")
       If ReadPreferenceInteger("enabled", 0)
-        HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), ReadPreferenceString("password", ""))
+        HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), aes::decryptString(ReadPreferenceString("password", "")))
       Else
         HTTPProxy("")
       EndIf
