@@ -18,6 +18,7 @@ Module images
     Images("tpfnet")      = CatchImage(#PB_Any, ?DataImageTPFnet,   ?DataImageTPFnetEnd - ?DataImageTPFnet)
     Images("mod")         = CatchImage(#PB_Any, ?DataImageMod,      ?DataImageModEnd - ?DataImageMod)
     Images("icon_mod_official")    = CatchImage(#PB_Any, ?DataImageTpf,      ?DataImageTpfEnd - ?DataImageTpf)
+    Images("avatar")      = CatchImage(#PB_Any, ?DataImageAvatar,   ?DataImageAvatarEnd - ?DataImageAvatar)
     
     ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
     
@@ -74,6 +75,10 @@ Module images
     DataImageTpf:
     IncludeBinary "images/mod_official.png"
     DataImageTpfEnd:
+    
+    DataImageAvatar:
+    IncludeBinary "images/avatar.png"
+    DataImageAvatarEnd:
     
   EndDataSection
 EndModule

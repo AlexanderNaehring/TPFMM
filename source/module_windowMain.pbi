@@ -488,6 +488,9 @@ Module windowMain
     name$
     role$
     url$
+    tfnetId.i
+    steamId.i
+    image.i
   EndStructure
   Structure modInfoSource Extends modInfoGadget
     text$
@@ -512,6 +515,11 @@ Module windowMain
     If *data
       CloseWindow(*data\window)
       FreeDialog(*data\dialog)
+      ForEach *data\authors()
+        If *data\authors()\image And IsImage(*data\authors()\image)
+          FreeImage(*data\authors()\image)
+        EndIf
+      Next
       FreeStructure(*data)
     EndIf
   EndProcedure
@@ -522,8 +530,53 @@ Module windowMain
   
   Procedure modInfoAuthorImage(*author.modInfoAuthor)
     ; download avatar and set in imagegadget
+    Protected gadget = *author\gadgetImage\id
+    Protected *buffer, image
+    Protected scale.d
+    Static mutex, avatarDefault
     
+    If Not gadget Or Not IsGadget(gadget)
+      ProcedureReturn #False
+    EndIf
+    
+    If Not mutex
+      mutex = CreateMutex()
+    EndIf
+    
+    LockMutex(mutex)
     ; 1st: set to loading
+    If Not avatarDefault Or Not IsImage(avatarDefault)
+      avatarDefault = CopyImage(images::Images("avatar"), #PB_Any)
+      ResizeImage(avatarDefault, GadgetWidth(gadget), GadgetHeight(gadget), #PB_Image_Smooth)
+    EndIf
+    
+    SetGadgetState(gadget, ImageID(avatarDefault))
+    UnlockMutex(mutex)
+    
+    ; check if author has an avatar
+    If *author\tfnetId Or *author\steamId
+      ; get avatar from transportfever.net
+      *buffer = ReceiveHTTPMemory(URLEncoder("https://www.transportfevermods.com/repository/avatar/?tfnetId="+*author\tfnetId+"&steamId="+*author\steamId))
+      If *buffer
+        image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
+        FreeMemory(*buffer)
+      Else
+        Debug "ERROR: could not load image from "+URLEncoder("https://www.transportfevermods.com/repository/avatar/?tfnetId="+*author\tfnetId+"&steamId="+*author\steamId)
+      EndIf
+    EndIf
+    
+    If image And IsImage(image)
+      If ImageWidth(image) > GadgetWidth(gadget)
+        scale = GadgetWidth(gadget) / ImageWidth(image)
+      EndIf
+      If ImageHeight(image)*scale > GadgetHeight(gadget)
+        scale = GadgetHeight(gadget) / ImageHeight(image)
+      EndIf
+      ResizeImage(image, ImageWidth(image)*scale, ImageHeight(image)*scale)
+      SetGadgetState(gadget, ImageID(image))
+      *author\image = image
+    EndIf
+    
   EndProcedure
   
   Procedure modInfoShow(*mod.mods::mod)
@@ -552,23 +605,31 @@ Module windowMain
           AddElement(*data\authors())
           *data\authors()\name$ = author\name$
           *data\authors()\role$ = author\role$
+          *data\authors()\tfnetId = author\tfnetId
+          *data\authors()\steamId = author\steamId
           
+          *node = *nodeBase
           ; new container
-          *node = CreateXMLNode(*nodeBase, "container", -1)
-          *data\authors()\gadgetContainer\name$ = Str(*node)
-          SetXMLAttribute(*node, "name", Str(*node))
+;           *node = CreateXMLNode(*node, "container", -1)
+;           *data\authors()\gadgetContainer\name$ = Str(*node)
+;           SetXMLAttribute(*node, "name", Str(*node))
+;           SetXMLAttribute(*node, "width", "300")
+;           SetXMLAttribute(*node, "flags", "#PB_Container_Single")
           
           *nodeBox = CreateXMLNode(*node, "hbox", -1)
           SetXMLAttribute(*nodeBox, "expand", "item:2")
+          SetXMLAttribute(*nodeBox, "spacing", "10")
+          SetXMLAttribute(*nodeBox, "width", "200")
           
           *node = CreateXMLNode(*nodeBox, "image", -1)
           *data\authors()\gadgetImage\name$ = "image-"+Str(*data\authors())
           SetXMLAttribute(*node, "name", "image-"+Str(*data\authors()))
-          SetXMLAttribute(*node, "width", "80")
-          SetXMLAttribute(*node, "height", "80")
+          SetXMLAttribute(*node, "width", "60")
+          SetXMLAttribute(*node, "height", "60")
           
           *nodeBox = CreateXMLNode(*nodeBox, "vbox", -1)
           SetXMLAttribute(*nodeBox, "expand", "no")
+          SetXMLAttribute(*nodeBox, "align", "center,left")
           
           *node = CreateXMLNode(*nodeBox, "text", -1)
           *data\authors()\gadgetAuthor\name$ = "author-"+Str(*data\authors())
@@ -607,7 +668,9 @@ Module windowMain
             debugger::add("windowMain::modInfoShow() - Error: could not get gadget '"+gadget+"'")
           EndIf
         EndMacro
-          
+        
+        getGadget("top")
+        getGadget("bar")
         getGadget("name")
         getGadget("descriptionLabel")
         getGadget("description")
@@ -638,11 +701,22 @@ Module windowMain
         SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
         SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
         
+        SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
+        SetGadgetText(*data\gadgets("description"),       *mod\description$)
+        SetGadgetText(*data\gadgets("uuid"),              *mod\uuid$)
+        SetGadgetText(*data\gadgets("folder"),            *mod\tpf_id$)
         
         
-        Protected font
-        font = LoadFont(#PB_Any, misc::getDefaultFontName(), misc::getDefaultFontSize()*1.2, #PB_Font_Bold)
-        SetGadgetFont(*data\gadgets("name"), FontID(font))
+        
+        Static fontHeader, fontBigger
+        If Not fontHeader
+          fontHeader = LoadFont(#PB_Any, misc::getDefaultFontName(), Round(misc::getDefaultFontSize()*1.8, #PB_Round_Nearest), #PB_Font_Bold)
+        EndIf
+        If Not fontBigger
+          fontBigger = LoadFont(#PB_Any, misc::getDefaultFontName(), Round(misc::getDefaultFontSize()*1.4, #PB_Round_Nearest), #PB_Font_Bold)
+        EndIf
+        
+        SetGadgetFont(*data\gadgets("name"), FontID(fontHeader))
         SetGadgetColor(*data\gadgets("name"), #PB_Gadget_FrontColor, RGB($FF, $FF, $FF))
         SetGadgetColor(*data\gadgets("name"), #PB_Gadget_BackColor, RGB(47, 71, 99))
         
@@ -652,11 +726,12 @@ Module windowMain
         
         ; get dynamic gadgets for event binding...
         ForEach *data\authors()
-          *data\authors()\gadgetContainer\id  = DialogGadget(*data\dialog, *data\authors()\gadgetContainer\name$)
+;           *data\authors()\gadgetContainer\id  = DialogGadget(*data\dialog, *data\authors()\gadgetContainer\name$)
           *data\authors()\gadgetImage\id      = DialogGadget(*data\dialog, *data\authors()\gadgetImage\name$)
           *data\authors()\gadgetAuthor\id     = DialogGadget(*data\dialog, *data\authors()\gadgetAuthor\name$)
           *data\authors()\gadgetRole\id       = DialogGadget(*data\dialog, *data\authors()\gadgetRole\name$)
-          SetGadgetData(*data\authors()\gadgetContainer\id, *data\authors())
+;           SetGadgetData(*data\authors()\gadgetContainer\id, *data\authors())
+          SetGadgetFont(*data\authors()\gadgetAuthor\id, FontID(fontBigger))
           ;BindGadgetEvent(, @modInfoAuthor())
           CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
@@ -669,7 +744,19 @@ Module windowMain
         
         ;show
         ; DisableWindow(window, #True)
-        RefreshDialog(dialog)
+        RefreshDialog(*data\dialog)
+        
+        If StartDrawing(CanvasOutput(*data\gadgets("top")))
+          FillArea(1, 1, -1, RGB(47, 71, 99))
+          StopDrawing()
+        EndIf
+        If StartDrawing(CanvasOutput(*data\gadgets("bar")))
+          FillArea(1, 1, -1, RGB(47, 71, 99))
+          Box(0, GadgetHeight(*data\gadgets("bar"))-3, GadgetWidth(*data\gadgets("bar")), 3, RGB(130, 155, 175))
+          StopDrawing()
+        EndIf
+        
+        
         ProcedureReturn #True
       EndIf
     EndIf

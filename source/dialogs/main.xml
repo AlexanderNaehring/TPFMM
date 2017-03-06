@@ -88,10 +88,18 @@
 
 
   <window id='#PB_Any' name='modInfo' text='mod info' minwidth='480' minheight='240' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
-    <vbox expand='no'>
-      <text name='name' text='Mod Name (v1.0)' flags='' />
-      <multibox id='infoBoxAuthors'>
-      </multibox>
+    <vbox expand='no' spacing='0'>
+      <singlebox margin='top:-8,left:-8,right:-8,bottom:0'>
+        <vbox colums='2' spacing='0' expand='no'>
+          <canvas name='top' height='5' />
+          <text name='name' flags='#PB_Text_Center' />
+          <canvas name='bar' height='6' />
+        </vbox>
+      </singlebox>
+      <scrollarea scrolling='horizontal' innerheight='auto' innerwidth='auto' flags='#PB_ScrollArea_BorderLess'>
+        <hbox id='infoBoxAuthors' expand='equal' spacing='15'>
+        </hbox>
+      </scrollarea>
       <!--
         <hbox expand='no' align='center'>
           <canvas width='240' height='135' />
@@ -112,10 +120,10 @@
               <hbox id='infoBoxTags' expand='no' maxwidth='10'></hbox>
               <text name='dependenciesLabel' />
               <hbox id='infoBoxDependencies' expand='no'></hbox>
-              <text name='filesLabel' />
-              <text name='files' />
-              <text name='sizeLabel' />
-              <text name='size' />
+              <text name='filesLabel'   invisible='yes'/>
+              <text name='files'   invisible='yes' />
+              <text name='sizeLabel'   invisible='yes' />
+              <text name='size'   invisible='yes' />-->
             </gridbox>
           </vbox>
         </hbox>
