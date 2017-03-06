@@ -62,6 +62,11 @@ Module aes
     Protected *buffer, len, *out, out$
     
     len = StringByteLength(string$)
+    If len = 0
+      ProcedureReturn ""
+    ElseIf len < 16
+      len = 16
+    EndIf
     *buffer = AllocateMemory(len)
     If *buffer
       PokeS(*buffer, string$, len)
@@ -92,6 +97,11 @@ Module aes
     Protected *buffer, len, *out, out$
     
     len = StringByteLength(string$)
+    If len = 0
+      ProcedureReturn ""
+    ElseIf len < 16
+      len = 16
+    EndIf
     *buffer = AllocateMemory(len)
     If *buffer
       ; write ASCII coded Base64 string to *buffer

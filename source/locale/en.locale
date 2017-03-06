@@ -91,6 +91,12 @@ cancel          = Cancel
 cancel_tip      = Drop changes and close this dialog
 save            = Save
 save_tip        = Save settings and close this dialog
+proxy           = Proxy Settings
+proxy_enabled   = Connect to the Internet through a proxy server
+proxy_frame     = Proxy Connection Details
+proxy_server    = Server
+proxy_user      = Username
+proxy_password  = Password
 repository_add          = Add new repository
 repository_remove       = Remove selected repository
 repository_name         = Name:
@@ -130,16 +136,6 @@ ok            = OK
 export_list   = Export Mod List
 overwrite_file = Do you want to overwrite the current file?
 
-
-[information]
-name      = Name:
-version   = Version:
-author    = Author(s):
-category  = Category:
-download  = Website:
-close     = Close
-change    = Change
-save      = Save
 
 [repository]
 all_types   = All Types

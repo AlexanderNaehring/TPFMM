@@ -11,6 +11,7 @@
   #PORT = 14123
   
   Declare init()
+  Declare initProxy()
   Declare exit()
   Declare loop()
 EndDeclareModule
@@ -153,6 +154,8 @@ Module main
       End
     EndIf
     
+    initProxy()
+    
     images::LoadImages()
     
     ; user init...
@@ -269,6 +272,18 @@ Module main
     
     ; main loop...
     loop()
+  EndProcedure
+  
+  Procedure initProxy()
+    If OpenPreferences(settingsFile$)
+      PreferenceGroup("proxy")
+      If ReadPreferenceInteger("enabled", 0)
+        HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), ReadPreferenceString("password", ""))
+      Else
+        HTTPProxy("")
+      EndIf
+      ClosePreferences()
+    EndIf
   EndProcedure
   
   Procedure exit()

@@ -33,6 +33,23 @@
           </vbox>
         </tab>
 
+        <tab text='Proxy Settings'>
+          <vbox expand='no'>
+            <checkbox name='proxyEnabled' text='Connect through proxy server' />
+            <frame name='proxyFrame'>
+              <gridbox columns='2' colexpand='item:2' rowexpand='no'>
+                <text name='proxyServerLabel' />
+                <string name='proxyServer' />
+                <text name='proxyUserLabel' />
+                <string name='proxyUser' />
+                <text name='proxyPasswordLabel' />
+                <string name='proxyPassword' flags='#PB_String_Password' />
+              </gridbox>
+            </frame>
+          </vbox>
+        </tab>
+
+
 <!--
         <tab text='Online Repositories'>
           <hbox expand='equal'>

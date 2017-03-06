@@ -94,6 +94,12 @@ cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
 save            = Speichern
 save_tip        = Speichere Änderungen und schließe Einstellungen
+proxy           = Proxy Einstellungen
+proxy_enabled   = Stelle zum Internet Verbindung über einen Proxy-Server her
+proxy_frame     = Proxy Verbindungsdetails
+proxy_server    = Server
+proxy_user      = Nutzername
+proxy_password  = Passwort
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
 repository_name         = Name:
@@ -133,15 +139,6 @@ ok            = Okay
 export_list   = Exportiere Liste von Modifikationen
 overwrite_file = Soll die vorhandene Datei überschrieben werden?
 
-[information]
-name      = Name:
-version   = Version:
-author    = Ersteller:
-category  = Kategorie:
-download  = Website:
-close     = Schließen
-change    = Anpassen
-save      = Speichern
 
 [repository]
 all_types     = Alle Typen

@@ -50,12 +50,12 @@ EndProcedure
   
   
 
-Define file$   = "main"
-Define dialog$ = "modInfo"
+Define file$   = "settings"
+Define dialog$ = "settings"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False
-#FONTBIG$ = "infoName"
+#FONTBIG$ = "name"
 
 
 xml = LoadXML(#PB_Any, file$+".xml")
@@ -81,7 +81,7 @@ If xml And XMLStatus(xml) = #PB_XML_Success
     
     CompilerIf #FONTBIG$ <> ""
       Define font
-      font = LoadFont(#PB_Any, getDefaultFontName(), Round(getDefaultFontSize()*1.2, #PB_Round_Nearest), #PB_Font_Bold)
+      font = LoadFont(#PB_Any, getDefaultFontName(), Round(getDefaultFontSize()*1.5, #PB_Round_Nearest), #PB_Font_Bold)
       SetGadgetFont(DialogGadget(dialog, #FONTBIG$), FontID(font))
       RefreshDialog(dialog)
     CompilerEndIf

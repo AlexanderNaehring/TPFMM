@@ -13,6 +13,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_queue.pbi"
 XIncludeFile "module_repository.h.pbi"
+XIncludeFile "module_aes.pbi"
 
 
 Module windowSettings
@@ -113,25 +114,35 @@ Module windowSettings
     EndIf
     
     
-    OpenPreferences(main::settingsFile$)
-    WritePreferenceString("path", main::gameDirectory$)
-    WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
-    If locale$ <> ReadPreferenceString("locale", "en")
-      restart = #True
+    If OpenPreferences(main::settingsFile$)
+      WritePreferenceString("path", main::gameDirectory$)
+      WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
+      If locale$ <> ReadPreferenceString("locale", "en")
+        restart = #True
+      EndIf
+      WritePreferenceString("locale", locale$)
+      WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+      
+      
+      PreferenceGroup("proxy")
+      WritePreferenceInteger("enabled", GetGadgetState(gadget("proxyEnabled")))
+      WritePreferenceString("server", GetGadgetText(gadget("proxyServer")))
+      WritePreferenceString("user", GetGadgetText(gadget("proxyUser")))
+      WritePreferenceString("password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
+      
+      
+      ClosePreferences()
     EndIf
-    WritePreferenceString("locale", locale$)
-    WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
-    ClosePreferences()
+    
+    main::initProxy()
     
     If restart
       MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
-      RunProgram(ProgramFilename())
+      misc::openLink(ProgramFilename())
       End
     EndIf
     
     mods::freeAll()
-    
-    ; load library
     queue::add(queue::#QueueActionLoad)
       
     GadgetCloseSettings()
@@ -169,6 +180,17 @@ Module windowSettings
         EndIf
       EndIf
     EndIf
+    
+    If GetGadgetState(gadget("proxyEnabled"))
+      DisableGadget(gadget("proxyServer"), #False)
+      DisableGadget(gadget("proxyUser"), #False)
+      DisableGadget(gadget("proxyPassword"), #False)
+    Else
+      DisableGadget(gadget("proxyServer"), #True)
+      DisableGadget(gadget("proxyUser"), #True)
+      DisableGadget(gadget("proxyPassword"), #True)
+    EndIf
+    
   EndProcedure
   
   ;----------------------------------------------------------------------------
@@ -235,6 +257,16 @@ Module windowSettings
     getGadget("languageSelection")
     
     
+    getGadget("proxyEnabled")
+    getGadget("proxyFrame")
+    getGadget("proxyServerLabel")
+    getGadget("proxyServer")
+    getGadget("proxyUserLabel")
+    getGadget("proxyUser")
+    getGadget("proxyPasswordLabel")
+    getGadget("proxyPassword")
+    
+    
 ;     getGadget("repositoryList")
 ;     getGadget("repositoryAdd")
 ;     getGadget("repositoryRemove")
@@ -250,7 +282,8 @@ Module windowSettings
     SetWindowTitle(window, l("settings","title"))
     
     SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
-    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "repository"))
+    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "proxy"))
+;     SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "repository"))
     
     SetGadgetText(gadget("save"),                   l("settings","save"))
     GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
@@ -276,6 +309,13 @@ Module windowSettings
     SetGadgetText(gadget("languageSelection"),      "")
     
     
+    SetGadgetText(gadget("proxyEnabled"),           l("settings","proxy_enabled"))
+    SetGadgetText(gadget("proxyFrame"),             l("settings","proxy_frame"))
+    SetGadgetText(gadget("proxyServerLabel"),       l("settings","proxy_server"))
+    SetGadgetText(gadget("proxyUserLabel"),         l("settings","proxy_user"))
+    SetGadgetText(gadget("proxyPasswordLabel"),     l("settings","proxy_password"))
+    
+    
 ;     SetGadgetText(gadget("repositoryList"),         "")
 ;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
 ;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
@@ -296,6 +336,7 @@ Module windowSettings
     BindGadgetEvent(gadget("save"), @GadgetSaveSettings())
     BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
     
     RefreshDialog(_dialog)
     
@@ -307,6 +348,7 @@ Module windowSettings
     
     debugger::add("windowSettings::show()")
     
+    ; main
     If OpenPreferences(main::settingsFile$)
       SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
       SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
@@ -319,7 +361,19 @@ Module windowSettings
       GadgetButtonAutodetect()
     EndIf
     
+    ; locale
     locale::listAvailable(gadget("languageSelection"), locale$)
+    
+    
+    ; proxy
+    If OpenPreferences(main::settingsFile$)
+      PreferenceGroup("proxy")
+      SetGadgetState(gadget("proxyEnabled"), ReadPreferenceInteger("enabled", 0))
+      SetGadgetText(gadget("proxyServer"), ReadPreferenceString("server", ""))
+      SetGadgetText(gadget("proxyUser"), ReadPreferenceString("user", ""))
+      SetGadgetText(gadget("proxyPassword"), aes::decryptString(ReadPreferenceString("password", "")))
+      ClosePreferences()
+    EndIf
     
 ;     repository::listRepositories(gadget())
     
