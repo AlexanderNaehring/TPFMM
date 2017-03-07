@@ -355,7 +355,7 @@ Module repository
       Delay(100)
     Wend
     running = #True
-    windowMain::progressDownload(0)
+    windowMain::progressDownload(0, *mod\name$)
     
     ; start process...
     Protected connection, size, downloaded, progress, finish
@@ -389,7 +389,7 @@ Module repository
         HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
         If HTTPstatus = 404
           debugger::add("repository::downloadModThread() - server response: 404 File Not Found")
-          windowMain::progressDownload(-2)
+          windowMain::progressDownload(-2, *mod\name$)
           running = #False
           ProcedureReturn #False
         EndIf
@@ -422,14 +422,14 @@ Module repository
         Default 
           ; progess = bytes receiuved
           If size
-            windowMain::progressDownload(progress / size)
+            windowMain::progressDownload(progress / size, *mod\name$)
           EndIf
       EndSelect
       Delay(50)
     Until finish
     
     If size
-      windowMain::progressDownload(1)
+      windowMain::progressDownload(1, *mod\name$)
       ; TODO display progress somewhere
     Else
       ; stop update
@@ -438,7 +438,7 @@ Module repository
     If Not downloaded
       ; cleanup downlaod folder
       debugger::add("repository::downloadModThread() - download failed")
-      windowMain::progressDownload(-2)
+      windowMain::progressDownload(-2, *mod\name$)
       DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
       running = #False
       ProcedureReturn #False

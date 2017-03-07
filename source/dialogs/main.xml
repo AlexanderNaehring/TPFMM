@@ -66,7 +66,19 @@
           </tab>
         </panel>
       </singlebox>
-      <singlebox id='placeholder' margin='bottom:0' invisible='yes'></singlebox>
+      <hbox expand='item:1' spacing='10'>
+        <gridbox columns='3' colexpand='equal' rowexpand='no'>
+        <text name='progressRepoText' text=' ' flags='#PB_Text_Right' />
+          <progressbar name='progressRepoBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
+          <text name='progressModText' text=' ' flags='#PB_Text_Right' />
+          <progressbar name='progressModBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
+        </gridbox>
+        <vbox expand='item:1'>
+          <empty />
+          <text name='version' flags='#PB_Text_Right' />
+        </vbox>
+      </hbox>
+      <singlebox id='placeholder' margin='bottom:0' invisible='yes' comment='placeholder for menu and status bar'></singlebox>
     </vbox>
   </window>
 

@@ -31,7 +31,7 @@ DeclareModule windowMain
   Declare getColumnWidth(column)
   
   Declare progressBar(value, max=-1, text$=Chr(1))
-  Declare progressDownload(percent.d)
+  Declare progressDownload(percent.d, modName$)
   
 EndDeclareModule
 
@@ -1100,34 +1100,47 @@ Module windowMain
   Procedure progressBar(value, max=-1, text$=Chr(1))
     If value = -1
       ; hide progress bar
-      StatusBarText(0, 0, "", #PB_StatusBar_BorderLess)
+      HideGadget(gadget("progressModBar"), #True)
     Else
       ; show progress
+      HideGadget(gadget("progressModBar"), #False)
       If max = -1
-        StatusBarProgress(0, 0, value, #PB_StatusBar_BorderLess)
+        SetGadgetState(gadget("progressModBar"), value)
       Else
-        StatusBarProgress(0, 0, value, #PB_StatusBar_BorderLess, 0, max)
+        SetGadgetAttribute(gadget("progressModBar"), #PB_ProgressBar_Maximum, max)
+        SetGadgetState(gadget("progressModBar"), value)
       EndIf
     EndIf
     
     If text$ <> Chr(1)
-      StatusBarText(0, 1, text$);, #PB_StatusBar_BorderLess)
+      SetGadgetText(gadget("progressModText"), text$)
+      ;RefreshDialog(dialog)
     EndIf
   EndProcedure
   
-  Procedure progressDownload(percent.d)
+  Procedure progressDownload(percent.d, modName$)
     Protected text$
+    Protected NewMap strings$()
+    strings$("modname") = modName$
+    
     If percent = 0
-      text$ = "Download started"
+      HideGadget(gadget("progressRepoBar"), #True)
+      text$ = locale::getEx("repository", "download_start", strings$())
     ElseIf percent = 1
-      text$ = "Download finished"
+      HideGadget(gadget("progressRepoBar"), #True)
+      text$ = locale::getEx("repository", "download_finish", strings$())
     ElseIf percent = -2
-      text$ = "Download failed"
+      HideGadget(gadget("progressRepoBar"), #True)
+      text$ = locale::getEx("repository", "download_fail", strings$())
     Else
-      text$ = "Download "+Str(percent*100)+"%"
+      HideGadget(gadget("progressRepoBar"), #False)
+      SetGadgetState(gadget("progressRepoBar"), percent*100)
+      strings$("percent") = Str(percent*100)
+      text$ = locale::getEx("repository", "downloading", strings$())
     EndIf
     
-    StatusBarText(0, 2, text$, #PB_StatusBar_Center)
+    SetGadgetText(gadget("progressRepoText"), text$)
+    ;RefreshDialog(dialog)
   EndProcedure
   
   
@@ -1154,11 +1167,10 @@ Module windowMain
     
     ; dialog does not take menu height and statusbar height into account
     ; workaround: placeholder node in dialog tree with required offset.
-    SetXMLAttribute(XMLNodeFromID(xml, "placeholder"), "margin", "bottom:"+Str(MenuHeight()+getStatusBarHeight()-8))
+    SetXMLAttribute(XMLNodeFromID(xml, "placeholder"), "margin", "bottom:"+Str(MenuHeight()-8)) ; getStatusBarHeight()
     
     dialog = CreateDialog(#PB_Any)
-     
-    If Not OpenXMLDialog(dialog, xml, "main")
+    If Not dialog Or Not OpenXMLDialog(dialog, xml, "main")
       MessageRequester("Critical Error", "Could not open main window!", #PB_MessageRequester_Error)
       End
     EndIf
@@ -1187,6 +1199,12 @@ Module windowMain
     
     getGadget("headerMain")
     getGadget("panel")
+    
+    getGadget("progressRepoText")
+    getGadget("progressRepoBar")
+    getGadget("progressModText")
+    getGadget("progressModBar")
+    getGadget("version")
     
     getGadget("modList")
     getGadget("modFilterFrame")
@@ -1298,16 +1316,16 @@ Module windowMain
     
     
     ; Status bar
-    CreateStatusBar(0, WindowID(DialogWindow(dialog)))
-    AddStatusBarField(#PB_Ignore) ; progressbar
-    AddStatusBarField(250) ; progress text
-    AddStatusBarField(150) ; download 
-    AddStatusBarField(100) ; version 
-    StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
-    StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
-    StatusBarText(0, 2, "", #PB_StatusBar_Center)
-    StatusBarText(0, 3, main::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
-    
+;     CreateStatusBar(0, WindowID(DialogWindow(dialog)))
+;     AddStatusBarField(#PB_Ignore) ; progressbar
+;     AddStatusBarField(250) ; progress text
+;     AddStatusBarField(150) ; download 
+;     AddStatusBarField(100) ; version 
+;     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
+;     StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
+;     StatusBarText(0, 2, "", #PB_StatusBar_Center)
+;     StatusBarText(0, 3, main::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
+    SetGadgetText(gadget("version"), main::VERSION$)
     
     ; OS specific
     CompilerSelect #PB_Compiler_OS

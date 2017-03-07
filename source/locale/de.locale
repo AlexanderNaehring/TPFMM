@@ -150,6 +150,10 @@ installed_no  = Zeige nur nicht installierte
 update        = Update
 update_text   = Neue Version von TPFMM verfügbar.\nJetzt herunterladen?
 disabled_update = Bitte benutze die neueste Version von TPFMM
+download_start  = Starte Download '{modname}'...
+download_finish = {modname} erfolgreich heruntergeladen
+download_fail   = Fehler beim Herunterladen von {modname}
+downloading     = Herunterladen von '{modname}' ({percent}%)
 
 [mods]
 filter_all      = Zeige Alle Ordner
