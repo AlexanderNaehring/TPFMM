@@ -23,7 +23,6 @@ Module mods
     #FILTER_FOLDER_STAGING
   EndEnumeration
   
-  
   Enumeration
     #QUEUE_LOAD
     #QUEUE_INSTALL
@@ -343,9 +342,10 @@ Module mods
       FreeStructure(*mods())
       DeleteMapElement(*mods(), *mod\tpf_id$)
     EndIf
-    UnlockMutex(mutexMods)
     
     *mods(id$) = *mod ; add (or overwrite) mod to/in map
+    
+    UnlockMutex(mutexMods)
     
     ProcedureReturn *mod
   EndProcedure
@@ -664,6 +664,7 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    ; cannot lock mutex here
     If FindMapElement(*mods(), id$)
       DeleteMapElement(*mods(), id$)
       FreeStructure(*mod)
@@ -988,6 +989,7 @@ Module mods
   EndProcedure
   
   Procedure isInstalled(source$, id)
+    Protected installed = #False
     
     If Not id
       ProcedureReturn #False
@@ -999,21 +1001,25 @@ Module mods
     EndIf
     
     ; search for mod in list of installed mods
+    LockMutex(mutexMods)
     If source$ = "tfnet" Or source$ = "tpfnet"
       ForEach *mods()
         If *mods()\aux\tfnetID = id
-          ProcedureReturn #True
+          installed = #True
+          Break
         EndIf
       Next
     ElseIf source$ = "workshop"
       ForEach *mods()
         If *mods()\aux\workshopID = id
-          ProcedureReturn #True
+          installed = #True
+          Break
         EndIf
       Next
     EndIf
+    UnlockMutex(mutexMods)
     
-    ProcedureReturn #False
+    ProcedureReturn installed
     
   EndProcedure
   
@@ -1101,7 +1107,9 @@ Module mods
     Protected modFolder$
     modFolder$ = getModFolder(id$, "mod") ;- TODO handle installation of maps and DLCs
     
+    LockMutex(mutexMods)
     ; check if mod already installed?
+    ; todo: call "doUninstall", which in turn may call backupBeforeUninstall
     If FindMapElement(*mods(), id$)
       debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
       free(*mods(id$))
@@ -1109,6 +1117,7 @@ Module mods
     If FileSize(modFolder$) = -2
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     EndIf
+    UnlockMutex(mutexMods)
     
     
     ; (3) copy mod to game folder
@@ -1185,7 +1194,9 @@ Module mods
     
     
     Protected *mod.mod
+    LockMutex(mutexMods)
     *mod = *mods(id$)
+    UnlockMutex(mutexMods)
     
     If Not *mod
       debugger::add("mods::doUninstall() - ERROR: cannot find *mod in list")
@@ -1222,10 +1233,12 @@ Module mods
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     misc::CreateDirectoryAll(backupFolder$)
     
-    
+    LockMutex(mutexMods)
     If FindMapElement(*mods(), id$)
       *mod = *mods(id$)
+      UnlockMutex(mutexMods)
     Else
+      UnlockMutex(mutexMods)
       debugger::add("mods::doBackup() - ERROR: cannot find mod {"+id$+"}")
       ProcedureReturn #False
     EndIf
@@ -1480,7 +1493,6 @@ Module mods
     EndIf
     
     
-    LockMutex(mutexMods)
     
     If IsGadget(_gadgetFilterString)
       filterString$ = GetGadgetText(_gadgetFilterString)
@@ -1510,6 +1522,7 @@ Module mods
     ; count = number of individual parts of search string
     ; only if all parts are found, show result!
     count = CountString(filterString$, " ") + 1 
+    LockMutex(mutexMods)
     ForEach *mods()
       *mod = *mods()
       With *mod
@@ -1598,6 +1611,8 @@ Module mods
       EndWith
     Next
     
+    UnlockMutex(mutexMods)
+    
     misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
     
     Protected *repo_mod.repository::mod
@@ -1657,7 +1672,6 @@ Module mods
       EndWith
     Next
     
-    UnlockMutex(mutexMods)
     
     HideGadget(_gadgetModList, #False)
     windowMain::stopGUIupdate(#False)

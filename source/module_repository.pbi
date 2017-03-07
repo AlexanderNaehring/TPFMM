@@ -23,6 +23,7 @@ Module repository
   
   Global NewMap repo_mods.repo_mods()
   Global NewList repositories.repository()
+  Global mutexRepoMods = CreateMutex() ; coordinate access to "repo_mods()" map
   
   Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID, _installedGadgetID
   Global Dim _columns.column_info(0)
@@ -86,12 +87,13 @@ Module repository
     ClearGadgetItems(_sourceGadgetID)
     AddGadgetItem(_sourceGadgetID, 0, locale::l("repository", "all_sources"))
     item = 1
+    LockMutex(mutexRepoMods)
     ForEach repo_mods()
       AddGadgetItem(_sourceGadgetID, item, repo_mods()\repo_info\name$)
       SetGadgetItemData(_sourceGadgetID, item, repo_mods()\repo_info)
       item + 1
     Next
-    
+    UnlockMutex(mutexRepoMods)
     SetGadgetState(_sourceGadgetID, 0)
     
   EndProcedure
@@ -168,6 +170,7 @@ Module repository
     
     ; load JSON into memory:
     ; repository information and complete list of mods
+    LockMutex(mutexRepoMods)
     ExtractJSONStructure(value, repo_mods(url$), repo_mods)
     
     ; Sort list for last modification time
@@ -215,6 +218,8 @@ Module repository
     EndWith
     
     debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
+    
+    UnlockMutex(mutexRepoMods)
     
     updateSourceGadget(); add this repository as new source
     
@@ -455,6 +460,8 @@ Module repository
   
   Procedure checkInstalled()
     Protected source$, id.i
+    
+    LockMutex(mutexRepoMods)
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         source$ = repo_mods()\mods()\source$
@@ -463,6 +470,8 @@ Module repository
         repo_mods()\mods()\installed = mods::isInstalled(source$, id)
       Next
     Next
+    UnlockMutex(mutexRepoMods)
+    
   EndProcedure
   
   Procedure showUpdate()
@@ -534,7 +543,9 @@ Module repository
         
         ; disable repository features for outdated versions?
         _DISABLED = #True
+        LockMutex(mutexRepoMods)
         ClearMap(repo_mods())
+        UnlockMutex(mutexRepoMods)
         ProcedureReturn #False
       Else
         debugger::add("repository::loadRepository() - TPFMM is up to date")
@@ -567,9 +578,12 @@ Module repository
     
     time = ElapsedMilliseconds()
     
+    
     ; clean all lists
     ClearList(repositories())
+    LockMutex(mutexRepoMods)
     ClearMap(repo_mods())
+    UnlockMutex(mutexRepoMods)
     displayMods() ; show clean gadget list
     
     ; always use official repository
@@ -888,6 +902,8 @@ Module repository
     
     count = CountString(search$, " ") + 1
     
+    LockMutex(mutexRepoMods)
+    
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         With repo_mods()\mods()
@@ -963,6 +979,8 @@ Module repository
         EndWith
       Next
     Next
+    
+    UnlockMutex(mutexRepoMods)
     
     ; sort list of mods-to-be-displayed
     misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Descending, OffsetOf(mod\timechanged), #PB_Integer)
@@ -1119,6 +1137,9 @@ Module repository
   EndProcedure
   
   Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
+    Protected *find = #Null
+    LockMutex(mutexRepoMods)
+    
     If *mod\aux\tfnetID
       ForEach repo_mods()
         If repo_mods()\repo_info\source$ <> "tpfnet"
@@ -1126,7 +1147,8 @@ Module repository
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\tfnetID
-            ProcedureReturn repo_mods()\mods()
+            *find = repo_mods()\mods()
+            Break 2
           EndIf
         Next
       Next
@@ -1138,13 +1160,16 @@ Module repository
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\workshopID
-            ProcedureReturn repo_mods()\mods()
+            *find = repo_mods()\mods()
+            Break 2
           EndIf
         Next
       Next
-      
     EndIf
-    ProcedureReturn #Null
+    
+    UnlockMutex(mutexRepoMods)
+    
+    ProcedureReturn *find
   EndProcedure
   
   
