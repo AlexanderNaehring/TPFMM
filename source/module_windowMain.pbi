@@ -266,9 +266,6 @@ Module windowMain
           windowSettings::show()
         EndIf
       EndIf
-      
-      ; working queue
-      queue::update()
     EndIf
   EndProcedure
   
@@ -327,7 +324,7 @@ Module windowMain
     file$ = OpenFileRequester(locale::l("management","select_mod"), "", locale::l("management","files_archive")+"|*.zip;*.rar|"+locale::l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
     While file$
       If FileSize(file$) > 0
-        queue::add(queue::#QueueActionInstall, file$)
+        mods::install(file$)
       EndIf
       file$ = NextSelectedFileName()
     Wend
@@ -364,7 +361,7 @@ Module windowMain
             *mod = ListIcon::GetListItemData(gadget("modList"), i)
             If mods::canUninstall(*mod)
 ;               debugger::add("windowMain::GadgetButtonUninstall() - {"+*mod\name$+"}")
-              queue::add(queue::#QueueActionUninstall, *mod\tpf_id$)
+              mods::uninstall(*mod\tpf_id$)
             EndIf
           EndIf
         Next i
@@ -394,7 +391,7 @@ Module windowMain
         If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
           *mod = ListIcon::GetListItemData(gadget("modList"), i)
           If mods::canBackup(*mod)
-            queue::add(queue::#QueueActionBackup, *mod\tpf_id$)
+            mods::backup(*mod\tpf_id$)
           EndIf
         EndIf
       Next i
@@ -1082,7 +1079,7 @@ Module windowMain
     count  = CountString(files$, Chr(10)) + 1
     For i = 1 To count
       file$ = StringField(files$, i, Chr(10))
-      queue::add(queue::#QueueActionInstall, file$)
+      mods::install(file$)
     Next i
   EndProcedure
   

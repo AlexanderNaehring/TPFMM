@@ -96,7 +96,7 @@ Module main
         If FileSize(parameter$) > 0
           ; install mod... (this function is called, before the main window is created ....
           ; Todo: Check if thisworks at program start.
-          queue::add(queue::#QueueActionInstall, parameter$)
+          mods::install(parameter$)
         EndIf
         
     EndSelect
@@ -263,7 +263,7 @@ Module main
     HideWindow(windowMain::window, #False)
     
     If gameDirectory$
-      queue::add(queue::#QueueActionLoad)
+      mods::load()
     Else
       ; no path specified upon program start -> open settings dialog
       windowSettings::show()

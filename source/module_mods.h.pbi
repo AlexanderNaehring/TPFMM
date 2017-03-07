@@ -61,6 +61,7 @@
   EndStructure
   
   Global isLoaded.b
+  Global working.b
   
   
   ; mod functions:
@@ -79,7 +80,6 @@
   Declare init()    ; allocate new mod structure, return *mod
   Declare free(*mod.mod) ; free *mod structure
   Declare freeAll() ; free all mods in map
-  Declare loadList(*data) ; load up programm (read mods from different locations)
   Declare saveList()
   
   Declare generateID(*mod.mod, id$ = "")
@@ -98,17 +98,17 @@
   Declare canBackup(*mod.mod)
   Declare isInstalled(source$, id)
   
-  ; queue callbacks:
-  Declare install(*data)    ; check and extract archive to game folder
-  Declare uninstall(*data)  ; remove mod folder from game, maybe create a security backup by zipping content
-  Declare backup(*data)     ; backup mod
+  ; actions
+  Declare load()                ; load mods.json and find installed mods
+  Declare install(file$)        ; check and extract archive to game folder
+  Declare uninstall(folderID$)  ; remove mod folder from game, maybe create a security backup by zipping content
+  Declare backup(folderID$)     ; backup installed mod
   
   ; export
   Declare exportList(all=#False)
   
   ; display callbacks
   Declare displayMods()
-  Declare displayDLCs()
   
   Declare getPreviewImage(*mod.mod, original=#False)
 EndDeclareModule

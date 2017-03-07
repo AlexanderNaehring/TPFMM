@@ -1,7 +1,6 @@
 ﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
-XIncludeFile "module_queue.pbi"
 XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_archive.pbi"
 
@@ -25,6 +24,22 @@ Module mods
   EndEnumeration
   
   
+  Enumeration
+    #QUEUE_LOAD
+    #QUEUE_INSTALL
+    #QUEUE_UNINSTALL
+    #QUEUE_BACKUP
+  EndEnumeration
+  Structure queue
+    action.i
+    string$
+  EndStructure
+  
+  Global mutexQueue = CreateMutex()
+  Global threadQueue
+  Global NewList queue.queue()
+  
+  
   UseMD5Fingerprint()
   
   ;----------------------------------------------------------------------------
@@ -40,8 +55,6 @@ Module mods
     pStagingArea$ = misc::Path(main::gameDirectory$ + "/")                               ;- TODO !!!
     pMaps$        = misc::Path(main::gameDirectory$ + "/maps/")
   EndMacro
-  
-  
   
   Procedure.s getModFolder(id$ = "", type$ = "mod")
     defineFolder()
@@ -62,7 +75,6 @@ Module mods
       ProcedureReturn misc::path(pMods$ + id$ + "/")
     EndIf
   EndProcedure
-  
   
   Procedure checkID(id$)
 ;     debugger::Add("mods::checkID("+id$+")")
@@ -676,8 +688,8 @@ Module mods
   
   ;### Load and Save
   
-  Procedure loadList(*dummy) ; load mod list from file and scan for installed mods
-    debugger::Add("mods::loadList("+main::gameDirectory$+")")
+  Procedure doLoad() ; load mod list from file and scan for installed mods
+    debugger::Add("mods::doLoad()")
     
     isLoaded = #False
     
@@ -695,7 +707,7 @@ Module mods
     ; load list from json file
     json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
     If json
-      debugger::add("mods::loadList() - load mods from json file")
+      debugger::add("mods::doLoad() - load mods from json file")
       ExtractJSONMap(JSONValue(json), mods_json())
       FreeJSON(json)
       
@@ -706,9 +718,9 @@ Module mods
           *mod\aux\installDate = Date()
         EndIf
         *mods(MapKey(mods_json())) = *mod
-        ; debugger::add("mods::loadList() - address {"+*mod+"} - id {"+*mod\tpf_id$+"} - name {"+*mod\name$+"}")
+        ; debugger::add("mods::doLoad() - address {"+*mod+"} - id {"+*mod\tpf_id$+"} - name {"+*mod\name$+"}")
       Next
-      debugger::Add("mods::loadList() - loaded "+MapSize(mods_json())+" mods from mods.json")
+      debugger::Add("mods::doLoad() - loaded "+MapSize(mods_json())+" mods from mods.json")
       FreeMap(mods_json())
     EndIf
     
@@ -808,20 +820,20 @@ Module mods
     
     
     ; first check:  deleted mods
-    debugger::add("mods::loadList() - check for removed mods")
+    debugger::add("mods::doLoad() - check for removed mods")
     ForEach *mods()
       If Not FindMapElement(scanner(), MapKey(*mods()))
-        debugger::add("mods::loadList() - WARNING: remove {"+MapKey(*mods())+"} from list")
+        debugger::add("mods::doLoad() - WARNING: remove {"+MapKey(*mods())+"} from list")
         free(*mods())
       EndIf
     Next
     
     
     ; second check: added mods
-    debugger::add("mods::loadList() - check for added mods")
+    debugger::add("mods::doLoad() - check for added mods")
     count = MapSize(scanner())
     n = 0
-    debugger::Add("mods::loadList() - found "+MapSize(scanner())+" mods in folders")
+    debugger::Add("mods::doLoad() - found "+MapSize(scanner())+" mods in folders")
     If count > 0
       windowMain::progressBar(0, count)
       
@@ -841,7 +853,7 @@ Module mods
         
         If Not *mod Or Not FindMapElement(*mods(), id$)
           ; this should never be reached
-          debugger::add("mods::loadList() - ERROR: failed to add mod to map")
+          debugger::add("mods::doLoad() - ERROR: failed to add mod to map")
           Continue
         EndIf
         
@@ -850,7 +862,7 @@ Module mods
         ; no need to load images now, is handled dynamically if mod is selected
         
         If *mod\name$ = ""
-          debugger::add("mods::loadList() - ERROR: no name for mod {"+id$+"}")
+          debugger::add("mods::doLoad() - ERROR: no name for mod {"+id$+"}")
         EndIf
         
       Next
@@ -859,23 +871,22 @@ Module mods
     
     
     ; Final Check
-    debugger::add("mods::loadList() - final checkup")
+    debugger::add("mods::doLoad() - final checkup")
     ForEach *mods()
       *mod = *mods()
       If *mod\tpf_id$ = "" Or MapKey(*mods()) = ""
-        debugger::add("mods::loadList() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(*mods())+"} tf_id$={"+*mod\tpf_id$+"}")
+        debugger::add("mods::doLoad() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(*mods())+"} tf_id$={"+*mod\tpf_id$+"}")
         End
       EndIf
     Next
     
-    debugger::add("mods::loadList() - finished")
+    debugger::add("mods::doLoad() - finished")
     windowMain::progressBar(-1, -1, locale::l("progress","loaded")) ; 0%
     
     UnlockMutex(mutexMods)
     
     ; Display mods in list gadget
     displayMods()
-    displayDLCs()
     
     isLoaded = #True
   EndProcedure
@@ -1006,12 +1017,10 @@ Module mods
     
   EndProcedure
   
+  ; actions
   
-  Procedure install(*data.queue::dat) ; install mod from file (archive)
-    debugger::Add("mods::install("+Str(*data)+")")
-    Protected file$ = *data\string$
-    
-    debugger::Add("mods::install() - {"+file$+"}")
+  Procedure doInstall(file$) ; install mod from file (archive)
+    debugger::Add("mods::doInstall("+file$+")")
     
     Protected source$, target$
     Protected i
@@ -1048,7 +1057,7 @@ Module mods
     misc::CreateDirectoryAll(target$)
     
     If Not archive::extract(source$, target$)
-        debugger::Add("mods::install() - ERROR - failed to extract files")
+        debugger::Add("mods::doInstall() - ERROR - failed to extract files")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
         ProcedureReturn #False
@@ -1061,7 +1070,7 @@ Module mods
     modRoot$ = getModRoot(target$)
     
     If modRoot$ = ""
-      debugger::add("mods::install() - ERROR: getModRoot("+target$+") failed!")
+      debugger::add("mods::doInstall() - ERROR: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
       windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
       ProcedureReturn #False
@@ -1072,12 +1081,12 @@ Module mods
     Protected id$
     id$ = misc::getDirectoryName(modRoot$)
     If Not checkID(id$)
-      debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
+      debugger::add("mods::doInstall() - ERROR: checkID("+id$+") failed!")
       
       ; try to get ID from file name
       id$ = GetFilePart(source$, #PB_FileSystem_NoExtension)
       If Not checkID(id$)
-        debugger::add("mods::install() - ERROR: checkID("+id$+") failed!")
+        debugger::add("mods::doInstall() - ERROR: checkID("+id$+") failed!")
         
         ;-TODO try to generate ID if not found?
         ; required for older mods - but new mods should not require this
@@ -1094,7 +1103,7 @@ Module mods
     
     ; check if mod already installed?
     If FindMapElement(*mods(), id$)
-      debugger::add("mods::install() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
+      debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
       free(*mods(id$))
     EndIf
     If FileSize(modFolder$) = -2
@@ -1105,7 +1114,7 @@ Module mods
     ; (3) copy mod to game folder
     windowMain::progressBar(3, 5)
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
-      debugger::add("mods::install() - ERROR: MoveDirectory() failed!")
+      debugger::add("mods::doInstall() - ERROR: MoveDirectory() failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
       windowMain::progressBar(-1, -1, locale::l("progress","install_fail"))
       ProcedureReturn #False
@@ -1152,10 +1161,10 @@ Module mods
     
     ; finish installation
     windowMain::progressBar(-1, -1, locale::l("progress","installed"))
-    debugger::Add("mods::install() - finish installation...")
+    debugger::Add("mods::doInstall() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     displayMods()
-    debugger::Add("mods::install() - finished")
+    debugger::Add("mods::doInstall() - finished")
     
     
     ; start backup if required
@@ -1164,41 +1173,38 @@ Module mods
       backup = ReadPreferenceInteger("autobackup", 0)
       ClosePreferences()
       If backup
-        queue::add(queue::#QueueActionBackup, id$)
+        backup(id$)
       EndIf
     EndIf
     
     ProcedureReturn #True
   EndProcedure
   
-  Procedure uninstall(*data.queue::dat) ; remove from Train Fever Mod folder (not library)
-    debugger::Add("mods::uninstall("+Str(*data)+")")
-    Protected id$
-    id$ = *data\string$
+  Procedure doUninstall(id$) ; remove from Train Fever Mod folder
+    debugger::Add("mods::doUninstall("+id$+")")
     
-    debugger::Add("mods::uninstall() - mod {"+id$+"}")
     
     Protected *mod.mod
     *mod = *mods(id$)
     
     If Not *mod
-      debugger::add("mods::uninstall() - ERROR: cannot find *mod in list")
+      debugger::add("mods::doUninstall() - ERROR: cannot find *mod in list")
       ProcedureReturn #False
     EndIf
     
     If Not canUninstall(*mod)
-      debugger::add("mods::uninstall() - ERROR: can not uninstall {"+id$+"}")
+      debugger::add("mods::doUninstall() - ERROR: can not uninstall {"+id$+"}")
       ProcedureReturn #False
     EndIf
     
     If Left(id$, 1) = "*"
-      debugger::add("mods::uninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
+      debugger::add("mods::doUninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
     EndIf
     
     Protected modFolder$
     modFolder$ = getModFolder(id$, *mod\aux\type$)
     
-    debugger::add("mods::uninstall() - delete {"+modFolder$+"} and all subfolders")
+    debugger::add("mods::doUninstall() - delete {"+modFolder$+"} and all subfolders")
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     free(*mod)
     
@@ -1207,35 +1213,33 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure backup(*data.queue::dat)
-    Protected id$, backupFolder$, modFolder$, backupFile$
+  Procedure doBackup(id$)
+    debugger::add("mods::doBackup("+id$+")")
+    Protected backupFolder$, modFolder$, backupFile$
     Protected *mod.mod
     
-    id$           = *data\string$
-    backupFolder$ = *data\option$
-    ; overwrite backupFolder
+    
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     misc::CreateDirectoryAll(backupFolder$)
     
-    debugger::add("mods::backup("+id$+")")
     
     If FindMapElement(*mods(), id$)
       *mod = *mods(id$)
     Else
-      debugger::add("mods::backup() - ERROR: cannot find mod {"+id$+"}")
+      debugger::add("mods::doBackup() - ERROR: cannot find mod {"+id$+"}")
       ProcedureReturn #False
     EndIf
     
     
     If FileSize(backupFolder$) <> -2
-      debugger::add("mods::backup() - ERROR: target directory does not exist {"+backupFolder$+"}")
+      debugger::add("mods::doBackup() - ERROR: target directory does not exist {"+backupFolder$+"}")
       ProcedureReturn #False
     EndIf
     
     modFolder$ = getModFolder(id$, *mod\aux\type$)
     
     If FileSize(modFolder$) <> -2
-      debugger::add("mods::backup() - ERROR: mod directory does not exist {"+modFolder$+"}")
+      debugger::add("mods::doBackup() - ERROR: mod directory does not exist {"+modFolder$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -1257,18 +1261,97 @@ Module mods
     windowMain::progressBar(80, 100, locale::getEx("progress", "backup_mod", strings$()))
     
     If archive::pack(backupFile$, modFolder$)
-      debugger::add("mods::backup() - success")
+      debugger::add("mods::doBackup() - success")
       *mod\aux\backup\date = Date()
       *mod\aux\backup\filename$ = GetFilePart(backupFile$)
       windowMain::progressBar(-1, -1, locale::l("progress", "backup_fin"))
       ProcedureReturn #True
     Else
-      debugger::add("mods::backup() - failed")
+      debugger::add("mods::doBackup() - failed")
       windowMain::progressBar(-1, -1, locale::l("progress", "backup_fail"))
       ProcedureReturn #False
     EndIf
     
   EndProcedure
+  
+  Procedure handleQueue(*dummy)
+    Protected action
+    Protected string$
+    
+    debugger::add("mods::handleQueue()")
+    
+    Repeat
+      working = #True
+      LockMutex(mutexQueue)
+      If ListSize(queue()) = 0
+        working = #False
+        UnlockMutex(mutexQueue)
+        Delay(100)
+        Continue
+      EndIf
+      
+      ; get top item from queue
+      FirstElement(queue())
+      action = queue()\action
+      string$ = queue()\string$
+      DeleteElement(queue(), 1)
+      UnlockMutex(mutexQueue)
+      
+      Select action
+        Case #QUEUE_LOAD
+          doLoad()
+          
+        Case #QUEUE_INSTALL
+          doInstall(string$)
+          
+        Case #QUEUE_UNINSTALL
+          doUninstall(string$)
+          
+        Case #QUEUE_BACKUP
+          doBackup(string$)
+          
+      EndSelect
+      Delay(100)
+    ForEver
+  EndProcedure
+  
+  Procedure addToQueue(action, string$="")
+    Debug "add to queue- wait for mutex"
+    LockMutex(mutexQueue)
+    Debug "got mutex - add"
+    LastElement(queue())
+    AddElement(queue())
+    queue()\action  = action
+    queue()\string$ = string$
+    
+    If Not threadQueue Or Not IsThread(threadQueue)
+      Debug "start thread"
+      threadQueue = CreateThread(@handleQueue(), 0)
+    EndIf
+    
+    UnlockMutex(mutexQueue)
+  EndProcedure
+  
+  ; actions (public)
+  
+  Procedure load()
+    Debug "load"
+    addToQueue(#QUEUE_LOAD)
+  EndProcedure
+  
+  Procedure install(file$)
+    addToQueue(#QUEUE_INSTALL, file$)
+  EndProcedure
+  
+  Procedure uninstall(id$)
+    addToQueue(#QUEUE_UNINSTALL, id$)
+  EndProcedure
+  
+  Procedure backup(id$)
+    addToQueue(#QUEUE_BACKUP, id$)
+  EndProcedure
+  
+  
   
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
@@ -1579,24 +1662,6 @@ Module mods
     HideGadget(_gadgetModList, #False)
     windowMain::stopGUIupdate(#False)
     
-  EndProcedure
-  
-  Procedure displayDLCs()
-;     Protected item
-;     If Not IsGadget(_gadgetDLC)
-;       ProcedureReturn #False
-;     EndIf
-;     If Not IsWindow(_window)
-;       ProcedureReturn #False
-;     EndIf
-;     
-;     ; IMPORTANT: New gadgets can only be added inside the main thread!
-;     ; therefore, ensure that this procedure always calls the main thread
-;     ; -> Cannot check if current function is called in main thread or not
-;     ; therefore, just send an "event" to the main window, which is always handled in the main thread
-;     ; the event has to be bound to the real "displayDLCs" function, which is then automatically called
-;     PostEvent(#PB_Event_Gadget, _window, _gadgetEventTriggerDLC)
-;     ProcedureReturn #True
   EndProcedure
   
   Procedure getPreviewImage(*mod.mod, original=#False)

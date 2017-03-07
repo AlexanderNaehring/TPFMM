@@ -449,7 +449,7 @@ Module repository
       FreeJSON(json)
     EndIf
     
-    queue::add(queue::#QueueActionInstall, file$)
+    mods::install(file$)
     running = #False
   EndProcedure
   

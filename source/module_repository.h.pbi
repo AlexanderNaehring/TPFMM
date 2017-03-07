@@ -1,4 +1,6 @@
-﻿DeclareModule repository
+﻿XIncludeFile "module_mods.h.pbi"
+
+DeclareModule repository
   EnableExplicit
   
   #OFFICIAL_REPOSITORY$ = "https://www.transportfevermods.com/repository/"

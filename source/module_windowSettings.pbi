@@ -11,7 +11,6 @@ EndDeclareModule
 XIncludeFile "module_misc.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
-XIncludeFile "module_queue.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_aes.pbi"
 
@@ -143,7 +142,7 @@ Module windowSettings
     EndIf
     
     mods::freeAll()
-    queue::add(queue::#QueueActionLoad)
+    mods::load()
     repository::init()
     
     GadgetCloseSettings()
