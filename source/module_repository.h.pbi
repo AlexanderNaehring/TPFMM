@@ -89,7 +89,7 @@
   EndStructure
   
   ; start repository loading
-  Declare loadRepositoryList()
+  Declare init()
   
   ; register functions
   Declare registerWindow(windowID)

@@ -144,7 +144,8 @@ Module windowSettings
     
     mods::freeAll()
     queue::add(queue::#QueueActionLoad)
-      
+    repository::init()
+    
     GadgetCloseSettings()
   EndProcedure
   

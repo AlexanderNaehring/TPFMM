@@ -465,19 +465,12 @@ Module repository
     Next
   EndProcedure
   
-  ; update window functions
-  
   Procedure showUpdate()
     If MessageRequester(locale::l("repository","update"), locale::l("repository","update_text"), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
       misc::openLink(main::WEBSITE$)
       main::exit()
     EndIf
   EndProcedure
-  
-  
-  ;----------------------------------------------------------------------------
-  ;---------------------------------- PUBLIC ----------------------------------
-  ;----------------------------------------------------------------------------
   
   Procedure loadRepository(*repository.repository)
     Protected file$ ; parameter: URL -> calculate local filename from url
@@ -574,8 +567,10 @@ Module repository
     
     time = ElapsedMilliseconds()
     
+    ; clean all lists
     ClearList(repositories())
     ClearMap(repo_mods())
+    displayMods() ; show clean gadget list
     
     ; always use official repository
     AddElement(repositories())
@@ -605,6 +600,36 @@ Module repository
       debugger::add("repository::loadRepositoryList() - no repositories in list")
       ProcedureReturn #False
     EndIf
+  EndProcedure
+  
+  Procedure initThread(*dummy)
+    While Not mods::isLoaded
+      ; do not start repository update while mods are loading
+      Delay(100)
+    Wend
+    loadRepositoryList()
+    displayMods() ; initially fill list
+    mods::displayMods()       ; update mod list to show remote links
+  EndProcedure
+  
+  
+  ;----------------------------------------------------------------------------
+  ;---------------------------------- PUBLIC ----------------------------------
+  ;----------------------------------------------------------------------------
+  
+  ; load repositories...
+  
+  Procedure init()
+    debugger::add("repository::init()")
+    
+    Static thread 
+    
+    If thread And IsThread(thread)
+      KillThread(thread)
+    EndIf
+    
+    thread = CreateThread(@initThread(), 0)
+    
   EndProcedure
   
   ; register functions

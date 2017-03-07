@@ -105,12 +105,11 @@ Module windowMain
       EndIf
     Next
     
-    DisableGadget(gadget("modInformation"), #True) ;- not yet implemented
-;     If numSelected = 1
-;       DisableGadget(GadgetButtonInfomation, #False)
-;     Else
-;       DisableGadget(GadgetButtonInfomation, #True)
-;     EndIf
+    If numSelected = 1
+      DisableGadget(gadget("modInformation"), #False)
+    Else
+      DisableGadget(gadget("modInformation"), #True)
+    EndIf
     
     If numCanBackup = 0
       DisableGadget(gadget("modBackup"),  #True)
@@ -247,16 +246,6 @@ Module windowMain
   Procedure close()
     HideWindow(window, #True)
     main::exit()
-  EndProcedure
-  
-  Procedure loadRepositoryThread(*dummy) ; first load
-    While Not mods::isLoaded
-      ; do not start repository update while mods are loading
-      Delay(100)
-    Wend
-    repository::loadRepositoryList()
-    repository::displayMods() ; initially fill list
-    mods::displayMods() ; update mod list to show remote links
   EndProcedure
   
   ;-------------------------------------------------
@@ -1390,10 +1379,7 @@ Module windowMain
     repository::registerThumbGadget(gadget("repoPreviewImage"))
     repository::registerFilterGadgets(gadget("repoFilterString"), gadget("repoFilterTypes"), gadget("repoFilterSources"), gadget("repoFilterInstalled"))
     
-    ; move @loadRepositoryThread to mods -> load repo after all mods have been loaded. 
-    ; common error: mods and repository access the "mods" list simultaneously...
-    ; use mutex for all list access...
-    CreateThread(@loadRepositoryThread(), 0)
+    repository::init() ; only starts thread -> returns quickly
     
     
     ; apply sizes
