@@ -36,14 +36,14 @@
         <tab text='Proxy Settings'>
           <vbox expand='no'>
             <checkbox name='proxyEnabled' text='Connect through proxy server' />
-            <frame name='proxyFrame'>
+            <frame name='proxyFrame' text=' ' >
               <gridbox columns='2' colexpand='item:2' rowexpand='no'>
-                <text name='proxyServerLabel' />
-                <string name='proxyServer' />
-                <text name='proxyUserLabel' />
-                <string name='proxyUser' />
-                <text name='proxyPasswordLabel' />
-                <string name='proxyPassword' flags='#PB_String_Password' />
+                <text name='proxyServerLabel' text='server' />
+                <string name='proxyServer' text=' ' />
+                <text name='proxyUserLabel' text='user' />
+                <string name='proxyUser' text=' ' />
+                <text name='proxyPasswordLabel' text='password' />
+                <string name='proxyPassword' flags='#PB_String_Password' text=' ' />
               </gridbox>
             </frame>
           </vbox>
