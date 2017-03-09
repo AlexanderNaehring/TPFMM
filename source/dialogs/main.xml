@@ -12,25 +12,25 @@
               <hbox expand='item:1'>
                 <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
                 <vbox expand='no'>
-                  <frame name='modFilterFrame'>
+                  <frame name='modFilterFrame' text=' '>
                     <vbox expand='no'>
                       <hbox expand='item:1'>
-                        <string name='modFilterString'/>
+                        <string name='modFilterString' text=' ' />
                         <button name='modFilterReset' text='X' />
                       </hbox>
                       <combobox name='modFilterFolder' />
                       <hbox expand='equal'>
-                        <checkbox name='modFilterHidden' />
-                        <checkbox name='modFilterVanilla' />
+                        <checkbox name='modFilterHidden' text=' ' />
+                        <checkbox name='modFilterVanilla' text=' ' />
                       </hbox>
                     </vbox>
                   </frame>
                   <image name='modPreviewImage' width='240' height='135' />
-                  <frame name='modManagementFrame'>
+                  <frame name='modManagementFrame' text=' '>
                     <vbox expand='no'>
-                      <button name='modInformation' />
-                      <button name='modBackup' />
-                      <button name='modUninstall' />
+                      <button name='modInformation' text=' ' />
+                      <button name='modBackup' text=' ' />
+                      <button name='modUninstall' text=' ' />
                     </vbox>
                   </frame>
                 </vbox>
@@ -42,21 +42,21 @@
               <hbox expand='item:1'>
                 <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
                 <vbox expand='no'>
-                  <frame name='repoFilterFrame'>
+                  <frame name='repoFilterFrame' text=' '>
                     <vbox expand='no'>
                       <combobox name='repoFilterSources' />
                       <combobox name='repoFilterTypes' />
                       <combobox name='repoFilterInstalled' />
                       <hbox expand='item:1'>
-                        <string name='repoFilterString'/>
+                        <string name='repoFilterString' text=' '/>
                         <button name='repoFilterReset' text='X' />
                       </hbox>
                     </vbox>
                   </frame>
-                  <frame name='repoManagementFrame'>
+                  <frame name='repoManagementFrame' text=' '>
                     <vbox expand='no'>
-                      <button name='repoWebsite' />
-                      <button name='repoInstall' />
+                      <button name='repoWebsite' text=' ' />
+                      <button name='repoInstall' text=' ' />
                     </vbox>
                   </frame>
                   <image name='repoPreviewImage' width='210' height='118' />
@@ -75,7 +75,7 @@
         </gridbox>
         <vbox expand='item:1'>
           <empty />
-          <text name='version' flags='#PB_Text_Right' />
+          <text name='version' text=' ' flags='#PB_Text_Right' />
         </vbox>
       </hbox>
       <singlebox id='placeholder' margin='bottom:0' invisible='yes' comment='placeholder for menu and status bar'></singlebox>

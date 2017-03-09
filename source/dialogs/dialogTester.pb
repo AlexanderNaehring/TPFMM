@@ -51,7 +51,7 @@ EndProcedure
   
 
 Define file$   = "main"
-Define dialog$ = "modInfo"
+Define dialog$ = "main"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False
