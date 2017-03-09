@@ -50,8 +50,8 @@ EndProcedure
   
   
 
-Define file$   = "settings"
-Define dialog$ = "settings"
+Define file$   = "main"
+Define dialog$ = "modInfo"
 Define dialog, xml
 #MENU = #False
 #STATUSBAR = #False

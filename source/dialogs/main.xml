@@ -104,7 +104,7 @@
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0'>
         <vbox colums='2' spacing='0' expand='no'>
           <canvas name='top' height='5' />
-          <text name='name' flags='#PB_Text_Center' />
+          <text name='name' text=' ' flags='#PB_Text_Center' />
           <canvas name='bar' height='6' />
         </vbox>
       </singlebox>
@@ -113,32 +113,32 @@
         </hbox>
       </scrollarea>
 
-      <frame name='descriptionLabel'>
-        <editor name='description' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' height='100' />
+      <frame name='descriptionLabel' text=' '>
+        <editor name='description' text=' ' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' height='100' />
       </frame>
-      <frame name='info'>
+      <frame name='info' text=' '>
         <hbox expand='item:2'>
           <vbox expand='no'>
             <gridbox colexpand='item:2' rowexpand='no' columns='2'>
-              <text name='uuidLabel'/>
-              <text name='uuid' />
-              <text name='folderLabel' />
-              <hyperlink name='folder' />
-              <text name='tagsLabel' />
-              <text name='tags' />
-              <text name='dependenciesLabel' />
+              <text name='uuidLabel' text=' ' />
+              <text name='uuid' text=' ' />
+              <text name='folderLabel' text=' ' />
+              <hyperlink name='folder' text=' ' />
+              <text name='tagsLabel' text=' ' />
+              <text name='tags' text=' ' />
+              <text name='dependenciesLabel' text=' ' />
               <hbox id='infoBoxDependencies' expand='no'></hbox>
-              <text name='filesLabel'   invisible='yes'/>
-              <text name='files'   invisible='yes' />
-              <text name='sizeLabel'   invisible='yes' />
-              <text name='size'   invisible='yes' />-->
+              <text name='filesLabel' text=' '  invisible='yes'/>
+              <text name='files' text=' ' invisible='yes' />
+              <text name='sizeLabel' text=' ' invisible='yes' />
+              <text name='size' text=' ' invisible='yes' />
             </gridbox>
           </vbox>
         </hbox>
       </frame>
       <empty />
       <hbox expand='item:2'>
-        <text name='sourcesLabel' text='Soures:'/>
+        <text name='sourcesLabel' text=' '/>
         <hbox id='infoBoxSources' expand='no'></hbox>
       </hbox>
       <!--
