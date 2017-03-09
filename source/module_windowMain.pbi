@@ -761,6 +761,7 @@ Module windowMain
           StopDrawing()
         EndIf
         
+        HideWindow(*data\window, #False, #PB_Window_WindowCentered)
         
         ProcedureReturn #True
       Else
