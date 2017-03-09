@@ -31,6 +31,7 @@ Module repository
   Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
   Global Dim type.type(0) ; type information (for filtering)
   Global _DISABLED = #False
+  Global _UPDATE_URL$ = ""
   
   Global NewMap settingsGadget()
   
@@ -476,7 +477,11 @@ Module repository
   
   Procedure showUpdate()
     If MessageRequester(locale::l("repository","update"), locale::l("repository","update_text"), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-      misc::openLink(main::WEBSITE$)
+      If _UPDATE_URL$
+        misc::openLink(_UPDATE_URL$)
+      Else
+        misc::openLink(main::WEBSITE$)
+      EndIf
       main::exit()
     EndIf
   EndProcedure
@@ -533,6 +538,7 @@ Module repository
         debugger::add("repository::loadRepository() - TPFMM update available: "+*repository\main_json\TPFMM\version$)
         
         CopyStructure(*repository\main_json\TPFMM, TPFMM_UPDATE, tpfmm)
+        _UPDATE_URL$ = *repository\main_json\TPFMM\url$
         BindEvent(#EventShowUpdate, @showUpdate(), _windowMain)
         PostEvent(#EventShowUpdate, _windowMain, 0)
         
