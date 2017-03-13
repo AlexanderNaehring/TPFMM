@@ -29,7 +29,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_ListIcon.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -68,8 +68,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_windowMain.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="9e340eaed84b53e0989e9e732127f446"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -85,8 +84,8 @@
       <purifier enable="0" granularity="-12566464,-12566464,-12566464,-12566464"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="1343"/>
-      <buildcount enable="1" value="22"/>
+      <compilecount enable="1" value="1357"/>
+      <buildcount enable="1" value="23"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
@@ -111,8 +110,8 @@
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="1343"/>
-      <buildcount enable="1" value="22"/>
+      <compilecount enable="1" value="1357"/>
+      <buildcount enable="1" value="23"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
