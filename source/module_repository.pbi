@@ -125,13 +125,16 @@ Module repository
   Procedure loadRepositoryMods(url$, enc$ = "")
     Protected file$ ; parameter: URL -> calculate local filename from url
     file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods("+url$+", "+enc$+") - filename: {"+file$+"}")
+    debugger::add("repository::loadRepositoryMods() "+url$)
     
     Protected json, value, mods
     
     If FileSize(file$) < 0
-      debugger::add("repository::loadRepositoryMods() - repository file not present, load from server")
-      downloadRepository(url$)
+      debugger::add("repository::loadRepositoryMods() - download: "+url$)
+      If Not downloadRepository(url$)
+        ; download failed
+        ProcedureReturn #False 
+      EndIf
     EndIf
     
     Select enc$
@@ -490,8 +493,7 @@ Module repository
     Protected file$ ; parameter: URL -> calculate local filename from url
     
     file$ = getRepoFileName(*repository\url$)
-    debugger::add("repository::loadRepository("+*repository\url$+")")
-    debugger::add("repository::loadRepository() - filename: {"+file$+"}")
+    debugger::add("repository::loadRepository() "+*repository\url$)
     
     Protected json, value
     Protected age
@@ -500,7 +502,11 @@ Module repository
       ProcedureReturn #False 
     EndIf
     
-    downloadRepository(*repository\url$)
+    ; main repository: always request new version from server!
+    If Not downloadRepository(*repository\url$)
+      ProcedureReturn #False
+    EndIf
+    
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
@@ -542,11 +548,6 @@ Module repository
         BindEvent(#EventShowUpdate, @showUpdate(), _windowMain)
         PostEvent(#EventShowUpdate, _windowMain, 0)
         
-        ; debugger::add("repository::loadRepository() - post event to main window!")
-        ; PostEvent(#EventShowUpdate, _windowMain, 0)
-        ; updateWindowShow()
-        
-        
         ; disable repository features for outdated versions?
         _DISABLED = #True
         LockMutex(mutexRepoMods)
@@ -565,10 +566,8 @@ Module repository
         age = Date() - GetFileDate(getRepoFileName(*repository\main_json\mods()\url$), #PB_Date_Modified)
         debugger::add("repository::loadRepository() - local age: "+Str(age)+", remote age: "+Str(*repository\main_json\mods()\age)+"")
         If age > *repository\main_json\mods()\age
-          debugger::add("repository::loadRepository() - download new version")
-          downloadRepository(*repository\main_json\mods()\url$)
-        Else
-          debugger::add("repository::loadRepository() - no download required")
+          debugger::add("repository::loadRepository() - local repository not up to date")
+          DeleteFile(getRepoFileName(*repository\main_json\mods()\url$))
         EndIf
         ; Load mods from repository file
         loadRepositoryMods(*repository\main_json\mods()\url$, *repository\main_json\mods()\enc$)
