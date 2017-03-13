@@ -112,8 +112,8 @@ Module windowSettings
       locale$ = "en"
     EndIf
     
-    
-    If OpenPreferences(main::settingsFile$)
+    OpenPreferences(main::settingsFile$, #PB_Preference_GroupSeparator)
+    If #True
       WritePreferenceString("path", main::gameDirectory$)
       WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
       If locale$ <> ReadPreferenceString("locale", "en")
@@ -348,14 +348,23 @@ Module windowSettings
     
     debugger::add("windowSettings::show()")
     
+    OpenPreferences(main::settingsFile$)
     ; main
-    If OpenPreferences(main::settingsFile$)
-      SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
-      SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
-      locale$ = ReadPreferenceString("locale", "en")
-      SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #False))
-      ClosePreferences()
-    EndIf
+    SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
+    SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
+    locale$ = ReadPreferenceString("locale", "en")
+    SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #False))
+    ClosePreferences()
+    
+    ; proxy
+    PreferenceGroup("proxy")
+    SetGadgetState(gadget("proxyEnabled"), ReadPreferenceInteger("enabled", 0))
+    SetGadgetText(gadget("proxyServer"), ReadPreferenceString("server", ""))
+    SetGadgetText(gadget("proxyUser"), ReadPreferenceString("user", ""))
+    SetGadgetText(gadget("proxyPassword"), aes::decryptString(ReadPreferenceString("password", "")))
+    
+    ClosePreferences()
+    
     
     If GetGadgetText(gadget("installationPath")) = ""
       GadgetButtonAutodetect()
@@ -364,21 +373,11 @@ Module windowSettings
     ; locale
     locale::listAvailable(gadget("languageSelection"), locale$)
     
-    
-    ; proxy
-    If OpenPreferences(main::settingsFile$)
-      PreferenceGroup("proxy")
-      SetGadgetState(gadget("proxyEnabled"), ReadPreferenceInteger("enabled", 0))
-      SetGadgetText(gadget("proxyServer"), ReadPreferenceString("server", ""))
-      SetGadgetText(gadget("proxyUser"), ReadPreferenceString("user", ""))
-      SetGadgetText(gadget("proxyPassword"), aes::decryptString(ReadPreferenceString("password", "")))
-      ClosePreferences()
-    EndIf
-    
 ;     repository::listRepositories(gadget())
     
     updateGadgets()
     
+    ; show window
     RefreshDialog(_dialog)
     HideWindow(window, #False, #PB_Window_WindowCentered)
     DisableWindow(_parentW, #True)

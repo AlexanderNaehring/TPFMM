@@ -158,39 +158,41 @@ Module main
     
     images::LoadImages()
     
-    ; user init...
+    ; settings file init..
+    If FileSize(settingsFile$) < 0
+      If CreatePreferences(settingsFile$)
+        ClosePreferences()
+      Else
+        debugger::add("main::init() - Error: could not create TPFMM settings file")
+        MessageRequester("Error", "Could not create TPFMM settings file.", #PB_MessageRequester_Error)
+        End
+      EndIf
+    EndIf
+    
+    ; open preferences
+    OpenPreferences(settingsFile$)
     
     debugger::Add("init() - read locale")
-    If OpenPreferences(settingsFile$)
-      locale::use(ReadPreferenceString("locale","en"))
-      ClosePreferences()
+    locale::use(ReadPreferenceString("locale","en"))
+    
+    gameDirectory$ = ReadPreferenceString("path", "")
+    If misc::checkGameDirectory(gameDirectory$) <> 0
+      gameDirectory$ = ""
     EndIf
+    
     
     ;-TODO: First: Check path, etc.. then open required windows.
     ; only if everything is fine: show main window...
     
-    ; open all windows
     windowMain::create()
     windowSettings::create(windowMain::window)
-;     windowProgress::create(windowMain::id)
-;     updater::create(windowMain::id)
     
     
-    If OpenPreferences(settingsFile$)
-      gameDirectory$ = ReadPreferenceString("path", "")
-      If misc::checkGameDirectory(gameDirectory$) <> 0
-        gameDirectory$ = ""
-      EndIf
-      ClosePreferences()
-    EndIf
-    
-    
-    
-    ; Window Location
-    ; (For testing purposes, may be solved more easy using #PB_Window_ScreenCentered and OS functions.....)
+    ; Restore Window Location
+    ; (For testing purposes, may be solved more easy using #PB_Window_ScreenCentered and OS functions...)
     Protected nDesktops, desktop, locationOK
     Protected windowX, windowY, windowWidth, windowHeight
-    If OpenPreferences(settingsFile$)
+    If #True
       debugger::add("main::init() - Set main window location")
       PreferenceGroup("window")
       windowX = ReadPreferenceInteger("x", #PB_Ignore)
@@ -220,7 +222,6 @@ Module main
         EndIf
       Next
       
-      
       If locationOK 
         debugger::add("main::init() - set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
         ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
@@ -235,23 +236,22 @@ Module main
         windowX = (DesktopWidth(0)  - windowWidth ) /2
         windowY = (DesktopHeight(0) - windowHeight) /2
       EndIf
-      
     EndIf
     
     
     
-    ; column sizes
-    If OpenPreferences(settingsFile$)
-      PreferenceGroup("columns")
-      Protected Dim widths(5)
-      For i = 0 To 5
-        widths(i) = ReadPreferenceInteger(Str(i), 0)
-      Next
-      ClosePreferences()
+    ; restore column sizes
+    PreferenceGroup("columns")
+    Protected Dim widths(5)
+    For i = 0 To 5
+      widths(i) = ReadPreferenceInteger(Str(i), 0)
+    Next
       
-      windowMain::setColumnWidths(widths())
-    EndIf
+    windowMain::setColumnWidths(widths())
     
+    
+    ; close preferences
+    ClosePreferences()
     
 ;     ; start update in background
 ;     debugger::Add("init() - start updater")
@@ -279,22 +279,21 @@ Module main
   EndProcedure
   
   Procedure initProxy()
-    If OpenPreferences(settingsFile$)
-      PreferenceGroup("proxy")
-      If ReadPreferenceInteger("enabled", 0)
-        HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), aes::decryptString(ReadPreferenceString("password", "")))
-      Else
-        HTTPProxy("")
-      EndIf
-      ClosePreferences()
+    OpenPreferences(settingsFile$)
+    PreferenceGroup("proxy")
+    If ReadPreferenceInteger("enabled", 0)
+      HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), aes::decryptString(ReadPreferenceString("password", "")))
+    Else
+      HTTPProxy("")
     EndIf
+    ClosePreferences()
   EndProcedure
   
   Procedure exit()
     Protected i.i
     
     
-    If OpenPreferences(settingsFile$)
+    If OpenPreferences(settingsFile$) ; can only write if opened
       PreferenceGroup("window")
       ;TODO: Check: linux does not seem to read the location correctly?
       WritePreferenceInteger("x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
