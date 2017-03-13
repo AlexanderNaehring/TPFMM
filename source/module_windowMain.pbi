@@ -257,7 +257,7 @@ Module windowMain
       
       ; check changed working Directory
       If LastDir$ <> main::gameDirectory$
-        Debug "Working Directory Changed"
+        Debug "windowMain::timerMain() - Working Directory Changed"
         LastDir$ = main::gameDirectory$
         If misc::checkGameDirectory(main::gameDirectory$) = 0
           ; ok
