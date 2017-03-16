@@ -112,6 +112,8 @@ DeclareModule repository
   Declare findModOnline(*mod.mods::mod)
   
   ; other
+  Declare refresh()
+  Declare clearCache()
   Declare listRepositories(Map gadgets()) ; used by settings window
   
   Global TPFMM_UPDATE.tpfmm

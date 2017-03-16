@@ -1225,6 +1225,38 @@ Module repository
     
   EndProcedure
   
+  Procedure refresh()
+    Protected dir$, entry$, dir
+    
+    dir$ = #DIRECTORY + "/"
+    Debug dir$
+    dir = ExamineDirectory(#PB_Any, dir$, "*.json")
+    If dir
+      While NextDirectoryEntry(dir)
+        entry$ = DirectoryEntryName(dir)
+        Debug entry$
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          DeleteFile(dir$ + entry$)
+        EndIf
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    init()
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure clearCache()
+    Protected dir$
+    
+    dir$ = #DIRECTORY + "/thumbnails/"
+    DeleteDirectory(dir$, "", #PB_FileSystem_Recursive)
+    CreateDirectory(dir$)
+    
+    ProcedureReturn #True
+  EndProcedure
+  
   
 EndModule
 

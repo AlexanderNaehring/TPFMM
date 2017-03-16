@@ -17,6 +17,9 @@ update            = Update TPFMM
 license           = License
 show_backups      = Show Backup Folder
 show_downloads    = Show Download Folder
+repository        = Repository
+repo_refresh      = Refresh Repository
+repo_clear        = Clear repository preview image cache
 
 [main]
 mods            = Modifications
@@ -49,6 +52,8 @@ select_files    = Select Files
 select_files_text = Which files should be downloaded and installed?
 cancel          = Cancel
 download        = Download
+repo_clear_title= Repository Cache
+repo_clear_text = The repository preview image cache was deleted.
 
 [info]
 title           = Mod Information

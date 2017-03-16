@@ -46,6 +46,8 @@ Module windowMain
     #MenuItem_SearchModOnline
     #MenuItem_ModWebsite
     #MenuItem_ModFolder
+    #MenuItem_RepositoryRefresh
+    #MenuItem_RepositoryClearCache
   EndEnumeration
   
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
@@ -1011,7 +1013,14 @@ Module windowMain
     ProcedureReturn #False
   EndProcedure
   
+  Procedure repoRefresh()
+    repository::refresh()
+  EndProcedure
   
+  Procedure repoClearCache()
+    repository::clearCache()
+    MessageRequester(locale::l("main","repo_clear_title"), locale::l("main","repo_clear_text"), #PB_MessageRequester_Info)
+  EndProcedure
   
   Procedure searchModOnline()
     ; get selected mod from list
@@ -1300,7 +1309,9 @@ Module windowMain
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
     MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
-    CloseSubMenu()
+    MenuTitle(l("menu","repository"))
+    MenuItem(#MenuItem_RepositoryRefresh, l("menu","repo_refresh"))
+    MenuItem(#MenuItem_RepositoryClearCache, l("menu","repo_clear"))
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
@@ -1312,20 +1323,11 @@ Module windowMain
     BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
     BindMenuEvent(0, #MenuItem_ShowBackups, @modShowBackupFolder())
     BindMenuEvent(0, #MenuItem_ShowDownloads, @modShowDownloadFolder())
+    BindMenuEvent(0, #MenuItem_RepositoryRefresh, @repoRefresh())
+    BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     
-    
-    ; Status bar
-;     CreateStatusBar(0, WindowID(DialogWindow(dialog)))
-;     AddStatusBarField(#PB_Ignore) ; progressbar
-;     AddStatusBarField(250) ; progress text
-;     AddStatusBarField(150) ; download 
-;     AddStatusBarField(100) ; version 
-;     StatusBarProgress(0, 0, 0, #PB_StatusBar_BorderLess)
-;     StatusBarText(0, 1, "", #PB_StatusBar_BorderLess)
-;     StatusBarText(0, 2, "", #PB_StatusBar_Center)
-;     StatusBarText(0, 3, main::VERSION$, #PB_StatusBar_Right | #PB_StatusBar_BorderLess)
     SetGadgetText(gadget("version"), main::VERSION$)
     
     ; OS specific
