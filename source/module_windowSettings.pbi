@@ -354,7 +354,6 @@ Module windowSettings
     SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
     locale$ = ReadPreferenceString("locale", "en")
     SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #False))
-    ClosePreferences()
     
     ; proxy
     PreferenceGroup("proxy")
