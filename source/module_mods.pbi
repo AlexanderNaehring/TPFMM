@@ -12,7 +12,7 @@ Module mods
     type$ ; mod, dlc, map
   EndStructure
   
-  Global NewMap *mods.mod()
+  Global NewMap mods.mod()
   Global mutexMods = CreateMutex()
   Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
   
@@ -325,25 +325,25 @@ Module mods
   EndProcedure
   
   Procedure addToMap(id$, type$ = "mod")
-    Protected count.i, *mod.mod
+    Protected *mod.mod
+    
+    LockMutex(mutexMods)
+    If FindMapElement(mods(), id$) 
+      debugger::Add("mods::addToMap() - WARNING: mod {"+id$+"} already in hash table -> delete old mod and overwrite with new")
+      DeleteMapElement(mods())
+    EndIf
     
     debugger::add("mods::addToMap() - add new mod {"+id$+"} to internal hash table")
-    ; create new mod and insert into map
-    *mod = init()
+    AddMapElement(mods(), id$)
+    
     ; only basic information required here
     ; later, a check tests if info in list is up to date with mod.lua file
     ; only indicate type and location of mod here!
-    *mod\tpf_id$    = id$
-    *mod\aux\type$  = type$
     
-    LockMutex(mutexMods)
-    If FindMapElement(*mods(), id$) 
-      debugger::Add("mods::addToMap() - WARNING: mod {"+*mod\tpf_id$+"} already in hash table -> delete old mod and overwrite with new")
-      FreeStructure(*mods())
-      DeleteMapElement(*mods(), *mod\tpf_id$)
-    EndIf
+    mods()\tpf_id$    = id$
+    mods()\aux\type$  = type$
     
-    *mods(id$) = *mod ; add (or overwrite) mod to/in map
+    *mod = mods()
     
     UnlockMutex(mutexMods)
     
@@ -387,8 +387,8 @@ Module mods
     WriteString(file, "</h1><table><tr><th>Modification</th><th>Version</th><th>Author</th></tr>", #PB_UTF8)
     
     LockMutex(mutexMods)
-    ForEach *mods()
-      *mod = *mods()
+    ForEach mods()
+      *mod = mods()
       With *mod
           name$ = \name$
           authors$ = ""
@@ -443,8 +443,8 @@ Module mods
     EndIf
     
     LockMutex(mutexMods)
-    ForEach *mods()
-      *mod = *mods()
+    ForEach mods()
+      *mod = mods()
       With *mod
         authors$ = ""
         count = modCountAuthors(*mod)
@@ -656,9 +656,8 @@ Module mods
     debugger::Add("mods::freeAll()")
     
     LockMutex(mutexMods)
-    ForEach *mods()
-      FreeStructure(*mods())
-      DeleteMapElement(*mods())
+    ForEach mods()
+      DeleteMapElement(mods())
     Next
     UnlockMutex(mutexMods)
     
@@ -690,14 +689,16 @@ Module mods
       FreeJSON(json)
       
       ForEach mods_json()
-        *mod = init()
+        id$ = MapKey(mods_json())
+        AddMapElement(mods(), id$)
+        *mod = mods() ; work in pointer, manipulates also data in the map
         CopyStructure(mods_json(), *mod, mod)
         If Not *mod\aux\installDate
           *mod\aux\installDate = Date()
         EndIf
-        *mods(MapKey(mods_json())) = *mod
         ; debugger::add("mods::doLoad() - address {"+*mod+"} - id {"+*mod\tpf_id$+"} - name {"+*mod\name$+"}")
       Next
+      
       debugger::Add("mods::doLoad() - loaded "+MapSize(mods_json())+" mods from mods.json")
       FreeMap(mods_json())
     EndIf
@@ -799,11 +800,10 @@ Module mods
     
     ; first check:  deleted mods
     debugger::add("mods::doLoad() - check for removed mods")
-    ForEach *mods()
-      If Not FindMapElement(scanner(), MapKey(*mods()))
-        debugger::add("mods::doLoad() - remove {"+MapKey(*mods())+"} from list (folder removed)")
-        FreeStructure(*mods())
-        DeleteMapElement(*mods())
+    ForEach mods()
+      If Not FindMapElement(scanner(), MapKey(mods()))
+        debugger::add("mods::doLoad() - remove {"+MapKey(mods())+"} from list (folder removed)")
+        DeleteMapElement(mods())
       EndIf
     Next
     
@@ -822,15 +822,15 @@ Module mods
         
         id$ = MapKey(scanner())
         
-        If FindMapElement(*mods(), id$)
+        If FindMapElement(mods(), id$)
           ; select existing element or
-          *mod = *mods()
+          *mod = mods()
         Else
           ; create new element
           *mod = addToMap(id$, scanner()\type$)
         EndIf
         
-        If Not *mod Or Not FindMapElement(*mods(), id$)
+        If Not *mod Or Not FindMapElement(mods(), id$)
           ; this should never be reached
           debugger::add("mods::doLoad() - ERROR: failed to add mod to map")
           Continue
@@ -851,10 +851,10 @@ Module mods
     
     ; Final Check
     debugger::add("mods::doLoad() - final checkup")
-    ForEach *mods()
-      *mod = *mods()
-      If *mod\tpf_id$ = "" Or MapKey(*mods()) = ""
-        debugger::add("mods::doLoad() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(*mods())+"} tf_id$={"+*mod\tpf_id$+"}")
+    ForEach mods()
+      *mod = mods()
+      If *mod\tpf_id$ = "" Or MapKey(mods()) = ""
+        debugger::add("mods::doLoad() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(mods())+"} tf_id$={"+*mod\tpf_id$+"}")
         End
       EndIf
     Next
@@ -879,28 +879,21 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    ; *mods() only holds pointer values, not the real data
-    ; -> copy data to mods_tmp
-    Protected NewMap mods_tmp.mod()
-    LockMutex(mutexMods)
-    ForEach *mods()
-      CopyStructure(*mods(), mods_tmp(MapKey(*mods())), mod)
-    Next
-    UnlockMutex(mutexMods)
-    
     defineFolder()
     
     If FileSize(pTPFMM$) <> -2
       misc::CreateDirectoryAll(pTPFMM$)
     EndIf
     
+    LockMutex(mutexMods)
+    
     Protected json
     json = CreateJSON(#PB_Any)
-    InsertJSONMap(JSONValue(json), mods_tmp())
+    InsertJSONMap(JSONValue(json), mods())
     SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
     
-    FreeMap(mods_tmp())
+    UnlockMutex(mutexMods)
     
     ProcedureReturn #True
   EndProcedure
@@ -981,15 +974,15 @@ Module mods
     ; search for mod in list of installed mods
     LockMutex(mutexMods)
     If source$ = "tfnet" Or source$ = "tpfnet"
-      ForEach *mods()
-        If *mods()\aux\tfnetID = id
+      ForEach mods()
+        If mods()\aux\tfnetID = id
           installed = #True
           Break
         EndIf
       Next
     ElseIf source$ = "workshop"
-      ForEach *mods()
-        If *mods()\aux\workshopID = id
+      ForEach mods()
+        If mods()\aux\workshopID = id
           installed = #True
           Break
         EndIf
@@ -1088,10 +1081,9 @@ Module mods
     LockMutex(mutexMods)
     ; check if mod already installed?
     ; todo: call "doUninstall", which in turn may call backupBeforeUninstall
-    If FindMapElement(*mods(), id$)
+    If FindMapElement(mods(), id$)
       debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
-      FreeStructure(*mods())
-      DeleteMapElement(*mods())
+      DeleteMapElement(mods())
     EndIf
     If FileSize(modFolder$) = -2
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -1174,7 +1166,7 @@ Module mods
     
     Protected *mod.mod
     LockMutex(mutexMods)
-    *mod = *mods(id$)
+    *mod = mods(id$)
     UnlockMutex(mutexMods)
     
     If Not *mod
@@ -1197,8 +1189,7 @@ Module mods
     debugger::add("mods::doUninstall() - delete {"+modFolder$+"} and all subfolders")
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
-    FreeStructure(*mods())
-    DeleteMapElement(*mods())
+    DeleteMapElement(mods())
     
     displayMods()
     
@@ -1215,8 +1206,8 @@ Module mods
     misc::CreateDirectoryAll(backupFolder$)
     
     LockMutex(mutexMods)
-    If FindMapElement(*mods(), id$)
-      *mod = *mods(id$)
+    If FindMapElement(mods(), id$)
+      *mod = mods(id$)
       UnlockMutex(mutexMods)
     Else
       UnlockMutex(mutexMods)
@@ -1504,8 +1495,8 @@ Module mods
     ; only if all parts are found, show result!
     count = CountString(filterString$, " ") + 1 
     LockMutex(mutexMods)
-    ForEach *mods()
-      *mod = *mods()
+    ForEach mods()
+      *mod = mods()
       With *mod
         mod_ok = 0 ; reset ok for every mod entry
         If \aux\type$ = "dlc"
@@ -1586,7 +1577,7 @@ Module mods
         If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
           
           AddElement(*mods_to_display())
-          *mods_to_display() = *mods()
+          *mods_to_display() = mods()
           
         EndIf
       EndWith
