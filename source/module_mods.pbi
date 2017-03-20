@@ -652,36 +652,13 @@ Module mods
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure free(*mod.mod) ; delete mod from map and free memory
-    Protected id$
-    If *mod
-      id$ = *mod\tpf_id$
-      If id$ = "" ; TODO check for valid ID (in case of IMA)
-        debugger::Add("mods::free() - ERROR: possible IMA: could not find ID for mod "+Str(*mod))
-      EndIf
-    Else
-      debugger::Add("mods::free() - ERROR: IMA")
-      ProcedureReturn #False
-    EndIf
-    
-    ; cannot lock mutex here
-    If FindMapElement(*mods(), id$)
-      DeleteMapElement(*mods(), id$)
-      FreeStructure(*mod)
-      ProcedureReturn #True
-    EndIf
-    
-    debugger::Add("mods::freeMod() - WARNING: could not find mod {"+id$+"} in hash table")
-    ProcedureReturn #False
-    
-  EndProcedure
-  
   Procedure freeAll()
     debugger::Add("mods::freeAll()")
     
     LockMutex(mutexMods)
     ForEach *mods()
-      mods::free(*mods())
+      FreeStructure(*mods())
+      DeleteMapElement(*mods())
     Next
     UnlockMutex(mutexMods)
     
@@ -824,8 +801,9 @@ Module mods
     debugger::add("mods::doLoad() - check for removed mods")
     ForEach *mods()
       If Not FindMapElement(scanner(), MapKey(*mods()))
-        debugger::add("mods::doLoad() - WARNING: remove {"+MapKey(*mods())+"} from list")
-        free(*mods())
+        debugger::add("mods::doLoad() - remove {"+MapKey(*mods())+"} from list (folder removed)")
+        FreeStructure(*mods())
+        DeleteMapElement(*mods())
       EndIf
     Next
     
@@ -1112,7 +1090,8 @@ Module mods
     ; todo: call "doUninstall", which in turn may call backupBeforeUninstall
     If FindMapElement(*mods(), id$)
       debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
-      free(*mods(id$))
+      FreeStructure(*mods())
+      DeleteMapElement(*mods())
     EndIf
     If FileSize(modFolder$) = -2
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -1217,7 +1196,9 @@ Module mods
     
     debugger::add("mods::doUninstall() - delete {"+modFolder$+"} and all subfolders")
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
-    free(*mod)
+    
+    FreeStructure(*mods())
+    DeleteMapElement(*mods())
     
     displayMods()
     

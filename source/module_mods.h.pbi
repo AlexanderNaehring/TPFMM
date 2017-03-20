@@ -78,7 +78,6 @@
   Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
   
   Declare init()    ; allocate new mod structure, return *mod
-  Declare free(*mod.mod) ; free *mod structure
   Declare freeAll() ; free all mods in map
   Declare saveList()
   
