@@ -33,6 +33,8 @@ DeclareModule windowMain
   Declare progressBar(value, max=-1, text$=Chr(1))
   Declare progressDownload(percent.d, modName$)
   
+  Declare repoFindModAndDownload(source$, id.q)
+  
 EndDeclareModule
 
 Module windowMain
@@ -1154,7 +1156,6 @@ Module windowMain
   EndProcedure
   
   
-  
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
@@ -1431,10 +1432,18 @@ Module windowMain
     ProcedureReturn GetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
   
-  
-  ; callbacks from mods module
-  
-  
+  Procedure repoFindModAndDownload(source$, id.q)
+    ; search for a mod in repo and initiate download
+    Protected *repoMod.repository::mod
+    
+    *repoMod = repository::findModByID(source$, id)
+    If *repoMod
+      ; select mod in repo list
+      If repository::selectModInList(*repoMod)
+        repoDownload()
+      EndIf
+    EndIf
+  EndProcedure
   
   
 EndModule

@@ -1177,6 +1177,27 @@ Module repository
     ProcedureReturn *find
   EndProcedure
   
+  Procedure findModByID(source$, id.q)
+    debugger::add("repository::findModByID("+source$+","+id+")")
+    Protected *find.mod
+    LockMutex(mutexRepoMods)
+    
+    ForEach repo_mods()
+      If repo_mods()\repo_info\source$ = source$
+        ForEach repo_mods()\mods()
+          If repo_mods()\mods()\source$ = source$ And 
+             repo_mods()\mods()\id      = id
+            *find = repo_mods()\mods()
+            debugger::add("repository::findModByID("+source$+","+id+") - found mod '"+*find\name$+"'")
+            Break 2
+          EndIf
+        Next
+      EndIf
+    Next
+    
+    UnlockMutex(mutexRepoMods)
+    ProcedureReturn *find
+  EndProcedure
   
   ; list all available repos in settings gadget
   

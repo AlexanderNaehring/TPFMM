@@ -93,7 +93,14 @@ Module main
         EndIf
         
       Default
-        If FileSize(parameter$) > 0
+        If Left(parameter$, 17) = "tpfmm://download/"
+          ; handle link
+          parameter$ = Mid(parameter$, 18)
+          Protected source$ = StringField(parameter$, 1, "/")
+          Protected id.q = Val(StringField(parameter$, 2, "/"))
+          windowMain::repoFindModAndDownload(source$, id)
+          
+        ElseIf FileSize(parameter$) > 0
           ; install mod... (this function is called, before the main window is created ....
           ; Todo: Check if thisworks at program start.
           mods::install(parameter$)

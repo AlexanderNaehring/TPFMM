@@ -110,6 +110,7 @@ DeclareModule repository
   Declare canDownloadFile(*file.file)
   Declare downloadMod(*download.download)
   Declare findModOnline(*mod.mods::mod)
+  Declare findModByID(source$, id.q)
   
   ; other
   Declare refresh()
