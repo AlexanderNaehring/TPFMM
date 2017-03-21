@@ -872,10 +872,9 @@ Module mods
   
   Procedure saveList()
     Protected gameDirectory$ = main::gameDirectory$
-    debugger::add("mods::saveList("+gameDirectory$+")")
     
     If gameDirectory$ = ""
-      debugger::add("mods::saveList() - ERROR: gameDirectory$ not defined")
+      debugger::add("mods::saveList() - gameDirectory$ not defined - do not save list")
       ProcedureReturn #False
     EndIf
     

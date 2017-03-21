@@ -187,7 +187,7 @@ Module misc
   EndProcedure
   
   Procedure HexStrToMem(hex$, *memlen = 0)
-    debugger::Add("misc::HexStrToMem("+hex$+")")
+    debugger::Add("misc::HexStrToMem()")
     Protected strlen.i, memlen.i, pos.i, *memory
     strlen = Len(hex$)
     If strlen % 2 = 1 Or strlen = 0
@@ -219,7 +219,7 @@ Module misc
   EndProcedure
   
   Procedure.s FileToHexStr(file$)
-    debugger::Add("misc::FileToHexStr("+file$+")")
+    debugger::Add("misc::FileToHexStr()")
     Protected hex$ = ""
     Protected file.i, *memory, size.i
     
@@ -240,7 +240,7 @@ Module misc
   EndProcedure
   
   Procedure HexStrToFile(hex$, file$)
-    debugger::Add("misc::HexStrToFile("+hex$+")")
+    debugger::Add("misc::HexStrToFile()")
     Protected file.i, *memory, memlen.i
     *memory = HexStrToMem(hex$, @memlen)
     file = CreateFile(#PB_Any, file$)
@@ -569,6 +569,7 @@ Module misc
     ProcedureReturn os$
   EndProcedure
   
+  
   CompilerIf #PB_Compiler_OS = #PB_OS_Linux
     #G_TYPE_STRING = 64
     
@@ -577,7 +578,6 @@ Module misc
     EndImport
   CompilerEndIf
   
-
   Procedure.S getDefaultFontName()
     CompilerSelect #PB_Compiler_OS 
       CompilerCase #PB_OS_Windows 
@@ -619,5 +619,41 @@ Module misc
     CompilerEndSelect
   EndProcedure
   
+  
+  Procedure registerProtocolHandler(protocol$, program$)
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        ; Windows: Protocol Handlers are registered in the registry under HKEY_CLASSES_ROOT
+        ; HKEY_CLASSES_ROOT
+        ;   tpfmm
+        ;     (Default) = "URL:Alert Protocol"
+        ;     URL Protocol = ""
+        ;     DefaultIcon
+        ;       (Default) = "alert.exe,1"
+        ;     shell
+        ;       open
+        ;         command
+        ;           (Default) = "TPFMM.exe" "%1"
+        
+      CompilerCase #PB_OS_Linux
+        ; Linux: use XDG with x-scheme-handler
+        ; create a tpfmm.desktop file and install using "xdg-desktop-menu install tpfmm.desktop"
+        ; or place manually in "~/.local/share/applications" and run "sudo update-desktop-database"
+        ;
+        ; [Desktop Entry]
+        ; Name=TPFMM
+        ; Exec=/path/to/tpfmm %u
+        ; Icon=/path/to/icon
+        ; Type=Application
+        ; Terminal=false
+        ; MimeType=x-scheme-handler/tpfmm;
+        ;
+        ; It may be required to open ~/.local/share/applications/mimeapps.list and add a line unter [Default Applications]
+        ; x-scheme-handler/tpfmm=tpfmm.desktop
+        
+      CompilerDefault
+        CompilerError "No protocol handler registration defined for this OS"
+    CompilerEndSelect
+  EndProcedure
   
 EndModule
