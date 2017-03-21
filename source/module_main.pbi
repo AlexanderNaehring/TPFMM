@@ -128,7 +128,6 @@ Module main
     Next
     
     
-    
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
       ; could not create instance. most likely, another instance is running
@@ -147,8 +146,19 @@ Module main
     
     
     
-    debugger::Add("init() - load plugins")
+    ; settings file: test if file can be written.
+    If FileSize(settingsFile$) < 0
+      If CreatePreferences(settingsFile$)
+        ClosePreferences()
+      Else
+        debugger::add("main::init() - Error: could not create TPFMM settings file")
+        MessageRequester("Error", "Could not create TPFMM settings file.", #PB_MessageRequester_Error)
+        End
+      EndIf
+    EndIf
     
+    
+    debugger::Add("init() - load plugins")
     If Not InitNetwork()
       debugger::Add("ERROR: InitNetwork()")
     EndIf
@@ -161,46 +171,41 @@ Module main
       End
     EndIf
     
+    ; proxy (read from preferences
     initProxy()
     
+    ; default images and logos
     images::LoadImages()
     
-    ; settings file init..
-    If FileSize(settingsFile$) < 0
-      If CreatePreferences(settingsFile$)
-        ClosePreferences()
-      Else
-        debugger::add("main::init() - Error: could not create TPFMM settings file")
-        MessageRequester("Error", "Could not create TPFMM settings file.", #PB_MessageRequester_Error)
-        End
-      EndIf
-    EndIf
-    
-    ; open preferences
+    ; read gameDirectory from preferences
     OpenPreferences(settingsFile$)
-    
-    debugger::Add("init() - read locale")
-    locale::use(ReadPreferenceString("locale","en"))
-    
     gameDirectory$ = ReadPreferenceString("path", "")
+    debugger::Add("init() - read gameDirectory: "+gameDirectory$)
     If misc::checkGameDirectory(gameDirectory$) <> 0
+      debugger::add("init() - gameDirectory not correct!")
       gameDirectory$ = ""
     EndIf
+    ClosePreferences()
     
+    ; read language from preferences
+    Protected lang$
+    OpenPreferences(settingsFile$)
+    lang$ = ReadPreferenceString("locale","en")
+    ClosePreferences()
+    locale::use(lang$)
     
-    ;-TODO: First: Check path, etc.. then open required windows.
-    ; only if everything is fine: show main window...
     
     windowMain::create()
     windowSettings::create(windowMain::window)
     
     
     ; Restore Window Location
-    ; (For testing purposes, may be solved more easy using #PB_Window_ScreenCentered and OS functions...)
+    ; (complicated version)
     Protected nDesktops, desktop, locationOK
     Protected windowX, windowY, windowWidth, windowHeight
-    If #True
-      debugger::add("main::init() - Set main window location")
+    debugger::add("main::init() - Set main window location")
+    
+    If OpenPreferences(settingsFile$)
       PreferenceGroup("window")
       windowX = ReadPreferenceInteger("x", #PB_Ignore)
       windowY = ReadPreferenceInteger("y", #PB_Ignore)
@@ -246,25 +251,16 @@ Module main
     EndIf
     
     
-    
     ; restore column sizes
+    OpenPreferences(settingsFile$)
     PreferenceGroup("columns")
     Protected Dim widths(5)
     For i = 0 To 5
       widths(i) = ReadPreferenceInteger(Str(i), 0)
     Next
+    ClosePreferences()
       
     windowMain::setColumnWidths(widths())
-    
-    
-    ; close preferences
-    ClosePreferences()
-    
-;     ; start update in background
-;     debugger::Add("init() - start updater")
-;     If ReadPreferenceInteger("update", 0)
-;       CreateThread(updater::@checkUpdate(), 1)
-;     EndIf
     
     
     HideWindow(windowMain::window, #False)
@@ -273,13 +269,13 @@ Module main
       mods::load()
     Else
       ; no path specified upon program start -> open settings dialog
+      debugger::add("init() - no gameDirectory defined - open settings dialog")
       windowSettings::show()
     EndIf
     
     
-    
     ; finish
-    debugger::Add("init complete")
+    debugger::Add("init() -  complete")
     
     ; main loop...
     loop()

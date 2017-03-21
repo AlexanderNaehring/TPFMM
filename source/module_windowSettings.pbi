@@ -36,6 +36,7 @@ Module windowSettings
     SetActiveWindow(_parentW)
     
     If misc::checkGameDirectory(main::gameDirectory$) <> 0
+      debugger::add("windowSettings() - gameDirectory not correct or not set - exit TPFMM now")
       main::exit()
     EndIf
     
@@ -95,17 +96,8 @@ Module windowSettings
   
   Procedure GadgetSaveSettings()
     Protected Dir$, locale$, restart.i = #False
-    Dir$ = GetGadgetText(gadget("installationPath"))
-    Dir$ = misc::Path(Dir$)
-    
-    If misc::checkGameDirectory(Dir$) = 0
-      ; 0   = path okay, executable found and writing possible
-      ; 1   = path okay, executable found but cannot write
-      ; 2   = path not okay
-      
-      main::gameDirectory$ = Dir$ ; store in global variable
-    EndIf
-    
+    dir$ = GetGadgetText(gadget("installationPath"))
+    dir$ = misc::Path(dir$)
     
     locale$ = StringField(StringField(GetGadgetText(gadget("languageSelection")), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
@@ -113,25 +105,21 @@ Module windowSettings
     EndIf
     
     OpenPreferences(main::settingsFile$, #PB_Preference_GroupSeparator)
-    If #True
-      WritePreferenceString("path", main::gameDirectory$)
-      WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
-      If locale$ <> ReadPreferenceString("locale", "en")
-        restart = #True
-      EndIf
-      WritePreferenceString("locale", locale$)
-      WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
-      
-      
-      PreferenceGroup("proxy")
-      WritePreferenceInteger("enabled", GetGadgetState(gadget("proxyEnabled")))
-      WritePreferenceString("server", GetGadgetText(gadget("proxyServer")))
-      WritePreferenceString("user", GetGadgetText(gadget("proxyUser")))
-      WritePreferenceString("password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
-      
-      
-      ClosePreferences()
+    WritePreferenceString("path", dir$)
+    WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
+    If locale$ <> ReadPreferenceString("locale", "en")
+      restart = #True
     EndIf
+    WritePreferenceString("locale", locale$)
+    WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+    
+    PreferenceGroup("proxy")
+    WritePreferenceInteger("enabled", GetGadgetState(gadget("proxyEnabled")))
+    WritePreferenceString("server", GetGadgetText(gadget("proxyServer")))
+    WritePreferenceString("user", GetGadgetText(gadget("proxyUser")))
+    WritePreferenceString("password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
+    
+    ClosePreferences()
     
     main::initProxy()
     
@@ -141,8 +129,20 @@ Module windowSettings
       End
     EndIf
     
-    mods::freeAll()
-    mods::load()
+    
+;     If misc::checkGameDirectory(Dir$) = 0
+;       ; 0   = path okay, executable found and writing possible
+;       ; 1   = path okay, executable found but cannot write
+;       ; 2   = path not okay
+;     EndIf
+    
+    If main::gameDirectory$ <> dir$
+      ; gameDir changed
+      main::gameDirectory$ = Dir$
+      mods::freeAll()
+      mods::load()
+    EndIf
+    
     repository::init()
     
     GadgetCloseSettings()
@@ -151,9 +151,9 @@ Module windowSettings
   Procedure updateGadgets()
     ; check gadgets etc
     Protected ret
-    Static LastDir$
+    Static LastDir$ = "-"
     
-    If LastDir$ <> GetGadgetText(gadget("installationPath"))
+    If #True Or LastDir$ <> GetGadgetText(gadget("installationPath"))
       LastDir$ = GetGadgetText(gadget("installationPath"))
       
       If FileSize(LastDir$) = -2
