@@ -282,14 +282,24 @@ Module main
   EndProcedure
   
   Procedure initProxy()
+    Protected server$, user$, password$
+    
     OpenPreferences(settingsFile$)
     PreferenceGroup("proxy")
     If ReadPreferenceInteger("enabled", 0)
-      HTTPProxy(ReadPreferenceString("server", ""), ReadPreferenceString("user", ""), aes::decryptString(ReadPreferenceString("password", "")))
+      server$   = ReadPreferenceString("server", "")
+      user$     = ReadPreferenceString("user", "")
+      password$ = aes::decryptString(ReadPreferenceString("password", ""))
+    EndIf
+    ClosePreferences()
+    
+    If server$
+      debugger::add("initProxy() - "+server$+" user:"+user$)
+      HTTPProxy(server$, user$, password$)
     Else
       HTTPProxy("")
     EndIf
-    ClosePreferences()
+    
   EndProcedure
   
   Procedure exit()
