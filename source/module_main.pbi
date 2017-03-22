@@ -96,9 +96,12 @@ Module main
         If Left(parameter$, 17) = "tpfmm://download/"
           ; handle link
           parameter$ = Mid(parameter$, 18)
-          Protected source$ = StringField(parameter$, 1, "/")
-          Protected id.q = Val(StringField(parameter$, 2, "/"))
-          windowMain::repoFindModAndDownload(source$, id)
+          Protected source$, id.q, fileID.q
+          source$ =     StringField(parameter$, 1, "/")
+          id      = Val(StringField(parameter$, 2, "/"))
+          fileID  = Val(StringField(parameter$, 3, "/"))
+          
+          windowMain::repoFindModAndDownload(source$, id, fileID)
           
         ElseIf FileSize(parameter$) > 0
           ; install mod... (this function is called, before the main window is created ....

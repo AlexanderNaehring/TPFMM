@@ -339,21 +339,47 @@ Module repository
   EndProcedure
   
   Procedure downloadModThread(*download.download)
-    If Not *download Or Not *download\mod Or Not *download\file
+    If Not *download Or *download\source$ = "" Or Not *download\id
       ProcedureReturn #False
     EndIf
     
-    Protected *mod.mod, *file.file
-    *mod = *download\mod
-    *file = *download\file
+    Protected source$, id.q, fileID.q
+    source$ = *download\source$
+    id      = *download\id
+    fileID  = *download\fileID
     FreeStructure(*download)
     
-    If Not canDownloadMod(*mod) Or Not canDownloadFile(*file)
-      debugger::add("repository::downloadModThread() - Error: cannot download mod/file")
+    ;TODO: allow direct download of HTTP(S) link
+    ; if source == a loaded source
+    ; if source = http(s)://...... -> direct download
+    ;
+    ; e.g. getRepoBySource(source$)...
+    ; if no repo found -> try direct download...
+    
+    Protected *mod.mod, *file.file
+    *mod = getModByID(source$, id)
+    *file = getFileByID(*mod, fileID) ; returns vaid pointer even if fileID = 0 when only one file in mod
+    
+    If Not *mod
+      debugger::add("repository::downloadModThread() - Error: could not find modID /"+source$+"/"+id)
+      ProcedureReturn #False
+    EndIf
+    If Not canDownloadMod(*mod)
+      debugger::add("repository::downloadModThread() - Error: cannot download mod")
+      ProcedureReturn #False
+    EndIf
+    If Not *file
+      debugger::add("repository::downloadModThread() - Error: could not find fileID /"+source$+"/"+id+"/"+fileID)
+      ProcedureReturn #False
+    EndIf
+    If Not canDownloadFile(*file)
+      debugger::add("repository::downloadModThread() - Error: cannot download file")
       ProcedureReturn #False
     EndIf
     
-    ; wait for other instances to finish download...
+    
+    
+    ; wait for other threads to finish download...
     Static running
     While running
       Delay(100)
@@ -1105,7 +1131,7 @@ Module repository
   
   ; check functions
   Procedure canDownloadFile(*file.file)
-    If *file\url$
+    If *file And *file\url$
       ProcedureReturn #True
     EndIf
   EndProcedure
@@ -1129,13 +1155,85 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
-  Procedure downloadMod(*download.download)
-    debugger::add("repository::downloadMod()")
-    Protected *buffer
+  Procedure getModByID(source$, id.q)
+    Protected *repoMod.mod
+    Protected *file.file
+    
+    LockMutex(mutexRepoMods)
+    ForEach repo_mods()
+      If repo_mods()\repo_info\source$ = source$
+        ForEach repo_mods()\mods()
+          If repo_mods()\mods()\id = id
+            *repoMod = repo_mods()\mods()
+            Break 2
+          EndIf
+        Next
+      EndIf
+    Next
+    UnlockMutex(mutexRepoMods)
+    
+    ProcedureReturn *repoMod
+  EndProcedure
+  
+  Procedure getFileByID(*repoMod.mod, fileID.q)
+    Protected *file.file
+    
+    If *repoMod
+      LockMutex(mutexRepoMods)
+      If fileID 
+        ; fileID given - search for this fileID
+        ForEach *repoMod\files()
+          If *repoMod\files()\fileID = fileID
+            *file = *repoMod\files()
+            Break
+          EndIf
+        Next
+      Else 
+        ; no fileID given
+        If ListSize(*repoMod\files()) = 1
+          ; if only one file in mod - return this file
+          FirstElement(*repoMod\files())
+          *file = *repoMod\files()
+        EndIf
+        ; if more files in mod, return false / null
+      EndIf
+      UnlockMutex(mutexRepoMods)
+    EndIf
+    
+    ProcedureReturn *file
+  EndProcedure
+  
+  Procedure canDownloadModByID(source$, id.q, fileID.q = 0)
+    Protected *repoMod.mod
+    Protected *file.file
+    
+    *repoMod = getModByID(source$, id)
+    
+    If Not *repoMod
+      debugger::add("repository::canDownloadModByID() - Could not find mod "+source$+"-"+id)
+      ProcedureReturn #False
+    EndIf
+    
+    If fileID
+      *file = getFileByID(*repoMod, fileID)
+    EndIf
+    
+    If fileID
+      ProcedureReturn Bool(canDownloadMod(*repoMod) And canDownloadFile(*file))
+    Else
+      ProcedureReturn canDownloadMod(*repoMod)
+    EndIf
+  EndProcedure
+  
+  Procedure downloadMod(source$, id.q, fileID.q = #Null)
+    debugger::add("repository::downloadMod() download/"+source$+"/"+id+"/"+fileID+"")
+    Protected *buffer.download
     
     ; copy structure so that data stays available in thread
     *buffer = AllocateStructure(download) ; memory is freed in thread function!
-    CopyStructure(*download, *buffer, download)
+    *buffer\source$ = source$
+    *buffer\id      = id
+    *buffer\fileID  = fileID
     
     ; call thread
     CreateThread(@downloadModThread(), *buffer)

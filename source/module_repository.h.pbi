@@ -9,14 +9,15 @@ DeclareModule repository
   ; mod strucutres
   
   Structure file
+    fileid.q
     filename$         ; 
-    url$              ; url to downlaod this file
+    url$              ; url to download this file
     timechanged.i     ; last time this file was changed
   EndStructure
   
   Structure mod
     source$
-    id.i
+    id.q
     name$
     author$
     authorid.i
@@ -84,10 +85,9 @@ DeclareModule repository
   EndStructure
   
   Structure download
-    ; each mod can have multiple files
-    ;-> reference mod info AND the specific file to be downloaded
-    *mod.mod
-    *file.file
+    source$   ; online repository source
+    id.q      ; mod ID in this source
+    fileID.q  ; if a mod has multiple files, specify fileID
   EndStructure
   
   ; start repository loading
@@ -106,9 +106,12 @@ DeclareModule repository
   Declare searchMod(name$, author$="")
   
   ; check functions
+  Declare getModByID(source$, id.q)
+  Declare getFileByID(*repoMod.mod, fileID.q)
+  Declare canDownloadModByID(source$, id.q, fileID.q = 0)
   Declare canDownloadMod(*repoMod.mod)
   Declare canDownloadFile(*file.file)
-  Declare downloadMod(*download.download)
+  Declare downloadMod(source$, id.q, fileID.q = 0)
   Declare findModOnline(*mod.mods::mod)
   Declare findModByID(source$, id.q)
   

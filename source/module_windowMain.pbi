@@ -24,6 +24,10 @@ DeclareModule windowMain
     #MenuItem_License
   EndEnumeration
   
+  Enumeration #PB_Event_FirstCustomValue
+    #Event_Repo_Show_Selection
+  EndEnumeration
+  
   Declare create()
   
   Declare stopGUIupdate(stop = #True)
@@ -33,7 +37,7 @@ DeclareModule windowMain
   Declare progressBar(value, max=-1, text$=Chr(1))
   Declare progressDownload(percent.d, modName$)
   
-  Declare repoFindModAndDownload(source$, id.q)
+  Declare repoFindModAndDownload(source$, id.q, fileID.q)
   
 EndDeclareModule
 
@@ -886,24 +890,19 @@ Module windowMain
   Procedure repoSelectFilesDownload()
     Protected *file.repository::file
     Protected *repo_mod.repository::mod
-    Protected download.repository::download
     If dialogSelectFiles And IsDialog(dialogSelectFiles)
+      *repo_mod = GetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"))
       ; find selected 
-    ForEach repoSelectFilesGadget()
-      If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
-        If GetGadgetState(repoSelectFilesGadget()) ; selected?
-                                                   ; init download
-          
-          *file = GetGadgetData(repoSelectFilesGadget())
-          *repo_mod = GetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"))
-          
-          download\mod = *repo_mod
-          download\file = *file
-          repository::downloadMod(download)
-          
+      ForEach repoSelectFilesGadget()
+        If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
+          If GetGadgetState(repoSelectFilesGadget())
+            ; init download if selected
+            *file = GetGadgetData(repoSelectFilesGadget())
+            
+            repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          EndIf
         EndIf
-      EndIf
-    Next
+      Next
     EndIf
     repoSelectFilesClose()
   EndProcedure
@@ -921,48 +920,10 @@ Module windowMain
     ProcedureReturn #False
   EndProcedure
   
-  Procedure repoDownload()
-    ; download and install mod from source
-    Protected item, url$, nFiles
-    Protected *repo_mod.repository::mod, *file.repository::file
-    Protected download.repository::download
-    
-    ; currently: only one file at a time! -> only get first selected
-    
-    ; get selected mod from list:
-    item = GetGadgetState(gadget("repoList"))
-    If item = -1
-      ProcedureReturn #False
-    EndIf
-    
-    *repo_mod = GetGadgetItemData(gadget("repoList"), item)
-    If Not *repo_mod
-      ProcedureReturn #False
-    EndIf
-    
-    ; check if download is available!
-    nFiles = repository::canDownloadMod(*repo_mod)
-    If Not nFiles
-      ProcedureReturn
-    EndIf
-    
-    ; single file? start download!
-    If nFiles = 1
-      ForEach *repo_mod\files()
-        *file = *repo_mod\files()
-        If repository::canDownloadFile(*file)
-          download\mod  = *repo_mod
-          download\file = *file
-          repository::downloadMod(download)
-          ProcedureReturn #True
-        EndIf
-      Next
-    EndIf
-    
-    ; more files? show selection window
-    
-    ; manipulate xml before opening dialog
+  Procedure repoDownloadShowSelection(*repo_mod.repository::mod)
     Protected *nodeBase, *node
+    Protected *file
+    
     If IsXML(xml)
       *nodeBase = XMLNodeFromID(xml, "selectBox")
       If *nodeBase
@@ -1012,6 +973,57 @@ Module windowMain
         EndIf
       EndIf
     EndIf
+  EndProcedure
+  
+  Procedure repoEventShowSelection()
+    Protected *repoMod
+    *repoMod = EventData()
+    If *repoMod
+      repoDownloadShowSelection(*repoMod)
+    EndIf
+  EndProcedure
+  
+  Procedure repoDownload()
+    ; download and install mod from source
+    Protected item, url$, nFiles
+    Protected *repo_mod.repository::mod, *file.repository::file
+    Protected download.repository::download
+    
+    ; currently: only one file at a time! -> only get first selected
+    
+    ; get selected mod from list:
+    item = GetGadgetState(gadget("repoList"))
+    If item = -1
+      ProcedureReturn #False
+    EndIf
+    
+    *repo_mod = GetGadgetItemData(gadget("repoList"), item)
+    If Not *repo_mod
+      ProcedureReturn #False
+    EndIf
+    
+    ; check if download is available!
+    nFiles = repository::canDownloadMod(*repo_mod)
+    If Not nFiles
+      ProcedureReturn
+    EndIf
+    
+    ; single file? start download!
+    If nFiles = 1
+      ForEach *repo_mod\files()
+        *file = *repo_mod\files()
+        If repository::canDownloadFile(*file) ; search for the single downloadable file
+          repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          ProcedureReturn #True
+        EndIf
+      Next
+    EndIf
+    
+    ; more files? show selection window
+    
+    ; manipulate xml before opening dialog
+    repoDownloadShowSelection(*repo_mod)
+    
     ProcedureReturn #False
   EndProcedure
   
@@ -1198,6 +1210,7 @@ Module windowMain
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     
+    BindEvent(#Event_Repo_Show_Selection, @repoEventShowSelection())
     
     ; get all gadgets
     Macro getGadget(name)
@@ -1432,17 +1445,28 @@ Module windowMain
     ProcedureReturn GetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
   
-  Procedure repoFindModAndDownload(source$, id.q)
+  Procedure repoFindModAndDownload(source$, id.q, fileID.q)
     ; search for a mod in repo and initiate download
-    Protected *repoMod.repository::mod
     
-    *repoMod = repository::findModByID(source$, id)
-    If *repoMod
-      ; select mod in repo list
-      If repository::selectModInList(*repoMod)
-        repoDownload()
+    If source$ And id
+      ; if not fileID and canDownloadMod > 1  ==> show file selection window!
+      ; else -> start download
+      
+      If Not fileID And repository::canDownloadModByID(source$, id) > 1
+        Protected *repoMod.repository::mod
+        *repoMod = repository::getModByID(source$, id)
+        If *repoMod
+          ; cannot directly call "repoDownloadShowSelection()" as this procedure is not called in the main thread!
+          ; send event to main window to open the selection
+          PostEvent(#Event_Repo_Show_Selection, window, 0, #PB_EventType_FirstCustomValue, *repoMod)
+        EndIf
+      Else
+        repository::downloadMod(source$, id, fileID)
       EndIf
+    Else
+      debugger::add("windowMain::repoFindModAndDownload("+source$+", "+id+", "+fileID+") - ERROR")
     EndIf
+      
   EndProcedure
   
   
