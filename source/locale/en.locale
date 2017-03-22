@@ -119,6 +119,7 @@ install2      = Do you want to add {count} modifications to Transport Fever?
 uninstall     = Uninstall '{name}'
 uninstall1    = Do you want to uninstall '{name}'?
 uninstall2    = Do you want to uninstall {count} modifications?
+uninstall_done = Mod uninstalled
 backup        = Create backup of mod
 
 conflict_hash = Modification '{name}' is already installed and added to Transport Fever.
@@ -147,9 +148,11 @@ overwrite_file = Do you want to overwrite the current file?
 
 
 [repository]
-all_types   = All Types
-all_sources = All Sources
-more_author = Show all mods by {author}
+load          = Load Repositories
+loaded        = Repositories successfully loaded
+all_types     = All Types
+all_sources   = All Sources
+more_author   = Show all mods by {author}
 installed_all = Installed or not installed
 installed_yes = Show only installed
 installed_no  = Show only not installed
@@ -157,9 +160,9 @@ update        = Update
 update_text   = New Version of TPFMM available.\nDownload now?
 disabled_update = Please use latest Version of TPFMM
 download_start  = Start Download '{modname}'...
-download_finish = Download of '{modname}' finished
+download_finish = Download finished
 download_fail   = Failed to download '{modname}'
-downloading     = Downloading '{modname}' ({percent}%)
+downloading     = Downloading '{modname}'
 
 [mods]
 filter_all      = Show All Folders

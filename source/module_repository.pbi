@@ -385,7 +385,11 @@ Module repository
       Delay(100)
     Wend
     running = #True
-    windowMain::progressDownload(0, *mod\name$)
+    
+    Protected NewMap strings$()
+    strings$("modname") = *mod\name$
+    
+    windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_start", strings$()))
     
     ; start process...
     Protected connection, size, downloaded, progress, finish
@@ -419,7 +423,7 @@ Module repository
         HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
         If HTTPstatus = 404
           debugger::add("repository::downloadModThread() - server response: 404 File Not Found")
-          windowMain::progressDownload(-2, *mod\name$)
+          windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
           running = #False
           ProcedureReturn #False
         EndIf
@@ -437,6 +441,7 @@ Module repository
     EndIf
       
     connection = ReceiveHTTPFile(*file\url$, file$, #PB_HTTP_Asynchronous)
+    windowMain::progressRepo(windowMain::#Progress_NoChange, locale::getEx("repository", "downloading", strings$()))
     Repeat
       progress = HTTPProgress(connection)
       Select progress
@@ -452,15 +457,14 @@ Module repository
         Default 
           ; progess = bytes receiuved
           If size
-            windowMain::progressDownload(progress / size, *mod\name$)
+            windowMain::progressRepo(100 * progress / size)
           EndIf
       EndSelect
       Delay(50)
     Until finish
     
     If size
-      windowMain::progressDownload(1, *mod\name$)
-      ; TODO display progress somewhere
+      windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_finish", strings$()))
     Else
       ; stop update
     EndIf
@@ -468,7 +472,7 @@ Module repository
     If Not downloaded
       ; cleanup downlaod folder
       debugger::add("repository::downloadModThread() - download failed")
-      windowMain::progressDownload(-2, *mod\name$)
+      windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
       DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
       running = #False
       ProcedureReturn #False
@@ -635,11 +639,14 @@ Module repository
     ;-TODO: save repos as json as well?
     
     If ListSize(repositories())
+      windowMain::progressRepo(0, locale::l("repository","load"))
       ForEach repositories()
         loadRepository(repositories())
+        windowMain::progressRepo(100*(ListIndex(repositories())+1)/ListSize(repositories()))
       Next
       
       debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
+      windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","loaded"))
       _READY = #True
       ProcedureReturn #True
     Else

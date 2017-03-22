@@ -28,14 +28,19 @@ DeclareModule windowMain
     #Event_Repo_Show_Selection
   EndEnumeration
   
+  Enumeration progress
+    #Progress_Hide      = -1
+    #Progress_NoChange  = -2
+  EndEnumeration
+  
   Declare create()
   
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
   
-  Declare progressBar(value, max=-1, text$=Chr(1))
-  Declare progressDownload(percent.d, modName$)
+  Declare progressMod(percent, text$=Chr(1))
+  Declare progressRepo(percent, text$=Chr(1))
   
   Declare repoFindModAndDownload(source$, id.q, fileID.q)
   
@@ -1128,50 +1133,47 @@ Module windowMain
     ProcedureReturn height
   EndProcedure
   
-  Procedure progressBar(value, max=-1, text$=Chr(1))
-    If value = -1
-      ; hide progress bar
+  Procedure progressMod(percent, text$=Chr(1))
+    Static max
+    If max <> 100
+      max = 100
+      SetGadgetAttribute(gadget("progressModBar"), #PB_ProgressBar_Maximum, max)
+    EndIf
+    
+    If percent = #Progress_Hide
       HideGadget(gadget("progressModBar"), #True)
     Else
-      ; show progress
       HideGadget(gadget("progressModBar"), #False)
-      If max = -1
-        SetGadgetState(gadget("progressModBar"), value)
-      Else
-        SetGadgetAttribute(gadget("progressModBar"), #PB_ProgressBar_Maximum, max)
-        SetGadgetState(gadget("progressModBar"), value)
-      EndIf
+      SetGadgetState(gadget("progressModBar"), percent)
     EndIf
     
     If text$ <> Chr(1)
       SetGadgetText(gadget("progressModText"), text$)
-      ;RefreshDialog(dialog)
+      RefreshDialog(dialog)
     EndIf
   EndProcedure
   
-  Procedure progressDownload(percent.d, modName$)
-    Protected text$
-    Protected NewMap strings$()
-    strings$("modname") = modName$
-    
-    If percent = 0
-      HideGadget(gadget("progressRepoBar"), #True)
-      text$ = locale::getEx("repository", "download_start", strings$())
-    ElseIf percent = 1
-      HideGadget(gadget("progressRepoBar"), #True)
-      text$ = locale::getEx("repository", "download_finish", strings$())
-    ElseIf percent = -2
-      HideGadget(gadget("progressRepoBar"), #True)
-      text$ = locale::getEx("repository", "download_fail", strings$())
-    Else
-      HideGadget(gadget("progressRepoBar"), #False)
-      SetGadgetState(gadget("progressRepoBar"), percent*100)
-      strings$("percent") = Str(percent*100)
-      text$ = locale::getEx("repository", "downloading", strings$())
+  Procedure progressRepo(percent, text$=Chr(1))
+    Static max
+    If max <> 100
+      max = 100
+      SetGadgetAttribute(gadget("progressRepoBar"), #PB_ProgressBar_Maximum, max)
     EndIf
     
-    SetGadgetText(gadget("progressRepoText"), text$)
-    ;RefreshDialog(dialog)
+    If percent <> #Progress_NoChange
+      If percent = #Progress_Hide
+        HideGadget(gadget("progressRepoBar"), #True)
+      Else
+        HideGadget(gadget("progressRepoBar"), #False)
+        SetGadgetState(gadget("progressRepoBar"), percent)
+      EndIf
+    EndIf
+    
+    If text$ <> Chr(1)
+      SetGadgetText(gadget("progressRepoText"), text$)
+      RefreshDialog(dialog)
+    EndIf
+    
   EndProcedure
   
   

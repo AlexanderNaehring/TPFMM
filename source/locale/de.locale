@@ -122,6 +122,7 @@ install2      = Sollen {count} Modifikationen zu Transport Fever hinzugefügt we
 uninstall     = Lösche '{name}'
 uninstall1    = Soll '{name}' gelöscht werden?
 uninstall2    = Sollen {count} Modifikationen gelöscht werden?
+uninstall_done = Mod gelöscht
 backup        = Erstelle Sicherheitskopie von Mod
 
 conflict_hash = Die Modifikation '{name}' wurde bereits installiert und zu Transport Fever hinzugefügt.
@@ -150,6 +151,8 @@ overwrite_file = Soll die vorhandene Datei überschrieben werden?
 
 
 [repository]
+load          = Lade Repositories
+loaded        = Repositories erfolgreich geladen
 all_types     = Alle Typen
 all_sources   = Alle Quellen
 more_author   = Zeige alle Mods von {author}
@@ -160,9 +163,9 @@ update        = Update
 update_text   = Neue Version von TPFMM verfügbar.\nJetzt herunterladen?
 disabled_update = Bitte benutze die neueste Version von TPFMM
 download_start  = Starte Download '{modname}'...
-download_finish = {modname} erfolgreich heruntergeladen
+download_finish = Herunterladen erfolgreich
 download_fail   = Fehler beim Herunterladen von {modname}
-downloading     = Herunterladen von '{modname}' ({percent}%)
+downloading     = Lade '{modname}' herunter
 
 [mods]
 filter_all      = Zeige Alle Ordner
