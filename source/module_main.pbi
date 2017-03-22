@@ -6,7 +6,7 @@
   Global gameDirectory$
   Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
-  Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/6886-TPFMM-Transport-Fever-Mod-Manager/"
+  Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   
   #PORT = 14123
   
