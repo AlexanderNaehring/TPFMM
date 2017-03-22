@@ -54,6 +54,7 @@ DeclareModule misc
   Declare.s getOSVersion()
   Declare.s getDefaultFontName()
   Declare getDefaultFontSize()
+  Declare registerProtocolHandler(protocol$, program$, description$="")
 EndDeclareModule
 
 Module misc
@@ -620,13 +621,14 @@ Module misc
   EndProcedure
   
   
-  Procedure registerProtocolHandler(protocol$, program$)
+  Procedure registerProtocolHandler(protocol$, program$, description$="")
+    debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        ; Windows: Protocol Handlers are registered in the registry under HKEY_CLASSES_ROOT
-        ; HKEY_CLASSES_ROOT
+        ; Windows: Protocol Handlers are registered in the registry under HKEY_CURRENT_USER\Software\Classes (not HKEY_CLASSES_ROOT)
+        ; HKEY_CURRENT_USER\Software\Classes
         ;   tpfmm
-        ;     (Default) = "URL:Alert Protocol"
+        ;     (Default) = "Description"
         ;     URL Protocol = ""
         ;     DefaultIcon
         ;       (Default) = "alert.exe,1"
@@ -634,6 +636,56 @@ Module misc
         ;       open
         ;         command
         ;           (Default) = "TPFMM.exe" "%1"
+        
+        Protected regFile$, string$, file, program, exitcode
+        
+        regFile$ = "tpfmm_register.reg"
+        
+        
+        If program$
+          string$ = "Windows Registry Editor Version 5.00" + #CRLF$ +
+                    #CRLF$ +
+                    "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"]" + #CRLF$ +
+                    "@="+#DQUOTE$+description$+#DQUOTE$ + #CRLF$ +
+                    #CRLF$ +
+                    "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"\shell]" + #CRLF$ +
+                    #CRLF$ +
+                    "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"\shell\open]" + #CRLF$ +
+                    #CRLF$ +
+                    "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"\shell\open\command]"+ #CRLF$ +
+                    "@="+#DQUOTE$+"\"+#DQUOTE$+ReplaceString(program$, "\", "\\")+"\"+#DQUOTE$+" \"+#DQUOTE$+"%1\"+#DQUOTE$+#DQUOTE$ + #CRLF$
+          
+        Else
+          ; unregister
+          string$ = "Windows Registry Editor Version 5.00" + #CRLF$ +
+                    #CRLF$ +
+                    "[-HKEY_CURRENT_USER\Software\Classes\"+protocol$+"]" + #CRLF$
+          
+        EndIf
+        
+        
+        file = CreateFile(#PB_Any, regFile$, #PB_UTF8)
+        If file
+          WriteString(file, string$)
+          CloseFile(file)
+          
+          program = RunProgram("reg", "import "+regFile$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Wait|#PB_Program_Hide)
+          exitcode = ProgramExitCode(program)
+          CloseProgram(program)
+          
+          DeleteFile(regFile$)
+          
+          If exitcode = 0
+            debugger::add("misc::registerProtocolHandler() - Successful")
+            ProcedureReturn #True
+          Else
+            debugger::add("misc::registerProtocolHandler() - Error: Could not handle registry keys")
+            ProcedureReturn #False
+          EndIf
+        Else
+          debugger::add("misc::registerProtocolHandler() - Error: could not create file")
+          ProcedureReturn #False
+        EndIf
         
       CompilerCase #PB_OS_Linux
         ; Linux: use XDG with x-scheme-handler

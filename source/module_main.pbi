@@ -12,8 +12,10 @@
   
   Declare init()
   Declare initProxy()
+  Declare updateDesktopIntegration()
   Declare exit()
   Declare loop()
+  
 EndDeclareModule
 
 
@@ -125,12 +127,6 @@ Module main
     CompilerEndIf
     
     
-    ; parameter handling
-    For i = 0 To CountProgramParameters() - 1
-      handleParameter(ProgramParameter(i))
-    Next
-    
-    
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
       ; could not create instance. most likely, another instance is running
@@ -147,6 +143,11 @@ Module main
       EndIf
     EndIf
     
+    
+    ; parameter handling
+    For i = 0 To CountProgramParameters() - 1
+      handleParameter(ProgramParameter(i))
+    Next
     
     
     ; settings file: test if file can be written.
@@ -176,6 +177,9 @@ Module main
     
     ; proxy (read from preferences
     initProxy()
+    
+    ; desktopIntegration
+    updateDesktopIntegration()
     
     ; default images and logos
     images::LoadImages()
@@ -303,6 +307,22 @@ Module main
       HTTPProxy("")
     EndIf
     
+  EndProcedure
+  
+  Procedure updateDesktopIntegration()
+    OpenPreferences(settingsFile$)
+    PreferenceGroup("integration")
+    If ReadPreferenceInteger("register_protocol", 0)
+      misc::registerProtocolHandler("tpfmm", ProgramFilename(), "Transport Fever Mod Link")
+    Else
+      misc::registerProtocolHandler("tpfmm", "") ; unregister tpfmm
+    EndIf
+    
+    If  ReadPreferenceInteger("register_context_menu", 0)
+      ; TODO
+    EndIf
+    
+    ClosePreferences()
   EndProcedure
   
   Procedure exit()

@@ -49,6 +49,13 @@
           </vbox>
         </tab>
 
+        <tab text='Desktop Integration'>
+          <vbox expand='no'>
+            <text name='integrateText' text=' ' />
+            <checkbox name='integrateRegisterProtocol' text=' ' />
+            <checkbox name='integrateRegisterContextMenu' text=' ' />
+          </vbox>
+        </tab>
 
 <!--
         <tab text='Online Repositories'>

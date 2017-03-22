@@ -95,7 +95,7 @@ Module windowSettings
   EndProcedure
   
   Procedure GadgetSaveSettings()
-    Protected Dir$, locale$, restart.i = #False
+    Protected Dir$, locale$, restart = #False
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     
@@ -119,15 +119,21 @@ Module windowSettings
     WritePreferenceString("user", GetGadgetText(gadget("proxyUser")))
     WritePreferenceString("password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     
-    ClosePreferences()
+    PreferenceGroup("integration")
+    WritePreferenceInteger("register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
+    WritePreferenceInteger("register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
-    main::initProxy()
+    ClosePreferences()
     
     If restart
       MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
       misc::openLink(ProgramFilename())
       End
     EndIf
+    
+    main::initProxy()
+    main::updateDesktopIntegration()
+    
     
     
 ;     If misc::checkGameDirectory(Dir$) = 0
@@ -138,7 +144,7 @@ Module windowSettings
     
     If main::gameDirectory$ <> dir$
       ; gameDir changed
-      main::gameDirectory$ = Dir$
+      main::gameDirectory$ = dir$
       mods::freeAll()
       mods::load()
     EndIf
@@ -266,6 +272,10 @@ Module windowSettings
     getGadget("proxyPasswordLabel")
     getGadget("proxyPassword")
     
+    getGadget("integrateText")
+    getGadget("integrateRegisterProtocol")
+    getGadget("integrateRegisterContextMenu")
+    
     
 ;     getGadget("repositoryList")
 ;     getGadget("repositoryAdd")
@@ -283,7 +293,8 @@ Module windowSettings
     
     SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
     SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "proxy"))
-;     SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "repository"))
+    SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "integrate"))
+;     SetGadgetItemText(gadget("panelSettings"), ,   l("settings", "repository"))
     
     SetGadgetText(gadget("save"),                   l("settings","save"))
     GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
@@ -308,12 +319,15 @@ Module windowSettings
     SetGadgetText(gadget("languageFrame"),          l("settings","locale"))
     SetGadgetText(gadget("languageSelection"),      "")
     
-    
     SetGadgetText(gadget("proxyEnabled"),           l("settings","proxy_enabled"))
     SetGadgetText(gadget("proxyFrame"),             l("settings","proxy_frame"))
     SetGadgetText(gadget("proxyServerLabel"),       l("settings","proxy_server"))
     SetGadgetText(gadget("proxyUserLabel"),         l("settings","proxy_user"))
     SetGadgetText(gadget("proxyPasswordLabel"),     l("settings","proxy_password"))
+    
+    SetGadgetText(gadget("integrateText"),                l("settings","integrate_text"))
+    SetGadgetText(gadget("integrateRegisterProtocol"),    l("settings","integrate_register_protocol"))
+    SetGadgetText(gadget("integrateRegisterContextMenu"), l("settings","integrate_register_context"))
     
     
 ;     SetGadgetText(gadget("repositoryList"),         "")
@@ -361,6 +375,12 @@ Module windowSettings
     SetGadgetText(gadget("proxyServer"), ReadPreferenceString("server", ""))
     SetGadgetText(gadget("proxyUser"), ReadPreferenceString("user", ""))
     SetGadgetText(gadget("proxyPassword"), aes::decryptString(ReadPreferenceString("password", "")))
+    
+    ; integration
+    PreferenceGroup("integration")
+    SetGadgetState(gadget("integrateRegisterProtocol"), ReadPreferenceInteger("register_protocol", 0))
+    SetGadgetState(gadget("integrateRegisterContextMenu"), ReadPreferenceInteger("register_context_menu", 0))
+    DisableGadget(gadget("integrateRegisterContextMenu"), #True)
     
     ClosePreferences()
     
