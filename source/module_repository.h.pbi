@@ -121,5 +121,6 @@ DeclareModule repository
   Declare listRepositories(Map gadgets()) ; used by settings window
   
   Global TPFMM_UPDATE.tpfmm
+  Global _READY
   
 EndDeclareModule

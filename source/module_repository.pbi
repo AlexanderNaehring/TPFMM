@@ -640,6 +640,7 @@ Module repository
       Next
       
       debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
+      _READY = #True
       ProcedureReturn #True
     Else
       debugger::add("repository::loadRepositoryList() - no repositories in list")
@@ -648,6 +649,7 @@ Module repository
   EndProcedure
   
   Procedure initThread(*dummy)
+    _READY = #False
     While Not mods::isLoaded
       ; do not start repository update while mods are loading
       Delay(100)

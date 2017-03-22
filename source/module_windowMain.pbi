@@ -924,6 +924,13 @@ Module windowMain
     Protected *nodeBase, *node
     Protected *file
     
+    If IsDialog(dialogSelectFiles)
+      If IsWindow(DialogWindow(dialogSelectFiles))
+        CloseWindow(DialogWindow(dialogSelectFiles))
+      EndIf
+      FreeDialog(dialogSelectFiles)
+    EndIf
+    
     If IsXML(xml)
       *nodeBase = XMLNodeFromID(xml, "selectBox")
       If *nodeBase
@@ -1445,8 +1452,24 @@ Module windowMain
     ProcedureReturn GetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
   
-  Procedure repoFindModAndDownload(source$, id.q, fileID.q)
-    ; search for a mod in repo and initiate download
+  Structure findModStruct
+    source$
+    id.q
+    fileID.q
+  EndStructure
+  
+  Procedure repoFindModAndDownloadThread(*buffer.findModStruct)
+    Protected source$, id.q, fileID.q
+    
+    source$ = *buffer\source$
+    id      = *buffer\id
+    fileID  = *buffer\fileID
+    FreeStructure(*buffer)
+    
+    While Not repository::_READY
+      ; wait for repository to be loaded before starting download
+      Delay(100)
+    Wend
     
     If source$ And id
       ; if not fileID and canDownloadMod > 1  ==> show file selection window!
@@ -1466,7 +1489,21 @@ Module windowMain
     Else
       debugger::add("windowMain::repoFindModAndDownload("+source$+", "+id+", "+fileID+") - ERROR")
     EndIf
-      
+    
+  EndProcedure
+  
+  Procedure repoFindModAndDownload(source$, id.q, fileID.q)
+    ; search for a mod in repo and initiate download
+    
+    Protected *buffer.findModStruct
+    *buffer = AllocateStructure(findModStruct)
+    
+    *buffer\source$ = source$
+    *buffer\id      = id
+    *buffer\fileID  = fileID
+    
+    ; start in thread in order to wait for repository to finish
+    CreateThread(@repoFindModAndDownloadThread(), *buffer)
   EndProcedure
   
   
