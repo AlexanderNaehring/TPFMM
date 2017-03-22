@@ -59,15 +59,17 @@ Module instance
     If InitNetwork()
       _port = port
       callback = receiveFn
+      
       _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP, "127.0.0.1")
-      _stop = #False
-      _thread = CreateThread(@listener(), _server)
-      
-      If Not _thread
-        CloseNetworkServer(_server)
-        _server = #Null
+      If _server
+        _stop = #False
+        _thread = CreateThread(@listener(), _server)
+        
+        If Not _thread
+          CloseNetworkServer(_server)
+          _server = #Null
+        EndIf
       EndIf
-      
       
       If _server And _thread
         ProcedureReturn #True
