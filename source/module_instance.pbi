@@ -32,7 +32,6 @@ Module instance
     
     Repeat
       If NetworkServerEvent(server) = #PB_NetworkEvent_Data
-        Debug "instance::listener() - receive data..."
         received$ = ""
         Repeat 
           len = ReceiveNetworkData(EventClient(), *buffer, #BufferSize)
