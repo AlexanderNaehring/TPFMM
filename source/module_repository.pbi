@@ -32,7 +32,6 @@ Module repository
   Global Dim type.type(0) ; type information (for filtering)
   Global _DISABLED = #False
   Global _UPDATE_URL$ = ""
-  Global _READY = #False
   
   Global NewMap settingsGadget()
   
@@ -623,7 +622,6 @@ Module repository
   EndProcedure
   
   Procedure initThread(*dummy)
-    _READY = #False
     While Not mods::isLoaded
       ; do not start repository update while mods are loading
       Delay(100)
@@ -631,7 +629,6 @@ Module repository
     loadRepositoryList()
     displayMods() ; initially fill list
     mods::displayMods()       ; update mod list to show remote links
-    _READY = #True
   EndProcedure
   
   
@@ -866,10 +863,6 @@ Module repository
       ProcedureReturn #False
     EndIf
     
-    If Not _READY
-      ProcedureReturn #False
-    EndIf
-    
     If _DISABLED
       AddGadgetItem(_listGadgetID, 0, locale::l("repository","disabled_update"))
       SetGadgetItemColor(_listGadgetID, 0, #PB_Gadget_FrontColor, RGB($A0, $00, $00))
@@ -1059,11 +1052,6 @@ Module repository
   EndProcedure
   
   Procedure selectModInList(*mod.mod)
-    
-    If Not _READY
-      ProcedureReturn #False
-    EndIf
-    
     ; remove all filters
     Protected item, *mod_in_list.mod
     If _listGadgetID And IsGadget(_listGadgetID)
@@ -1125,10 +1113,6 @@ Module repository
   Procedure canDownloadMod(*repoMod.mod)
     Protected nFiles
     
-    If Not _READY
-      ProcedureReturn #False
-    EndIf
-    
     ; currently, only mods with single file can be downloaded automatically
     If *repoMod\type$ = "mod"
       ForEach *repoMod\files()
@@ -1159,11 +1143,6 @@ Module repository
   
   Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
     Protected *find = #Null
-    
-    If Not _READY
-      ProcedureReturn #False
-    EndIf
-    
     LockMutex(mutexRepoMods)
     
     If *mod\aux\tfnetID
@@ -1298,6 +1277,7 @@ Module repository
     
     ProcedureReturn #True
   EndProcedure
+  
   
 EndModule
 
