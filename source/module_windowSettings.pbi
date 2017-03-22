@@ -378,8 +378,8 @@ Module windowSettings
     
     ; integration
     PreferenceGroup("integration")
-    SetGadgetState(gadget("integrateRegisterProtocol"), ReadPreferenceInteger("register_protocol", 0))
-    SetGadgetState(gadget("integrateRegisterContextMenu"), ReadPreferenceInteger("register_context_menu", 0))
+    SetGadgetState(gadget("integrateRegisterProtocol"), ReadPreferenceInteger("register_protocol", 1))
+    SetGadgetState(gadget("integrateRegisterContextMenu"), ReadPreferenceInteger("register_context_menu", 1))
     DisableGadget(gadget("integrateRegisterContextMenu"), #True)
     
     ClosePreferences()

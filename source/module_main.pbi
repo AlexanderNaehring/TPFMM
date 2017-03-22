@@ -312,13 +312,13 @@ Module main
   Procedure updateDesktopIntegration()
     OpenPreferences(settingsFile$)
     PreferenceGroup("integration")
-    If ReadPreferenceInteger("register_protocol", 0)
+    If ReadPreferenceInteger("register_protocol", 1)
       misc::registerProtocolHandler("tpfmm", ProgramFilename(), "Transport Fever Mod Link")
     Else
       misc::registerProtocolHandler("tpfmm", "") ; unregister tpfmm
     EndIf
     
-    If  ReadPreferenceInteger("register_context_menu", 0)
+    If  ReadPreferenceInteger("register_context_menu", 1)
       ; TODO
     EndIf
     
