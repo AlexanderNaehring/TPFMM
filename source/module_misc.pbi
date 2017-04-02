@@ -646,7 +646,8 @@ Module misc
           string$ = "Windows Registry Editor Version 5.00" + #CRLF$ +
                     #CRLF$ +
                     "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"]" + #CRLF$ +
-                    "@="+#DQUOTE$+description$+#DQUOTE$ + #CRLF$ +
+                    "@="+#DQUOTE$+"URL:"+description$+#DQUOTE$ + #CRLF$ +
+                    "URL Protocol="+#DQUOTE$+#DQUOTE$ + #CRLF$ +
                     #CRLF$ +
                     "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"\shell]" + #CRLF$ +
                     #CRLF$ +
