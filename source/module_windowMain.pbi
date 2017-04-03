@@ -42,7 +42,7 @@ DeclareModule windowMain
   Declare progressMod(percent, text$=Chr(1))
   Declare progressRepo(percent, text$=Chr(1))
   
-  Declare repoFindModAndDownload(source$, id.q, fileID.q)
+  Declare repoFindModAndDownload(source$, id.q, fileID.q = 0)
   
 EndDeclareModule
 
@@ -177,10 +177,13 @@ Module windowMain
       
       ; link to mod in repo
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
+      DisableGadget(gadget("modUpdate"), #False)
       If *mod\aux\repo_mod ; link to online mod known
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
+        SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
       Else ; link unknown
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "search_online"))
+        SetGadgetText(gadget("modUpdate"), locale::l("main", "search_online"))
       EndIf
       
       ; website 
@@ -192,12 +195,13 @@ Module windowMain
       
       
     Else
-      ; multiple mods selected
+      ; multiple mods or none selected
       
       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
       EndIf
       
+      DisableGadget(gadget("modUpdate"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
@@ -797,6 +801,36 @@ Module windowMain
   EndProcedure
   
   
+  Procedure modUpdate()
+    ; currently, supprot only one selected mod in list
+    ; if multiple mods selected, start "repoFindModAndDownload" for each mod
+    ; for this, change repoFindModAndDownloadThread to wait for other instances to finish!
+    
+    Protected *mod.mods::mod, *repoMod.repository::mod
+    Protected selected
+    
+    selected = GetGadgetState(gadget("modList"))
+    If selected <> -1
+      *mod = GetGadgetItemData(gadget("modList"), selected)
+    EndIf
+    
+    If *mod
+      If *mod\aux\repo_mod
+        *repoMod = *mod\aux\repo_mod
+        ; download current version from repo
+        repoFindModAndDownload(*repoMod\source$, *repoMod\id)
+        
+      Else
+        ; show mod in database
+        repository::searchMod(*mod\name$) ; todo search author?
+        SetGadgetState(gadget("panel"), 1)
+        
+      EndIf
+    EndIf
+    
+    
+  EndProcedure
+  
   
   Procedure repoList()
     updateRepoButtons()
@@ -1249,6 +1283,7 @@ Module windowMain
     getGadget("modPreviewImage")
     getGadget("modManagementFrame")
     getGadget("modInformation")
+    getGadget("modUpdate")
     getGadget("modBackup")
     getGadget("modUninstall")
     
@@ -1280,6 +1315,7 @@ Module windowMain
     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
     SetGadgetText(gadget("modInformation"),     l("main","information"))
+    SetGadgetText(gadget("modUpdate"),          l("main","search_online"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
     
@@ -1291,6 +1327,7 @@ Module windowMain
     
     ; Bind Gadget Events
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
+    BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())
@@ -1494,7 +1531,7 @@ Module windowMain
     
   EndProcedure
   
-  Procedure repoFindModAndDownload(source$, id.q, fileID.q)
+  Procedure repoFindModAndDownload(source$, id.q, fileID.q = 0)
     ; search for a mod in repo and initiate download
     
     Protected *buffer.findModStruct
