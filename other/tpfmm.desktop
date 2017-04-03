@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+
+Exec=/home/alexander/TPFMM/bin/lin64/TPFMM %u
+Icon=/home/alexander/TPFMM/source/images/logo/favicon.png
+
+Name=TPFMM
+Comment=Transport Fever Mod Manager
+
+Terminal=true
+MimeType=x-scheme-handler/tpfmm;
