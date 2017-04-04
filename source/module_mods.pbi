@@ -83,7 +83,7 @@ Module mods
       ; DLC: name_version
       ; general: (alphanum_)*num
       ; regexp = CreateRegularExpression(#PB_Any, "^([a-z0-9]+_){2,}[0-9]+$") ; at least one author name
-      regexp = CreateRegularExpression(#PB_Any, "^([A-Za-z0-9]+_)+[0-9]+$") ; no author name required
+      regexp = CreateRegularExpression(#PB_Any, "^([A-Za-z0-9\-]+_)+[0-9]+$") ; no author name required
     EndIf
     
     ProcedureReturn MatchRegularExpression(regexp, id$)
