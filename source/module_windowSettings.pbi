@@ -384,6 +384,9 @@ Module windowSettings
     
     ClosePreferences()
     
+    CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+      DisableGadget(gadget("integrateRegisterProtocol"), #True)
+    CompilerEndIf
     
     If GetGadgetText(gadget("installationPath")) = ""
       GadgetButtonAutodetect()
