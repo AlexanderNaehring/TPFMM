@@ -1451,8 +1451,10 @@ Module mods
     Protected filterString$, showHidden, showVanilla, filterFolder
     Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
     Protected NewList *mods_to_display(), *mod.mod
+    Protected *selectedMod.mod
     Protected i, n, author.author
     
+    debugger::add("mods::displayMods()")
     
     If Not IsWindow(_window)
       debugger::add("mods::displayMods() - ERROR: window not valid")
@@ -1478,6 +1480,10 @@ Module mods
       filterFolder = GetGadgetItemData(_gadgetFilterFolder, GetGadgetState(_gadgetFilterFolder))
     EndIf
     
+    If GetGadgetState(_gadgetModList) <> -1
+      *selectedMod = GetGadgetItemData(_gadgetModList, GetGadgetState(_gadgetModList))
+      Debug "selected mod: "+*selectedMod\name$
+    EndIf
     
     windowMain::stopGUIupdate()
     HideGadget(_gadgetModList, #True)
@@ -1638,6 +1644,10 @@ Module mods
           EndIf
         EndIf
         
+        If *selectedMod And *selectedMod = *mod
+          Debug "reselect mod: "+*mod\name$
+          SetGadgetState(_gadgetModList, item)
+        EndIf
         
         item + 1
       EndWith
