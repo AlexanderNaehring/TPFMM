@@ -1183,7 +1183,10 @@ Module windowMain
     
     If text$ <> Chr(1)
       SetGadgetText(gadget("progressModText"), text$)
-      RefreshDialog(dialog)
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        RefreshDialog(dialog)
+        ; causes segmentation violation in Linux
+      CompilerEndIf
     EndIf
   EndProcedure
   
@@ -1205,9 +1208,11 @@ Module windowMain
     
     If text$ <> Chr(1)
       SetGadgetText(gadget("progressRepoText"), text$)
-      RefreshDialog(dialog)
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        RefreshDialog(dialog)
+        ; causes segmentation violation in Linux
+      CompilerEndIf
     EndIf
-    
   EndProcedure
   
   
