@@ -106,6 +106,7 @@ Module repository
     file$ = getRepoFileName(url$)
     
     time = ElapsedMilliseconds()
+    DeleteFile(file$+".tmp")
     If ReceiveHTTPFile(url$, file$+".tmp")
       If FileSize(file$)
         DeleteFile(file$)
@@ -1250,6 +1251,13 @@ Module repository
   
   Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
     Protected *find = #Null
+    
+    ; try to find matching mod in online repository
+    ; prefer source based on currently installed mod.
+    ; e.g. If installed mod is a "workshop" mod, link To workshop source
+    ; alternatively, save link to all available sources in mod...
+    ;TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     LockMutex(mutexRepoMods)
     
     If *mod\aux\tfnetID

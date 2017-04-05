@@ -1619,7 +1619,7 @@ Module mods
         EndIf
         
         \aux\repo_mod = repository::findModOnline(*mod)
-        If \aux\repo_mod
+        If \aux\repo_mod And Left(\tpf_id$, 1) <> "*"
           ; link to online mod exists
           *repo_mod = \aux\repo_mod
           ; try to find indication that repo mod is newer than local version
