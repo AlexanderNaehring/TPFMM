@@ -871,6 +871,7 @@ Module mods
   
   Procedure saveList()
     Protected gameDirectory$ = main::gameDirectory$
+    Protected NewMap saveMods.mod()
     
     If gameDirectory$ = ""
       debugger::add("mods::saveList() - gameDirectory$ not defined - do not save list")
@@ -884,12 +885,20 @@ Module mods
     EndIf
     
     LockMutex(mutexMods)
+    CopyMap(mods(), saveMods())
+    
+    ForEach saveMods()
+      saveMods()\aux\tfnetMod = #Null
+      SaveMods()\aux\workshopMod = #Null
+    Next
+    
     
     Protected json
     json = CreateJSON(#PB_Any)
-    InsertJSONMap(JSONValue(json), mods())
+    InsertJSONMap(JSONValue(json), saveMods())
     SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
+    FreeMap(saveMods())
     
     UnlockMutex(mutexMods)
     
@@ -1124,8 +1133,10 @@ Module mods
           Select repo_mod\source$
             Case "tpfnet"
               *mod\aux\tfnetID = repo_mod\id
+              *mod\aux\installSource$ = "tpfnet"
             Case "workshop"
               *mod\aux\workshopID = repo_mod\id
+              *mod\aux\installSource$ = "workshop"
             Default
               
           EndSelect
@@ -1618,10 +1629,11 @@ Module mods
           SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB(100, 100, 100))
         EndIf
         
-        \aux\repo_mod = repository::findModOnline(*mod)
-        If \aux\repo_mod And Left(\tpf_id$, 1) <> "*"
+        repository::findModOnline(*mod)
+        *repo_mod = repository::getRepoMod(*mod) ; get most appropriate mod from repository based on stored links in *mod
+        
+        If *repo_mod And Left(\tpf_id$, 1) <> "*"
           ; link to online mod exists
-          *repo_mod = \aux\repo_mod
           ; try to find indication that repo mod is newer than local version
           ; do not use "version" for now, as it may not be realiable
           Protected compare

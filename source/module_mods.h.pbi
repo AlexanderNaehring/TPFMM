@@ -17,7 +17,9 @@
     repoTimeChanged.i ; timechanged value from repository if installed from repo (if timechanged in repo > timechanged in mod: update available
     tfnetID.i         ; entry ID in transportfever.net download section
     workshopID.q      ; fileID in Steam Workshop
-    *repo_mod         ; (temp) link to mod in repository
+    installSource$    ; name of install source (workshop, tpfnet)
+    *tfnetMod         ; (temp) link to mod in repository
+    *workshopMod      ; (temp) link to mod in repository
     sv.i              ; scanner version, rescan if newer scanner version is used
     hidden.b          ; hidden from overview ("visible" in mod.lua)
     backup.backup     ; backup information (local)

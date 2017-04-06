@@ -178,7 +178,7 @@ Module windowMain
       ; link to mod in repo
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
       DisableGadget(gadget("modUpdate"), #False)
-      If *mod\aux\repo_mod ; link to online mod known
+      If *mod\aux\tfnetMod Or *mod\aux\workshopMod ; link to online mod known
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
         SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
       Else ; link unknown
@@ -494,6 +494,7 @@ Module windowMain
     tfnetId.i
     steamId.i
     image.i
+    thread.i
   EndStructure
   Structure modInfoSource Extends modInfoGadget
     text$
@@ -518,13 +519,17 @@ Module windowMain
     Protected *data.modInfoWindow
     *data = GetWindowData(EventWindow())
     If *data
-      CloseWindow(*data\window)
-      FreeDialog(*data\dialog)
+      HideWindow(*data\window, #True)
       ForEach *data\authors()
         If *data\authors()\image And IsImage(*data\authors()\image)
           FreeImage(*data\authors()\image)
         EndIf
+        If *data\authors()\thread And IsThread(*data\authors()\thread)
+          KillThread(*data\authors()\thread)
+        EndIf
       Next
+      CloseWindow(*data\window)
+      FreeDialog(*data\dialog)
       FreeStructure(*data)
     EndIf
   EndProcedure
@@ -541,6 +546,9 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure modInfoSource()
+    ; TODO
+  EndProcedure
   
   Procedure modInfoAuthorImage(*author.modInfoAuthor)
     ; download avatar and set in imagegadget
@@ -666,8 +674,25 @@ Module windowMain
         Next
       EndIf
       
-      debugger::add("windowMain::modInfoShow() - create tags gadgets...")
-      ; sources, tags, ...
+      ; tags
+      
+      ; sources
+      debugger::add("windowMain::modInfoShow() - sources...")
+      *nodeBase = XMLNodeFromID(xml, "infoBoxSources")
+      If *nodeBase
+        clearXMLchildren(*nodeBase)
+        If *mod\aux\workshopID
+          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+          SetXMLAttribute(*node, "name", "source-workshop")
+          SetXMLAttribute(*node, "text", "Workshop")
+        EndIf
+        If *mod\aux\tfnetID
+          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+          SetXMLAttribute(*node, "name", "source-tpfnet")
+          SetXMLAttribute(*node, "text", "TransportFever.net")
+        EndIf
+      EndIf
+      
       
       
       
@@ -755,7 +780,7 @@ Module windowMain
 ;           SetGadgetData(*data\authors()\gadgetContainer\id, *data\authors())
           SetGadgetFont(*data\authors()\gadgetAuthor\id, FontID(fontBigger))
           ;BindGadgetEvent(, @modInfoAuthor())
-          CreateThread(@modInfoAuthorImage(), *data\authors())
+          *data\authors()\thread = CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
         
         
@@ -802,6 +827,7 @@ Module windowMain
   
   
   Procedure modUpdate()
+    debugger::add("windowMain::modUpdate()")
     ; currently, supprot only one selected mod in list
     ; if multiple mods selected, start "repoFindModAndDownload" for each mod
     ; for this, change repoFindModAndDownloadThread to wait for other instances to finish!
@@ -814,21 +840,23 @@ Module windowMain
       *mod = GetGadgetItemData(gadget("modList"), selected)
     EndIf
     
+    
     If *mod
-      If *mod\aux\repo_mod
-        *repoMod = *mod\aux\repo_mod
+      ; get best fit repoMod (if any)
+      ; if multiple defined, select same "installSource" or based on folder name
+      *repoMod = repository::getRepoMod(*mod)
+      
+      If *repoMod
+        debugger::add("windowMain::modUpdate() - download mod /"+*repoMod\source$+"/"+*repoMod\id)
         ; download current version from repo
         repoFindModAndDownload(*repoMod\source$, *repoMod\id)
-        
       Else
         ; show mod in database
         repository::searchMod(*mod\name$) ; todo search author?
         SetGadgetState(gadget("panel"), 1)
-        
       EndIf
+      
     EndIf
-    
-    
   EndProcedure
   
   
@@ -1086,14 +1114,16 @@ Module windowMain
     ; get selected mod from list
     
     Protected *mod.mods::mod
+    Protected *repoMod.repository::mod
     Protected item
     
     item = GetGadgetState(gadget("modList"))
     If item <> -1
       *mod = GetGadgetItemData(gadget("modList"), item)
       If *mod
-        If *mod\aux\repo_mod
-          repository::selectModInList(*mod\aux\repo_mod)
+        *repoMod = repository::getRepoMod(*mod)
+        If *repoMod
+          repository::selectModInList(*repoMod)
           SetGadgetState(gadget("panel"), 1)
         Else
           repository::searchMod(*mod\name$) ; todo search author?

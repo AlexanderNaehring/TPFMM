@@ -1250,16 +1250,11 @@ Module repository
   EndProcedure
   
   Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
-    Protected *find = #Null
-    
-    ; try to find matching mod in online repository
-    ; prefer source based on currently installed mod.
-    ; e.g. If installed mod is a "workshop" mod, link To workshop source
-    ; alternatively, save link to all available sources in mod...
-    ;TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Protected found = #False
     
     LockMutex(mutexRepoMods)
     
+    *mod\aux\tfnetMod = #Null
     If *mod\aux\tfnetID
       ForEach repo_mods()
         If repo_mods()\repo_info\source$ <> "tpfnet"
@@ -1267,20 +1262,24 @@ Module repository
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\tfnetID
-            *find = repo_mods()\mods()
+            *mod\aux\tfnetMod = repo_mods()\mods()
+            found = #True
             Break 2
           EndIf
         Next
       Next
-      
-    ElseIf *mod\aux\workshopID
+    EndIf
+    
+    *mod\aux\workshopMod = #Null
+    If *mod\aux\workshopID
       ForEach repo_mods()
         If repo_mods()\repo_info\source$ <> "workshop"
           Continue
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\workshopID
-            *find = repo_mods()\mods()
+            *mod\aux\workshopMod = repo_mods()\mods()
+            found = #True
             Break 2
           EndIf
         Next
@@ -1289,7 +1288,7 @@ Module repository
     
     UnlockMutex(mutexRepoMods)
     
-    ProcedureReturn *find
+    ProcedureReturn found
   EndProcedure
   
   Procedure findModByID(source$, id.q)
@@ -1312,6 +1311,52 @@ Module repository
     
     UnlockMutex(mutexRepoMods)
     ProcedureReturn *find
+  EndProcedure
+  
+  Procedure getRepoMod(*mod.mods::mod) ; get the best fit repo mod (based on linked mods and installSource or folder name)
+    Protected *repoMod.repository::mod
+    
+    Static regexp
+    If Not regexp
+      regexp = CreateRegularExpression(#PB_Any, "^[\*]{0,1}[0-9]+_1$") ; workshop mod
+    EndIf
+    
+    If *mod
+      If *mod\aux\tfnetMod Or *mod\aux\workshopMod
+        ; select source based on currently installed version
+        ; if folder name = number_1, it is most likely the workshop version
+        ; if folder name = some_text_1, it is most likely the tfnet version
+        ; if installed using TPFMM online repository, TPFMM saves the installation source as "installSource"
+        
+        If *mod\aux\tfnetMod And *mod\aux\workshopMod
+          ; both sources defined
+          ; check if installSource was defined during install
+          If *mod\aux\installSource$ = "tpfnet" And *mod\aux\tfnetMod
+            *repoMod = *mod\aux\tfnetMod
+          ElseIf *mod\aux\installSource$ = "workshop" And *mod\aux\workshopMod
+            *repoMod = *mod\aux\workshopMod
+          Else
+            ; no installSource or no match-> try to match source using the folder name
+            If MatchRegularExpression(regexp, *mod\tpf_id$)
+              ; use workshop source
+              *repoMod = *mod\aux\workshopMod
+            Else
+              ; use tpfnet mod
+              *repoMod = *mod\aux\tfnetMod
+            EndIf
+          EndIf
+        Else
+          ; only a single source defined
+          If *mod\aux\tfnetMod
+            *repoMod = *mod\aux\tfnetMod
+          ElseIf *mod\aux\workshopMod
+            *repoMod = *mod\aux\workshopMod
+          EndIf
+        EndIf
+      EndIf
+      
+      ProcedureReturn *repoMod
+    EndIf
   EndProcedure
   
   ; list all available repos in settings gadget

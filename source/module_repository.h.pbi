@@ -115,6 +115,8 @@ DeclareModule repository
   Declare findModOnline(*mod.mods::mod)
   Declare findModByID(source$, id.q)
   
+  Declare getRepoMod(*mod.mods::mod)
+  
   ; other
   Declare refresh()
   Declare clearCache()
