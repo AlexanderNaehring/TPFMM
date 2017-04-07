@@ -104,6 +104,7 @@
   Declare install(file$)        ; check and extract archive to game folder
   Declare uninstall(folderID$)  ; remove mod folder from game, maybe create a security backup by zipping content
   Declare backup(folderID$)     ; backup installed mod
+  Declare update(folderID$)
   
   ; export
   Declare exportList(all=#False)

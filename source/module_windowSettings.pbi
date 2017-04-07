@@ -106,12 +106,16 @@ Module windowSettings
     
     OpenPreferences(main::settingsFile$, #PB_Preference_GroupSeparator)
     WritePreferenceString("path", dir$)
-    WritePreferenceInteger("autobackup", GetGadgetState(gadget("miscAutoBackup")))
     If locale$ <> ReadPreferenceString("locale", "en")
       restart = #True
     EndIf
     WritePreferenceString("locale", locale$)
     WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+    
+    PreferenceGroup("backup")
+    WritePreferenceInteger("after_install", GetGadgetState(gadget("miscBackupAfterInstall")))
+    WritePreferenceInteger("before_update", GetGadgetState(gadget("miscBackupBeforeUpdate")))
+    WritePreferenceInteger("before_uninstall", GetGadgetState(gadget("miscBackupBeforeUninstall")))
     
     PreferenceGroup("proxy")
     WritePreferenceInteger("enabled", GetGadgetState(gadget("proxyEnabled")))
@@ -256,7 +260,9 @@ Module windowSettings
     getGadget("installationTextStatus")
     
     getGadget("miscFrame")
-    getGadget("miscAutoBackup")
+    getGadget("miscBackupAfterInstall")
+    getGadget("miscBackupBeforeUpdate")
+    getGadget("miscBackupBeforeUninstall")
     getGadget("miscVersionCheck")
     
     getGadget("languageFrame")
@@ -311,8 +317,9 @@ Module windowSettings
     SetGadgetText(gadget("installationTextStatus"), "")
                
     SetGadgetText(gadget("miscFrame"),              l("settings","other"))
-    SetGadgetText(gadget("miscAutoBackup"),         l("settings","backup"))
-    GadgetToolTip(gadget("miscAutoBackup"),         l("settings","backup_tip"))
+    SetGadgetText(gadget("miscBackupAfterInstall"),     l("settings","backup_after_install"))
+    SetGadgetText(gadget("miscBackupBeforeUpdate"),     l("settings","backup_before_update"))
+    SetGadgetText(gadget("miscBackupBeforeUninstall"),  l("settings","backup_before_uninstall"))
     SetGadgetText(gadget("miscVersionCheck"),       l("settings","versioncheck"))
     GadgetToolTip(gadget("miscVersionCheck"),       l("settings","versioncheck_tip"))
     
@@ -365,9 +372,13 @@ Module windowSettings
     OpenPreferences(main::settingsFile$)
     ; main
     SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
-    SetGadgetState(gadget("miscAutoBackup"), ReadPreferenceInteger("autobackup", 1))
     locale$ = ReadPreferenceString("locale", "en")
-    SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #False))
+    SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #True))
+    
+    PreferenceGroup("backup")
+    SetGadgetState(gadget("miscBackupAfterInstall"),    ReadPreferenceInteger("after_install", 0))
+    SetGadgetState(gadget("miscBackupBeforeUpdate"),    ReadPreferenceInteger("before_update", 1))
+    SetGadgetState(gadget("miscBackupBeforeUninstall"), ReadPreferenceInteger("before_uninstall", 0))
     
     ; proxy
     PreferenceGroup("proxy")

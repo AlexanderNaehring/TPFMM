@@ -844,13 +844,8 @@ Module windowMain
     If *mod
       ; get best fit repoMod (if any)
       ; if multiple defined, select same "installSource" or based on folder name
-      *repoMod = repository::getRepoMod(*mod)
       
-      If *repoMod
-        debugger::add("windowMain::modUpdate() - download mod /"+*repoMod\source$+"/"+*repoMod\id)
-        ; download current version from repo
-        repoFindModAndDownload(*repoMod\source$, *repoMod\id)
-      Else
+      If Not mods::update(*mod\tpf_id$)
         ; show mod in database
         repository::searchMod(*mod\name$) ; todo search author?
         SetGadgetState(gadget("panel"), 1)

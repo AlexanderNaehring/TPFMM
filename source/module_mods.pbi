@@ -28,6 +28,7 @@ Module mods
     #QUEUE_INSTALL
     #QUEUE_UNINSTALL
     #QUEUE_BACKUP
+    #QUEUE_UPDATE
   EndEnumeration
   Structure queue
     action.i
@@ -38,6 +39,11 @@ Module mods
   Global threadQueue
   Global NewList queue.queue()
   
+  Declare doLoad()
+  Declare doInstall(file$)
+  Declare doBackup(id$)
+  Declare doUninstall(id$)
+  Declare doUpdate(id$)
   
   UseMD5Fingerprint()
   
@@ -1007,8 +1013,13 @@ Module mods
     debugger::Add("mods::doInstall("+file$+")")
     
     Protected source$, target$
+    Protected id$
+    Protected modRoot$, modFolder$
     Protected i
-    
+    Protected backup
+    Protected *installedMod.mod
+    Protected *mod.mod
+    Protected json
     
     ; check if file exists
     If FileSize(file$) <= 0
@@ -1050,7 +1061,6 @@ Module mods
     ; archive is extracted to target$
     ; (2) try to find mod in target$ (may be in some sub-directory)...
     windowMain::progressMod(40)
-    Protected modRoot$
     modRoot$ = getModRoot(target$)
     
     If modRoot$ = ""
@@ -1062,7 +1072,6 @@ Module mods
     
     ; modRoot folder found. 
     ; try to get ID from folder name
-    Protected id$
     id$ = misc::getDirectoryName(modRoot$)
     If Not checkID(id$)
       debugger::add("mods::doInstall() - ERROR: checkID("+id$+") failed!")
@@ -1082,20 +1091,37 @@ Module mods
     EndIf
     
     
-    Protected modFolder$
     modFolder$ = getModFolder(id$, "mod") ;- TODO handle installation of maps and DLCs
     
-    LockMutex(mutexMods)
     ; check if mod already installed?
-    ; todo: call "doUninstall", which in turn may call backupBeforeUninstall
-    If FindMapElement(mods(), id$)
+    LockMutex(mutexMods)
+    *installedMod = FindMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
+    
+    If *installedMod
       debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
-      DeleteMapElement(mods())
+      
+      ; backup before overwrite with new mod if activated in settings...
+      If OpenPreferences(main::settingsFile$)
+        ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
+        PreferenceGroup("backup")
+        backup = ReadPreferenceInteger("before_update", 0)
+        ClosePreferences()
+        If backup
+          doBackup(id$)
+        EndIf
+      EndIf
+      
+      ; remove mod from internal map.
+      LockMutex(mutexMods)
+      DeleteMapElement(mods(), id$)
+      UnlockMutex(mutexMods)
     EndIf
+    
+    ; if directory exists, remove
     If FileSize(modFolder$) = -2
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     EndIf
-    UnlockMutex(mutexMods)
     
     
     ; (3) copy mod to game folder
@@ -1110,7 +1136,6 @@ Module mods
     
     ; (4) create reference to mod and load info
     windowMain::progressMod(80)
-    Protected *mod.mod
     *mod = addToMap(id$, "mod")
     loadInfo(*mod)
     *mod\aux\installDate = Date()
@@ -1122,7 +1147,6 @@ Module mods
       ; pro of using file: information is also used when installing the file manually. (manually drag&drop from "download/" folder)
       ; read info from meta file and add information to file reference...
       ; IMPORTANT: tpfnetID / workshop id!
-      Protected json
       json = LoadJSON(#PB_Any, file$+".meta")
       If json
         Protected repo_mod.repository::mod
@@ -1157,9 +1181,10 @@ Module mods
     
     
     ; start backup if required
-    Protected backup, backupFolder$
-    If OpenPreferences(main::settingsFile$) ;- TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
-      backup = ReadPreferenceInteger("autobackup", 0)
+    If OpenPreferences(main::settingsFile$)
+      ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
+      PreferenceGroup("backup")
+      backup = ReadPreferenceInteger("after_install", 0)
       ClosePreferences()
       If backup
         backup(id$)
@@ -1191,6 +1216,18 @@ Module mods
     If Left(id$, 1) = "*"
       debugger::add("mods::doUninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
     EndIf
+    
+    Protected backup
+    If OpenPreferences(main::settingsFile$)
+      ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
+      PreferenceGroup("backup")
+      backup = ReadPreferenceInteger("before_uninstall", 0)
+      ClosePreferences()
+      If backup
+        doBackup(id$)
+      EndIf
+    EndIf
+    
     
     Protected modFolder$
     modFolder$ = getModFolder(id$, *mod\aux\type$)
@@ -1269,6 +1306,20 @@ Module mods
     
   EndProcedure
   
+  Procedure doUpdate(id$)
+    debugger::add("mods::doUpdate("+id$+")")
+    Protected *mod.mod
+    Protected *repoMod.repository::mod
+    
+    LockMutex(mutexMods)
+    *mod = FindMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
+    
+    *repoMod = repository::getRepoMod(*mod) ; if can get a mod
+    ; send back to windowMain, as there may be the need for a selection window (if mod has multiple files) 
+    windowMain::repoFindModAndDownload(*repoMod\source$, *repoMod\id)
+  EndProcedure
+  
   Procedure handleQueue(*dummy)
     Protected action
     Protected string$
@@ -1304,6 +1355,9 @@ Module mods
           
         Case #QUEUE_BACKUP
           doBackup(string$)
+          
+        Case #QUEUE_UPDATE
+          doUpdate(string$)
           
       EndSelect
       Delay(100)
@@ -1346,7 +1400,23 @@ Module mods
     addToQueue(#QUEUE_BACKUP, id$)
   EndProcedure
   
-  
+  Procedure update(id$)
+    Protected *mod.mod
+    Protected *repoMod.repository::mod
+    
+    LockMutex(mutexMods)
+    *mod = FindMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
+    
+    *repoMod = repository::getRepoMod(*mod)
+    
+    If *repoMod And repository::canDownloadMod(*repoMod) ; found an online mod that can be installed
+      addToQueue(#QUEUE_UPDATE, id$)
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+  EndProcedure
   
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")

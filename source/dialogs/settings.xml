@@ -10,7 +10,7 @@
               <gridbox columns='2' colexpand='item:1' rowexpand='no'>
                 <text name='installationTextSelect' text='Select path to Transport Fever' />
                 <button name='installationAutodetect' text='Autodetect' />
-                <string name='installationPath' />
+                <string name='installationPath' text=' '/>
                 <button name='installationBrowse' text='Browse' />
                 <text name='installationTextStatus' text='' colspan='2' />
               </gridbox>
@@ -18,9 +18,10 @@
             <hbox expand='equal'>
               <frame name='miscFrame' text='Miscellaneous'>
                 <vbox expand='no'>
-                  <checkbox name='miscAutoBackup' text='Automatically backup mods after installation' />
-                  <checkbox name='miscVersionCheck' />
-
+                  <checkbox name='miscBackupAfterInstall' text=' ' />
+                  <checkbox name='miscBackupBeforeUpdate' text=' ' />
+                  <checkbox name='miscBackupBeforeUninstall' text=' ' />
+                  <checkbox name='miscVersionCheck' text=' '/>
                 </vbox>
               </frame>
               <vbox expand='no'>
