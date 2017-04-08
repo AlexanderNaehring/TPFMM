@@ -85,11 +85,7 @@ Module main
           ; normal/maximize may behave differently on linux (linux mint 18.1: maximze = normal and normal = on left edge)
           ; catch this behaviour??
           Select GetWindowState(windowMain::window)
-            Case #PB_Window_Maximize
-              SetWindowState(windowMain::window, #PB_Window_Minimize)
-              SetWindowState(windowMain::window, #PB_Window_Maximize)
-            Default
-              SetWindowState(windowMain::window, #PB_Window_Minimize)
+            Case #PB_Window_Minimize
               SetWindowState(windowMain::window, #PB_Window_Normal)
           EndSelect
         EndIf
