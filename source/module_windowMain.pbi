@@ -497,7 +497,6 @@ Module windowMain
     thread.i
   EndStructure
   Structure modInfoSource Extends modInfoGadget
-    text$
     url$
   EndStructure
   Structure modInfoTag Extends modInfoGadget
@@ -547,7 +546,18 @@ Module windowMain
   EndProcedure
   
   Procedure modInfoSource()
-    ; TODO
+    Protected *data.modInfoWindow
+    *data = GetWindowData(EventWindow())
+    If *data
+      ForEach *data\sources()
+        If EventGadget() = *data\sources()\id
+          If *data\sources()\url$
+            misc::openLink(*data\sources()\url$)
+            ProcedureReturn #True
+          EndIf
+        EndIf
+      Next
+    EndIf
   EndProcedure
   
   Procedure modInfoAuthorImage(*author.modInfoAuthor)
@@ -681,15 +691,21 @@ Module windowMain
       *nodeBase = XMLNodeFromID(xml, "infoBoxSources")
       If *nodeBase
         clearXMLchildren(*nodeBase)
-        If *mod\aux\workshopID
-          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
-          SetXMLAttribute(*node, "name", "source-workshop")
-          SetXMLAttribute(*node, "text", "Workshop")
-        EndIf
         If *mod\aux\tfnetID
           *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
           SetXMLAttribute(*node, "name", "source-tpfnet")
           SetXMLAttribute(*node, "text", "TransportFever.net")
+          AddElement(*data\sources())
+          *data\sources()\name$ = "source-tpfnet"
+          *data\sources()\url$  = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID+"/"
+        EndIf
+        If *mod\aux\workshopID
+          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+          SetXMLAttribute(*node, "name", "source-workshop")
+          SetXMLAttribute(*node, "text", "Workshop")
+          AddElement(*data\sources())
+          *data\sources()\name$ = "source-workshop"
+          *data\sources()\url$  = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
         EndIf
       EndIf
       
@@ -705,7 +721,7 @@ Module windowMain
         ; get gadgets
         Macro getGadget(gadget)
           *data\gadgets(gadget) = DialogGadget(*data\dialog, gadget)
-          If Not *data\gadgets(gadget)
+          If *data\gadgets(gadget) = -1
             debugger::add("windowMain::modInfoShow() - Error: could not get gadget '"+gadget+"'")
           EndIf
         EndMacro
@@ -783,6 +799,11 @@ Module windowMain
           *data\authors()\thread = CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
         
+        ForEach *data\sources()
+          *data\sources()\id = DialogGadget(*data\dialog, *data\sources()\name$)
+          BindGadgetEvent(*data\sources()\id, @modInfoSource())
+        Next
+        
         
         ; store all information attached to the window:
         ; todo - create structure for modInfoWindow
@@ -825,7 +846,6 @@ Module windowMain
     modInfoShow(*mod)
   EndProcedure
   
-  
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
     ; currently, supprot only one selected mod in list
@@ -853,7 +873,6 @@ Module windowMain
       
     EndIf
   EndProcedure
-  
   
   Procedure repoList()
     updateRepoButtons()
@@ -1239,7 +1258,6 @@ Module windowMain
       CompilerEndIf
     EndIf
   EndProcedure
-  
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
