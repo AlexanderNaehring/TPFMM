@@ -26,26 +26,23 @@ Module luaParser
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
-      DataSection
-        dataLua:
-        IncludeBinary "lua/lua53_x86.dll"
-        dataLuaEnd:
-      EndDataSection
-      misc::extractBinary("lua/lua53_x86.dll", ?dataLua, ?dataLuaEnd - ?dataLua, #False)
-      
+      CompilerIf #PB_Compiler_Processor=#PB_Processor_x64
+        #LUA_FILE = "lua/lua53.dll"
+      CompilerElse
+        #LUA_FILE = "lua/lua53_x86.dll"
+      CompilerEndIf
     CompilerCase #PB_OS_Linux
-      DataSection
-        dataLua:
-        IncludeBinary "lua/liblua53.so"
-        dataLuaEnd:
-      EndDataSection
-      
-      misc::extractBinary("lua/liblua53.so", ?dataLua, ?dataLuaEnd - ?dataLua, #False)
-      
-    CompilerDefault
-      CompilerError "no dynamic libary for this OS"
+      CompilerIf #PB_Compiler_Processor=#PB_Processor_x64
+        #LUA_FILE = "lua/liblua53.so"
+      CompilerEndIf
   CompilerEndSelect
   
+  DataSection
+    dataLua:
+    IncludeBinary #LUA_FILE
+    dataLuaEnd:
+  EndDataSection
+  misc::extractBinary(#LUA_FILE, ?dataLua, ?dataLuaEnd - ?dataLua, #False)
   
   
   If Not Lua_Initialize("lua/")
