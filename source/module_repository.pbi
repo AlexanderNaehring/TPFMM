@@ -603,14 +603,17 @@ Module repository
         ; Load mods from repository file
         loadRepositoryMods(*repository\main_json\mods()\url$, *repository\main_json\mods()\enc$)
       Next
+      
+      ProcedureReturn #True
+      
     EndIf
     
-    
+    ProcedureReturn #False 
   EndProcedure
   
   Procedure loadRepositoryList()
     debugger::add("repository::loadRepositoryList()")
-    Protected file, time
+    Protected file, time, success
     
     time = ElapsedMilliseconds()
     
@@ -642,12 +645,19 @@ Module repository
     If ListSize(repositories())
       windowMain::progressRepo(0, locale::l("repository","load"))
       ForEach repositories()
-        loadRepository(repositories())
+        If loadRepository(repositories())
+          success + 1
+        EndIf
         windowMain::progressRepo(100*(ListIndex(repositories())+1)/ListSize(repositories()))
       Next
       
       debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
-      windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","loaded"))
+      If success = ListSize(repositories())
+        windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","loaded"))
+      Else
+        windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","load_failed"))
+      EndIf
+      
       _READY = #True
       ProcedureReturn #True
     Else

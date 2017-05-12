@@ -153,6 +153,7 @@ overwrite_file = Do you want to overwrite the current file?
 [repository]
 load          = Load Repositories
 loaded        = Repositories successfully loaded
+load_failed   = Could not load repositories
 all_types     = All Types
 all_sources   = All Sources
 more_author   = Show all mods by {author}

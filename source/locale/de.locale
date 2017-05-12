@@ -156,6 +156,7 @@ overwrite_file = Soll die vorhandene Datei überschrieben werden?
 [repository]
 load          = Lade Repositories
 loaded        = Repositories erfolgreich geladen
+load_failed   = Repositories konnten nicht geladen werden
 all_types     = Alle Typen
 all_sources   = Alle Quellen
 more_author   = Zeige alle Mods von {author}
