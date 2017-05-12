@@ -356,7 +356,7 @@ Module mods
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure exportListHTML(file$)
+  Procedure exportListHTML(file$, all)
     debugger::add("mods::exportListHTML("+file$+")")
     Protected file
     Protected *mod.mod
@@ -436,7 +436,7 @@ Module mods
     misc::openLink(File$)
   EndProcedure
   
-  Procedure exportListTXT(File$)
+  Procedure exportListTXT(File$, all)
     debugger::add("mods::exportListTXT("+file$+")")
     Protected file, i, authors$
     Protected *mod.mod
@@ -1483,15 +1483,13 @@ Module mods
     Protected file$, selectedExt$, ext$
     Protected ok = #False
     
-    file$ = SaveFileRequester(locale::l("management", "export_list"), "mods", "HTML|*.html|Plain Text|*.txt", 0)
+    file$ = SaveFileRequester(locale::l("management", "export_list"), "mods", "HTML|*.html|Text|*.txt", 0)
     If file$ = ""
       ProcedureReturn #False
     EndIf
     
     ; get selected file pattern (from dropdown in save file dialog)
     Select SelectedFilePattern()
-      Case 0
-        selectedExt$ = "html"
       Case 1
         selectedExt$ = "txt"
       Default
@@ -1519,9 +1517,9 @@ Module mods
     
     Select LCase(GetExtensionPart(file$))
       Case "html"
-        ExportListHTML(file$)
+        ExportListHTML(file$, all)
       Case "txt"
-        ExportListTXT(file$)
+        ExportListTXT(file$, all)
       Default
         ProcedureReturn #False
     EndSelect
