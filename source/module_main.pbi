@@ -103,7 +103,6 @@ Module main
           
         ElseIf FileSize(parameter$) > 0
           ; install mod... (this function is called, before the main window is created ....
-          ; Todo: Check if thisworks at program start.
           mods::install(parameter$)
         EndIf
         
