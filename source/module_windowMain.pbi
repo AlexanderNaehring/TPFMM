@@ -10,6 +10,10 @@ DeclareModule windowMain
   
   Global window, dialog
   
+  Macro gadget(name)
+    DialogGadget(windowMain::dialog, name)
+  EndMacro
+    
   Enumeration FormMenu
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       #PB_Menu_Quit
@@ -62,9 +66,6 @@ Module windowMain
   EndEnumeration
   
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
-  
-  ;- Gadgets
-  Global NewMap gadget()
   
   ;- Timer
   Global TimerMainGadgets = 101
@@ -1302,51 +1303,6 @@ Module windowMain
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     
     BindEvent(#Event_Repo_Show_Selection, @repoEventShowSelection())
-    
-    ; get all gadgets
-    Macro getGadget(name)
-      gadget(name) = DialogGadget(dialog, name)
-      If Not IsGadget(gadget(name))
-        MessageRequester("Critical Error", "Could not create gadget "+name+"!", #PB_MessageRequester_Error)
-        End
-      EndIf
-    EndMacro
-    
-    getGadget("headerMain")
-    getGadget("panel")
-    
-    getGadget("progressRepoText")
-    getGadget("progressRepoBar")
-    getGadget("progressModText")
-    getGadget("progressModBar")
-    getGadget("version")
-    
-    getGadget("modList")
-    getGadget("modFilterFrame")
-    getGadget("modFilterString")
-    getGadget("modFilterReset")
-    getGadget("modFilterHidden")
-    getGadget("modFilterVanilla")
-    getGadget("modFilterFolder")
-    getGadget("modPreviewImage")
-    getGadget("modManagementFrame")
-    getGadget("modInformation")
-    getGadget("modUpdate")
-    getGadget("modBackup")
-    getGadget("modUninstall")
-    
-    getGadget("repoList")
-    getGadget("repoFilterFrame")
-    getGadget("repoFilterString")
-    getGadget("repoFilterReset")
-    getGadget("repoFilterSources")
-    getGadget("repoFilterTypes")
-    getGadget("repoFilterInstalled")
-    getGadget("repoManagementFrame")
-    getGadget("repoWebsite")
-    getGadget("repoInstall")
-    getGadget("repoPreviewImage")
-    
     
     ; initialize gadgets
     
