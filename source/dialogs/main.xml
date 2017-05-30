@@ -29,6 +29,7 @@
                   <frame name='modManagementFrame' text=' '>
                     <vbox expand='no'>
                       <button name='modInformation' text=' ' />
+                      <button name='modSettings' text=' ' disabled='yes' />
                       <button name='modUpdate' text=' ' />
                       <button name='modBackup' text=' ' />
                       <button name='modUninstall' text=' ' />

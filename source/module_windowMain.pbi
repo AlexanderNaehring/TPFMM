@@ -956,6 +956,7 @@ Module windowMain
     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
     SetGadgetText(gadget("modInformation"),     l("main","information"))
+    SetGadgetText(gadget("modSettings"),        l("main","settings"))
     SetGadgetText(gadget("modUpdate"),          l("main","search_online"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
