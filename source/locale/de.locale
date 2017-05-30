@@ -72,6 +72,11 @@ files           = Dateien:
 size            = Größe:
 sources         = Quellen:
 
+[mod_settings]
+title           = Mod Einstellungen
+default         = Standardwert
+save            = Einstellungen speichern
+cancel          = Änderungen verwerfen
 
 [settings]
 title           = TPFMM Einstellungen

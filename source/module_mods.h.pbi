@@ -26,9 +26,13 @@
   EndStructure
   
   Structure settings
-    type$
-    defaultValue$
-    name$
+    type$             ; boolean, number, string
+    name$             ; name of given setting
+    Default$          ; optional, default value, type dependent, stored as string
+    description$      ; tooltip / description of setting
+    min.d             ; only for number, minimum value, optional
+    max.d             ; only for number, maximum value, optional
+;     Step.d            ; only for number, step for spin gagdet, optional
   EndStructure
   
   

@@ -70,6 +70,12 @@ files           = Files:
 size            = Size on Disk:
 sources         = Sources:
 
+[mod_settings]
+title           = Mod Settings
+default         = Set to default
+save            = Save Settings
+cancel          = Cancel
+
 [settings]
 title           = TPFMM Settings
 general         = General Settings

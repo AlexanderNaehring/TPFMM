@@ -5,6 +5,7 @@ XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_modInformation.pbi"
+XIncludeFile "module_modSettings.pbi"
 
 DeclareModule windowMain
   EnableExplicit
@@ -197,6 +198,13 @@ Module windowMain
         DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       EndIf
       
+      ; settings
+      If MapSize(*mod\settings()) > 0
+        DisableGadget(gadget("modSettings"), #False)
+      Else
+        DisableGadget(gadget("modSettings"), #True)
+      EndIf
+      
       
     Else
       ; multiple mods or none selected
@@ -206,6 +214,7 @@ Module windowMain
       EndIf
       
       DisableGadget(gadget("modUpdate"), #True)
+      DisableGadget(gadget("modSettings"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
@@ -483,6 +492,18 @@ Module windowMain
     
     modInformation::modInfoShow(*mod, xml, WindowID(window))
   EndProcedure
+  
+  Procedure modSettings()
+    Protected *mod.mods::mod
+    
+    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    modSettings::show(*mod, WindowID(window))
+  EndProcedure
+    
   
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
@@ -969,6 +990,7 @@ Module windowMain
     
     ; Bind Gadget Events
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
+    BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())

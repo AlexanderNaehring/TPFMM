@@ -9,6 +9,7 @@ DeclareModule luaParser
   EnableExplicit
   
   Declare parseModLua(modfolder$, *mod.mods::mod, language$="")
+  Declare parseModSettings(modfolder$, Map settings$(), language$="")
   
 EndDeclareModule
 
@@ -148,7 +149,7 @@ Module luaParser
   	ProcedureReturn 1
   EndProcedure
   
-  
+  ;- mod.lua related functions
   
   Procedure getAuthor(L, index)
     Protected key$, val$, val
@@ -307,7 +308,7 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure readSettingsTable(L, index, setting$)
+  Procedure readSettingsTableValue(L, index, setting$)
     Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -329,9 +330,21 @@ Module luaParser
           ; boolean, string, number
           *mod\settings(setting$)\type$ = lua_tostring(L, -2)
         Case "default"
-          *mod\settings(setting$)\defaultValue$ = lua_tostring(L, -2)
+          If lua_isboolean(L, -2) ; lua_toString cannot typecast "boolean", do typecast here: true = 1, false = 0
+            *mod\settings(setting$)\default$ = Str(lua_toboolean(L, -2))
+          Else
+            *mod\settings(setting$)\default$ = lua_tostring(L, -2)
+          EndIf
         Case "name"
           *mod\settings(setting$)\name$ = lua_tostring(L, -2)
+        Case "description"
+          *mod\settings(setting$)\description$ = lua_tostring(L, -2)
+;         Case "subtype"
+;           *mod\settings(setting$)\subtype$ = lua_tostring(L, -2)
+        Case "min"
+          *mod\settings(setting$)\min = lua_tonumber(L, -2)
+        Case "max"
+          *mod\settings(setting$)\max = lua_tonumber(L, -2)
           
         Default
           
@@ -352,6 +365,9 @@ Module luaParser
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
     
+    ; clear map bevor reading new settings...
+    ClearMap(*mod\settings())
+    
     lua_pushvalue(L, index) ; push copy of table to top of stack
     ; stack now contains: -1 => table
     lua_pushnil(L) ; initial key (nil)
@@ -364,7 +380,7 @@ Module luaParser
       
       key$ = lua_tostring(L, -1) ; name of this parameter
       AddMapElement(*mod\settings(), key$, #PB_Map_ElementCheck)
-      readSettingsTable(L, -2, key$) ; read type, default value and name of this parameter
+      readSettingsTableValue(L, -2, key$) ; read type, default value and name of this parameter
       
       ; pop value + copy of key, leaving original key
       lua_pop(L, 2)
@@ -451,7 +467,7 @@ Module luaParser
     ProcedureReturn #True
   EndProcedure
   
-  
+  ;- strings.lua related functions
   
   Procedure readStringsTranslations(L, index, language$)
     Protected key$, val$
@@ -530,9 +546,90 @@ Module luaParser
     lua_pop(L, 1)
     
   EndProcedure
-
   
-  ; PUBLIC FUNCTIONS
+  ;- settings.lua related functions
+  
+  Procedure iterateSettingsLuaTable(L, index, Map settings$())
+    Protected key$, val$
+    lua_pushvalue(L, index)
+    lua_pushnil(L)
+    While lua_next(L, -2)
+      lua_pushvalue(L, -2)
+      
+      key$ = lua_tostring(L, -1)
+      If lua_isboolean(L, -2)
+        val$ = Str(lua_toboolean(L, -2))
+      Else
+        val$ = lua_tostring(L, -2)
+      EndIf
+      settings$(key$) = val$
+      
+      lua_pop(L, 2)
+     Wend
+     lua_pop(L, 1)
+  EndProcedure
+  
+  Procedure openSettingsLua(L, file$, Map settings$())
+    removeBOM(file$)
+    
+    If luaL_dofile(L, file$) <> 0
+      debugger::add("lua::openSettingsLua() - lua_dofile ERROR: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
+      lua_pop(L, 1)
+      ProcedureReturn #False
+    EndIf
+    
+    ; check that return value is a table
+    If Not lua_istable(L, -1)
+      debugger::add("lua::openSettingsLua() - lua_istable ERROR: not a table")
+      lua_pop(L, 1)
+      ProcedureReturn #False
+    EndIf
+    
+    ; iterate over data-table and search for "info" key!
+    ; -1 = location of data-table... proceedure will leave stack as it is after finish
+    iterateSettingsLuaTable(L, -1, settings$())
+     
+    ; stack is like before table iteration, with original table on top of stack
+    lua_pop(L, 1)
+    ProcedureReturn #True
+    
+  EndProcedure
+  
+  ;- init
+  
+  Procedure initLUA(modfolder$)
+    Protected L
+    Protected tmp$, string$
+    
+    L = luaL_newstate()
+    
+    ; basic libs (require, ...)
+    luaL_openlibs(L) 
+;     luaopen_base(L)	; base lib laden , fuer print usw
+    
+    ; add search path for require function:
+    tmp$ = misc::path(main::gameDirectory$, "/")
+    string$ = "package.path = '"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;"+misc::path(modfolder$, "/")+"res/scripts/?.lua';"
+    luaL_dostring(L, string$)
+    
+    ; make translation function known to lua global
+    lua_pushcfunction(L, @lua_translate())
+    lua_setglobal(L, "_")
+    
+    ; nil some os calls
+    string$ = "os.execute = nil; os.remove = nil;"
+    luaL_dostring(L, string$)
+    
+    
+    ; initialize variable storage for this lua state
+    AddMapElement(lua(), Str(L))
+    
+    
+    ProcedureReturn L
+  EndProcedure
+  
+  
+  ;- PUBLIC FUNCTIONS
   
   Procedure parseModLua(modfolder$, *mod.mods::mod, language$="")
     If modfolder$ = "" Or FileSize(modfolder$) <> -2
@@ -564,29 +661,10 @@ Module luaParser
     
     ; start
     Protected L
-    L = luaL_newstate()
+    L = initLUA(modfolder$)
     
-    luaL_openlibs(L) ; basic libs (require, ...)
-;     luaopen_base(L)	; base lib laden , fuer print usw
-    
-    ; initialize variable storage for this lua state
-    AddMapElement(lua(), Str(L))
     lua(Str(L))\language$ = language$
     lua(Str(L))\mod = *mod
-    
-    ; add search path for require function:
-    tmp$ = misc::path(main::gameDirectory$, "/")
-    string$ = "package.path = '"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;"+misc::path(modfolder$, "/")+"res/scripts/?.lua';"
-    
-    luaL_dostring(L, string$)
-    
-    ; make translation function known to lua global
-    lua_pushcfunction(L, @lua_translate())
-    lua_setglobal(L, "_")
-    
-    ; nil some os calls
-    string$ = "os.execute = nil; os.remove = nil;"
-    luaL_dostring(L, string$)
     
     
     ; first step: parse strings and save to translation!
@@ -610,6 +688,36 @@ Module luaParser
     lua_close(L)
     
     ProcedureReturn success
+  EndProcedure
+  
+  Procedure parseModSettings(modfolder$, Map settings$(), language$="")
+    debugger::add("luaParser::parseModSettings()")
+    modfolder$ = misc::path(modfolder$)
+    
+    Protected settingsLua$ = modfolder$ + "settings.lua"
+    Protected stringsLua$ = modfolder$ + "strings.lua"
+    
+    If FileSize(settingsLua$) <= 0
+      ProcedureReturn #False
+    EndIf
+    
+    If language$=""
+      language$ = locale::getCurrentLocale()
+    EndIf
+    
+    
+    Protected L
+    L = initLUA(modfolder$)
+    
+    If FileSize(stringsLua$) > 0
+      openStringsLua(L, stringsLua$)
+    EndIf
+    
+    openSettingsLua(L, settingsLua$, settings$())
+    
+    DeleteMapElement(lua(), Str(L))
+    lua_close(L)
+    
   EndProcedure
   
   
