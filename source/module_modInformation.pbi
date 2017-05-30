@@ -45,7 +45,6 @@ Module modInformation
   EndStructure
   
   
-  
   Procedure modInfoClose()
     Protected *data.modInfoWindow
     *data = GetWindowData(EventWindow())
@@ -147,7 +146,7 @@ Module modInformation
     If Not *mod
       ProcedureReturn #False
     EndIf
-    debugger::add("windowMain::modInfoShow()")
+    debugger::add("modInformation::modInfoShow()")
     
     Protected *data.modInfoWindow
     *data = AllocateStructure(modInfoWindow)
@@ -159,7 +158,7 @@ Module modInformation
     If IsXML(xml)
       ; fill authors
       Protected count, i, author.mods::author
-      debugger::add("windowMain::modInfoShow() - create author gadgets...")
+      debugger::add("modInformation::modInfoShow() - create author gadgets...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
@@ -219,7 +218,7 @@ Module modInformation
       ; tags
       
       ; sources
-      debugger::add("windowMain::modInfoShow() - sources...")
+      debugger::add("modInformation::modInfoShow() - sources...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxSources")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
@@ -245,7 +244,7 @@ Module modInformation
       
       
       ; show window
-      debugger::add("windowMain::modInfoShow() - open window...")
+      debugger::add("modInformation::modInfoShow() - open window...")
       *data\dialog = CreateDialog(#PB_Any)
       If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, parentWindowID)
         *data\window = DialogWindow(*data\dialog)
@@ -254,7 +253,7 @@ Module modInformation
         Macro getGadget(gadget)
           *data\gadgets(gadget) = DialogGadget(*data\dialog, gadget)
           If *data\gadgets(gadget) = -1
-            debugger::add("windowMain::modInfoShow() - Error: could not get gadget '"+gadget+"'")
+            debugger::add("modInformation::modInfoShow() - Error: could not get gadget '"+gadget+"'")
           EndIf
         EndMacro
         
@@ -361,7 +360,7 @@ Module modInformation
         
         ProcedureReturn #True
       Else
-        debugger::add("windowMain::modInfoShow() - Error: "+DialogError(*data\dialog))
+        debugger::add("modInformation::modInfoShow() - Error: "+DialogError(*data\dialog))
       EndIf
     EndIf
     ; failed to open window -> free data
