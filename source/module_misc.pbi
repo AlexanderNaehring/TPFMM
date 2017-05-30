@@ -56,6 +56,7 @@ DeclareModule misc
   Declare.s getOSVersion()
   Declare.s getDefaultFontName()
   Declare getDefaultFontSize()
+  Declare clearXMLchildren(*node)
   Declare registerProtocolHandler(protocol$, program$, description$="")
 EndDeclareModule
 
@@ -665,6 +666,15 @@ Module misc
         size = Val(StringField(font$, CountString(font$, " ")+1, " "))
         ProcedureReturn size
     CompilerEndSelect
+  EndProcedure
+  
+  Procedure clearXMLchildren(*node)
+    Protected *child
+    *child = ChildXMLNode(*node)
+    While *child
+      DeleteXMLNode(*child)
+      *child = ChildXMLNode(*node)
+    Wend
   EndProcedure
   
   
