@@ -121,18 +121,22 @@
         <hbox expand='item:2'>
           <vbox expand='no'>
             <gridbox colexpand='item:2' rowexpand='no' columns='2'>
+              <!--
               <text name='uuidLabel' text=' ' />
               <text name='uuid' text=' ' />
+              -->
               <text name='folderLabel' text=' ' />
               <hyperlink name='folder' text=' ' />
               <text name='tagsLabel' text=' ' />
               <text name='tags' text=' ' />
               <text name='dependenciesLabel' text=' ' />
               <hbox id='infoBoxDependencies' expand='no'></hbox>
-              <text name='filesLabel' text=' '  invisible='yes'/>
-              <text name='files' text=' ' invisible='yes' />
-              <text name='sizeLabel' text=' ' invisible='yes' />
-              <text name='size' text=' ' invisible='yes' />
+              <!--
+              <text name='filesLabel' text=' ' />
+              <text name='files' text=' ' />
+              -->
+              <text name='sizeLabel' text=' ' />
+              <text name='size' text=' ' />
             </gridbox>
           </vbox>
         </hbox>

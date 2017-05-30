@@ -50,6 +50,8 @@ DeclareModule misc
   Declare encodeTGA(image, file$, depth =24)
   Declare checkGameDirectory(Dir$)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
+  Declare.s printSize(bytes.q)
+  Declare.q getDirectorySize(path$)
   Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
   Declare.s getOSVersion()
   Declare.s getDefaultFontName()
@@ -394,7 +396,52 @@ Module misc
     EndIf
     ProcedureReturn #False
   EndProcedure
+    
+  Procedure.s printSize(bytes.q)
+    Protected k.q = 1024
+    Protected M.q = k*1024
+    Protected G.q = M*1024
+    Protected T.q = G*1024
+    
+    If bytes > T
+      ProcedureReturn StrD(bytes/T, 2)+" TIB"
+    ElseIf bytes > G
+      ProcedureReturn StrD(bytes/G, 2)+" GiB"
+    ElseIf bytes > M
+      ProcedureReturn StrD(bytes/M, 2)+" MiB"
+    ElseIf bytes > k
+      ProcedureReturn StrD(bytes/k, 2)+" kiB"
+    Else
+      ProcedureReturn Str(bytes)+" B"
+    EndIf
+    
+  EndProcedure
   
+  Procedure.q getDirectorySize(path$)
+    Protected dir, size
+    Protected name$
+    
+    path$ = path(path$)
+    dir = ExamineDirectory(#PB_Any, path(path$), "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          size + FileSize(path$ + DirectoryEntryName(dir))
+        Else
+          name$ = DirectoryEntryName(dir)
+          If name$ = "." Or name$ = ".."
+            Continue
+          EndIf
+          size + getDirectorySize(path$ + name$)
+        EndIf
+      Wend
+      FinishDirectory(dir)
+      ProcedureReturn size
+    Else
+      debugger::Add("          ERROR: could not examine directory "+path(path$))
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
   
   Procedure compareIsGreater(*element1, *element2, options, offset, type)
     Protected doSwap = #False
