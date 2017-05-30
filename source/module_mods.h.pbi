@@ -25,6 +25,12 @@
     backup.backup     ; backup information (local)
   EndStructure
   
+  Structure settings
+    type$
+    defaultValue$
+    name$
+  EndStructure
+  
   
   Structure author  ;-- information about author
     name$             ; name of author
@@ -59,6 +65,7 @@
     List dependencies.dependency()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
     
+    Map settings.settings() ; mod settings (optional)
     aux.aux                 ; auxiliary information
   EndStructure
   

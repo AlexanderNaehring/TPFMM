@@ -307,6 +307,75 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
+  Procedure readSettingsTable(L, index, setting$)
+    Protected key$
+    Protected *mod.mods::mod
+    *mod = lua(Str(L))\mod
+    
+    lua_pushvalue(L, index) ; push copy of table to top of stack
+    ; stack now contains: -1 => table
+    lua_pushnil(L) ; initial key (nil)
+    ; stack now contains: -1 => nil; -2 => table
+    While lua_next(L, -2) ; iterate through table with key/table at -1/-2
+      ; stack now contains: -1 => value; -2 => key; -3 => table
+      ; copy the key so that lua_tostring does not modify the original
+      lua_pushvalue(L, -2)
+      ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+      
+      key$    = lua_tostring(L, -1)
+      
+      Select key$
+        Case "type"
+          ; boolean, string, number
+          *mod\settings(setting$)\type$ = lua_tostring(L, -2)
+        Case "default"
+          *mod\settings(setting$)\defaultValue$ = lua_tostring(L, -2)
+        Case "name"
+          *mod\settings(setting$)\name$ = lua_tostring(L, -2)
+          
+        Default
+          
+      EndSelect
+      
+      ; pop value + copy of key, leaving original key
+      lua_pop(L, 2)
+      ; stack now contains: -1 => key; -2 => table
+      ; ready for next iteration
+     Wend
+     ; stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
+     ; Pop table (copy)
+     lua_pop(L, 1)
+  EndProcedure
+  
+  Procedure iterateSettingsTable(L, index)
+    Protected key$
+    Protected *mod.mods::mod
+    *mod = lua(Str(L))\mod
+    
+    lua_pushvalue(L, index) ; push copy of table to top of stack
+    ; stack now contains: -1 => table
+    lua_pushnil(L) ; initial key (nil)
+    ; stack now contains: -1 => nil; -2 => table
+    While lua_next(L, -2) ; iterate through table with key/table at -1/-2
+      ; stack now contains: -1 => value; -2 => key; -3 => table
+      ; copy the key so that lua_tostring does not modify the original
+      lua_pushvalue(L, -2)
+      ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
+      
+      key$ = lua_tostring(L, -1) ; name of this parameter
+      AddMapElement(*mod\settings(), key$, #PB_Map_ElementCheck)
+      readSettingsTable(L, -2, key$) ; read type, default value and name of this parameter
+      
+      ; pop value + copy of key, leaving original key
+      lua_pop(L, 2)
+      ; stack now contains: -1 => key; -2 => table
+      ; ready for next iteration
+     Wend
+     ; stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
+     ; Pop table (copy)
+     lua_pop(L, 1)
+  EndProcedure
+  
   Procedure iterateModDataTable(L, index)
     lua_pushvalue(L, index) ; push data-table to top of stack (copy)
     ; stack now contains: -1 => table
@@ -322,6 +391,9 @@ Module luaParser
         ; info table found!
         ; table at -2
         iterateInfoTable(L, -2)
+        
+      ElseIf lua_tostring(L, -1) = "settings" And lua_istable(L, -2)
+        iterateSettingsTable(L, -2)
         
       EndIf
       
