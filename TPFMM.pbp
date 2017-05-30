@@ -8,6 +8,7 @@
   <section name="data">
     <explorer view="..\" pattern="0"/>
     <log show="1"/>
+    <lastopen date="2017-05-30 16:56" user="naehring" host="MU732281"/>
   </section>
   <section name="files">
     <file name="source\main.pb">
@@ -90,7 +91,7 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="1548"/>
+      <compilecount enable="1" value="1644"/>
       <buildcount enable="1" value="30"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
