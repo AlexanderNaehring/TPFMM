@@ -73,6 +73,7 @@ sources         = Sources:
 [mod_settings]
 title           = Mod Settings
 default         = Set to default
+settings        = Mod Settings
 save            = Save Settings
 cancel          = Cancel
 

@@ -75,6 +75,7 @@ sources         = Quellen:
 [mod_settings]
 title           = Mod Einstellungen
 default         = Standardwert
+settings        = Mod Einstellungen
 save            = Einstellungen speichern
 cancel          = Änderungen verwerfen
 

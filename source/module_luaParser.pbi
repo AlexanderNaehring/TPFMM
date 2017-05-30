@@ -380,7 +380,27 @@ Module luaParser
       
       key$ = lua_tostring(L, -1) ; name of this parameter
       AddMapElement(*mod\settings(), key$, #PB_Map_ElementCheck)
+      *mod\settings(key$)\min = -2147483648
+      *mod\settings(key$)\max =  2147483647
+      
       readSettingsTableValue(L, -2, key$) ; read type, default value and name of this parameter
+      
+      Protected delete = #False
+      Select *mod\settings(key$)\type$
+        Case "boolean"
+        Case "string"
+        Case "number"
+        Default
+          delete = #True
+      EndSelect
+      If *mod\settings(key$)\name$ = ""
+        delete = #True
+      EndIf
+      
+      If delete
+        DeleteMapElement(*mod\settings(), key$)
+      EndIf
+      
       
       ; pop value + copy of key, leaving original key
       lua_pop(L, 2)
@@ -570,6 +590,7 @@ Module luaParser
   EndProcedure
   
   Procedure openSettingsLua(L, file$, Map settings$())
+    ; read settings.lua (user settings for mod)
     removeBOM(file$)
     
     If luaL_dofile(L, file$) <> 0
@@ -578,18 +599,14 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
-    ; check that return value is a table
     If Not lua_istable(L, -1)
       debugger::add("lua::openSettingsLua() - lua_istable ERROR: not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
-    ; iterate over data-table and search for "info" key!
-    ; -1 = location of data-table... proceedure will leave stack as it is after finish
     iterateSettingsLuaTable(L, -1, settings$())
      
-    ; stack is like before table iteration, with original table on top of stack
     lua_pop(L, 1)
     ProcedureReturn #True
     

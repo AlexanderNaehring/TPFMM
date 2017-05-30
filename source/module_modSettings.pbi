@@ -6,9 +6,7 @@ XIncludeFile "module_mods.h.pbi"
 DeclareModule modSettings
   EnableExplicit
   
-  
   Declare show(*mod.mods::mod, parentWindowID=0)
-  
   
 EndDeclareModule
 
@@ -60,7 +58,6 @@ Module modSettings
     number = ValD(GetGadgetText(gadget))
     
     If number > *setting\max
-      Debug ""+number+" > "+*setting\max
       number = *setting\max
     ElseIf number < *setting\min
       number = *setting\min
@@ -218,13 +215,19 @@ Module modSettings
             *node = CreateXMLNode(*nodeBase, "text", -1)
             SetXMLAttribute(*node, "name", "name-"+\name$)
             SetXMLAttribute(*node, "text", \name$+":")
+            ;             SetXMLAttribute(*node, "flags", "#PB_String_ReadOnly | #PB_String_BorderLess")
+            SetXMLAttribute(*node, "flags", "#PB_Text_Right")
             
+            If \type$ = "boolean"
+              SetXMLAttribute(*node, "invisible", "yes")
+            EndIf
+          
             ; second: input of parameter
             Select \type$
               Case "boolean"
                 *node = CreateXMLNode(*nodeBase, "checkbox", -1)
                 SetXMLAttribute(*node, "name", "value-"+\name$)
-                SetXMLAttribute(*node, "text", "")
+                SetXMLAttribute(*node, "text", \name$)
               Case "string"
                 *node = CreateXMLNode(*nodeBase, "string", -1)
                 SetXMLAttribute(*node, "name", "value-"+\name$)
@@ -248,8 +251,6 @@ Module modSettings
 ;                 *node = CreateXMLNode(*nodeBox, "button", -1)
 ;                 SetXMLAttribute(*node, "name", "dec-"+\name$)
 ;                 SetXMLAttribute(*node, "text", "v")
-                
-                
             EndSelect
             
             ; third: reset to default
@@ -337,6 +338,7 @@ Module modSettings
         AddKeyboardShortcut(*data\window, #PB_Shortcut_Return, 1)
         BindEvent(#PB_Event_Menu, @enter(), *data\window, 1)
         
+        SetGadgetText(gadget("settings"), l("mod_settings", "settings"))
         SetGadgetText(gadget("save"), l("mod_settings", "save"))
         SetGadgetText(gadget("cancel"), l("mod_settings", "cancel"))
         BindGadgetEvent(gadget("save"), @save())
