@@ -1863,7 +1863,7 @@ Module mods
   Procedure backupCleanFolder()
     Protected backupFolder$, infoFile$, zipFile$, entry$
     Protected dir, json, writeInfo
-    Protected backup.backupInfo
+    Protected NewList backups.backupInfo()
     
     debugger::add("mods::backupCleanFolder()")
     
@@ -1896,19 +1896,20 @@ Module mods
     If dir
       While NextDirectoryEntry(dir)
         entry$ = DirectoryEntryName(dir)
+        AddElement(backups())
+        
         zipFile$  = backupFolder$ + entry$
         infoFile$ = zipFile$ + ".backup"
         
         ; read .backup file (meta data like name, author, version, original ID, etc...
-        ClearStructure(backup, backupInfo)
         json = LoadJSON(#PB_Any, infoFile$)
         If json
-          ExtractJSONStructure(JSONValue(json), backup, backupInfo)
+          ExtractJSONStructure(JSONValue(json), backups(), backupInfo)
           FreeJSON(json)
         EndIf
        
         
-        With backup
+        With backups()
           ; add missing information
           writeInfo = #False
           If \filename$ = ""
@@ -1935,7 +1936,7 @@ Module mods
           If writeInfo
             json = CreateJSON(#PB_Any)
             If json
-              InsertJSONStructure(JSONValue(json), backup, backupInfo)
+              InsertJSONStructure(JSONValue(json), backups(), backupInfo)
               Debug infoFile$
               DeleteFile(infoFile$)
               SaveJSON(json, infoFile$, #PB_JSON_PrettyPrint)
@@ -1945,7 +1946,6 @@ Module mods
               CompilerEndIf
             EndIf
           EndIf
-          
         EndWith
         
       Wend
@@ -1953,7 +1953,20 @@ Module mods
     EndIf
     
     
-    ; find duplicates (same fingerprint)
+    ; delete duplicates (same fingerprint)
+    Protected checksum$
+    SortStructuredList(backups(), #PB_Sort_Descending, OffsetOf(backupInfo\date), TypeOf(backupInfo\date))
+    ForEach backups()
+      PushListPosition(backups())
+      checksum$ = backups()\checksum$
+      While NextElement(backups())
+        If checksum$ = backups()\checksum$
+          backupDelete(backups()\filename$)
+          DeleteElement(backups())
+        EndIf
+      Wend
+      PopListPosition(backups())
+    Next
     
     
   EndProcedure

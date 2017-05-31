@@ -886,7 +886,6 @@ Module windowMain
       ; get current item:
       item = GetGadgetState(gadget)
       If item <> -1
-        Debug "windowMain::backupTree() item "+item
         state = GetGadgetItemState(gadget, item)
         state & #PB_Tree_Checked
         
