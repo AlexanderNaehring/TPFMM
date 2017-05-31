@@ -12,6 +12,7 @@ Module mods
     type$ ; mod, dlc, map
   EndStructure
   
+  Global NewMap backups.backupInfo()
   Global NewMap mods.mod()
   Global mutexMods = CreateMutex()
   Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
@@ -879,6 +880,11 @@ Module mods
     Protected gameDirectory$ = main::gameDirectory$
     Protected NewMap saveMods.mod()
     
+    If Not isLoaded
+      ; do not save list when it is not loaded
+      ProcedureReturn #False
+    EndIf
+    
     If gameDirectory$ = ""
       debugger::add("mods::saveList() - gameDirectory$ not defined - do not save list")
       ProcedureReturn #False
@@ -972,7 +978,7 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure isInstalled(source$, id)
+  Procedure isInstalledByRemote(source$, id)
     Protected installed = #False
     
     If Not id
@@ -1005,6 +1011,22 @@ Module mods
     
     ProcedureReturn installed
     
+  EndProcedure
+  
+  Procedure isInstalled(id$)
+    Protected installed = #False
+    
+    If id$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    LockMutex(mutexMods)
+    If FindMapElement(mods(), id$)
+      installed = #True
+    EndIf
+    UnlockMutex(mutexMods)
+    
+    ProcedureReturn installed
   EndProcedure
   
   ; actions
@@ -1297,15 +1319,15 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    ; normally, use id$ as filename. DO NOT when creating backup of mods in workshop or staging area
+    ; normally, use id$ as filename.
     backupFile$ = id$
-    If Left(id$, 1) = "*" Or Left(id$, 1) = "?" ; workshop or staging area
-      ;backupFile$ = generateNewID(*mod)
-      ; for now, use original folder name (without * and ?)
+    ; adjust name for workshop and staging area mods
+    If Left(id$, 1) = "*"     ; workshop
+      backupFile$ = Right(id$, Len(id$)-1)+"_1"
+    ElseIf Left(id$, 1) = "?" ; staging area
       backupFile$ = Right(id$, Len(id$)-1)
     EndIf
     
-    ; add backupPath
     backupFile$ = backupFolder$ + backupFile$ + ".zip"
     
     ; start backup now: modFolder$ -> zip -> backupFile$
@@ -1317,7 +1339,25 @@ Module mods
       debugger::add("mods::doBackup() - success")
       *mod\aux\backup\date = Date()
       *mod\aux\backup\filename$ = GetFilePart(backupFile$)
+      
+      ; save mod information with the backup file
+      Protected json
+      Protected backupInfo.backupInfo
+      json = CreateJSON(#PB_Any)
+      If json
+        backupInfo\name$    = *mod\name$
+        backupInfo\version$ = *mod\version$
+        backupInfo\author$  = getAuthorsString(*mod)
+        backupInfo\tpf_id$  = *mod\tpf_id$
+        backupInfo\date     = Date()
+        InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
+        SaveJSON(json, backupFile$ + ".backup", #PB_JSON_PrettyPrint)
+        FreeJSON(json)
+      EndIf
+      
+      ; finished
       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fin"))
+    getBackupList()
       ProcedureReturn #True
     Else
       debugger::add("mods::doBackup() - failed")
@@ -1554,7 +1594,7 @@ Module mods
     Protected *selectedMod.mod
     Protected i, n, author.author
     
-    debugger::add("mods::displayMods()")
+;     debugger::add("mods::displayMods()")
     
     If Not IsWindow(_window)
       debugger::add("mods::displayMods() - ERROR: window not valid")
@@ -1806,5 +1846,48 @@ Module mods
       ProcedureReturn previewImages(*mod\tpf_id$)
     EndIf
   EndProcedure
+  
+  Procedure getBackupList(Map backups.backupInfoLocal())
+    Protected backupFolder$, entry$
+    Protected dir, json
+    
+    debugger::add("mods::getBackupList()")
+    
+    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    
+    ClearMap(backups())
+    
+    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
+    If dir
+      While NextDirectoryEntry(dir)
+        entry$ = DirectoryEntryName(dir)
+        AddMapElement(backups(), entry$)
+        
+        json = LoadJSON(#PB_Any, backupFolder$ + entry$ + ".backup")
+        If json
+          ExtractJSONStructure(JSONValue(json), backups(), backupInfo)
+          FreeJSON(json)
+        EndIf
+        
+        If backups()\name$ = ""
+          backups()\name$ = MapKey(backups())
+        EndIf
+        If backups()\tpf_id$ = ""
+          backups()\tpf_id$ = GetFilePart(entry$, #PB_FileSystem_NoExtension)
+        EndIf
+        
+        backups()\installed = isInstalled(backups()\tpf_id$)
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    If MapSize(backups()) > 0
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+    
+  EndProcedure
+  
   
 EndModule

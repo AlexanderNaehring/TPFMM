@@ -502,7 +502,7 @@ Module repository
         source$ = repo_mods()\mods()\source$
         id      = repo_mods()\mods()\id
         
-        repo_mods()\mods()\installed = mods::isInstalled(source$, id)
+        repo_mods()\mods()\installed = mods::isInstalledByRemote(source$, id)
       Next
     Next
     UnlockMutex(mutexRepoMods)

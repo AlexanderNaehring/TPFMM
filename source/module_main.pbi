@@ -18,18 +18,14 @@
   
 EndDeclareModule
 
-
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_instance.pbi"
 
-
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
-
-
 
 Module main
   

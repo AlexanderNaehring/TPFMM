@@ -73,6 +73,19 @@
     aux.aux                 ; auxiliary information
   EndStructure
   
+  Structure backupInfo
+    name$
+    version$
+    author$
+    tpf_id$
+    date.i
+  EndStructure
+  
+  Structure backupInfoLocal Extends backupInfo
+    installed.b
+  EndStructure
+  
+  
   Global isLoaded.b
   Global working.b
   
@@ -108,7 +121,9 @@
   
   Declare canUninstall(*mod.mod)
   Declare canBackup(*mod.mod)
-  Declare isInstalled(source$, id)
+  Declare isInstalledByRemote(source$, id)
+  Declare isInstalled(id$)
+  Declare getBackupList(Map backups.backupInfoLocal())
   
   ; actions
   Declare load()                ; load mods.json and find installed mods

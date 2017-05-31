@@ -62,8 +62,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_modSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+-"/>
-      <fingerprint md5="16277e674eb23a030497f07311e4aa49"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -72,7 +71,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_repository.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -91,7 +90,7 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="1678"/>
+      <compilecount enable="1" value="1714"/>
       <buildcount enable="1" value="31"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
