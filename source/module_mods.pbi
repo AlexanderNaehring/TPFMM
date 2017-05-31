@@ -1119,7 +1119,18 @@ Module mods
     EndIf
     
     ; if directory exists, remove
+    Protected settingsLua$ = ""
+    Protected file
     If FileSize(modFolder$) = -2
+      ; keep settings.lua if present.
+      If FileSize(modFolder$+"settings.lua") > 0
+        file = ReadFile(#PB_Any, modFolder$+"settings.lua")
+        If file
+          settingsLua$ = ReadString(file, #PB_File_IgnoreEOL)
+          CloseFile(file)
+        EndIf
+      EndIf
+      
       DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     EndIf
     
@@ -1132,6 +1143,16 @@ Module mods
       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
+    
+    ; restore mod settings
+    If settingsLua$
+      file = CreateFile(#PB_Any, modFolder$+"settings.lua")
+      If file
+        WriteString(file, settingsLua$)
+        CloseFile(file)
+      EndIf
+    EndIf
+    settingsLua$ = ""
     
     
     ; (4) create reference to mod and load info
