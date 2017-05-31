@@ -481,7 +481,6 @@ Module windowMain
     EndIf
   EndProcedure
   
-  
   Procedure modInformation()
     Protected *mod.mods::mod
     
@@ -490,7 +489,7 @@ Module windowMain
       ProcedureReturn #False
     EndIf
     
-    modInformation::modInfoShow(*mod, xml, WindowID(window))
+    modInformation::modInfoShow(*mod, WindowID(window))
   EndProcedure
   
   Procedure modSettings()

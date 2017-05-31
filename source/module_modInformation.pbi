@@ -2,7 +2,7 @@
 DeclareModule modInformation
   EnableExplicit
   
-  Declare modInfoShow(*mod.mods::mod, xml, parentWindowID=0)
+  Declare modInfoShow(*mod.mods::mod, parentWindowID=0)
   
 EndDeclareModule
 
@@ -44,6 +44,20 @@ Module modInformation
     modFolder$
   EndStructure
   
+  
+  ; load default XML
+  
+  DataSection
+    dialogXML:
+    IncludeBinary "dialogs/modInfo.xml"
+    dialogXMLend:
+  EndDataSection
+  
+  Global xml
+  xml = CatchXML(#PB_Any, ?dialogXML, ?dialogXMLend - ?dialogXML)
+  If Not xml Or XMLStatus(xml) <> #PB_XML_Success
+    debugger::add("modInfo:: - ERROR (XML): could not read window definition")
+  EndIf
   
   Procedure modInfoClose()
     Protected *data.modInfoWindow
@@ -142,7 +156,7 @@ Module modInformation
     
   EndProcedure
   
-  Procedure modInfoShow(*mod.mods::mod, xml, parentWindowID=0)
+  Procedure modInfoShow(*mod.mods::mod, parentWindowID=0)
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -158,7 +172,6 @@ Module modInformation
     If IsXML(xml)
       ; fill authors
       Protected count, i, author.mods::author
-      debugger::add("modInformation::modInfoShow() - create author gadgets...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
@@ -218,7 +231,6 @@ Module modInformation
       ; tags
       
       ; sources
-      debugger::add("modInformation::modInfoShow() - sources...")
       *nodeBase = XMLNodeFromID(xml, "infoBoxSources")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
@@ -244,7 +256,6 @@ Module modInformation
       
       
       ; show window
-      debugger::add("modInformation::modInfoShow() - open window...")
       *data\dialog = CreateDialog(#PB_Any)
       If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, parentWindowID)
         *data\window = DialogWindow(*data\dialog)
