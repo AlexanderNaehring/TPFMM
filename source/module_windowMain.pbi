@@ -1030,7 +1030,10 @@ Module windowMain
         
         ; add top level entry to tree gadget
         If ListSize(someBackups()) = 1
-          text$ = someBackups()\name$ + " v" + someBackups()\version$
+          text$ = someBackups()\name$ 
+          If someBackups()\version$
+            text$ + " v" + someBackups()\version$
+          EndIf
           text$ + Space(4) + "(" +  misc::printSize(someBackups()\size) + ")"
         Else
           text$ = "" + ListSize(someBackups()) + " " + locale::l("main","backup_files")
@@ -1046,7 +1049,11 @@ Module windowMain
         ; add entry for each backup
         ForEach someBackups()
           With someBackups()
-            text$ = \name$ + " v" + \version$ + " (" +  misc::printSize(\size) + ")"
+            text$ = \name$
+            If \version$
+              text$ + " v" + \version$
+            EndIf
+            text$ + " (" +  misc::printSize(\size) + ")"
             If \date
               text$ = "[" + FormatDate("%dd.%mm. %hh:%ii:%ss", \date) + "] " + text$
             EndIf

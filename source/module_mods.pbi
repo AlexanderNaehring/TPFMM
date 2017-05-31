@@ -1328,8 +1328,8 @@ Module mods
       backupFile$ = Right(id$, Len(id$)-1)
     EndIf
     
-    backupInfoFile$ = backupFolder$ + backupFile$ + "." + FormatDate("%yyyy%mm%dd-%hh%ii%ss", date) + ".backup"
     backupFile$     = backupFolder$ + backupFile$ + "." + FormatDate("%yyyy%mm%dd-%hh%ii%ss", date) + ".zip"
+    backupInfoFile$ = backupFile$ + ".backup"
     
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
@@ -1340,6 +1340,8 @@ Module mods
       debugger::add("mods::doBackup() - success")
       *mod\aux\backup\date = Date()
       *mod\aux\backup\filename$ = GetFilePart(backupFile$)
+      
+      ;TODO check for older backups with identical checksum...
       
       ; save mod information with the backup file
       Protected json
@@ -1353,9 +1355,13 @@ Module mods
         backupInfo\filename$  = GetFilePart(backupFile$)
         backupInfo\date       = date
         backupInfo\size       = FileSize(backupFile$)
+        backupInfo\checksum$  = FileFingerprint(backupFile$, #PB_Cipher_MD5)
         InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
         SaveJSON(json, backupInfoFile$, #PB_JSON_PrettyPrint)
         FreeJSON(json)
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          SetFileAttributes(backupInfoFile$, #PB_FileSystem_Hidden)
+        CompilerEndIf
       Else
         debugger::add("mods::doBackup() - ERROR: failed to create backup meta data file: "+backupInfoFile$)
       EndIf
@@ -1852,16 +1858,123 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure getBackupList(List backups.backupInfoLocal())
-    Protected backupFolder$, entry$
-    Protected zipFile$, infoFile$
-    Protected dir, json
+  ; backup stuff
+  
+  Procedure backupCleanFolder()
+    Protected backupFolder$, infoFile$, zipFile$, entry$
+    Protected dir, json, writeInfo
+    Protected backup.backupInfo
     
-    debugger::add("mods::getBackupList()")
+    debugger::add("mods::backupCleanFolder()")
+    
+    If main::gameDirectory$ = ""
+      ProcedureReturn #False
+    EndIf
     
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     
+    ; delete all .backup files without a corresponding .zip file
+    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.backup")
+    If dir
+      While NextDirectoryEntry(dir)
+        entry$ = DirectoryEntryName(dir)
+        
+        infoFile$ = backupFolder$ + entry$
+        zipFile$ = Left(infoFile$, Len(infoFile$) - Len(".backup"))
+        
+        If FileSize(zipFile$) <= 0
+          DeleteFile(infoFile$)
+          Continue
+        EndIf
+        
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    ; create missing .backup files or fill in missing information
+    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
+    If dir
+      While NextDirectoryEntry(dir)
+        entry$ = DirectoryEntryName(dir)
+        zipFile$  = backupFolder$ + entry$
+        infoFile$ = zipFile$ + ".backup"
+        
+        ; read .backup file (meta data like name, author, version, original ID, etc...
+        ClearStructure(backup, backupInfo)
+        json = LoadJSON(#PB_Any, infoFile$)
+        If json
+          ExtractJSONStructure(JSONValue(json), backup, backupInfo)
+          FreeJSON(json)
+        EndIf
+       
+        
+        With backup
+          ; add missing information
+          writeInfo = #False
+          If \filename$ = ""
+            \filename$ = entry$
+            writeInfo = #True
+          EndIf
+          If \tpf_id$ = ""
+            \tpf_id$ = StringField(entry$, 1, ".") ; read filename up to first dot as tpf_id
+            writeInfo = #True
+          EndIf
+          If \name$ = ""
+            \name$ = \tpf_id$
+            writeInfo = #True
+          EndIf
+          If Not \size
+            \size = FileSize(zipFile$)
+            writeInfo = #True
+          EndIf
+          If \checksum$ = ""
+            \checksum$ = FileFingerprint(zipFile$, #PB_Cipher_MD5)
+            writeInfo = #True
+          EndIf
+          
+          If writeInfo
+            json = CreateJSON(#PB_Any)
+            If json
+              InsertJSONStructure(JSONValue(json), backup, backupInfo)
+              Debug infoFile$
+              DeleteFile(infoFile$)
+              SaveJSON(json, infoFile$, #PB_JSON_PrettyPrint)
+              FreeJSON(json)
+              CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+                SetFileAttributes(infoFile$, #PB_FileSystem_Hidden)
+              CompilerEndIf
+            EndIf
+          EndIf
+          
+        EndWith
+        
+      Wend
+      FinishDirectory(dir)
+    EndIf
+    
+    
+    ; find duplicates (same fingerprint)
+    
+    
+  EndProcedure
+  
+  
+  Procedure getBackupList(List backups.backupInfoLocal())
+    Protected backupFolder$, entry$
+    Protected zipFile$, infoFile$
+    Protected dir, json, writeInfo
+    
+    debugger::add("mods::getBackupList()")
+    
     ClearList(backups())
+    
+    If main::gameDirectory$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    
+    backupCleanFolder()
     
     ; find all zip files in backup folder
     dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
@@ -1871,34 +1984,16 @@ Module mods
         AddElement(backups())
         
         zipFile$  = backupFolder$ + entry$
-        infoFile$ = Left(zipFile$, Len(zipFile$) - 4) + ".backup"
+        infoFile$ = zipFile$ + ".backup"
         
-        ; read .backup file (meta data like name, author, version, original ID, etc...
+        ; read .backup file (meta data like name, author, version, original ID, etc...)
         json = LoadJSON(#PB_Any, infoFile$)
         If json
           ExtractJSONStructure(JSONValue(json), backups(), backupInfo)
           FreeJSON(json)
         EndIf
         
-        With backups()
-          ; add missing information
-          If \filename$ = ""
-            \filename$ = entry$
-          EndIf
-          If \tpf_id$ = ""
-            \tpf_id$ = StringField(entry$, 1, ".") ; read filename up to first dot as tpf_id
-          EndIf
-          If \name$ = ""
-            \name$ = \tpf_id$
-          EndIf
-          If Not \size
-            \size = FileSize(zipFile$)
-          EndIf
-          
-          ; check if mod is installed
-          \installed = isInstalled(\tpf_id$)
-          
-        EndWith
+        backups()\installed = isInstalled(backups()\tpf_id$)
         
       Wend
       FinishDirectory(dir)
@@ -1921,7 +2016,8 @@ Module mods
       backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
       file$ = backupFolder$ + file$
       If FileSize(file$) > 0
-        ProcedureReturn DeleteFile(file$)
+        DeleteFile(file$)
+        DeleteFile(file$+".backup")
       EndIf
     EndIf
     ProcedureReturn #False

@@ -81,6 +81,7 @@
     filename$
     date.i
     size.q
+    checksum$
   EndStructure
   
   Structure backupInfoLocal Extends backupInfo
