@@ -66,6 +66,21 @@
               </hbox>
             </vbox>
           </tab>
+          <tab text='Backups'>
+            <hbox expand='item:1'>
+              <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
+              <vbox expand='no'>
+                <frame name='backupFrame' text=' ' width='210'>
+                  <vbox expand='no'>
+                    <button name='backupRefresh' text=' ' />
+                    <button name='backupRestore' text=' ' />
+                    <button name='backupDelete' text=' ' />
+                    <button name='backupFolder' text=' ' />
+                  </vbox>
+                </frame>
+              </vbox>
+            </hbox>
+          </tab>
         </panel>
       </singlebox>
       <hbox expand='item:1' spacing='10'>

@@ -78,7 +78,9 @@
     version$
     author$
     tpf_id$
+    filename$
     date.i
+    size.q
   EndStructure
   
   Structure backupInfoLocal Extends backupInfo
@@ -123,7 +125,9 @@
   Declare canBackup(*mod.mod)
   Declare isInstalledByRemote(source$, id)
   Declare isInstalled(id$)
-  Declare getBackupList(Map backups.backupInfoLocal())
+  
+  Declare getBackupList(List backups.backupInfoLocal())
+  Declare backupDelete(file$)
   
   ; actions
   Declare load()                ; load mods.json and find installed mods

@@ -272,6 +272,36 @@ Module windowMain
     
   EndProcedure
   
+  Procedure updateBackupButtons()
+    Protected item, checked, canRestore, canDelete
+    
+    If main::gameDirectory$
+      
+      For item = 0 To CountGadgetItems(gadget("backupTree")) - 1
+        If GetGadgetItemState(gadget("backupTree"), item) & #PB_Tree_Checked
+          checked + 1
+        EndIf
+      Next
+      If checked
+        canDelete = #True
+      EndIf
+      
+      
+      DisableGadget(gadget("backupTree"), #False)
+      DisableGadget(gadget("backupFolder"), #False)
+      
+      DisableGadget(gadget("backupRestore"), Bool(Not canRestore))
+      DisableGadget(gadget("backupDelete"), Bool(Not canDelete))
+      
+    Else
+      
+      DisableGadget(gadget("backupTree"), #True)
+      DisableGadget(gadget("backupRestore"), #True)
+      DisableGadget(gadget("backupDelete"), #True)
+      DisableGadget(gadget("backupFolder"), #True)
+    EndIf
+    
+  EndProcedure
   
   Procedure close()
     HideWindow(window, #True)
@@ -345,7 +375,18 @@ Module windowMain
   EndProcedure
   
   ;- GADGETS
-      
+  
+  Declare backupRefreshList()
+  Procedure panel()
+    If EventType() = #PB_EventType_Change
+      If GetGadgetState(gadget("panel")) = 2
+        backupRefreshList()
+      EndIf
+    EndIf
+  EndProcedure
+  
+  ;- mod tab
+  
   Procedure modAddNewMod()
     Protected file$
     If FileSize(main::gameDirectory$) <> -2
@@ -467,13 +508,6 @@ Module windowMain
     mods::displayMods()
   EndProcedure
   
-  Procedure modShowBackupFolder()
-    If main::gameDirectory$
-      misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/backups/")
-      misc::openLink(main::gameDirectory$+"TPFMM/backups/")
-    EndIf
-  EndProcedure
-  
   Procedure modShowDownloadFolder()
     If main::gameDirectory$
       misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/download/")
@@ -502,7 +536,6 @@ Module windowMain
     
     modSettings::show(*mod, WindowID(window))
   EndProcedure
-    
   
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
@@ -531,6 +564,8 @@ Module windowMain
       
     EndIf
   EndProcedure
+  
+  ;- repo tab
   
   Procedure repoList()
     updateRepoButtons()
@@ -839,7 +874,203 @@ Module windowMain
     ProcedureReturn #True
   EndProcedure
   
-  ; DRAG & DROP
+  ;- backup tab
+  
+  Procedure backupTree()
+    Protected item, level, i, gadget, checked, state, state2
+    
+    ; update checked items...
+    If EventType() = #PB_EventType_LeftClick
+      ; the _current_ item was changed!
+      gadget = EventGadget()
+      ; get current item:
+      item = GetGadgetState(gadget)
+      If item <> -1
+        Debug "windowMain::backupTree() item "+item
+        state = GetGadgetItemState(gadget, item)
+        state & #PB_Tree_Checked
+        
+        level = GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel)
+        If level = 0
+          ; top level item -> apply state to all lower level items
+          ; iterate to next items until an item with same level is found
+          For i = item + 1 To CountGadgetItems(gadget) - 1
+            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) = level
+              Break
+            EndIf
+            ; apply parent "state" to all child items:
+            SetGadgetItemState(gadget, i, state) ; checked or 0
+          Next
+        ElseIf level = 1
+          ; lower level -> check state of sibling items and apply corresponding state to parent item
+          ; iterate down to end of this level
+          For i = item To CountGadgetItems(gadget) - 1
+            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) < level ; found another high level item
+              i - 1
+              Break
+            EndIf
+          Next
+          If i > (CountGadgetItems(gadget) - 1)
+            i = CountGadgetItems(gadget) - 1
+          EndIf
+          
+          ; i is now the last item of this sublevel
+          ; iterate "up" to parent and check the states while 
+          For i = i To 0 Step -1
+            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) < level
+              Break
+            EndIf
+            
+            state2 = GetGadgetItemState(gadget, i)
+            If (state & #PB_Tree_Checked And Not state2 & #PB_Tree_Checked) Or
+               (state2 & #PB_Tree_Checked And Not state & #PB_Tree_Checked)
+              state = #PB_Tree_Inbetween
+;             ElseIf state & #PB_Tree_Checked And state2 & #PB_Tree_Checked And i <> item
+;               ; set all other sublevel items that are checked to inbetween
+;               SetGadgetItemState(gadget, i , #PB_Tree_Inbetween)
+            EndIf
+          Next
+          SetGadgetItemState(gadget, i, state)
+        EndIf
+      EndIf
+    EndIf
+    
+    updateBackupButtons()
+    
+  EndProcedure
+  
+  Procedure backupRestore()
+    ;- TODO
+    ;- make sure, that only one file for each tpf_id is restored at once!
+  EndProcedure
+  
+  Procedure backupDelete()
+    Protected gadget, item
+    Protected *buffer, file$
+    
+    gadget = gadget("backupTree")
+    For item = 0 To CountGadgetItems(gadget) - 1
+      If GetGadgetItemState(gadget, item) & #PB_Tree_Checked
+        *buffer = GetGadgetItemData(gadget, item)
+        If *buffer
+          file$ = PeekS(*buffer)
+          mods::backupDelete(file$)
+        EndIf
+      EndIf
+    Next
+    
+    backupRefreshList()
+  EndProcedure
+  
+  Procedure backupFolder()
+    If main::gameDirectory$
+      misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/backups/")
+      misc::openLink(main::gameDirectory$+"TPFMM/backups/")
+    EndIf
+  EndProcedure
+  
+  Procedure backupRefreshList()
+    Protected NewList allBackups.mods::backupInfoLocal()
+    Protected NewList tpf_id$()
+    Protected NewList someBackups.mods::backupInfoLocal()
+    Protected found, item
+    Protected text$
+    Protected *buffer
+    
+    Debug "windowMain::backupRefreshList()"
+    
+    For item = 0 To CountGadgetItems(gadget("backupTree")) - 1
+      *buffer = GetGadgetItemData(gadget("backupTree"), item)
+      If *buffer
+        FreeMemory(*buffer)
+      EndIf
+    Next
+    
+    ClearGadgetItems(gadget("backupTree"))
+    item = 0
+    
+    If mods::getBackupList(allBackups())
+      ; create individual lists for each tpf_id, sorted by date.
+      
+      ; first: extract the tpf_ids
+      ForEach allBackups()
+        ; check if the tpf_id of this backup is already in list...
+        found = #False
+        ForEach tpf_id$()
+          If tpf_id$() = allBackups()\tpf_id$
+            ; already in list
+            found = #True
+            Break
+          EndIf
+        Next
+        ; if not: add to list
+        If Not found
+          AddElement(tpf_id$())
+          tpf_id$() = allBackups()\tpf_id$
+        EndIf
+      Next
+      
+      ; second: order all tpf_id by name
+      SortList(tpf_id$(), #PB_Sort_Ascending|#PB_Sort_NoCase)
+      
+      ; third: iterate all tpf_id and display all backups with this ID sorted by date
+      ForEach tpf_id$()
+        ; find all backups with this tpf_id
+        ClearList(someBackups())
+        ForEach allBackups()
+          If allBackups()\tpf_id$ = tpf_id$()
+            AddElement(someBackups())
+            ; copy values to temporary list
+            someBackups() = allBackups()
+          EndIf
+        Next
+        
+        ; sort someBackups by date (newest first)
+        SortStructuredList(someBackups(), #PB_Sort_Descending, OffsetOf(mods::backupInfoLocal\date), TypeOf(mods::backupInfoLocal\date))
+        
+        ; add top level entry to tree gadget
+        If ListSize(someBackups()) = 1
+          text$ = someBackups()\name$ + " v" + someBackups()\version$
+          text$ + Space(4) + "(" +  misc::printSize(someBackups()\size) + ")"
+        Else
+          text$ = "" + ListSize(someBackups()) + " " + locale::l("main","backup_files")
+        EndIf
+        AddGadgetItem(gadget("backupTree"), item, text$, 0, 0)
+;         If someBackups()\installed
+;           SetGadgetItemColor(gadget("backupTree"), item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
+;         Else
+;           SetGadgetItemColor(gadget("backupTree"), item, #PB_Gadget_FrontColor, RGB($66, $00, $00))
+;         EndIf
+        item + 1
+        
+        ; add entry for each backup
+        ForEach someBackups()
+          With someBackups()
+            text$ = \name$ + " v" + \version$ + " (" +  misc::printSize(\size) + ")"
+            If \date
+              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii:%ss", \date) + "] " + text$
+            EndIf
+            
+            ; remember the filename for later actions (restore, delete)
+            ; memory must be freed manually!!!
+            *buffer = AllocateMemory(StringByteLength(\filename$) + SizeOf(character))
+            PokeS(*buffer, \filename$)
+            
+            AddGadgetItem(gadget("backupTree"), item, text$, 0, 1)
+            SetGadgetItemData(gadget("backupTree"), item, *buffer)
+            If ListSize(someBackups()) > 1 And ListIndex(someBackups()) = 0
+              SetGadgetItemState(gadget("backupTree"), item-1, #PB_Tree_Expanded)
+            EndIf
+            item + 1
+          EndWith
+        Next
+      Next
+    EndIf
+    
+  EndProcedure
+  
+  
+  ;- DRAG & DROP
   
   Procedure HandleDroppedFiles()
     Protected count, i
@@ -965,6 +1196,7 @@ Module windowMain
     
     SetGadgetItemText(gadget("panel"), 0,       l("main","mods"))
     SetGadgetItemText(gadget("panel"), 1,       l("main","repository"))
+    SetGadgetItemText(gadget("panel"), 2,       l("main","backups"))
     
     RemoveGadgetColumn(gadget("modList"), 0)
     AddGadgetColumn(gadget("modList"), 0,       l("main","name"), 240)
@@ -986,8 +1218,16 @@ Module windowMain
     SetGadgetText(gadget("repoWebsite"),        l("main","mod_website"))
     SetGadgetText(gadget("repoInstall"),        l("main","install"))
     
+    SetGadgetText(gadget("backupFrame"),        l("main","backup_manage"))
+    SetGadgetText(gadget("backupRefresh"),      l("main","backup_refresh"))
+    SetGadgetText(gadget("backupRestore"),      l("main","backup_restore"))
+    SetGadgetText(gadget("backupDelete"),       l("main","backup_delete"))
+    SetGadgetText(gadget("backupFolder"),       l("main","backup_folder"))
+    
     
     ; Bind Gadget Events
+    BindGadgetEvent(gadget("panel"),            @panel())
+    
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
@@ -1000,12 +1240,17 @@ Module windowMain
     BindGadgetEvent(gadget("modFilterVanilla"), @modFilterMods())
     BindGadgetEvent(gadget("modFilterFolder"),  @modFilterMods(), #PB_EventType_Change)
     
-    
     BindGadgetEvent(gadget("repoList"),         @repoList())
     BindGadgetEvent(gadget("repoList"),         @repoListShowMenu(), #PB_EventType_RightClick)
     BindGadgetEvent(gadget("repoFilterReset"),  @repoResetFilter())
     BindGadgetEvent(gadget("repoWebsite"),      @repoWebsite())
     BindGadgetEvent(gadget("repoInstall"),      @repoDownload())
+    
+    BindGadgetEvent(gadget("backupTree"),       @backupTree())
+    BindGadgetEvent(gadget("backupRefresh"),    @backupRefreshList())
+    BindGadgetEvent(gadget("backupRestore"),    @backupRestore())
+    BindGadgetEvent(gadget("backupDelete"),     @backupDelete())
+    BindGadgetEvent(gadget("backupFolder"),     @backupFolder())
     
     
     ; create shortcuts
@@ -1044,7 +1289,7 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
     BindMenuEvent(0, #MenuItem_AddMod, @modAddNewMod())
     BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
-    BindMenuEvent(0, #MenuItem_ShowBackups, @modShowBackupFolder())
+    BindMenuEvent(0, #MenuItem_ShowBackups, @backupFolder())
     BindMenuEvent(0, #MenuItem_ShowDownloads, @modShowDownloadFolder())
     BindMenuEvent(0, #MenuItem_RepositoryRefresh, @repoRefresh())
     BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
@@ -1070,6 +1315,9 @@ Module windowMain
       SetWindowTitle(window, GetWindowTitle(window) + " (Test Mode Enabled)")
     EndIf
     
+    ; fonts...
+    Protected fontMono = LoadFont(#PB_Any, "Courier", misc::getDefaultFontSize())
+;     SetGadgetFont(gadget("backupTree"), FontID(fontMono))
     
     ; load images
     ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), GadgetHeight(gadget("headerMain")), #PB_Image_Raw)
@@ -1094,8 +1342,6 @@ Module windowMain
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
     BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
-    
-    
     
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
@@ -1130,7 +1376,7 @@ Module windowMain
     ; init gui texts and button states
     updateModButtons()
     updateRepoButtons()
-    
+    updateBackupButtons()
     
     UnuseModule locale
   EndProcedure

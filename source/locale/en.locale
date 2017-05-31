@@ -25,6 +25,7 @@ repo_clear        = Clear repository preview image cache
 mods            = Modifications
 dlcs            = Downloadable Content
 repository      = Online Repository
+backups         = Mod Backups
 maps            = Maps
 name            = Name
 author          = Author
@@ -57,6 +58,13 @@ cancel          = Cancel
 download        = Download
 repo_clear_title= Repository Cache
 repo_clear_text = The repository preview image cache was deleted.
+backup_manage   = Manage Backups
+backup_refresh  = Refresh Backup List
+backup_restore  = Restore Backup
+backup_delete   = Delete Backup
+backup_folder   = Open Backup Folder
+backup_file     = file
+backup_files    = files
 
 [info]
 title           = Mod Information

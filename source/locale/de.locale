@@ -27,6 +27,7 @@ repo_clear        = Repository Cache für Vorschaubilder leeren
 mods            = Modifikationen
 dlcs            = Herunterladbare Inhalte (DLC)
 repository      = Online Datenbank
+backups         = Sicherheitskopien
 maps            = Karten
 name            = Name
 author          = Ersteller
@@ -59,6 +60,13 @@ cancel          = Abbrechen
 download        = Herunterladen
 repo_clear_title= Repository Cache
 repo_clear_text = Der Reposiotory Cache für Vorschaubilder wurde geleert.
+backup_manage   = Verwalte Sicherheitskopien
+backup_refresh  = Liste erneut laden
+backup_restore  = Sicherung wiederherstellen
+backup_delete   = Sicherung entfernen
+backup_folder   = Ordner mit Sicherheitskopien öffnen
+backup_file     = Datei
+backup_files    = Dateien
 
 [info]
 title           = Mod Informationen
