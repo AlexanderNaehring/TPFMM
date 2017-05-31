@@ -320,15 +320,10 @@ Module modSettings
 ;                 SetGadgetState(gadget("value-"+\name$), Val(val$))
             EndSelect
             
-            
-            
           EndWith
         Next
         
-        
-        
-        
-        SetGadgetFont(gadget("name"), FontID(fontHeader))
+        SetGadgetFont(gadget("name"), FontID(fontBigger))
 ;         SetGadgetColor(*data\gadgets("name"), #PB_Gadget_FrontColor, RGB($FF, $FF, $FF))
 ;         SetGadgetColor(*data\gadgets("name"), #PB_Gadget_BackColor, RGB(47, 71, 99))
         
