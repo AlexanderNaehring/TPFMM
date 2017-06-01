@@ -58,6 +58,7 @@ DeclareModule misc
   Declare clearXMLchildren(*node)
   Declare registerProtocolHandler(protocol$, program$, description$="")
   Declare time(*tloc = #Null)
+  Declare getRowHeight(gadget)
 EndDeclareModule
 
 Module misc
@@ -665,6 +666,47 @@ Module misc
     Wend
   EndProcedure
   
+  
+CompilerSelect #PB_Compiler_OS
+  CompilerCase #PB_OS_Windows
+    
+    Procedure getRowHeight(gadget)
+      ; ListIconGadget get/set row height: http://www.purebasic.fr/english/viewtopic.php?f=13&t=54533&start=7
+      
+      If GadgetType(gadget) = #PB_GadgetType_ListView
+        ProcedureReturn SendMessage_(GadgetID(gadget), #LB_GETITEMHEIGHT, 0, 0)
+        
+      ElseIf GadgetType(gadget) = #PB_GadgetType_ListIcon
+        Protected rectangle.RECT
+        rectangle\left = #LVIR_BOUNDS
+        SendMessage_(GadgetID(gadget), #LVM_GETITEMRECT, 0, rectangle)
+        ProcedureReturn rectangle\bottom - rectangle\top - 1
+        
+      EndIf
+    EndProcedure
+    
+  CompilerCase #PB_OS_Linux
+
+    Procedure getRowHeight(gadget)
+      Protected height, yOffset
+      Protected *tree, *tree_column
+      If GadgetType(gadget) = #PB_GadgetType_ListIcon Or
+         GadgetType(gadget) = #PB_GadgetType_ListView
+        
+        *tree = GadgetID(gadget)
+        
+        ; https://developer.gnome.org/gtk3/stable/GtkTreeView.html#gtk-tree-view-get-column
+        *tree_column = gtk_tree_view_get_column_(*tree, 0)
+        
+        ; https://developer.gnome.org/gtk3/stable/GtkTreeViewColumn.html#gtk-tree-view-column-cell-get-size
+        gtk_tree_view_column_cell_get_size_(*tree_column, #Null, #Null, @yOffset, #Null, @height)
+        
+        ProcedureReturn height
+      EndIf
+    EndProcedure
+
+    
+CompilerEndSelect
   
   Procedure registerProtocolHandler(protocol$, program$, description$="")
     debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
