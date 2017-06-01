@@ -59,6 +59,7 @@ DeclareModule misc
   Declare registerProtocolHandler(protocol$, program$, description$="")
   Declare time(*tloc = #Null)
   Declare getRowHeight(gadget)
+  Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
 EndDeclareModule
 
 Module misc
@@ -705,9 +706,36 @@ CompilerSelect #PB_Compiler_OS
       EndIf
     EndProcedure
 
-    
 CompilerEndSelect
+
+  Procedure getDefaultRowHeight(type=#PB_GadgetType_ListView)
+    Static heightLV, heightLI
+    Protected window, gadgetLV, gadgetLI
+    
+    If Not heightLV Or Not heightLI
+      window = OpenWindow(#PB_Any, 0, 0, 100, 100, "", #PB_Window_Invisible)
+      If window
+        gadgetLV = ListViewGadget(#PB_Any, 0, 0, 50, 100)
+        gadgetLI = ListIconGadget(#PB_Any, 50, 0, 50, 100, "test", 80)
+        AddGadgetItem(gadgetLV, -1, "test")
+        AddGadgetItem(gadgetLI, -1, "test")
+        
+        heightLV = getRowHeight(gadgetLV)
+        heightLI = getRowHeight(gadgetLI)
+        CloseWindow(window)
+      EndIf
+    EndIf
+    
+    If type = #PB_GadgetType_ListView
+      ProcedureReturn heightLV
+    ElseIf type = #PB_GadgetType_ListIcon
+      ProcedureReturn heightLI
+    EndIf
+    
+  EndProcedure
   
+
+
   Procedure registerProtocolHandler(protocol$, program$, description$="")
     debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
     CompilerSelect #PB_Compiler_OS
