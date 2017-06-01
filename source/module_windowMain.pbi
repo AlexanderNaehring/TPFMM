@@ -1025,7 +1025,7 @@ Module windowMain
         Next
         
         ; sort someBackups by date (newest first)
-        SortStructuredList(someBackups(), #PB_Sort_Descending, OffsetOf(mods::backupInfoLocal\date), TypeOf(mods::backupInfoLocal\date))
+        SortStructuredList(someBackups(), #PB_Sort_Descending, OffsetOf(mods::backupInfoLocal\time), TypeOf(mods::backupInfoLocal\time))
         
         ; add top level entry to tree gadget
         If ListSize(someBackups()) = 1
@@ -1053,8 +1053,8 @@ Module windowMain
               text$ + " v" + \version$
             EndIf
             text$ + " (" +  misc::printSize(\size) + ")"
-            If \date
-              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii:%ss", \date) + "] " + text$
+            If \time
+              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii:%ss", \time) + "] " + text$
             EndIf
             
             ; remember the filename for later actions (restore, delete)

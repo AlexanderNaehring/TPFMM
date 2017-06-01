@@ -37,7 +37,6 @@ DeclareModule misc
   
   Declare.s path(path$, delimiter$ = "")
   Declare.s getDirectoryName(path$)
-  Declare.s bytes(bytes.d)
   Declare VersionCheck(current$, required$)
   Declare CreateDirectoryAll(dir$, delimiter$ = "")
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
@@ -58,9 +57,14 @@ DeclareModule misc
   Declare getDefaultFontSize()
   Declare clearXMLchildren(*node)
   Declare registerProtocolHandler(protocol$, program$, description$="")
+  Declare time(*tloc = #Null)
 EndDeclareModule
 
 Module misc
+  
+  ImportC ""
+    time(*tloc = #Null)
+  EndImport
  
   Procedure.s path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
@@ -123,20 +127,6 @@ Module misc
     path$ = Left(path$, Len(path$)-1)
     path$ = GetFilePart(path$)
     ProcedureReturn path$
-  EndProcedure
-  
-  Procedure.s Bytes(bytes.d)
-    If bytes > 1024*1024*1024
-      ProcedureReturn StrD(bytes/1024/1024/1024,2) + " GiB"
-    ElseIf bytes > 1024*1024
-      ProcedureReturn StrD(bytes/1024/1024,2) + " MiB"
-    ElseIf bytes > 1024
-      ProcedureReturn StrD(bytes/1024,0) + " KiB"
-    ElseIf bytes > 0
-      ProcedureReturn StrD(bytes,0) + " Byte"
-    Else
-      ProcedureReturn ""
-    EndIf
   EndProcedure
   
   Procedure VersionCheck(current$, required$)
@@ -567,7 +557,6 @@ Module misc
     
   EndProcedure
   
-  
   Procedure.s getOSVersion()
     Protected os$
     CompilerSelect #PB_Compiler_OS
@@ -617,7 +606,6 @@ Module misc
     CompilerEndSelect
     ProcedureReturn os$
   EndProcedure
-  
   
   CompilerIf #PB_Compiler_OS = #PB_OS_Linux
     #G_TYPE_STRING = 64

@@ -30,7 +30,7 @@ XIncludeFile "module_repository.pbi"
 Module main
   
   Procedure handleError()
-    Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss", Date())
+    Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss UTC", misc::time())
     Protected file, file$ = "crash/dump-"+date$+".txt"
     CreateDirectory("crash")
     

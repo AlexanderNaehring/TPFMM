@@ -700,7 +700,7 @@ Module mods
         *mod = mods() ; work in pointer, manipulates also data in the map
         CopyStructure(mods_json(), *mod, mod)
         If Not *mod\aux\installDate
-          *mod\aux\installDate = Date()
+          *mod\aux\installDate = misc::time()
         EndIf
         ; debugger::add("mods::doLoad() - address {"+*mod+"} - id {"+*mod\tpf_id$+"} - name {"+*mod\name$+"}")
       Next
@@ -1180,7 +1180,7 @@ Module mods
     windowMain::progressMod(80)
     *mod = addToMap(id$, "mod")
     loadInfo(*mod)
-    *mod\aux\installDate = Date()
+    *mod\aux\installDate = misc::time()
     
     ; is mod installed from a repository? -> read .meta file
     If FileSize(file$+".meta") > 0
@@ -1290,8 +1290,10 @@ Module mods
     debugger::add("mods::doBackup("+id$+")")
     Protected backupFolder$, modFolder$, backupFile$, backupInfoFile$
     Protected *mod.mod
-    Protected date
-    date = Date()
+    Protected time
+    
+    ; use local time, as this is displayed and only used to determine age of backup files...
+    time = Date()
     
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     misc::CreateDirectoryAll(backupFolder$)
@@ -1328,7 +1330,7 @@ Module mods
       backupFile$ = Right(id$, Len(id$)-1)
     EndIf
     
-    backupFile$     = backupFolder$ + backupFile$ + "." + FormatDate("%yyyy%mm%dd-%hh%ii%ss", date) + ".zip"
+    backupFile$     = backupFolder$ + backupFile$ + "." + FormatDate("%yyyy%mm%dd-%hh%ii%ss", time) + ".zip"
     backupInfoFile$ = backupFile$ + ".backup"
     
     ; start backup now: modFolder$ -> zip -> backupFile$
@@ -1338,7 +1340,7 @@ Module mods
     
     If archive::pack(backupFile$, modFolder$)
       debugger::add("mods::doBackup() - success")
-      *mod\aux\backup\date = Date()
+      *mod\aux\backup\time = misc::time()
       *mod\aux\backup\filename$ = GetFilePart(backupFile$)
       
       ;TODO check for older backups with identical checksum...
@@ -1353,7 +1355,7 @@ Module mods
         backupInfo\author$    = getAuthorsString(*mod)
         backupInfo\tpf_id$    = *mod\tpf_id$
         backupInfo\filename$  = GetFilePart(backupFile$)
-        backupInfo\date       = date
+        backupInfo\time       = time
         backupInfo\size       = FileSize(backupFile$)
         backupInfo\checksum$  = FileFingerprint(backupFile$, #PB_Cipher_MD5)
         InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
@@ -1928,6 +1930,10 @@ Module mods
             \size = FileSize(zipFile$)
             writeInfo = #True
           EndIf
+          If Not \time
+            \time = GetFileDate(zipFile$, #PB_Date_Created)
+            writeInfo = #True
+          EndIf
           If \checksum$ = ""
             \checksum$ = FileFingerprint(zipFile$, #PB_Cipher_MD5)
             writeInfo = #True
@@ -1955,7 +1961,7 @@ Module mods
     
     ; delete duplicates (same fingerprint)
     Protected checksum$
-    SortStructuredList(backups(), #PB_Sort_Descending, OffsetOf(backupInfo\date), TypeOf(backupInfo\date))
+    SortStructuredList(backups(), #PB_Sort_Descending, OffsetOf(backupInfo\time), TypeOf(backupInfo\time))
     ForEach backups()
       PushListPosition(backups())
       checksum$ = backups()\checksum$

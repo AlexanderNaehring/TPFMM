@@ -4,7 +4,7 @@
   #SCANNER_VERSION = #PB_Editor_CompileCount
   
   Structure backup  ;-- information about last backup if available
-    date.i
+    time.i
     filename$
   EndStructure
   
@@ -79,7 +79,7 @@
     author$
     tpf_id$
     filename$
-    date.i
+    time.i
     size.q
     checksum$
   EndStructure
