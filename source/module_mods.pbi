@@ -12,8 +12,6 @@ Module mods
     type$ ; mod, dlc, map
   EndStructure
   
-  Global NewMap mods.mod()
-  Global mutexMods = CreateMutex()
   Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
   
   Enumeration
@@ -35,8 +33,11 @@ Module mods
     string$
   EndStructure
   
-  Global mutexQueue = CreateMutex()
+  Global mutexMods    = CreateMutex()
+  Global mutexQueue   = CreateMutex()
+  Global _backupActive = #False
   Global threadQueue
+  Global NewMap mods.mod()
   Global NewList queue.queue()
   
   Declare doLoad()
@@ -1292,6 +1293,8 @@ Module mods
     Protected *mod.mod
     Protected time
     
+    _backupActive = #True
+    
     ; use local time, as this is displayed and only used to determine age of backup files...
     time = Date()
     
@@ -1305,12 +1308,14 @@ Module mods
     Else
       UnlockMutex(mutexMods)
       debugger::add("mods::doBackup() - ERROR: cannot find mod {"+id$+"}")
+      _backupActive = #False
       ProcedureReturn #False
     EndIf
     
     
     If FileSize(backupFolder$) <> -2
       debugger::add("mods::doBackup() - ERROR: target directory does not exist {"+backupFolder$+"}")
+      _backupActive = #False
       ProcedureReturn #False
     EndIf
     
@@ -1318,6 +1323,7 @@ Module mods
     
     If FileSize(modFolder$) <> -2
       debugger::add("mods::doBackup() - ERROR: mod directory does not exist {"+modFolder$+"}")
+      _backupActive = #False
       ProcedureReturn #False
     EndIf
     
@@ -1370,11 +1376,12 @@ Module mods
       
       ; finished
       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fin"))
-      
+      _backupActive = #False
       ProcedureReturn #True
     Else
       debugger::add("mods::doBackup() - failed")
       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
+      _backupActive = #False
       ProcedureReturn #False
     EndIf
     
@@ -1873,6 +1880,11 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    If _backupActive
+      ProcedureReturn #False
+    EndIf
+    
+    
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     
     ; delete all .backup files without a corresponding .zip file
@@ -1974,7 +1986,7 @@ Module mods
       PopListPosition(backups())
     Next
     
-    
+    ProcedureReturn #True
   EndProcedure
   
   
@@ -1993,7 +2005,9 @@ Module mods
     
     backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
     
-    backupCleanFolder()
+    If Not backupCleanFolder()
+      ProcedureReturn #False
+    EndIf
     
     ; find all zip files in backup folder
     dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
@@ -2030,6 +2044,11 @@ Module mods
   
   Procedure backupDelete(file$)
     Protected backupFolder$
+    Protected val = #False
+    
+    If _backupActive
+      ProcedureReturn #False
+    EndIf
     
     If main::gameDirectory$
       backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
@@ -2037,9 +2056,11 @@ Module mods
       If FileSize(file$) > 0
         DeleteFile(file$)
         DeleteFile(file$+".backup")
+        val = #True
       EndIf
     EndIf
-    ProcedureReturn #False
+    
+    ProcedureReturn val
   EndProcedure
   
   
