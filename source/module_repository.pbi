@@ -393,7 +393,7 @@ Module repository
     windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_start", strings$()))
     
     ; start process...
-    Protected connection, size, downloaded, progress, finish
+    Protected connection, size.q, downloaded.q, progress.q, finish
     Protected target$, file$, header$
     Protected json
     Protected HTTPstatus
@@ -435,7 +435,7 @@ Module repository
         size = Val(RegularExpressionGroup(regExpContentLength, 1))
       EndIf
       If size
-        
+        debugger::add("repository::downloadModThread() - Content-Length: "+misc::printSize(size))
       Else
         ; no progress known...
       EndIf
