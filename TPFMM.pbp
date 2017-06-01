@@ -90,8 +90,8 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="1814"/>
-      <buildcount enable="1" value="31"/>
+      <compilecount enable="1" value="1850"/>
+      <buildcount enable="1" value="32"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
@@ -116,8 +116,8 @@
       <options unicode="1" thread="1" xpskin="1" user="1" onerror="1" debug="1"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="standalone"/>
-      <compilecount enable="1" value="1678"/>
-      <buildcount enable="1" value="31"/>
+      <compilecount enable="1" value="1850"/>
+      <buildcount enable="1" value="32"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
