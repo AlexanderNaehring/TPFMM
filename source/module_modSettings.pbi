@@ -126,6 +126,15 @@ Module modSettings
       HideWindow(*data\window, #True)
       CloseWindow(*data\window)
       FreeDialog(*data\dialog)
+      
+      ForEach *data\mod\settings()
+        With *data\mod\settings()
+          If \im And IsImage(\im)
+            FreeImage(\im)
+          EndIf
+        EndWith
+      Next
+      
       FreeStructure(*data)
     EndIf
   EndProcedure
@@ -193,6 +202,9 @@ Module modSettings
     *data = AllocateStructure(modSettingsWindow)
     *data\mod = *mod
     
+    Protected modFolder$
+    modFolder$ = mods::getModFolder(*mod\tpf_id$, *mod\aux\type$)
+    
     ; load default XML
     Protected xml
     xml = CatchXML(#PB_Any, ?dialogModSettingsXML, ?dialogModSettingsXMLend - ?dialogModSettingsXML)
@@ -203,6 +215,9 @@ Module modSettings
     
     ; manipulate xml before opening dialog
     Protected *nodeBase, *node, *nodeBox
+    Protected factor.d
+    #WIDTH  = 55
+    #HEIGHT = 20
     If IsXML(xml)
       
       *nodeBase = XMLNodeFromID(xml, "settings")
@@ -211,18 +226,42 @@ Module modSettings
         
         ForEach *data\mod\settings()
           With *data\mod\settings()
-            ; first: name of parameter
+            ; preview image
+            If \image$ And FileSize(modFolder$ + \image$) > 0
+              \im = LoadImage(#PB_Any, modFolder$ + \image$)
+              factor = 1
+              ; If ImageWidth(\im) > #WIDTH
+                factor = #WIDTH / ImageWidth(\im)
+              ; EndIf
+              If ImageHeight(\im) * factor > #HEIGHT
+                factor = #HEIGHT / ImageHeight(\im)
+              EndIf
+              ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
+            EndIf
+            
+            If \im And IsImage(\im)
+              *node = CreateXMLNode(*nodeBase, "image", -1)
+              SetXMLAttribute(*node, "name", "image-"+\name$)
+              SetXMLAttribute(*node, "width", Str(ImageWidth(\im)))
+              SetXMLAttribute(*node, "height", Str(ImageHeight(\im)))
+            Else
+              *node = CreateXMLNode(*nodeBase, "empty", -1)
+            EndIf
+            
+            
+            ; name of parameter
             *node = CreateXMLNode(*nodeBase, "text", -1)
             SetXMLAttribute(*node, "name", "name-"+\name$)
             SetXMLAttribute(*node, "text", \name$+":")
-            ;             SetXMLAttribute(*node, "flags", "#PB_String_ReadOnly | #PB_String_BorderLess")
+            ; SetXMLAttribute(*node, "flags", "#PB_String_ReadOnly | #PB_String_BorderLess")
             SetXMLAttribute(*node, "flags", "#PB_Text_Right")
-            
             If \type$ = "boolean"
+              SetXMLAttribute(*node, "text", "")
               SetXMLAttribute(*node, "invisible", "yes")
             EndIf
-          
-            ; second: input of parameter
+            
+            
+            ; input of parameter
             Select \type$
               Case "boolean"
                 *node = CreateXMLNode(*nodeBase, "checkbox", -1)
@@ -253,7 +292,8 @@ Module modSettings
 ;                 SetXMLAttribute(*node, "text", "v")
             EndSelect
             
-            ; third: reset to default
+            
+            ; reset to default
             *node = CreateXMLNode(*nodeBase, "button", -1)
             SetXMLAttribute(*node, "name", "default-"+\name$)
             SetXMLAttribute(*node, "text", l("mod_settings", "default"))
@@ -274,6 +314,10 @@ Module modSettings
         
         ForEach *data\mod\settings()
           With *data\mod\settings()
+            If \im And IsImage(\im)
+              SetGadgetState(gadget("image-"+\name$), ImageID(\im))
+            EndIf
+            
             BindGadgetEvent(gadget("default-"+\name$), @setDefault())
             SetGadgetData(gadget("default-"+\name$), *data\mod\settings())
             
@@ -286,7 +330,6 @@ Module modSettings
         Next
         
         ; load current settings
-        Protected modFolder$ = mods::getModFolder(*mod\tpf_id$, *mod\aux\type$)
         Protected NewMap settings$()
         luaParser::parseModSettings(modFolder$, settings$())
         

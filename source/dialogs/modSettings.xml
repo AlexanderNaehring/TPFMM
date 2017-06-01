@@ -5,7 +5,7 @@
       <text name='name' text='Settings: Mod Name' flags='#PB_Text_Center' />
       <empty height='3' />
       <frame name='settings' text='Settings'>
-        <gridbox id='settings' colexpand='item:2' rowexpand='no' columns='3'>  </gridbox>
+        <gridbox id='settings' colexpand='item:3' rowexpand='no' columns='4'>  </gridbox>
       </frame>
 
       <empty height='8' />

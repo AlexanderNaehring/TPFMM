@@ -339,6 +339,8 @@ Module luaParser
           *mod\settings(setting$)\name$ = lua_tostring(L, -2)
         Case "description"
           *mod\settings(setting$)\description$ = lua_tostring(L, -2)
+        Case "image"
+          *mod\settings(setting$)\image$ = lua_tostring(L, -2)
 ;         Case "subtype"
 ;           *mod\settings(setting$)\subtype$ = lua_tostring(L, -2)
         Case "min"
