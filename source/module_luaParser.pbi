@@ -9,7 +9,7 @@ DeclareModule luaParser
   EnableExplicit
   
   Declare parseModLua(modfolder$, *mod.mods::mod, language$="")
-  Declare parseModSettings(modfolder$, Map settings$(), language$="")
+  Declare parseSettingsLua(modfolder$, Map settings.mods::modSetting(), language$="")
   
 EndDeclareModule
 
@@ -171,9 +171,11 @@ Module luaParser
   
   ;- mod.lua related functions
   
-  Procedure getAuthor(L, index)
+  ; mod.lua -> data -> info
+  
+  Procedure modlua_getAuthor(L, index)
     Protected key$, val$, val
-    ; for more comments, see iterateInfoTable()
+    ; for more comments, see modlua_iterateInfoTable()
     lua_pushvalue(L, index) ; copy table
     
     If Not lua_istable(L, -1)
@@ -224,8 +226,8 @@ Module luaParser
      
   EndProcedure
   
-  Procedure getAuthors(L, index)
-    ; for more comments, see iterateInfoTable()
+  Procedure modlua_getAuthors(L, index)
+    ; for more comments, see modlua_iterateInfoTable()
     lua_pushvalue(L, index) ; copy table
     
     If Not lua_istable(L, -1)
@@ -243,7 +245,7 @@ Module luaParser
       ; stack: -1 => key; -2 => value; -3 => key; -4 => table
       
       If lua_istable(L, -2) ; value
-        getAuthor(L, -2)
+        modlua_getAuthor(L, -2)
       EndIf
       
       ; pop value + copy of key, leaving original key
@@ -253,12 +255,12 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure getTags(L, index)
+  Procedure modlua_getTags(L, index)
     Protected val$
     lua_pushvalue(L, index) 
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::getTags() - lua_istable ERROR: not a table")
+      debugger::add("lua::modlua_getTags() - lua_istable ERROR: not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -277,7 +279,7 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure iterateInfoTable(L, index)
+  Procedure modlua_iterateInfoTable(L, index)
     Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -302,9 +304,9 @@ Module luaParser
         Case "minorVersion"
           *mod\minorVersion = lua_tointeger(L, -2)
         Case "authors"
-          getAuthors(L, -2)
+          modlua_getAuthors(L, -2)
         Case "tags"
-          getTags(L, -2)
+          modlua_getTags(L, -2)
         Case "visible"
           *mod\aux\hidden = Bool(Not lua_toboolean(L, -2))
         Case "tfnetId"
@@ -328,7 +330,9 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure readSettingsTableDefaultTable(L, index, setting$)
+  ; mod.lua -> data -> settings
+  
+  Procedure modlua_readSettingsDefaultTable(L, index, setting$)
     Protected value$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -356,8 +360,7 @@ Module luaParser
     
   EndProcedure
   
-  
-  Procedure readSettingsTableValuesTable(L, index, setting$)
+  Procedure modlua_readSettingsValuesTable(L, index, setting$)
     ; read the possible values for the "table" type mod setting
     Protected key$, text$, value$
     Protected *mod.mods::mod
@@ -411,20 +414,15 @@ Module luaParser
     
   EndProcedure
   
-  Procedure readSettingsTableValue(L, index, setting$)
+  Procedure modlua_readSettingsTableOption(L, index, setting$)
     Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
     
-    lua_pushvalue(L, index) ; push copy of table to top of stack
-    ; stack now contains: -1 => table
-    lua_pushnil(L) ; initial key (nil)
-    ; stack now contains: -1 => nil; -2 => table
-    While lua_next(L, -2) ; iterate through table with key/table at -1/-2
-      ; stack now contains: -1 => value; -2 => key; -3 => table
-      ; copy the key so that lua_tostring does not modify the original
+    lua_pushvalue(L, index)
+    lua_pushnil(L)
+    While lua_next(L, -2)
       lua_pushvalue(L, -2)
-      ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
       
       key$    = lua_tostring(L, -1)
       
@@ -433,12 +431,12 @@ Module luaParser
           ; boolean, string, number
           *mod\settings(setting$)\type$ = lua_tostring(L, -2)
         Case "default"
-          If lua_isboolean(L, -2) ; lua_toString cannot typecast "boolean", do typecast here: true = 1, false = 0
+          If lua_isboolean(L, -2)
+            ; lua_toString cannot typecast "boolean", do typecast here: true = 1, false = 0
             *mod\settings(setting$)\default$ = Str(lua_toboolean(L, -2))
           ElseIf lua_istable(L, -2) ; default value is a table -> read all defaults...
-            ;TODO
             ; default table type values, values saved in table
-            readSettingsTableDefaultTable(L, -2, setting$)
+            modlua_readSettingsDefaultTable(L, -2, setting$)
           Else
             *mod\settings(setting$)\default$ = lua_tostring(L, -2)
           EndIf
@@ -455,23 +453,18 @@ Module luaParser
         Case "max"
           *mod\settings(setting$)\max = lua_tonumber(L, -2)
         Case "values"
-          readSettingsTableValuesTable(L, -2, setting$)
+          modlua_readSettingsValuesTable(L, -2, setting$)
           
         Default
           
       EndSelect
       
-      ; pop value + copy of key, leaving original key
       lua_pop(L, 2)
-      ; stack now contains: -1 => key; -2 => table
-      ; ready for next iteration
      Wend
-     ; stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
-     ; Pop table (copy)
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure iterateSettingsTable(L, index)
+  Procedure modlua_iterateSettingsTable(L, index)
     Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -480,22 +473,19 @@ Module luaParser
     Debug "clear mod settings map"
     ClearMap(*mod\settings())
     
-    lua_pushvalue(L, index) ; push copy of table to top of stack
-    ; stack now contains: -1 => table
-    lua_pushnil(L) ; initial key (nil)
-    ; stack now contains: -1 => nil; -2 => table
-    While lua_next(L, -2) ; iterate through table with key/table at -1/-2
-      ; stack now contains: -1 => value; -2 => key; -3 => table
-      ; copy the key so that lua_tostring does not modify the original
+    lua_pushvalue(L, index) 
+    lua_pushnil(L)
+    While lua_next(L, -2) 
       lua_pushvalue(L, -2)
-      ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
       
       key$ = lua_tostring(L, -1) ; name of this parameter
       AddMapElement(*mod\settings(), key$, #PB_Map_ElementCheck)
+      ; default values
       *mod\settings(key$)\min = -2147483648
       *mod\settings(key$)\max =  2147483647
       
-      readSettingsTableValue(L, -2, key$) ; read type, default value and name of this parameter
+      ; read type, default value and name of this parameter
+      modlua_readSettingsTableOption(L, -2, key$) 
       
       Protected delete = #False
       Select *mod\settings(key$)\type$
@@ -515,17 +505,14 @@ Module luaParser
       EndIf
       
       
-      ; pop value + copy of key, leaving original key
       lua_pop(L, 2)
-      ; stack now contains: -1 => key; -2 => table
-      ; ready for next iteration
      Wend
-     ; stack now contains: -1 => table (when lua_next returns 0 it pops the key but does not push anything.)
-     ; Pop table (copy)
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure iterateModDataTable(L, index)
+  ; mod.lua -> data
+  
+  Procedure modlua_iterateDataTable(L, index)
     lua_pushvalue(L, index) ; push data-table to top of stack (copy)
     ; stack now contains: -1 => table
     lua_pushnil(L) ; initial key (nil)
@@ -537,12 +524,10 @@ Module luaParser
       ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
       
       If lua_tostring(L, -1) = "info" And lua_istable(L, -2)
-        ; info table found!
-        ; table at -2
-        iterateInfoTable(L, -2)
+        modlua_iterateInfoTable(L, -2)
         
       ElseIf lua_tostring(L, -1) = "settings" And lua_istable(L, -2)
-        iterateSettingsTable(L, -2)
+        modlua_iterateSettingsTable(L, -2)
         
       EndIf
       
@@ -555,8 +540,10 @@ Module luaParser
      ; Pop table (copy)
      lua_pop(L, 1)
   EndProcedure
-
-  Procedure openModLua(L, file$)
+  
+  ; mod.lua 
+  
+  Procedure modlua_open(L, file$)
     ; with help of http://stackoverflow.com/questions/6137684/iterate-through-lua-table
     
     ; open and parse mod.lua
@@ -593,7 +580,7 @@ Module luaParser
     
     ; iterate over data-table and search for "info" key!
     ; -1 = location of data-table... proceedure will leave stack as it is after finish
-    iterateModDataTable(L, -1)
+    modlua_iterateDataTable(L, -1)
      
     ; stack is like before table iteration, with original table on top of stack
     lua_pop(L, 1)
@@ -602,7 +589,7 @@ Module luaParser
   
   ;- strings.lua related functions
   
-  Procedure readStringsTranslations(L, index, language$)
+  Procedure stringslua_readStringTranslations(L, index, language$)
     Protected key$, val$
     ; comments in iterateModDataTable()
     lua_pushvalue(L, index)
@@ -621,7 +608,7 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure iterateStringsDataTable(L, index)
+  Procedure stringslua_iterateDataTable(L, index)
     Protected key$
     ; comments in iterateModDataTable()
     lua_pushvalue(L, index)
@@ -631,7 +618,7 @@ Module luaParser
       key$ = lua_tostring(L, -1)
       If key$ And lua_istable(L, -2)
         ; new language found
-        readStringsTranslations(L, -2, key$)
+        stringslua_readStringTranslations(L, -2, key$)
       EndIf
       lua_pop(L, 2)
      Wend
@@ -673,7 +660,7 @@ Module luaParser
     
     ; iterate over data-table and search for "info" key!
     ; -1 = location of data-table... proceedure will leave stack as it is after finish
-    iterateStringsDataTable(L, -1)
+    stringslua_iterateDataTable(L, -1)
      
     ; stack is like before table iteration, with original table on top of stack
     lua_pop(L, 1)
@@ -682,7 +669,7 @@ Module luaParser
   
   ;- settings.lua related functions
   
-  Procedure iterateSettingsLuaTable(L, index, Map settings.mods::modSetting())
+  Procedure settingslua_readTable(L, index, Map settings.mods::modSetting())
     Protected key$, val$
     lua_pushvalue(L, index)
     lua_pushnil(L)
@@ -741,7 +728,7 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
-    iterateSettingsLuaTable(L, -1, settings())
+    settingslua_readTable(L, -1, settings())
      
     lua_pop(L, 1)
     ProcedureReturn #True
@@ -778,9 +765,9 @@ Module luaParser
     AddMapElement(lua(), Str(L))
     
     
+    
     ProcedureReturn L
   EndProcedure
-  
   
   ;- PUBLIC FUNCTIONS
   
@@ -819,7 +806,6 @@ Module luaParser
     lua(Str(L))\language$ = language$
     lua(Str(L))\mod = *mod
     
-    
     ; first step: parse strings and save to translation!
     If FileSize(stringsLua$) > 0
       openStringsLua(L, stringsLua$)
@@ -828,7 +814,7 @@ Module luaParser
     
     Protected success = #False
     
-    If openModLua(L, modLua$)
+    If modlua_open(L, modLua$)
       *mod\aux\luaDate = GetFileDate(modLua$, #PB_Date_Modified)
       *mod\aux\luaLanguage$ = locale::getCurrentLocale()
       
@@ -843,7 +829,7 @@ Module luaParser
     ProcedureReturn success
   EndProcedure
   
-  Procedure parseModSettings(modfolder$, Map settings.mods::modSetting(), language$="")
+  Procedure parseSettingsLua(modfolder$, Map settings.mods::modSetting(), language$="")
     debugger::add("luaParser::parseModSettings()")
     modfolder$ = misc::path(modfolder$)
     
@@ -861,6 +847,9 @@ Module luaParser
     
     Protected L
     L = initLUA(modfolder$)
+    
+    lua(Str(L))\language$ = language$
+    
     
     If FileSize(stringsLua$) > 0
       openStringsLua(L, stringsLua$)
