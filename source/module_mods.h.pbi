@@ -39,7 +39,7 @@
   EndStructure
   
   ; mod.lua custom mod setting definition
-  Structure settings
+  Structure modLuaSetting
     type$             ; boolean, number, string
     name$             ; name of given setting
     Default$          ; default value, type dependent, stored as string
@@ -87,7 +87,7 @@
     List dependencies.dependency()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
     
-    Map settings.settings() ; mod settings (optional)
+    Map settings.modLuaSetting() ; mod settings (optional)
     aux.aux                 ; auxiliary information
   EndStructure
   

@@ -51,7 +51,7 @@ Module modSettings
   ;- Procedures
   
   Procedure _handleNumber(gadget, force=#False)
-    Protected *setting.mods::settings
+    Protected *setting.mods::modLuaSetting
     Protected text$, number.d
     
     *setting  = GetGadgetData(gadget)
@@ -83,7 +83,7 @@ Module modSettings
   
   Procedure setDefault()
     Protected *data.modSettingsWindow
-    Protected *setting.mods::settings
+    Protected *setting.mods::modLuaSetting
     Protected *tableValue.mods::tableValue
     Protected gadget, item
     *data     = GetWindowData(EventWindow())
@@ -119,7 +119,7 @@ Module modSettings
   Procedure enter()
     ; enter button was pressed
     Protected gadget
-    Protected *setting.mods::settings
+    Protected *setting.mods::modLuaSetting
     
     gadget = GetActiveGadget()
     If gadget = -1
@@ -367,7 +367,7 @@ Module modSettings
         
         ; load current settings
         Protected NewMap currentSettings.mods::modSetting()
-        luaParser::parseModSettings(modFolder$, currentSettings())
+        luaParser::parseSettingsLua(modFolder$, currentSettings())
         
         ; apply current setting or default 
         Protected val$, option$
