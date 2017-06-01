@@ -273,25 +273,24 @@ Module windowMain
   EndProcedure
   
   Procedure updateBackupButtons()
-    Protected item, checked, canRestore, canDelete
+    Protected item, checked
+    Protected gadgetTree
     
     If main::gameDirectory$
-      
-      For item = 0 To CountGadgetItems(gadget("backupTree")) - 1
-        If GetGadgetItemState(gadget("backupTree"), item) & #PB_Tree_Checked
-          checked + 1
+      gadgetTree = gadget("backupTree")
+      For item = 0 To CountGadgetItems(gadgetTree) - 1
+        If GetGadgetItemAttribute(gadgetTree, item, #PB_Tree_SubLevel) = 1
+          If GetGadgetItemState(gadgetTree, item) & #PB_Tree_Checked
+            checked + 1
+          EndIf
         EndIf
       Next
-      If checked
-        canDelete = #True
-      EndIf
-      
       
       DisableGadget(gadget("backupTree"), #False)
       DisableGadget(gadget("backupFolder"), #False)
       
-      DisableGadget(gadget("backupRestore"), Bool(Not canRestore))
-      DisableGadget(gadget("backupDelete"), Bool(Not canDelete))
+      DisableGadget(gadget("backupRestore"), Bool(Not checked))
+      DisableGadget(gadget("backupDelete"), Bool(Not checked))
       
     Else
       
@@ -939,8 +938,39 @@ Module windowMain
   EndProcedure
   
   Procedure backupRestore()
-    ;- TODO
-    ;- make sure, that only one file for each tpf_id is restored at once!
+    Protected gadget, item
+    Protected *buffer.mods::backupInfoLocal
+    Protected backupFolder$
+    
+    If main::gameDirectory$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    backupFolder$ = misc::path(main::gameDirectory$+"TPFMM/backups/")
+    
+    gadget = gadget("backupTree")
+    ; iterate all items, only use the first checked item of sublevel 1,
+    ; then wait For the Next level 0 item befor accepting new items form level 1
+    For item = 0 To CountGadgetItems(gadget) - 1
+      If GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel) = 1
+        If GetGadgetItemState(gadget, item) & #PB_Tree_Checked
+          ; use this item!
+          *buffer = GetGadgetItemData(gadget, item)
+          If *buffer
+            mods::install(backupFolder$ + PeekS(*buffer))
+          EndIf
+          
+          
+          ; skip following level 1 items and skip to next level 0 item
+          For item = item To CountGadgetItems(gadget) - 1
+            If GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel) = 0
+              Break
+            EndIf
+          Next
+        EndIf
+      EndIf
+    Next
+    
   EndProcedure
   
   Procedure backupDelete()
