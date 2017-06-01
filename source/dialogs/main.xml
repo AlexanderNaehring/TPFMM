@@ -68,7 +68,18 @@
           </tab>
           <tab text='Backups'>
             <hbox expand='item:1'>
-              <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
+              <vbox expand='item:1'>
+                <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
+                <hbox expand='item:2'>
+                  <hbox expand='equal'>
+                    <button name='backupExpand' text=' ' />
+                    <button name='backupCollapse' text=' ' />
+                    <button name='backupCheck' text=' ' />
+                    <button name='backupClear' text=' ' />
+                  </hbox>
+                  <empty />
+                </hbox>
+              </vbox>
               <vbox expand='no'>
                 <frame name='backupFrame' text=' ' width='210'>
                   <vbox expand='no'>

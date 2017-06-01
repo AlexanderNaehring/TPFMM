@@ -968,6 +968,51 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure backupExpand()
+    Protected gadget, item, state
+    
+    gadget = gadget("backupTree")
+    For item = 0 To CountGadgetItems(gadget)
+      state = GetGadgetItemState(gadget, item)
+      If state & #PB_Tree_Collapsed
+        state ! #PB_Tree_Collapsed
+        state | #PB_Tree_Expanded
+        SetGadgetItemState(gadget, item, state)
+      EndIf
+    Next
+  EndProcedure
+  
+  Procedure backupCollapse()
+    Protected gadget, item, state
+    gadget = gadget("backupTree")
+    For item = 0 To CountGadgetItems(gadget)
+      state = GetGadgetItemState(gadget, item)
+      If state & #PB_Tree_Expanded
+        state ! #PB_Tree_Expanded
+        state | #PB_Tree_Collapsed
+        SetGadgetItemState(gadget, item, state)
+      EndIf
+    Next
+  EndProcedure
+  
+  Procedure backupCheck()
+    Protected gadget, item
+    gadget = gadget("backupTree")
+    For item = 0 To CountGadgetItems(gadget)
+      SetGadgetItemState(gadget, item, #PB_Tree_Checked)
+    Next
+    updateBackupButtons()
+  EndProcedure
+  
+  Procedure backupClear()
+    Protected gadget, item
+    gadget = gadget("backupTree")
+    For item = 0 To CountGadgetItems(gadget)
+      SetGadgetItemState(gadget, item, 0)
+    Next
+    updateBackupButtons()
+  EndProcedure
+  
   Procedure backupRefreshList()
     Protected NewList allBackups.mods::backupInfoLocal()
     Protected NewList tpf_id$()
@@ -1054,7 +1099,7 @@ Module windowMain
             EndIf
             text$ + " (" +  misc::printSize(\size) + ")"
             If \time
-              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii:%ss", \time) + "] " + text$
+              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii", \time) + "] " + text$
             EndIf
             
             ; remember the filename for later actions (restore, delete)
@@ -1229,6 +1274,10 @@ Module windowMain
     SetGadgetText(gadget("backupRestore"),      l("main","backup_restore"))
     SetGadgetText(gadget("backupDelete"),       l("main","backup_delete"))
     SetGadgetText(gadget("backupFolder"),       l("main","backup_folder"))
+    SetGadgetText(gadget("backupExpand"),       l("main","backup_expand"))
+    SetGadgetText(gadget("backupCollapse"),     l("main","backup_collapse"))
+    SetGadgetText(gadget("backupCheck"),        l("main","backup_check"))
+    SetGadgetText(gadget("backupClear"),        l("main","backup_clear"))
     
     
     ; Bind Gadget Events
@@ -1257,6 +1306,10 @@ Module windowMain
     BindGadgetEvent(gadget("backupRestore"),    @backupRestore())
     BindGadgetEvent(gadget("backupDelete"),     @backupDelete())
     BindGadgetEvent(gadget("backupFolder"),     @backupFolder())
+    BindGadgetEvent(gadget("backupExpand"),     @backupExpand())
+    BindGadgetEvent(gadget("backupCollapse"),   @backupCollapse())
+    BindGadgetEvent(gadget("backupCheck"),      @backupCheck())
+    BindGadgetEvent(gadget("backupClear"),      @backupClear())
     
     
     ; create shortcuts
@@ -1324,6 +1377,7 @@ Module windowMain
     ; fonts...
     Protected fontMono = LoadFont(#PB_Any, "Courier", misc::getDefaultFontSize())
 ;     SetGadgetFont(gadget("backupTree"), FontID(fontMono))
+    
     
     ; load images
     ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), GadgetHeight(gadget("headerMain")), #PB_Image_Raw)
