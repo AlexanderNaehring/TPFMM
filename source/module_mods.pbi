@@ -281,9 +281,12 @@ Module mods
       ; load info from mod.lua
       If FileSize(luaFile$) > 0
 ;         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
+        *mod\aux\luaParseError = #False
         If luaParser::parseModLua(modFolder$, *mod) ; current language
           ; ok
           *mod\aux\sv = #SCANNER_VERSION
+        Else
+          *mod\aux\luaParseError = #True
         EndIf
       Else
         ; no mod.lua present -> extract info from ID
@@ -1801,9 +1804,13 @@ Module mods
           Else
             ; no update available (most likely)
             SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
-            
           EndIf
         EndIf
+        
+        If \aux\luaParseError
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($FF, $00, $00))
+        EndIf
+        
         
         If *selectedMod And *selectedMod = *mod
           Debug "reselect mod: "+*mod\name$

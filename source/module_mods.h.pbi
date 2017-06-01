@@ -23,6 +23,7 @@
     sv.i              ; scanner version, rescan if newer scanner version is used
     hidden.b          ; hidden from overview ("visible" in mod.lua)
     backup.backup     ; backup information (local)
+    luaParseError.b   ; set true if parsing of mod.lua failed
   EndStructure
   
   ; as saved in settings.lua
