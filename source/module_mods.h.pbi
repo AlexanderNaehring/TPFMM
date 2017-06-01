@@ -25,14 +25,29 @@
     backup.backup     ; backup information (local)
   EndStructure
   
+  ; as saved in settings.lua
+  Structure modSetting
+    value$            ; single value
+    List values$()    ; table type value
+  EndStructure
+  
+  ; a single value for table-type setting definition in mod.lua
+  Structure tableValue
+    text$
+    value$
+  EndStructure
+  
+  ; mod.lua custom mod setting definition
   Structure settings
     type$             ; boolean, number, string
     name$             ; name of given setting
-    Default$          ; optional, default value, type dependent, stored as string
+    Default$          ; default value, type dependent, stored as string
+    List tableDefaults$()  ; default values for table type
     description$      ; tooltip / description of setting
     image$            ; path (relative to mod.lua) to a preview image to show in the settings dialog
     min.d             ; only for number, minimum value, optional
     max.d             ; only for number, maximum value, optional
+    List tableValues.tableValue()
 ;     Step.d            ; only for number, step for spin gagdet, optional
     im.i              ; image # 
   EndStructure

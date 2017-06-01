@@ -149,6 +149,26 @@ Module luaParser
   	ProcedureReturn 1
   EndProcedure
   
+  Procedure.s getTableValue(L, index)
+    Protected value$
+    If lua_isboolean(L, index)
+      If lua_toboolean(L, index)
+        value$ = "true"
+      Else
+        value$ = "false"
+      EndIf
+    ElseIf lua_isnumber(L, index)
+      value$ = StrD(lua_tonumber(L, index))
+    Else
+      value$ = lua_tostring(L, index)
+      value$ = ReplaceString(value$, "\", "\\")
+      value$ = ReplaceString(value$, #DQUOTE$, "\"+#DQUOTE$)
+      value$ = #DQUOTE$+value$+#DQUOTE$
+    EndIf
+    ProcedureReturn value$
+  EndProcedure
+  
+  
   ;- mod.lua related functions
   
   Procedure getAuthor(L, index)
@@ -308,6 +328,89 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
+  Procedure readSettingsTableDefaultTable(L, index, setting$)
+    Protected value$
+    Protected *mod.mods::mod
+    *mod = lua(Str(L))\mod
+    
+    ; format: tables in table:
+    ; default = { value1, value2, value3 }
+    
+    lua_pushvalue(L, index)
+    lua_pushnil(L)
+    While lua_next(L, -2)
+      lua_pushvalue(L, -2)
+      
+      ; key$ = lua_tostring(L, -1) ; key is not used
+      ; read value in correct format (apply same formatting as used for "tableValues")
+      value$ = getTableValue(L, -2)
+      
+      If value$
+        AddElement(*mod\settings(setting$)\tableDefaults$())
+        *mod\settings(setting$)\tableDefaults$() = value$
+      EndIf
+      
+      lua_pop(L, 2)
+     Wend
+     lua_pop(L, 1)
+    
+  EndProcedure
+  
+  
+  Procedure readSettingsTableValuesTable(L, index, setting$)
+    ; read the possible values for the "table" type mod setting
+    Protected key$, text$, value$
+    Protected *mod.mods::mod
+    *mod = lua(Str(L))\mod
+    
+    ; format: tables in table:
+    ; values = {
+    ;   { name = "name", value = 1, },
+    ;   { name = "other", value = false },
+    ; },
+    
+    lua_pushvalue(L, index)
+    lua_pushnil(L)
+    While lua_next(L, -2)
+      lua_pushvalue(L, -2)
+      
+      text$   = ""
+      value$  = ""
+      
+      ; -> the table hold multiple tables...
+      ; key = 1,2,3,4,...
+      ; value = table
+      lua_pushvalue(L, -2)
+      lua_pushnil(L)
+      While lua_next(L, -2)
+        lua_pushvalue(L, -2)
+        
+        key$ = lua_tostring(L, -1)
+        Select key$
+          Case "text"
+            text$ = lua_tostring(L, -2)
+          Case "value"
+            ; already format all values correctly depending on their type (string with ", boolean as true/false, ...)
+            value$ = getTableValue(L, -2)
+        EndSelect
+        
+        lua_pop(L, 2)
+      Wend
+      lua_pop(L, 1)
+      ; end of "inner" table
+      
+      If text$ And value$
+        AddElement(*mod\settings(setting$)\tableValues())
+        *mod\settings(setting$)\tableValues()\text$  = text$
+        *mod\settings(setting$)\tableValues()\value$ = value$
+      EndIf
+      
+      lua_pop(L, 2)
+     Wend
+     lua_pop(L, 1)
+    
+  EndProcedure
+  
   Procedure readSettingsTableValue(L, index, setting$)
     Protected key$
     Protected *mod.mods::mod
@@ -332,6 +435,10 @@ Module luaParser
         Case "default"
           If lua_isboolean(L, -2) ; lua_toString cannot typecast "boolean", do typecast here: true = 1, false = 0
             *mod\settings(setting$)\default$ = Str(lua_toboolean(L, -2))
+          ElseIf lua_istable(L, -2) ; default value is a table -> read all defaults...
+            ;TODO
+            ; default table type values, values saved in table
+            readSettingsTableDefaultTable(L, -2, setting$)
           Else
             *mod\settings(setting$)\default$ = lua_tostring(L, -2)
           EndIf
@@ -347,6 +454,8 @@ Module luaParser
           *mod\settings(setting$)\min = lua_tonumber(L, -2)
         Case "max"
           *mod\settings(setting$)\max = lua_tonumber(L, -2)
+        Case "values"
+          readSettingsTableValuesTable(L, -2, setting$)
           
         Default
           
@@ -368,6 +477,7 @@ Module luaParser
     *mod = lua(Str(L))\mod
     
     ; clear map bevor reading new settings...
+    Debug "clear mod settings map"
     ClearMap(*mod\settings())
     
     lua_pushvalue(L, index) ; push copy of table to top of stack
@@ -392,6 +502,7 @@ Module luaParser
         Case "boolean"
         Case "string"
         Case "number"
+        Case "table"
         Default
           delete = #True
       EndSelect
@@ -571,7 +682,7 @@ Module luaParser
   
   ;- settings.lua related functions
   
-  Procedure iterateSettingsLuaTable(L, index, Map settings$())
+  Procedure iterateSettingsLuaTable(L, index, Map settings.mods::modSetting())
     Protected key$, val$
     lua_pushvalue(L, index)
     lua_pushnil(L)
@@ -579,19 +690,42 @@ Module luaParser
       lua_pushvalue(L, -2)
       
       key$ = lua_tostring(L, -1)
-      If lua_isboolean(L, -2)
-        val$ = Str(lua_toboolean(L, -2))
+      If lua_istable(L, -2)
+        ;fill settings(key$)\value$()
+        
+        ; start table
+        lua_pushvalue(L, -2)
+        lua_pushnil(L)
+        While lua_next(L, -2)
+          lua_pushvalue(L, -2)
+          
+          val$ = getTableValue(L, -2)
+          If val$
+            AddElement(settings(key$)\values$())
+            settings(key$)\values$() = val$
+          EndIf
+          
+          lua_pop(L, 2)
+        Wend
+        lua_pop(L, 1)
+        ; end table
+        
+        
       Else
-        val$ = lua_tostring(L, -2)
+        If lua_isboolean(L, -2)
+          val$ = Str(lua_toboolean(L, -2))
+        Else
+          val$ = lua_tostring(L, -2)
+        EndIf
+        settings(key$)\value$ = val$
       EndIf
-      settings$(key$) = val$
       
       lua_pop(L, 2)
      Wend
      lua_pop(L, 1)
   EndProcedure
   
-  Procedure openSettingsLua(L, file$, Map settings$())
+  Procedure openSettingsLua(L, file$, Map settings.mods::modSetting())
     ; read settings.lua (user settings for mod)
     removeBOM(file$)
     
@@ -607,7 +741,7 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
-    iterateSettingsLuaTable(L, -1, settings$())
+    iterateSettingsLuaTable(L, -1, settings())
      
     lua_pop(L, 1)
     ProcedureReturn #True
@@ -709,7 +843,7 @@ Module luaParser
     ProcedureReturn success
   EndProcedure
   
-  Procedure parseModSettings(modfolder$, Map settings$(), language$="")
+  Procedure parseModSettings(modfolder$, Map settings.mods::modSetting(), language$="")
     debugger::add("luaParser::parseModSettings()")
     modfolder$ = misc::path(modfolder$)
     
@@ -732,7 +866,7 @@ Module luaParser
       openStringsLua(L, stringsLua$)
     EndIf
     
-    openSettingsLua(L, settingsLua$, settings$())
+    openSettingsLua(L, settingsLua$, settings())
     
     DeleteMapElement(lua(), Str(L))
     lua_close(L)

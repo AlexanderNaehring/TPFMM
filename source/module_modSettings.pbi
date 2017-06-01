@@ -84,16 +84,34 @@ Module modSettings
   Procedure setDefault()
     Protected *data.modSettingsWindow
     Protected *setting.mods::settings
+    Protected *tableValue.mods::tableValue
+    Protected gadget, item
     *data     = GetWindowData(EventWindow())
     *setting  = GetGadgetData(EventGadget())
     
+    gadget = gadget("value-"+*setting\name$)
+    
     Select *setting\type$
       Case "boolean"
-        SetGadgetState(gadget("value-"+*setting\name$), Val(*setting\Default$))
+        SetGadgetState(gadget, Val(*setting\Default$))
       Case "string"
-        SetGadgetText(gadget("value-"+*setting\name$), *setting\Default$)
+        SetGadgetText(gadget, *setting\Default$)
       Case "number"
-        SetGadgetText(gadget("value-"+*setting\name$), *setting\Default$)
+        SetGadgetText(gadget, *setting\Default$)
+      Case "table"
+        For item = 0 To CountGadgetItems(gadget) - 1
+          *tableValue = GetGadgetItemData(gadget, item)
+          
+          SetGadgetItemState(gadget, item, 0)
+          
+          ForEach *setting\tableDefaults$()
+            If *setting\tableDefaults$() = *tableValue\value$
+              SetGadgetItemState(gadget, item, 1)
+              Break
+            EndIf 
+          Next
+        Next
+        
     EndSelect
     
   EndProcedure
@@ -145,8 +163,9 @@ Module modSettings
     *data = GetWindowData(EventWindow())
     
     Protected modFolder$ = mods::getModFolder(*data\mod\tpf_id$, *data\mod\aux\type$)
-    Protected file, gadget
+    Protected file, gadget, item
     Protected val$
+    Protected *tableValue.mods::tableValue
     
     file = CreateFile(#PB_Any, modFolder$+"settings.lua")
     
@@ -171,6 +190,19 @@ Module modSettings
             Case "number"
               _handleNumber(gadget, #True)
               val$ = GetGadgetText(gadget)
+            Case "table"
+              val$ = "{"
+              For item = 0 To CountGadgetItems(gadget) - 1
+                If GetGadgetItemState(gadget, item) ; if selected
+                  *tableValue = GetGadgetItemData(gadget, item)
+                  If *tableValue
+                    ; \value$ is already correctly formated during LUAparsing :)
+                    val$ + *tableValue\value$ + ", "
+                  EndIf
+                EndIf
+              Next
+              val$ + "}"
+              
           EndSelect
           
           WriteStringN(file, "  "+MapKey(*data\mod\settings())+" = "+val$+",")
@@ -227,6 +259,7 @@ Module modSettings
         ForEach *data\mod\settings()
           With *data\mod\settings()
             ; preview image
+            
             If \image$ And FileSize(modFolder$ + \image$) > 0
               \im = LoadImage(#PB_Any, modFolder$ + \image$)
               factor = 1
@@ -239,29 +272,39 @@ Module modSettings
               ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
             EndIf
             
-            If \im And IsImage(\im)
+            If \im
               *node = CreateXMLNode(*nodeBase, "image", -1)
               SetXMLAttribute(*node, "name", "image-"+\name$)
               SetXMLAttribute(*node, "width", Str(ImageWidth(\im)))
               SetXMLAttribute(*node, "height", Str(ImageHeight(\im)))
-            Else
-              *node = CreateXMLNode(*nodeBase, "empty", -1)
+              If \type$ = "boolean"
+                ; no text for boolean type, only image
+                SetXMLAttribute(*node, "colspan", "2")
+              EndIf
             EndIf
             
             
             ; name of parameter
-            *node = CreateXMLNode(*nodeBase, "text", -1)
-            SetXMLAttribute(*node, "name", "name-"+\name$)
-            SetXMLAttribute(*node, "text", \name$+":")
-            ; SetXMLAttribute(*node, "flags", "#PB_String_ReadOnly | #PB_String_BorderLess")
-            SetXMLAttribute(*node, "flags", "#PB_Text_Right")
-            If \type$ = "boolean"
-              SetXMLAttribute(*node, "text", "")
-              SetXMLAttribute(*node, "invisible", "yes")
+            If \type$ <> "boolean"
+              *node = CreateXMLNode(*nodeBase, "text", -1)
+              SetXMLAttribute(*node, "name", "name-"+\name$)
+              SetXMLAttribute(*node, "text", \name$+":")
+              ; SetXMLAttribute(*node, "flags", "#PB_String_ReadOnly | #PB_String_BorderLess")
+              SetXMLAttribute(*node, "flags", "#PB_Text_Right")
+              If Not \im
+                ; no image, only text
+                SetXMLAttribute(*node, "colspan", "2")
+              EndIf
+            Else
+              If Not \im
+                ; no image, no text
+                *node = CreateXMLNode(*nodeBase, "empty", -1)
+                SetXMLAttribute(*node, "colspan", "2")
+              EndIf
             EndIf
             
             
-            ; input of parameter
+            ; input gadget (string/checkbox/listview/...)
             Select \type$
               Case "boolean"
                 *node = CreateXMLNode(*nodeBase, "checkbox", -1)
@@ -276,7 +319,6 @@ Module modSettings
                 *node = CreateXMLNode(*nodeBase, "string", -1)
                 SetXMLAttribute(*node, "name", "value-"+\name$)
                 SetXMLAttribute(*node, "text", "0")
-                
 ;                 *nodeBox = CreateXMLNode(*nodeBase, "hbox", -1)
 ;                 SetXMLAttribute(*nodeBox, "expand", "item:1")
 ;                 *node = CreateXMLNode(*nodeBox, "string", -1)
@@ -290,13 +332,24 @@ Module modSettings
 ;                 *node = CreateXMLNode(*nodeBox, "button", -1)
 ;                 SetXMLAttribute(*node, "name", "dec-"+\name$)
 ;                 SetXMLAttribute(*node, "text", "v")
+              Case "table"
+                *node = CreateXMLNode(*nodeBase, "listview", -1)
+                SetXMLAttribute(*node, "name", "value-"+\name$)
+                SetXMLAttribute(*node, "flags", "#PB_ListView_ClickSelect")
+                If ListSize(\tableValues()) > 6
+                  SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * 6))
+                Else
+                  SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * ListSize(\tableValues())))
+                EndIf
+                
             EndSelect
             
             
-            ; reset to default
+            ; reset to default button
             *node = CreateXMLNode(*nodeBase, "button", -1)
             SetXMLAttribute(*node, "name", "default-"+\name$)
             SetXMLAttribute(*node, "text", l("mod_settings", "default"))
+            
           EndWith
         Next
       EndIf
@@ -312,35 +365,72 @@ Module modSettings
         SetWindowTitle(*data\window, locale::l("mod_settings","title")+": "+*data\mod\name$)
         SetGadgetText(gadget("name"), *data\mod\name$)
         
+        ; load current settings
+        Protected NewMap currentSettings.mods::modSetting()
+        luaParser::parseModSettings(modFolder$, currentSettings())
+        
+        ; apply current setting or default 
+        Protected val$, option$
         ForEach *data\mod\settings()
           With *data\mod\settings()
-            If \im And IsImage(\im)
+            option$ = MapKey(*data\mod\settings())
+            
+            
+            
+            ; set image
+            If \im
               SetGadgetState(gadget("image-"+\name$), ImageID(\im))
             EndIf
             
+            ; handle table related stuff: fill entries and select items...
+            Protected item
+            If \type$ = "table"
+              item = 0
+              ForEach \tableValues()
+                AddGadgetItem(gadget("value-"+\name$), item, \tableValues()\text$)
+                SetGadgetItemData(gadget("value-"+\name$), item, \tableValues())
+                
+                ; select if currently selected or default
+                If FindMapElement(currentSettings(), option$)
+                  ForEach currentSettings()\values$()
+                    If currentSettings()\values$() = \tableValues()\value$
+                      ; select this table value
+                      SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      Break
+                    EndIf
+                  Next
+                Else ; use default values
+                  ForEach \tableDefaults$()
+                    If \tableDefaults$() = \tableValues()\value$
+                      ; select this table value
+                      SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      Break
+                    EndIf
+                  Next
+                EndIf
+                
+                item + 1
+              Next
+            EndIf
+            
+            ; number check
+            If \type$ = "number"
+              BindGadgetEvent(gadget("value-"+\name$), @checkNumber(), #PB_EventType_Change)
+            EndIf
+            
+            ; standard bindings
             BindGadgetEvent(gadget("default-"+\name$), @setDefault())
             SetGadgetData(gadget("default-"+\name$), *data\mod\settings())
-            
-            GadgetToolTip(gadget("name-"+\name$), \description$)
+            SetGadgetData(gadget("value-"+\name$), *data\mod\settings())
             GadgetToolTip(gadget("value-"+\name$), \description$)
             
-            BindGadgetEvent(gadget("value-"+\name$), @checkNumber(), #PB_EventType_Change)
-            SetGadgetData(gadget("value-"+\name$), *data\mod\settings())
-          EndWith
-        Next
-        
-        ; load current settings
-        Protected NewMap settings$()
-        luaParser::parseModSettings(modFolder$, settings$())
-        
-        ; apply current setting or default 
-        Protected val$
-        ForEach *data\mod\settings()
-          With *data\mod\settings()
             
-            If FindMapElement(settings$(), MapKey(*data\mod\settings()))
+            ; fill in values (not for table, this is already done)
+            ; select current setting for this setting option
+            If FindMapElement(currentSettings(), option$)
               ; apply value read from settings.lua
-              val$ = settings$()
+              val$ = currentSettings()\value$
+              ; table-related values are handled independently
             Else
               ; use default value
               val$ = \Default$
@@ -361,6 +451,9 @@ Module modSettings
 ;                 SetGadgetAttribute(gadget("value-"+\name$), #PB_Spin_Minimum, \min)
 ;                 SetGadgetAttribute(gadget("value-"+\name$), #PB_Spin_Maximum, \max)
 ;                 SetGadgetState(gadget("value-"+\name$), Val(val$))
+              Case "table"
+                ; nothing to do here
+                
             EndSelect
             
           EndWith
