@@ -97,7 +97,7 @@ Module modSettings
       Case "string"
         SetGadgetText(gadget, *setting\Default$)
       Case "number"
-        SetGadgetText(gadget, *setting\Default$)
+        SetGadgetText(gadget, StrD(ValD(*setting\Default$)))
       Case "table"
         For item = 0 To CountGadgetItems(gadget) - 1
           *tableValue = GetGadgetItemData(gadget, item)
