@@ -1127,14 +1127,8 @@ Module mods
       debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
       
       ; backup before overwrite with new mod if activated in settings...
-      If OpenPreferences(main::settingsFile$)
-        ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
-        PreferenceGroup("backup")
-        backup = ReadPreferenceInteger("before_update", 0)
-        ClosePreferences()
-        If backup
-          doBackup(id$)
-        EndIf
+      If settings::getInteger("backup", "before_update")
+        doBackup(id$)
       EndIf
       
       ; remove mod from internal map.
@@ -1227,14 +1221,8 @@ Module mods
     
     
     ; start backup if required
-    If OpenPreferences(main::settingsFile$)
-      ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
-      PreferenceGroup("backup")
-      backup = ReadPreferenceInteger("after_install", 0)
-      ClosePreferences()
-      If backup
-        backup(id$)
-      EndIf
+    If settings::getInteger("backup", "after_install")
+      backup(id$)
     EndIf
     
     ProcedureReturn #True
@@ -1263,15 +1251,9 @@ Module mods
       debugger::add("mods::doUninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
     EndIf
     
-    Protected backup
-    If OpenPreferences(main::settingsFile$)
-      ;TODO: make sure that preferences are not open in other thread? -> maybe use settings:: module with mutex..
-      PreferenceGroup("backup")
-      backup = ReadPreferenceInteger("before_uninstall", 0)
-      ClosePreferences()
-      If backup
-        doBackup(id$)
-      EndIf
+
+    If settings::getInteger("backup", "before_uninstall")
+      doBackup(id$)
     EndIf
     
     
@@ -1653,10 +1635,7 @@ Module mods
     ListIcon::ClearListItems(_gadgetModList)
     
     Protected compareVersion
-    If OpenPreferences(main::settingsFile$)
-      compareVersion = ReadPreferenceInteger("compareVersion", #False)
-      ClosePreferences()
-    EndIf
+    compareVersion = settings::getInteger("", "compareVersion")
     
     
     ; count = number of individual parts of search string

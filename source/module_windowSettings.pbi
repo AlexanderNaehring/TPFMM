@@ -18,8 +18,11 @@ XIncludeFile "module_aes.pbi"
 Module windowSettings
   
   Global _parentW, _dialog
-  Global NewMap gadget()
   
+  Macro gadget(name)
+    DialogGadget(_dialog, name)
+  EndMacro
+    
   Declare updateGadgets()
   
   ;----------------------------------------------------------------------------
@@ -104,30 +107,26 @@ Module windowSettings
       locale$ = "en"
     EndIf
     
-    OpenPreferences(main::settingsFile$, #PB_Preference_GroupSeparator)
-    WritePreferenceString("path", dir$)
-    If locale$ <> ReadPreferenceString("locale", "en")
+    
+    settings::setString("", "path", dir$)
+    If locale$ <> settings::getString("", "locale")
       restart = #True
     EndIf
-    WritePreferenceString("locale", locale$)
-    WritePreferenceInteger("compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+    settings::setString("", "locale", locale$)
+    settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     
-    PreferenceGroup("backup")
-    WritePreferenceInteger("after_install", GetGadgetState(gadget("miscBackupAfterInstall")))
-    WritePreferenceInteger("before_update", GetGadgetState(gadget("miscBackupBeforeUpdate")))
-    WritePreferenceInteger("before_uninstall", GetGadgetState(gadget("miscBackupBeforeUninstall")))
+    settings::setInteger("backup", "after_install", GetGadgetState(gadget("miscBackupAfterInstall")))
+    settings::setInteger("backup", "before_update", GetGadgetState(gadget("miscBackupBeforeUpdate")))
+    settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("miscBackupBeforeUninstall")))
     
-    PreferenceGroup("proxy")
-    WritePreferenceInteger("enabled", GetGadgetState(gadget("proxyEnabled")))
-    WritePreferenceString("server", GetGadgetText(gadget("proxyServer")))
-    WritePreferenceString("user", GetGadgetText(gadget("proxyUser")))
-    WritePreferenceString("password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
+    settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
+    settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
+    settings::setString("proxy", "user", GetGadgetText(gadget("proxyUser")))
+    settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     
-    PreferenceGroup("integration")
-    WritePreferenceInteger("register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
-    WritePreferenceInteger("register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
+    settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
+    settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
-    ClosePreferences()
     
     If restart
       MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
@@ -237,63 +236,6 @@ Module windowSettings
     window = DialogWindow(_dialog)
     
     
-    ; get gadgets
-    Macro getGadget(name)
-      gadget(name) = DialogGadget(_dialog, name)
-      If Not IsGadget(gadget(name))
-        MessageRequester("Critical Error", "Could not create gadget "+name+"!", #PB_MessageRequester_Error)
-        End
-      EndIf
-    EndMacro
-    
-    
-    getGadget("panelSettings")
-    
-    getGadget("save")
-    getGadget("cancel")
-    
-    getGadget("installationFrame")
-    getGadget("installationTextSelect")
-    getGadget("installationAutodetect")
-    getGadget("installationPath")
-    getGadget("installationBrowse")
-    getGadget("installationTextStatus")
-    
-    getGadget("miscFrame")
-    getGadget("miscBackupAfterInstall")
-    getGadget("miscBackupBeforeUpdate")
-    getGadget("miscBackupBeforeUninstall")
-    getGadget("miscVersionCheck")
-    
-    getGadget("languageFrame")
-    getGadget("languageSelection")
-    
-    
-    getGadget("proxyEnabled")
-    getGadget("proxyFrame")
-    getGadget("proxyServerLabel")
-    getGadget("proxyServer")
-    getGadget("proxyUserLabel")
-    getGadget("proxyUser")
-    getGadget("proxyPasswordLabel")
-    getGadget("proxyPassword")
-    
-    getGadget("integrateText")
-    getGadget("integrateRegisterProtocol")
-    getGadget("integrateRegisterContextMenu")
-    
-    
-;     getGadget("repositoryList")
-;     getGadget("repositoryAdd")
-;     getGadget("repositoryRemove")
-;     getGadget("repositoryNameLabel")
-;     getGadget("repositoryName")
-;     getGadget("repositoryCuratorLabel")
-;     getGadget("repositoryCurator")
-;     getGadget("repositoryDescriptionLabel")
-;     getGadget("repositoryDescription")
-    
-    
     ; set texts
     SetWindowTitle(window, l("settings","title"))
     
@@ -320,6 +262,7 @@ Module windowSettings
     SetGadgetText(gadget("miscBackupAfterInstall"),     l("settings","backup_after_install"))
     SetGadgetText(gadget("miscBackupBeforeUpdate"),     l("settings","backup_before_update"))
     SetGadgetText(gadget("miscBackupBeforeUninstall"),  l("settings","backup_before_uninstall"))
+    SetGadgetText(gadget("miscBackupFolderChange"),     l("settings","backup_change_folder"))
     SetGadgetText(gadget("miscVersionCheck"),       l("settings","versioncheck"))
     GadgetToolTip(gadget("miscVersionCheck"),       l("settings","versioncheck_tip"))
     
@@ -369,31 +312,26 @@ Module windowSettings
     
     debugger::add("windowSettings::show()")
     
-    OpenPreferences(main::settingsFile$)
     ; main
     SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
-    locale$ = ReadPreferenceString("locale", "en")
-    SetGadgetState(gadget("miscVersionCheck"), ReadPreferenceInteger("compareVersion", #True))
+    locale$ = settings::getString("", "locale")
+    SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
     
-    PreferenceGroup("backup")
-    SetGadgetState(gadget("miscBackupAfterInstall"),    ReadPreferenceInteger("after_install", 0))
-    SetGadgetState(gadget("miscBackupBeforeUpdate"),    ReadPreferenceInteger("before_update", 1))
-    SetGadgetState(gadget("miscBackupBeforeUninstall"), ReadPreferenceInteger("before_uninstall", 0))
+    SetGadgetState(gadget("miscBackupAfterInstall"),    settings::getInteger("backup", "after_install"))
+    SetGadgetState(gadget("miscBackupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
+    SetGadgetState(gadget("miscBackupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
     
     ; proxy
-    PreferenceGroup("proxy")
-    SetGadgetState(gadget("proxyEnabled"), ReadPreferenceInteger("enabled", 0))
-    SetGadgetText(gadget("proxyServer"), ReadPreferenceString("server", ""))
-    SetGadgetText(gadget("proxyUser"), ReadPreferenceString("user", ""))
-    SetGadgetText(gadget("proxyPassword"), aes::decryptString(ReadPreferenceString("password", "")))
+    SetGadgetState(gadget("proxyEnabled"), settings::getInteger("proxy", "enabled"))
+    SetGadgetText(gadget("proxyServer"), settings::getString("proxy", "server"))
+    SetGadgetText(gadget("proxyUser"), settings::getString("proxy", "user"))
+    SetGadgetText(gadget("proxyPassword"), aes::decryptString(settings::getString("proxy", "password")))
     
     ; integration
-    PreferenceGroup("integration")
-    SetGadgetState(gadget("integrateRegisterProtocol"), ReadPreferenceInteger("register_protocol", 1))
-    SetGadgetState(gadget("integrateRegisterContextMenu"), ReadPreferenceInteger("register_context_menu", 1))
+    SetGadgetState(gadget("integrateRegisterProtocol"), settings::getInteger("integration", "register_protocol"))
+    SetGadgetState(gadget("integrateRegisterContextMenu"), settings::getInteger("integration", "register_context_menu"))
     DisableGadget(gadget("integrateRegisterContextMenu"), #True)
     
-    ClosePreferences()
     
     CompilerIf #PB_Compiler_OS = #PB_OS_Linux
       DisableGadget(gadget("integrateRegisterProtocol"), #True)

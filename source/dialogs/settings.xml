@@ -16,17 +16,26 @@
               </gridbox>
             </frame>
             <hbox expand='equal'>
-              <frame name='miscFrame' text='Miscellaneous'>
+              <frame name='backupFrame' text='Backup'>
                 <vbox expand='no'>
                   <checkbox name='miscBackupAfterInstall' text=' ' />
                   <checkbox name='miscBackupBeforeUpdate' text=' ' />
                   <checkbox name='miscBackupBeforeUninstall' text=' ' />
-                  <checkbox name='miscVersionCheck' text=' '/>
+                  <hbox>
+                    <empty />
+                    <button name='miscBackupFolderChange' text=' ' disabled='yes' />
+                    <empty />
+                  </hbox>
                 </vbox>
               </frame>
               <vbox expand='no'>
                 <frame name='languageFrame' text='Language'>
                   <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+                </frame>
+                <frame name='miscFrame' text='Miscellaneous'>
+                  <vbox expand='no'>
+                    <checkbox name='miscVersionCheck' text=' '/>
+                  </vbox>
                 </frame>
               </vbox>
             </hbox>

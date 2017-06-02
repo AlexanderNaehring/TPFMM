@@ -4,7 +4,6 @@
   Global _DEBUG     = #True ; write debug messages to log file
   Global _TESTMODE  = #False
   Global gameDirectory$
-  Global settingsFile$ = "TPFMM.ini"
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
   Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   
@@ -19,6 +18,7 @@
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_settings.pbi"
 XIncludeFile "module_images.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
@@ -117,6 +117,7 @@ Module main
       OnErrorCall(@handleError())
     CompilerEndIf
     
+    settings::setFilename("TPFMM.ini")
     
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
@@ -139,18 +140,6 @@ Module main
     For i = 0 To CountProgramParameters() - 1
       handleParameter(ProgramParameter(i))
     Next
-    
-    
-    ; settings file: test if file can be written.
-    If FileSize(settingsFile$) < 0
-      If CreatePreferences(settingsFile$)
-        ClosePreferences()
-      Else
-        debugger::add("main::init() - Error: could not create TPFMM settings file")
-        MessageRequester("Error", "Could not create TPFMM settings file.", #PB_MessageRequester_Error)
-        End
-      EndIf
-    EndIf
     
     
     debugger::Add("init() - load plugins")
@@ -176,21 +165,15 @@ Module main
     images::LoadImages()
     
     ; read gameDirectory from preferences
-    OpenPreferences(settingsFile$)
-    gameDirectory$ = ReadPreferenceString("path", "")
+    gameDirectory$ = settings::getString("", "path")
     debugger::Add("init() - read gameDirectory: "+gameDirectory$)
     If misc::checkGameDirectory(gameDirectory$) <> 0
       debugger::add("init() - gameDirectory not correct!")
       gameDirectory$ = ""
     EndIf
-    ClosePreferences()
     
     ; read language from preferences
-    Protected lang$
-    OpenPreferences(settingsFile$)
-    lang$ = ReadPreferenceString("locale","en")
-    ClosePreferences()
-    locale::use(lang$)
+    locale::use(settings::getString("", "locale"))
     
     
     windowMain::create()
@@ -203,13 +186,11 @@ Module main
     Protected windowX, windowY, windowWidth, windowHeight
     debugger::add("main::init() - Set main window location")
     
-    If OpenPreferences(settingsFile$)
-      PreferenceGroup("window")
-      windowX = ReadPreferenceInteger("x", #PB_Ignore)
-      windowY = ReadPreferenceInteger("y", #PB_Ignore)
-      windowWidth   = ReadPreferenceInteger("width", WindowWidth(windowMain::window))
-      windowHeight  = ReadPreferenceInteger("height", WindowHeight(windowMain::window))
-      ClosePreferences()
+    If #True
+      windowX = settings::getInteger("window", "x")
+      windowY = settings::getInteger("window", "y")
+      windowWidth   = settings::getInteger("window", "width")
+      windowHeight  = settings::getInteger("window", "height")
       
       ; get desktops
       nDesktops = ExamineDesktops()
@@ -250,13 +231,10 @@ Module main
     
     
     ; restore column sizes
-    OpenPreferences(settingsFile$)
-    PreferenceGroup("columns")
     Protected Dim widths(5)
     For i = 0 To 5
-      widths(i) = ReadPreferenceInteger(Str(i), 0)
+      widths(i) = settings::getInteger("columns", Str(i))
     Next
-    ClosePreferences()
       
     windowMain::setColumnWidths(widths())
     
@@ -282,14 +260,11 @@ Module main
   Procedure initProxy()
     Protected server$, user$, password$
     
-    OpenPreferences(settingsFile$)
-    PreferenceGroup("proxy")
-    If ReadPreferenceInteger("enabled", 0)
-      server$   = ReadPreferenceString("server", "")
-      user$     = ReadPreferenceString("user", "")
-      password$ = aes::decryptString(ReadPreferenceString("password", ""))
+    If settings::getInteger("proxy", "enabled")
+      server$   = settings::getString("proxy", "server")
+      user$     = settings::getString("proxy", "user")
+      password$ = aes::decryptString(settings::getString("proxy", "password"))
     EndIf
-    ClosePreferences()
     
     If server$
       debugger::add("initProxy() - "+server$+" user:"+user$)
@@ -301,15 +276,13 @@ Module main
   EndProcedure
   
   Procedure updateDesktopIntegration()
-    OpenPreferences(settingsFile$)
-    PreferenceGroup("integration")
-    If ReadPreferenceInteger("register_protocol", 1)
+    If settings::getInteger("integration", "register_protocol")
       misc::registerProtocolHandler("tpfmm", ProgramFilename(), "Transport Fever Mod Link")
     Else
       misc::registerProtocolHandler("tpfmm", "") ; unregister tpfmm
     EndIf
     
-    If  ReadPreferenceInteger("register_context_menu", 1)
+    If  settings::getInteger("integration", "register_context_menu")
       ; TODO
     EndIf
     
@@ -320,21 +293,14 @@ Module main
     Protected i.i
     
     
-    If OpenPreferences(settingsFile$) ; can only write if opened
-      PreferenceGroup("window")
-      ;TODO: Check: linux does not seem to read the location correctly?
-      WritePreferenceInteger("x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
-      WritePreferenceInteger("y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
-      WritePreferenceInteger("width", WindowWidth(windowMain::window))
-      WritePreferenceInteger("height", WindowHeight(windowMain::window))
-      PreferenceGroup("columns")
-      For i = 0 To 5
-        WritePreferenceInteger(Str(i), windowMain::getColumnWidth(i))
-      Next
-      ClosePreferences()
-    Else
-      debugger::add("main::exit() - Error: could not open preferences file")
-    EndIf
+    settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
+    settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
+    settings::setInteger("window", "width", WindowWidth(windowMain::window))
+    settings::setInteger("window", "height", WindowHeight(windowMain::window))
+
+    For i = 0 To 5
+      settings::setInteger("columns", Str(i), windowMain::getColumnWidth(i))
+    Next
     
     mods::saveList()
     mods::freeAll()
