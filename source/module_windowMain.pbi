@@ -275,6 +275,7 @@ Module windowMain
   Procedure updateBackupButtons()
     Protected item, checked
     Protected gadgetTree
+    Debug "windowMain::updateBackupButtons()"
     
     If main::gameDirectory$
       gadgetTree = gadget("backupTree")
@@ -379,6 +380,7 @@ Module windowMain
   Procedure panel()
     If EventType() = #PB_EventType_Change
       If GetGadgetState(gadget("panel")) = 2
+        updateBackupButtons()
         backupRefreshList()
       EndIf
     EndIf
