@@ -5,7 +5,7 @@ DeclareModule settings
   Declare setFilename(filename$)
   
   Declare setInteger(group$, key$, value)
-  Declare setString(group$, keyx$, value$)
+  Declare setString(group$, key$, value$)
   Declare getInteger(group$, key$)
   Declare.s getString(group$, key$)
   
