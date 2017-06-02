@@ -81,6 +81,12 @@
                 </hbox>
               </vbox>
               <vbox expand='no'>
+                <frame name='backupFrameFilter'>
+                  <hbox expand='item:1'>
+                    <string name='backupFilter' text=' ' />
+                    <button name='backupFilterReset' text='X' />
+                  </hbox>
+                </frame>
                 <frame name='backupFrame' text=' ' width='210'>
                   <vbox expand='no'>
                     <button name='backupRefresh' text=' ' />

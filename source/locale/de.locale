@@ -71,6 +71,7 @@ backup_expand   = Alle ausklappen
 backup_collapse = Alle einklappen
 backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
+backup_filter   = Durchsuche Sicherungen
 
 [info]
 title           = Mod Informationen

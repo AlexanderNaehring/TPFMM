@@ -1048,7 +1048,7 @@ Module windowMain
     Protected NewList tpf_id$()
     Protected NewList someBackups.mods::backupInfoLocal()
     Protected found, item
-    Protected text$
+    Protected text$, filter$
     Protected *buffer
     
     Debug "windowMain::backupRefreshList()"
@@ -1063,7 +1063,9 @@ Module windowMain
     ClearGadgetItems(gadget("backupTree"))
     item = 0
     
-    If mods::getBackupList(allBackups())
+    filter$ = GetGadgetText(gadget("backupFilter"))
+    
+    If mods::getBackupList(allBackups(), filter$)
       ; create individual lists for each tpf_id, sorted by date.
       
       ; first: extract the tpf_ids
@@ -1308,6 +1310,7 @@ Module windowMain
     SetGadgetText(gadget("backupCollapse"),     l("main","backup_collapse"))
     SetGadgetText(gadget("backupCheck"),        l("main","backup_check"))
     SetGadgetText(gadget("backupClear"),        l("main","backup_clear"))
+    SetGadgetText(gadget("backupFrameFilter"),  l("main","backup_filter"))
     
     
     ; Bind Gadget Events
@@ -1340,6 +1343,7 @@ Module windowMain
     BindGadgetEvent(gadget("backupCollapse"),   @backupCollapse())
     BindGadgetEvent(gadget("backupCheck"),      @backupCheck())
     BindGadgetEvent(gadget("backupClear"),      @backupClear())
+    BindGadgetEvent(gadget("backupFilter"),     @backupRefreshList())
     
     
     ; create shortcuts

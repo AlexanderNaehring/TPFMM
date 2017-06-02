@@ -145,7 +145,7 @@
   Declare isInstalledByRemote(source$, id)
   Declare isInstalled(id$)
   
-  Declare getBackupList(List backups.backupInfoLocal())
+  Declare getBackupList(List backups.backupInfoLocal(), filter$="")
   Declare backupDelete(file$)
   
   ; actions
