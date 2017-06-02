@@ -1787,7 +1787,7 @@ Module mods
         EndIf
         
         If \aux\luaParseError
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($FF, $00, $00))
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_BackColor, RGB($ff, $cc, $cc))
         EndIf
         
         
