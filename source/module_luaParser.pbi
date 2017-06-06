@@ -760,6 +760,10 @@ Module luaParser
     string$ = "os.execute = nil; os.remove = nil;"
     luaL_dostring(L, string$)
     
+    ; register dummy functions
+    string$ = "function addFileFilter() end; function addModifier() end;"
+    luaL_dostring(L, string$)
+    
     
     ; initialize variable storage for this lua state
     AddMapElement(lua(), Str(L))
