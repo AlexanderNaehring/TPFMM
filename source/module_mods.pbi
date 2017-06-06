@@ -2090,8 +2090,8 @@ Module mods
     EndIf
     
 ;     SortStructuredList(backups(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(backupInfoLocal\tpf_id$), #PB_String)
-    
-    If Trim(filter$)
+    filter$ = Trim(filter$)
+    If filter$
       ForEach backups()
         If Not FindString(backups()\name$, filter$, 1, #PB_String_NoCase) And
            Not FindString(backups()\tpf_id$, filter$, 1, #PB_String_NoCase) And

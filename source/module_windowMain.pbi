@@ -1154,6 +1154,11 @@ Module windowMain
     
   EndProcedure
   
+  Procedure backupFilterReset()
+    SetGadgetText(gadget("backupFilter"), "")
+    backupRefreshList()
+  EndProcedure
+  
   
   ;- DRAG & DROP
   
@@ -1304,7 +1309,7 @@ Module windowMain
     SetGadgetText(gadget("repoInstall"),        l("main","install"))
     
     SetGadgetText(gadget("backupFrame"),        l("main","backup_manage"))
-    SetGadgetText(gadget("backupRefresh"),      l("main","backup_refresh"))
+;     SetGadgetText(gadget("backupRefresh"),      l("main","backup_refresh"))
     SetGadgetText(gadget("backupRestore"),      l("main","backup_restore"))
     SetGadgetText(gadget("backupDelete"),       l("main","backup_delete"))
     SetGadgetText(gadget("backupFolder"),       l("main","backup_folder"))
@@ -1337,7 +1342,7 @@ Module windowMain
     BindGadgetEvent(gadget("repoInstall"),      @repoDownload())
     
     BindGadgetEvent(gadget("backupTree"),       @backupTree())
-    BindGadgetEvent(gadget("backupRefresh"),    @backupRefreshList())
+;     BindGadgetEvent(gadget("backupRefresh"),    @backupRefreshList())
     BindGadgetEvent(gadget("backupRestore"),    @backupRestore())
     BindGadgetEvent(gadget("backupDelete"),     @backupDelete())
     BindGadgetEvent(gadget("backupFolder"),     @backupFolder())
@@ -1346,6 +1351,7 @@ Module windowMain
     BindGadgetEvent(gadget("backupCheck"),      @backupCheck())
     BindGadgetEvent(gadget("backupClear"),      @backupClear())
     BindGadgetEvent(gadget("backupFilter"),     @backupRefreshList())
+    BindGadgetEvent(gadget("backupFilterReset"),  @backupFilterReset())
     
     
     ; create shortcuts
