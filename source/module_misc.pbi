@@ -754,7 +754,7 @@ CompilerEndSelect
         
         Protected regFile$, string$, file, program, exitcode
         
-        regFile$ = "tpfmm_register.reg"
+        regFile$ = "register.reg"
         
         
         If program$
@@ -762,7 +762,8 @@ CompilerEndSelect
                     #CRLF$ +
                     "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"]" + #CRLF$ +
                     "@="+#DQUOTE$+"URL:"+description$+#DQUOTE$ + #CRLF$ +
-                    "URL Protocol="+#DQUOTE$+#DQUOTE$ + #CRLF$ +
+                    #DQUOTE$+"URL Protocol"+#DQUOTE$+"="+#DQUOTE$+#DQUOTE$ + #CRLF$ +
+                    #DQUOTE$+"DefaultIcon"+#DQUOTE$+"="+#DQUOTE$+"\"+#DQUOTE$+ReplaceString(program$, "\", "\\")+"\"+#DQUOTE$+",1"+#DQUOTE$ + #CRLF$ + 
                     #CRLF$ +
                     "[HKEY_CURRENT_USER\Software\Classes\"+protocol$+"\shell]" + #CRLF$ +
                     #CRLF$ +
