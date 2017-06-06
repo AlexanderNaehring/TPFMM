@@ -572,6 +572,61 @@ Module mods
     ProcedureReturn str$
   EndProcedure
   
+  Procedure.s getBackupFolder()
+    Protected backupFolder$
+    
+    If main::gameDirectory$ = ""
+      ProcedureReturn ""
+    EndIf
+    
+    backupFolder$ = settings::getString("backup", "folder")
+    If backupFolder$ = ""
+      backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    EndIf
+    
+    ProcedureReturn backupFolder$
+    
+  EndProcedure
+  
+  Procedure moveBackupFolder(newFolder$)
+    Protected oldFolder$, entry$
+    Protected dir, error
+    
+    newFolder$ = misc::path(newFolder$)
+    oldFolder$ = getBackupFolder()
+    
+    misc::CreateDirectoryAll(newFolder$)
+    
+    
+    ; move all *.zip and *.backup files from oldFolder$ to newFolder
+    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          entry$ = DirectoryEntryName(dir)
+          If LCase(GetExtensionPart(entry$)) = "zip" Or
+             LCase(GetExtensionPart(entry$)) = "backup"
+            If RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
+              debugger::add("mods::moveBackupFolder() - ERROR: failed to move file "+entry$)
+              error = #True
+            EndIf
+          EndIf
+        EndIf
+      Wend
+      FinishDirectory(dir)
+    Else
+      debugger::add("mods::moveBackupFolder() - ERROR: failed to examine directory "+oldFolder$)
+      error = #True
+    EndIf
+    
+    
+    If Not error
+      settings::setString("backup", "folder", newFolder$)
+    EndIf
+    
+  EndProcedure
+  
+  
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
@@ -1283,7 +1338,11 @@ Module mods
     ; use local time, as this is displayed and only used to determine age of backup files...
     time = Date()
     
-    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    backupFolder$ = getBackupFolder()
+    If backupFolder$ = ""
+      ProcedureReturn #False
+    EndIf
+    
     misc::CreateDirectoryAll(backupFolder$)
     
     LockMutex(mutexMods)
@@ -1871,7 +1930,11 @@ Module mods
     EndIf
     
     
-    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    backupFolder$ = getBackupFolder()
+    If backupFolder$ = ""
+      ProcedureReturn #False
+    EndIf
+    
     
     ; delete all .backup files without a corresponding .zip file
     dir = ExamineDirectory(#PB_Any, backupFolder$, "*.backup")
@@ -1989,7 +2052,11 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    backupFolder$ = getBackupFolder()
+    If backupFolder$ = ""
+      ProcedureReturn #False
+    EndIf
+    
     
     If Not backupCleanFolder()
       ProcedureReturn #False
@@ -2048,8 +2115,8 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    If main::gameDirectory$
-      backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+    backupFolder$ = getBackupFolder()
+    If backupFolder$
       file$ = backupFolder$ + file$
       If FileSize(file$) > 0
         DeleteFile(file$)
