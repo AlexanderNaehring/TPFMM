@@ -23,7 +23,7 @@
                   <checkbox name='miscBackupBeforeUninstall' text=' ' />
                   <hbox>
                     <empty />
-                    <button name='miscBackupFolderChange' text=' ' disabled='yes' />
+                    <button name='miscBackupFolderChange' text=' ' />
                     <empty />
                   </hbox>
                 </vbox>

@@ -590,13 +590,32 @@ Module mods
   
   Procedure moveBackupFolder(newFolder$)
     Protected oldFolder$, entry$
-    Protected dir, error
+    Protected dir, error, count
     
     newFolder$ = misc::path(newFolder$)
     oldFolder$ = getBackupFolder()
     
     misc::CreateDirectoryAll(newFolder$)
     
+    ; check if new folder is empty (only use empty folder)
+    count = 0
+    dir = ExamineDirectory(#PB_Any, newFolder$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          count + 1
+        EndIf
+      Wend
+      FinishDirectory(dir)
+    Else
+      debugger::add("mods::moveBackupFolder() - ERROR: failed to examine directory "+newFolder$)
+      error = #True
+    EndIf
+    
+    If count
+      debugger::add("mods::moveBackupFolder() - ERROR: target directory not empty")
+      ProcedureReturn #False  
+    EndIf
     
     ; move all *.zip and *.backup files from oldFolder$ to newFolder
     dir = ExamineDirectory(#PB_Any, oldFolder$, "")
@@ -606,7 +625,7 @@ Module mods
           entry$ = DirectoryEntryName(dir)
           If LCase(GetExtensionPart(entry$)) = "zip" Or
              LCase(GetExtensionPart(entry$)) = "backup"
-            If RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
+            If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
               debugger::add("mods::moveBackupFolder() - ERROR: failed to move file "+entry$)
               error = #True
             EndIf
@@ -622,7 +641,9 @@ Module mods
     
     If Not error
       settings::setString("backup", "folder", newFolder$)
+      ProcedureReturn #True
     EndIf
+    ProcedureReturn #False
     
   EndProcedure
   

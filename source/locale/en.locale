@@ -114,6 +114,7 @@ backup_after_install    = Automatically backup mods after installation
 backup_before_update    = Automatically backup mods before updating
 backup_before_uninstall = Automatically backup mods before deleting
 backup_change_folder    = Change backup folder loaction
+backup_change_folder_wait = Moving folder...
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
 locale          = Localization (Language)

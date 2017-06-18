@@ -116,6 +116,7 @@ backup_after_install    = Automatische Sicherheitskopie von Mods nach Installati
 backup_before_update    = Automatische Sicherheitskopie von Mods vor Update
 backup_before_uninstall = Automatische Sicherheitskopie von Mods vor Löschen
 backup_change_folder    = Ordner für Sicherheitskopien ändern
+backup_change_folder_wait = Ordner wird verschoben...
 versioncheck    = Nutze Versionsvergleich für Update
 versioncheck_tip = When aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
 locale          = Lokalisierung (Sprache)

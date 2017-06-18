@@ -138,7 +138,6 @@ Module windowSettings
     main::updateDesktopIntegration()
     
     
-    
 ;     If misc::checkGameDirectory(Dir$) = 0
 ;       ; 0   = path okay, executable found and writing possible
 ;       ; 1   = path okay, executable found but cannot write
@@ -155,6 +154,31 @@ Module windowSettings
     repository::init()
     
     GadgetCloseSettings()
+  EndProcedure
+  
+  Procedure backupFolderMoveThread(*folder)
+    Protected folder$
+    folder$ = PeekS(*folder)
+    FreeMemory(*folder)
+    
+    DisableGadget(gadget("miscBackupFolderChange"), #True)
+    SetGadgetText(gadget("miscBackupFolderChange"), locale::l("settings", "backup_change_folder_wait"))
+    mods::moveBackupFolder(folder$)
+    DisableGadget(gadget("miscBackupFolderChange"), #False)
+    SetGadgetText(gadget("miscBackupFolderChange"), locale::l("settings", "backup_change_folder"))
+  EndProcedure
+  
+  Procedure backupFolderMove()
+    Protected folder$
+    Protected *folder
+    
+    folder$ = PathRequester(locale::get("settings", "backup_change_folder"), mods::getBackupFolder())
+    
+    *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
+    PokeS(*folder, folder$)
+    
+    CreateThread(@backupFolderMoveThread(), *folder)
+    
   EndProcedure
   
   Procedure updateGadgets()
@@ -301,6 +325,7 @@ Module windowSettings
     BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
     BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
+    BindGadgetEvent(gadget("miscBackupFolderChange"), @backupFolderMove())
     
     RefreshDialog(_dialog)
     

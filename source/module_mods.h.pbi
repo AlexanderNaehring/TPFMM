@@ -147,6 +147,8 @@
   
   Declare getBackupList(List backups.backupInfoLocal(), filter$="")
   Declare backupDelete(file$)
+  Declare.s getBackupFolder()
+  Declare moveBackupFolder(newFolder$)
   
   ; actions
   Declare load()                ; load mods.json and find installed mods
