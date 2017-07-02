@@ -191,6 +191,7 @@ disabled_update = Bitte benutze die neueste Version von TPFMM
 download_start  = Starte Download '{modname}'...
 download_finish = Herunterladen erfolgreich
 download_fail   = Fehler beim Herunterladen von {modname}
+download_429    = Zu viele Anfragen, bitte später erneut versuchen
 downloading     = Lade '{modname}' herunter
 
 [mods]

@@ -427,6 +427,11 @@ Module repository
           windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
           running = #False
           ProcedureReturn #False
+        ElseIf HTTPstatus = 429
+          debugger::add("repository::downloadModThread() - server response: 429 Too Many Requests")
+          windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_429", strings$()))
+          running = #False
+          ProcedureReturn #False
         EndIf
       EndIf
       

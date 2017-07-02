@@ -189,6 +189,7 @@ disabled_update = Please use latest Version of TPFMM
 download_start  = Start Download '{modname}'...
 download_finish = Download finished
 download_fail   = Failed to download '{modname}'
+download_429    = Too many requests, please try again later
 downloading     = Downloading '{modname}'
 
 [mods]
