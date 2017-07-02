@@ -49,6 +49,7 @@
     min.d             ; only for number, minimum value, optional
     max.d             ; only for number, maximum value, optional
     List tableValues.tableValue()
+    multiSelect.b     ; for table type: if multiselect = false, allow only exactly one option, default = true
 ;     Step.d            ; only for number, step for spin gagdet, optional
     im.i              ; image # 
   EndStructure

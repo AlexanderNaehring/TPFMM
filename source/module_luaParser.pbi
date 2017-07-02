@@ -452,6 +452,8 @@ Module luaParser
           *mod\settings(setting$)\min = lua_tonumber(L, -2)
         Case "max"
           *mod\settings(setting$)\max = lua_tonumber(L, -2)
+        Case "multiSelect"
+          *mod\settings(setting$)\multiSelect = lua_toboolean(L, -2)
         Case "values"
           modlua_readSettingsValuesTable(L, -2, setting$)
           
@@ -483,6 +485,7 @@ Module luaParser
       ; default values
       *mod\settings(key$)\min = -2147483648
       *mod\settings(key$)\max =  2147483647
+      *mod\settings(key$)\multiSelect = #True
       
       ; read type, default value and name of this parameter
       modlua_readSettingsTableOption(L, -2, key$) 

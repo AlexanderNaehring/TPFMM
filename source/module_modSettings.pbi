@@ -106,9 +106,14 @@ Module modSettings
           
           ForEach *setting\tableDefaults$()
             If *setting\tableDefaults$() = *tableValue\value$
-              SetGadgetItemState(gadget, item, 1)
-              Break
-            EndIf 
+              If *setting\multiSelect 
+                SetGadgetItemState(gadget, item, 1)
+                Break ; break ForEach, but no For-Loop
+              Else
+                SetGadgetState(gadget, item)
+                Break 2 ; finished, only one can be selected
+              EndIf
+            EndIf
           Next
         Next
         
@@ -192,15 +197,24 @@ Module modSettings
               val$ = GetGadgetText(gadget)
             Case "table"
               val$ = "{"
-              For item = 0 To CountGadgetItems(gadget) - 1
-                If GetGadgetItemState(gadget, item) ; if selected
-                  *tableValue = GetGadgetItemData(gadget, item)
-                  If *tableValue
-                    ; \value$ is already correctly formated during LUAparsing :)
-                    val$ + *tableValue\value$ + ", "
+              If \multiSelect
+                For item = 0 To CountGadgetItems(gadget) - 1
+                  If GetGadgetItemState(gadget, item) ; if selected
+                    *tableValue = GetGadgetItemData(gadget, item)
+                    If *tableValue
+                      ; \value$ is already correctly formated during LUAparsing :)
+                      val$ + *tableValue\value$ + ", "
+                    EndIf
                   EndIf
+                Next
+              Else
+                item = GetGadgetState(gadget)
+                *tableValue = GetGadgetItemData(gadget, item)
+                If *tableValue
+                  ; \value$ is already correctly formated during LUAparsing :)
+                  val$ + *tableValue\value$
                 EndIf
-              Next
+              EndIf
               val$ + "}"
               
           EndSelect
@@ -333,13 +347,18 @@ Module modSettings
 ;                 SetXMLAttribute(*node, "name", "dec-"+\name$)
 ;                 SetXMLAttribute(*node, "text", "v")
               Case "table"
-                *node = CreateXMLNode(*nodeBase, "listview", -1)
-                SetXMLAttribute(*node, "name", "value-"+\name$)
-                SetXMLAttribute(*node, "flags", "#PB_ListView_ClickSelect")
-                If ListSize(\tableValues()) > 6
-                  SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * 6))
-                Else
-                  SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * ListSize(\tableValues())))
+                If \multiSelect ; allow multiple selections
+                  *node = CreateXMLNode(*nodeBase, "listview", -1)
+                  SetXMLAttribute(*node, "name", "value-"+\name$)
+                  SetXMLAttribute(*node, "flags", "#PB_ListView_ClickSelect")
+                  If ListSize(\tableValues()) > 6
+                    SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * 6))
+                  Else
+                    SetXMLAttribute(*node, "height", Str(misc::getDefaultRowHeight(#PB_GadgetType_ListView) * ListSize(\tableValues())))
+                  EndIf
+                Else ; only exactly one entry may be selected
+                  *node = CreateXMLNode(*nodeBase, "combobox", -1)
+                  SetXMLAttribute(*node, "name", "value-"+\name$)
                 EndIf
                 
             EndSelect
@@ -395,7 +414,11 @@ Module modSettings
                   ForEach currentSettings()\values$()
                     If currentSettings()\values$() = \tableValues()\value$
                       ; select this table value
-                      SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      If \multiSelect
+                        SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      Else
+                        SetGadgetState(gadget("value-"+\name$), item)
+                      EndIf
                       Break
                     EndIf
                   Next
@@ -403,7 +426,11 @@ Module modSettings
                   ForEach \tableDefaults$()
                     If \tableDefaults$() = \tableValues()\value$
                       ; select this table value
-                      SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      If \multiSelect
+                        SetGadgetItemState(gadget("value-"+\name$), item, 1)
+                      Else
+                        SetGadgetState(gadget("value-"+\name$), item)
+                      EndIf
                       Break
                     EndIf
                   Next
