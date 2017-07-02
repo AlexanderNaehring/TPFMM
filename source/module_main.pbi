@@ -6,6 +6,15 @@
   Global gameDirectory$
   Global VERSION$ = "TPFMM 1.0." + #PB_Editor_BuildCount
   Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
+  Global VERSION_FULL$ = VERSION$ + " b" + #PB_Editor_CompileCount
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      VERSION_FULL$ + " Win"
+    CompilerCase #PB_OS_Linux
+      VERSION_FULL$ + " Lin"
+    CompilerCase #PB_OS_MacOS
+      VERSION_FULL$ + " OSX"
+  CompilerEndSelect
   
   #PORT = 14123
   

@@ -416,7 +416,7 @@ Module repository
     file$   = target$ + *file\filename$
     
     debugger::add("repository::downloadModThread() - {"+*file\url$+"}")
-    header$ = GetHTTPHeader(*file\url$)
+    header$ = GetHTTPHeader(*file\url$, 0, main::VERSION_FULL$)
     If header$
       
       ExamineRegularExpression(regExpHTTPstatus, header$)
@@ -441,7 +441,7 @@ Module repository
       EndIf
     EndIf
       
-    connection = ReceiveHTTPFile(*file\url$, file$, #PB_HTTP_Asynchronous)
+    connection = ReceiveHTTPFile(*file\url$, file$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
     windowMain::progressRepo(windowMain::#Progress_NoChange, locale::getEx("repository", "downloading", strings$()))
     Repeat
       progress = HTTPProgress(connection)
