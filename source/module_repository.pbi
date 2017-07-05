@@ -107,7 +107,7 @@ Module repository
     
     time = ElapsedMilliseconds()
     DeleteFile(file$+".tmp")
-    If ReceiveHTTPFile(url$, file$+".tmp")
+    If ReceiveHTTPFile(url$, file$+".tmp", 0, main::VERSION_FULL$)
       If FileSize(file$)
         DeleteFile(file$)
       EndIf
@@ -284,7 +284,7 @@ Module repository
         ; download image
         downloading(url$) = #True
         CreateDirectory(GetPathPart(file$))
-        ReceiveHTTPFile(url$, file$)
+        ReceiveHTTPFile(url$, file$, 0, main::VERSION_FULL$)
         If FileSize(file$) > 0
           image = LoadImage(#PB_Any, file$)
           If image And IsImage(image)
