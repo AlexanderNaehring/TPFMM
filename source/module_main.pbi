@@ -55,6 +55,7 @@ Module main
     WriteStringN(file, "")
     WriteStringN(file, "################################################################################")
     WriteStringN(file, "ERROR @ "+date$)
+    WriteStringN(file, VERSION_FULL$)
     WriteStringN(file, "Error #"+ErrorCode()+" at address "+ErrorAddress()+">"+ErrorTargetAddress()+" in <"+ErrorFile()+"> line "+ErrorLine())
     WriteStringN(file, ErrorMessage(ErrorCode()))
     WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" ("+CountCPUs()+" CPUs)")
