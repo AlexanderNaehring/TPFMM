@@ -219,7 +219,7 @@ Module modSettings
               
           EndSelect
           
-          WriteStringN(file, "  "+MapKey(*data\mod\settings())+" = "+val$+",")
+          WriteStringN(file, "  "+\key$+" = "+val$+",")
         EndWith
       Next
       WriteStringN(file, "}")
@@ -240,7 +240,7 @@ Module modSettings
     If Not *mod
       ProcedureReturn #False
     EndIf
-    If MapSize(*mod\settings()) = 0
+    If ListSize(*mod\settings()) = 0
       ProcedureReturn #False
     EndIf
     
@@ -392,7 +392,7 @@ Module modSettings
         Protected val$, option$
         ForEach *data\mod\settings()
           With *data\mod\settings()
-            option$ = MapKey(*data\mod\settings())
+            option$ = \key$
             
             
             

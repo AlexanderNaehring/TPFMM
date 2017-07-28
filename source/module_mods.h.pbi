@@ -40,8 +40,10 @@
   
   ; mod.lua custom mod setting definition
   Structure modLuaSetting
+    key$              ; internal name of the setting
+    order.i           ; manual ordering of settings
     type$             ; boolean, number, string
-    name$             ; name of given setting
+    name$             ; display name of given setting
     Default$          ; default value, type dependent, stored as string
     List tableDefaults$()  ; default values for table type
     description$      ; tooltip / description of setting
@@ -88,7 +90,7 @@
     List dependencies.dependency()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
     
-    Map settings.modLuaSetting() ; mod settings (optional)
+    List settings.modLuaSetting() ; mod settings (optional)
     aux.aux                 ; auxiliary information
   EndStructure
   

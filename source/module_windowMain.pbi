@@ -199,7 +199,7 @@ Module windowMain
       EndIf
       
       ; settings
-      If MapSize(*mod\settings()) > 0
+      If ListSize(*mod\settings()) > 0
         DisableGadget(gadget("modSettings"), #False)
       Else
         DisableGadget(gadget("modSettings"), #True)

@@ -29,8 +29,6 @@ Module luaParser
     CompilerCase #PB_OS_Windows
       CompilerIf #PB_Compiler_Processor=#PB_Processor_x64
         #LUA_FILE = "lua/lua53.dll"
-      CompilerElse
-        #LUA_FILE = "lua/lua53_x86.dll"
       CompilerEndIf
     CompilerCase #PB_OS_Linux
       CompilerIf #PB_Compiler_Processor=#PB_Processor_x64
@@ -332,7 +330,7 @@ Module luaParser
   
   ; mod.lua -> data -> settings
   
-  Procedure modlua_readSettingsDefaultTable(L, index, setting$)
+  Procedure modlua_readSettingsDefaultTable(L, index, *setting.mods::modLuaSetting)
     Protected value$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -350,8 +348,8 @@ Module luaParser
       value$ = getTableValue(L, -2)
       
       If value$
-        AddElement(*mod\settings(setting$)\tableDefaults$())
-        *mod\settings(setting$)\tableDefaults$() = value$
+        AddElement(*setting\tableDefaults$())
+        *setting\tableDefaults$() = value$
       EndIf
       
       lua_pop(L, 2)
@@ -360,7 +358,7 @@ Module luaParser
     
   EndProcedure
   
-  Procedure modlua_readSettingsValuesTable(L, index, setting$)
+  Procedure modlua_readSettingsValuesTable(L, index, *setting.mods::modLuaSetting)
     ; read the possible values for the "table" type mod setting
     Protected key$, text$, value$
     Protected *mod.mods::mod
@@ -403,9 +401,9 @@ Module luaParser
       ; end of "inner" table
       
       If text$ And value$
-        AddElement(*mod\settings(setting$)\tableValues())
-        *mod\settings(setting$)\tableValues()\text$  = text$
-        *mod\settings(setting$)\tableValues()\value$ = value$
+        AddElement(*setting\tableValues())
+        *setting\tableValues()\text$  = text$
+        *setting\tableValues()\value$ = value$
       EndIf
       
       lua_pop(L, 2)
@@ -414,7 +412,7 @@ Module luaParser
     
   EndProcedure
   
-  Procedure modlua_readSettingsTableOption(L, index, setting$)
+  Procedure modlua_readSettingsTableOption(L, index, *setting.mods::modLuaSetting)
     Protected key$
     Protected *mod.mods::mod
     *mod = lua(Str(L))\mod
@@ -429,33 +427,35 @@ Module luaParser
       Select key$
         Case "type"
           ; boolean, string, number
-          *mod\settings(setting$)\type$ = lua_tostring(L, -2)
+          *setting\type$ = lua_tostring(L, -2)
         Case "default"
           If lua_isboolean(L, -2)
             ; lua_toString cannot typecast "boolean", do typecast here: true = 1, false = 0
-            *mod\settings(setting$)\default$ = Str(lua_toboolean(L, -2))
+            *setting\default$ = Str(lua_toboolean(L, -2))
           ElseIf lua_istable(L, -2) ; default value is a table -> read all defaults...
             ; default table type values, values saved in table
-            modlua_readSettingsDefaultTable(L, -2, setting$)
+            modlua_readSettingsDefaultTable(L, -2, *setting)
           Else
-            *mod\settings(setting$)\default$ = lua_tostring(L, -2)
+            *setting\default$ = lua_tostring(L, -2)
           EndIf
         Case "name"
-          *mod\settings(setting$)\name$ = lua_tostring(L, -2)
+          *setting\name$ = lua_tostring(L, -2)
         Case "description"
-          *mod\settings(setting$)\description$ = lua_tostring(L, -2)
+          *setting\description$ = lua_tostring(L, -2)
         Case "image"
-          *mod\settings(setting$)\image$ = lua_tostring(L, -2)
+          *setting\image$ = lua_tostring(L, -2)
 ;         Case "subtype"
-;           *mod\settings(setting$)\subtype$ = lua_tostring(L, -2)
+;           settings()\subtype$ = lua_tostring(L, -2)
         Case "min"
-          *mod\settings(setting$)\min = lua_tonumber(L, -2)
+          *setting\min = lua_tonumber(L, -2)
         Case "max"
-          *mod\settings(setting$)\max = lua_tonumber(L, -2)
+          *setting\max = lua_tonumber(L, -2)
         Case "multiSelect"
-          *mod\settings(setting$)\multiSelect = lua_toboolean(L, -2)
+          *setting\multiSelect = lua_toboolean(L, -2)
         Case "values"
-          modlua_readSettingsValuesTable(L, -2, setting$)
+          modlua_readSettingsValuesTable(L, -2, *setting)
+        Case "order"
+          *setting\order = lua_tonumber(L, -2)
           
         Default
           
@@ -469,11 +469,13 @@ Module luaParser
   Procedure modlua_iterateSettingsTable(L, index)
     Protected key$
     Protected *mod.mods::mod
+    Protected *setting.mods::modLuaSetting
+    Protected order.i
     *mod = lua(Str(L))\mod
     
-    ; clear map bevor reading new settings...
-    Debug "clear mod settings map"
-    ClearMap(*mod\settings())
+    ; clear list bevor reading new settings...
+    Debug "clear mod settings list"
+    ClearList(*mod\settings())
     
     lua_pushvalue(L, index) 
     lua_pushnil(L)
@@ -481,17 +483,35 @@ Module luaParser
       lua_pushvalue(L, -2)
       
       key$ = lua_tostring(L, -1) ; name of this parameter
-      AddMapElement(*mod\settings(), key$, #PB_Map_ElementCheck)
+      
+      ; check if another setting with this key exists?
+      Protected addSetting = #True
+      ForEach *mod\settings()
+        If *mod\settings()\key$ = key$
+          debugger::add("luaParser::modlua_iterateSettingsTable() - Error: double key value!")
+          ; this should never happen, as key should be unique in LUA table
+          addSetting = #False
+          Break
+        EndIf
+      Next
+      If addSetting
+        *setting = AddElement(*mod\settings())
+        *setting\key$ = key$
+      EndIf
+      
+      *setting\order = order
+      order + 1
+      
       ; default values
-      *mod\settings(key$)\min = -2147483648
-      *mod\settings(key$)\max =  2147483647
-      *mod\settings(key$)\multiSelect = #True
+      *setting\min = -2147483648
+      *setting\max =  2147483647
+      *setting\multiSelect = #True
       
       ; read type, default value and name of this parameter
-      modlua_readSettingsTableOption(L, -2, key$) 
+      modlua_readSettingsTableOption(L, -2, *setting) 
       
       Protected delete = #False
-      Select *mod\settings(key$)\type$
+      Select *setting\type$
         Case "boolean"
         Case "string"
         Case "number"
@@ -499,18 +519,23 @@ Module luaParser
         Default
           delete = #True
       EndSelect
-      If *mod\settings(key$)\name$ = ""
+      If *setting\name$ = ""
         delete = #True
       EndIf
       
       If delete
-        DeleteMapElement(*mod\settings(), key$)
+        ChangeCurrentElement(*mod\settings(), *setting)
+        DeleteElement(*mod\settings())
       EndIf
       
       
       lua_pop(L, 2)
      Wend
      lua_pop(L, 1)
+     
+     ; sort settings by "order"
+     SortStructuredList(*mod\settings(), #PB_Sort_Ascending, OffsetOf(mods::modLuaSetting\order), TypeOf(mods::modLuaSetting\order))
+     
   EndProcedure
   
   ; mod.lua -> data
