@@ -67,11 +67,11 @@ Module aes
     ElseIf len < 16
       len = 16
     EndIf
-    *buffer = AllocateMemory(len)
+    *buffer = AllocateMemory(len+1)
     If *buffer
-      PokeS(*buffer, string$, len)
+      PokeS(*buffer, string$)
       If encrypt(*buffer, len)
-        *out = AllocateMemory(len*2)
+        *out = AllocateMemory(len*2+1)
         If *out
           If Base64EncoderBuffer(*buffer, len, *out, len*2)
             out$ = PeekS(*out, len*2, #PB_Ascii)
@@ -102,11 +102,11 @@ Module aes
     ElseIf len < 16
       len = 16
     EndIf
-    *buffer = AllocateMemory(len)
+    *buffer = AllocateMemory(len+1)
     If *buffer
       ; write ASCII coded Base64 string to *buffer
       len = PokeS(*buffer, string$, StringByteLength(string$, #PB_Ascii), #PB_Ascii|#PB_String_NoZero)
-      *out = AllocateMemory(len)
+      *out = AllocateMemory(len+1)
       If *out
         ; *buffer contains Base64 (ASCII)
         len = Base64DecoderBuffer(*buffer, len, *out, len)
