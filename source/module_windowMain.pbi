@@ -994,10 +994,7 @@ Module windowMain
   EndProcedure
   
   Procedure backupFolder()
-    If main::gameDirectory$
-      misc::CreateDirectoryAll(main::gameDirectory$+"TPFMM/backups/")
-      misc::openLink(main::gameDirectory$+"TPFMM/backups/")
-    EndIf
+    misc::openLink(settings::getString("backup", "folder"))
   EndProcedure
   
   Procedure backupExpand()
