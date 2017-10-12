@@ -62,7 +62,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_modSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -80,7 +80,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_windowSettings.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
   </section>
   <section name="targets">
@@ -93,8 +93,8 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="2023"/>
-      <buildcount enable="1" value="34"/>
+      <compilecount enable="1" value="2072"/>
+      <buildcount enable="1" value="35"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,0,%BUILDCOUNT,%COMPILECOUNT"/>
