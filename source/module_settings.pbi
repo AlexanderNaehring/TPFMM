@@ -32,6 +32,10 @@ Module settings
   defaultValues$("window/y") = "-1"
   defaultValues$("window/width") = "-1"
   defaultValues$("window/height") = "-1"
+  defaultValues$("color/mod_up_to_date") = Str(RGB($00, $66, $00))
+  defaultValues$("color/mod_update_available") = Str(RGB($FF, $99, $00))
+  defaultValues$("color/mod_lua_error") = Str(RGB($ff, $cc, $cc))
+  defaultValues$("color/mod_hidden") = Str(RGB(100, 100, 100))
   
   
   Procedure setFilename(filename$)

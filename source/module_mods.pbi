@@ -1837,7 +1837,8 @@ Module mods
         EndIf
         
         If \aux\hidden
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB(100, 100, 100))
+          ; RGB(100, 100, 100)
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_hidden"))
         EndIf
         
         repository::findModOnline(*mod)
@@ -1859,15 +1860,18 @@ Module mods
           
           If compare
             ; update available (most likely)
-            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($FF, $99, $00))
+            ; RGB($FF, $99, $00)
+            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
           Else
             ; no update available (most likely)
-            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
+            ; RGB($00, $66, $00)
+            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
           EndIf
         EndIf
         
         If \aux\luaParseError
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_BackColor, RGB($ff, $cc, $cc))
+          ; RGB($ff, $cc, $cc)
+          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_BackColor, settings::getInteger("color", "mod_lua_error"))
         EndIf
         
         

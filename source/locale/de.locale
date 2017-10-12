@@ -139,6 +139,11 @@ repository_remove       = Entferne markiertes Repository
 repository_name         = Name:
 repository_curator      = Verwalter:
 repository_description  = Beschreibung:
+color                       = Farbeinstellungen
+color_mod_up_to_date        = Mod aktuell
+color_mod_update_available  = Mod Update verfügbar
+color_mod_lua_error         = LUA Fehler beim lesen
+color_mod_hidden            = Mod versteckt
 
 [management]
 install       = Füge '{name}' zu Transport Fever hinzu
