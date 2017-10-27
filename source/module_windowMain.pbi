@@ -1290,6 +1290,7 @@ Module windowMain
     AddGadgetColumn(gadget("modList"), 1,       l("main","author"), 90)
     AddGadgetColumn(gadget("modList"), 2,       l("main","category"), 90)
     AddGadgetColumn(gadget("modList"), 3,       l("main","version"), 60)
+    AddGadgetColumn(gadget("modList"), 4,       l("main","mod_options"), 25)
     SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
     SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))

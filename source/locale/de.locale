@@ -33,6 +33,7 @@ name            = Name
 author          = Ersteller
 category        = Kategorie
 version         = Version
+mod_options     = ✇
 new_mod         = Neue Mod
 start_tf        = Starte Transport Fever
 management      = Mod Verwaltung

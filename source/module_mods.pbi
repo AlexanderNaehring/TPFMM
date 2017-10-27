@@ -1820,7 +1820,11 @@ Module mods
       *mod = *mods_to_display()
       
       With *mod
-        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$
+        Protected supportsModSettings$ = ""
+        If ListSize(\settings()) > 0
+          supportsModSettings$ = "✓"
+        EndIf 
+        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$ + #LF$ + supportsModSettings$
         
         ListIcon::AddListItem(_gadgetModList, item, text$)
         ListIcon::SetListItemData(_gadgetModList, item, *mod)
