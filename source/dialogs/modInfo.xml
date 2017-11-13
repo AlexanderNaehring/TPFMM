@@ -42,6 +42,9 @@
         </hbox>
       </frame>
       <empty />
+      <hbox expand='item:1'>
+        <button name='modSettings' text=' ' disabled='yes'/>
+      </hbox>
       <hbox expand='item:2'>
         <text name='sourcesLabel' text=' '/>
         <hbox id='infoBoxSources' expand='no'></hbox>

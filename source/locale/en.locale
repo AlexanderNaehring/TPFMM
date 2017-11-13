@@ -83,6 +83,7 @@ dependencies    = Dependencies:
 files           = Files:
 size            = Size on Disk:
 sources         = Sources:
+mod_settings    = Open Mod Setttings
 
 [mod_settings]
 title           = Mod Settings

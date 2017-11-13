@@ -85,6 +85,7 @@ dependencies    = Abhängigkeiten:
 files           = Dateien:
 size            = Größe:
 sources         = Quellen:
+mod_settings    = Öffne Mod Einstellungen
 
 [mod_settings]
 title           = Mod Einstellungen

@@ -6,6 +6,8 @@ DeclareModule modInformation
   
 EndDeclareModule
 
+XIncludeFile "module_modSettings.pbi"
+
 Module modInformation
   
   ; mod info window
@@ -35,12 +37,14 @@ Module modInformation
   Structure modInfoWindow
     dialog.i
     window.i
+    parentWindowID.i
     Map gadgets.i() ; standard gadgets
     ; dynamic gadgets:
     List authors.modInfoAuthor()
     List sources.modInfoSource()
     List tags.modInfoTag()
     ; other data
+    mod.i
     modFolder$
   EndStructure
   
@@ -88,6 +92,13 @@ Module modInformation
     If *data
       misc::openLink(*data\modFolder$)
     EndIf
+  EndProcedure
+  
+  Procedure modInfoShowSettings()
+    Protected *data.modInfoWindow
+    *data = GetWindowData(EventWindow())
+    modSettings::show(*data\mod, *data\parentWindowID)
+    modInfoClose()
   EndProcedure
   
   Procedure modInfoSource()
@@ -259,6 +270,8 @@ Module modInformation
       *data\dialog = CreateDialog(#PB_Any)
       If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modInfo", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, parentWindowID)
         *data\window = DialogWindow(*data\dialog)
+        *data\parentWindowID = parentWindowID
+        *data\mod = *mod
         
         ; get gadgets
         Macro getGadget(gadget)
@@ -285,6 +298,7 @@ Module modInformation
 ;         getGadget("files")
         getGadget("sizeLabel")
         getGadget("size")
+        getGadget("modSettings")
         getGadget("sourcesLabel")
         
         UndefineMacro getGadget
@@ -299,6 +313,7 @@ Module modInformation
         SetGadgetText(*data\gadgets("dependenciesLabel"), locale::l("info", "dependencies"))
 ;         SetGadgetText(*data\gadgets("filesLabel"),        locale::l("info", "files"))
         SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
+        SetGadgetText(*data\gadgets("modSettings"),       locale::l("info", "mod_settings"))
         SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
         
         
@@ -341,6 +356,11 @@ Module modInformation
           ;BindGadgetEvent(, @modInfoAuthor())
           *data\authors()\thread = CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
+        
+        If ListSize(*mod\settings()) > 0
+          DisableGadget(*data\gadgets("modSettings"), #False)
+          BindGadgetEvent(*data\gadgets("modSettings"), @modInfoShowSettings())
+        EndIf
         
         ForEach *data\sources()
           *data\sources()\id = DialogGadget(*data\dialog, *data\sources()\name$)
