@@ -57,8 +57,8 @@ Module mods
     pTPFMM$       = misc::Path(main::gameDirectory$ + "/TPFMM/") ; only used for json file
     pMods$        = misc::Path(main::gameDirectory$ + "/mods/")
     pDLCs$        = misc::Path(main::gameDirectory$ + "/dlcs/")
-    pWorkshop$    = misc::Path(main::gameDirectory$ + "/../../workshop/content/446800/") ;- TODO !!! check if this directoy is always true
-    pStagingArea$ = misc::Path(main::gameDirectory$ + "/")                               ;- TODO !!!
+    pWorkshop$    = misc::Path(main::gameDirectory$ + "/../../workshop/content/446800/")
+    pStagingArea$ = misc::Path(main::gameDirectory$ + "/userdata/staging_area/")
     pMaps$        = misc::Path(main::gameDirectory$ + "/maps/")
   EndMacro
   
@@ -1038,7 +1038,7 @@ Module mods
     If *mod\aux\isVanilla
       ProcedureReturn #False
     EndIf
-    If Left(*mod\tpf_id$, 1) = "*"
+    If Left(*mod\tpf_id$, 1) = "*" Or Left(*mod\tpf_id$, 1) = "?"
       ProcedureReturn #False
     EndIf
     
