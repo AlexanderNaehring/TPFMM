@@ -976,6 +976,7 @@ Module repository
           EndIf
           
           If installed ; 1 = only show installed, 2 = only show not installed
+            ; \installed = true/false (actual state)
             If installed = 1 And \installed = 0
               Continue
             ElseIf installed = 2 And \installed = 1
@@ -1073,7 +1074,7 @@ Module repository
         SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_tpfnet")))
       EndIf
       If *base_address\installed
-        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
+        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
 ;         SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_BackColor, RGB($F0, $F0, $F0))
       EndIf
       If *selectedMod And *selectedMod = *base_address
