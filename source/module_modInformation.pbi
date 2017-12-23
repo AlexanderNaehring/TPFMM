@@ -70,7 +70,8 @@ Module modInformation
       HideWindow(*data\window, #True)
       ForEach *data\authors()
         If *data\authors()\image And IsImage(*data\authors()\image)
-          FreeImage(*data\authors()\image)
+          ; FreeImage(*data\authors()\image)
+          ; reuse image (do not free)
         EndIf
         If *data\authors()\thread And IsThread(*data\authors()\thread)
           KillThread(*data\authors()\thread)
@@ -119,9 +120,11 @@ Module modInformation
   Procedure modInfoAuthorImage(*author.modInfoAuthor)
     ; download avatar and set in imagegadget
     Protected gadget = *author\gadgetImage\id
+    Protected url$
     Protected *buffer, image
     Protected scale.d
     Static mutex, avatarDefault
+    Static NewMap images()
     
     If Not gadget Or Not IsGadget(gadget)
       ProcedureReturn #False
@@ -132,7 +135,7 @@ Module modInformation
     EndIf
     
     LockMutex(mutex)
-    ; 1st: set to loading
+    ; init default avatar
     If Not avatarDefault Or Not IsImage(avatarDefault)
       avatarDefault = CopyImage(images::Images("avatar"), #PB_Any)
       ResizeImage(avatarDefault, GadgetWidth(gadget), GadgetHeight(gadget), #PB_Image_Smooth)
@@ -141,28 +144,40 @@ Module modInformation
     
     SetGadgetState(gadget, ImageID(avatarDefault))
     
-    ; check if author has an avatar
+      ; if author has an avatar
     If *author\tfnetId Or *author\steamId
-      ; get avatar from transportfever.net
-      *buffer = ReceiveHTTPMemory(URLEncoder("https://www.transportfevermods.com/repository/avatar/?tfnetId="+*author\tfnetId+"&steamId="+*author\steamId))
-      If *buffer
-        image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
-        FreeMemory(*buffer)
+      url$ = URLEncoder("https://www.transportfevermods.com/repository/avatar/?tfnetId="+*author\tfnetId+"&steamId="+*author\steamId)
+      
+      If FindMapElement(images(), url$)
+        ; reuse image
+        image = images(url$)
       Else
-        ProcedureReturn #False
+        ; get avatar from transportfever.net
+        *buffer = ReceiveHTTPMemory(url$)
+        If *buffer
+          image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
+          FreeMemory(*buffer)
+          images(url$) = image
+        Else
+          ProcedureReturn #False
+        EndIf
       EndIf
     EndIf
     
+      
     If image And IsImage(image)
+      scale = 1
       If ImageWidth(image) > GadgetWidth(gadget)
         scale = GadgetWidth(gadget) / ImageWidth(image)
       EndIf
       If ImageHeight(image)*scale > GadgetHeight(gadget)
         scale = GadgetHeight(gadget) / ImageHeight(image)
       EndIf
-      ResizeImage(image, ImageWidth(image)*scale, ImageHeight(image)*scale)
+      If scale <> 1
+        ResizeImage(image, ImageWidth(image)*scale, ImageHeight(image)*scale)
+      EndIf
       SetGadgetState(gadget, ImageID(image))
-      *author\image = image
+      *author\image = image ; save for freeImage() when closing window
     EndIf
     
   EndProcedure
