@@ -52,7 +52,10 @@ Module main
     ; Error and System Information
     WriteStringN(file, "Please provide the following information at")
     WriteStringN(file, main::WEBSITE$)
+    WriteStringN(file, "Just copy the whole file content in the text box, or attache the .txt file directly.")
     WriteStringN(file, "")
+    WriteStringN(file, "[code]")
+    
     WriteStringN(file, "################################################################################")
     WriteStringN(file, "ERROR @ "+date$)
     WriteStringN(file, VERSION_FULL$)
@@ -75,10 +78,13 @@ Module main
     WriteString(file, debugger::getLog())
     
     ; close file
+    WriteStringN(file, "[/code]")
     CloseFile(file)
+
     
     MessageRequester("ERROR", ErrorMessage(ErrorCode())+#CRLF$+#CRLF$+"created "+GetFilePart(file$), #PB_MessageRequester_Error)
-    misc::openLink(file$)
+    
+    misc::openLink(GetCurrentDirectory()+"/"+file$)
     End
   EndProcedure
   
