@@ -1174,17 +1174,21 @@ Module mods
     ; modRoot folder found. 
     ; try to get ID from folder name
     id$ = misc::getDirectoryName(modRoot$)
+    
+    If Not checkID(id$) And checkWorkshopID(id$)
+      ; backuped mods from workshop only have number, add _1
+      id$ = id$ + "_1"
+    EndIf
+    
     If Not checkID(id$)
-      debugger::add("mods::doInstall() - ERROR: checkID("+id$+") failed!")
+      debugger::add("mods::doInstall() - folder name not valid id ("+id$+")")
       
-      ; try to get ID from file name
+      ; try to get ID from archive file name
       id$ = GetFilePart(source$, #PB_FileSystem_NoExtension)
       If Not checkID(id$)
-        debugger::add("mods::doInstall() - ERROR: checkID("+id$+") failed!")
+        debugger::add("mods::doInstall() - archive name not valid id ("+id$+")")
+        ;TODO: backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
         
-        ;-TODO try to generate ID if not found?
-        ; required for older mods - but new mods should not require this
-        ;-TODO handle mods downloaded from workshop as well!
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
         ProcedureReturn #False
