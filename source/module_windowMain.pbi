@@ -994,7 +994,7 @@ Module windowMain
   EndProcedure
   
   Procedure backupFolder()
-    misc::openLink(settings::getString("backup", "folder"))
+    misc::openLink(mods::getBackupFolder())
   EndProcedure
   
   Procedure backupExpand()
