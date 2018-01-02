@@ -2,6 +2,7 @@
 
 DeclareModule debugger
   Declare SetLogFile(file$)
+  Declare.s GetLogFile()
   Declare DeleteLogFile()
   Declare add(str$)
   Declare.s getLog()
@@ -16,6 +17,10 @@ Module debugger
     LockMutex(mutexDebug)
     LogFile$ = file$
     UnlockMutex(mutexDebug)
+  EndProcedure
+  
+  Procedure.s GetLogFile()
+    ProcedureReturn LogFile$
   EndProcedure
   
   Procedure DeleteLogFile()

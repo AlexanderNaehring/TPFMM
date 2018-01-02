@@ -22,6 +22,7 @@ show_downloads    = Öffne Download-Ordner
 repository        = Repository
 repo_refresh      = Aktualisiere Repository
 repo_clear        = Repository Cache für Vorschaubilder leeren
+log               = Zeige Log Datei
 
 [main]
 mods            = Modifikationen
