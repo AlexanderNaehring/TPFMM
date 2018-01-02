@@ -66,12 +66,28 @@ Module archive
         parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" -o"+#DQUOTE$+directory$+#DQUOTE$
         
       CompilerCase #PB_OS_Linux
-        If LCase(GetExtensionPart(archive$)) = "rar"
-          program$ = "unrar"
-          parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+        ; select archiver based on installed packages
+        program = RunProgram("7z", "", GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Hide)
+        If program
+          ; 7z available, use 7z for all archive types
+          If ProgramRunning(program)
+            KillProgram(program)
+          EndIf
+          CloseProgram(program)
+          
+          program$ = "7z"
+          parameter$ = "x -y -o"+ReplaceString(directory$, " ", "\ ")+" "+#DQUOTE$+archive$+#DQUOTE$+""
         Else
-          program$ = "unzip"
-          parameter$ = #DQUOTE$+archive$+#DQUOTE$+" -d "+#DQUOTE$+directory$+#DQUOTE$
+          debugger::add("archive::extract() - 7z not found, use unzip and unrar")
+          debugger::add("archive::extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
+          ; 7z not available - use unrar or unzip
+          If LCase(GetExtensionPart(archive$)) = "rar"
+            program$ = "unrar"
+            parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#DQUOTE$
+          Else
+            program$ = "unzip"
+            parameter$ = #DQUOTE$+archive$+#DQUOTE$+" -d "+#DQUOTE$+directory$+#DQUOTE$
+          EndIf
         EndIf
         
     CompilerEndSelect
