@@ -28,6 +28,7 @@ DeclareModule windowMain
     #MenuItem_ShowDownloads
     #MenuItem_Homepage
     #MenuItem_License
+    #PB_Menu_Log
   EndEnumeration
   
   Enumeration #PB_Event_FirstCustomValue
@@ -366,6 +367,20 @@ Module windowMain
     MessageRequester("About", About$, #PB_MessageRequester_Info)
   EndProcedure
   
+  Procedure MenuItemLog()
+    ; show log file
+    Protected log$, file$, file
+    ; write log to tmp file as default Windows notepad will not open the active .log file while it is being used by TPFMM
+    log$ = debugger::getLog()
+    file$ = misc::path(GetTemporaryDirectory())+"tpfmm-log.txt"
+    file = CreateFile(#PB_Any, file$, #PB_File_SharedWrite)
+    If file
+      WriteString(file, log$)
+      CloseFile(file)
+      misc::openLink(file$)
+    EndIf
+  EndProcedure
+  
   Procedure MenuItemSettings() ; open settings window
     windowSettings::show()
   EndProcedure
@@ -393,7 +408,15 @@ Module windowMain
     If FileSize(main::gameDirectory$) <> -2
       ProcedureReturn #False
     EndIf
-    file$ = OpenFileRequester(locale::l("management","select_mod"), "", locale::l("management","files_archive")+"|*.zip;*.rar|"+locale::l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
+    Protected types$
+    types$ = "*.zip;*.rar;*.7z;*.gz;*.tar"
+    
+    file$ = OpenFileRequester(locale::l("management","select_mod"), settings::getString("", "last_file"), locale::l("management","files_archive")+"|"+types$+"|"+locale::l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
+    
+    If file$
+      settings::setString("","last_file", file$)
+    EndIf
+    
     While file$
       If FileSize(file$) > 0
         mods::install(file$)
@@ -1267,6 +1290,17 @@ Module windowMain
     
     window = DialogWindow(dialog)
     
+    CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+      Protected iconPath$, iconError, file
+      DataSection
+        icon:
+        IncludeBinary "images/TPFMM.png"
+        iconEnd:
+      EndDataSection
+      iconPath$ = GetTemporaryDirectory()+"/tpfmm-icon.png"
+      misc::extractBinary(iconPath$, ?icon, ?iconEnd - ?icon)
+      gtk_window_set_icon_from_file_(WindowID(window), iconPath$, iconError)
+    CompilerEndIf
     
     ; Set window events & timers
     AddWindowTimer(window, TimerMainGadgets, 100)
@@ -1382,6 +1416,7 @@ Module windowMain
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
+    MenuItem(#PB_Menu_Log, l("menu","log"))
     
     ; Menu Events
     BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
@@ -1394,6 +1429,7 @@ Module windowMain
     BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
+    BindMenuEvent(0, #PB_Menu_Log, @MenuItemLog())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
