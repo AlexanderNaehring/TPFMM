@@ -819,6 +819,7 @@ Module windowMain
         *file = *repo_mod\files()
         If repository::canDownloadFile(*file) ; search for the single downloadable file
           repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          SetActiveGadget(gadget("repoList"))
           ProcedureReturn #True
         EndIf
       Next
