@@ -308,12 +308,18 @@ Module luaParser
         Case "visible"
           *mod\aux\hidden = Bool(Not lua_toboolean(L, -2))
         Case "tfnetId"
-          *mod\aux\tfnetID = lua_tointeger(L, -2)
+          ; only store if <> zero (especially: do not overwrite info saved during install)
+          If lua_tointeger(L, -2) <> 0
+            *mod\aux\tfnetID = lua_tointeger(L, -2)
+          EndIf
         Case "steamId"
-          *mod\aux\workshopID = lua_tointeger(L, -2)
+          If lua_tointeger(L, -2) <> 0
+            *mod\aux\workshopID = lua_tointeger(L, -2)
+          EndIf
         Case "workshop"
-          *mod\aux\workshopID = lua_tointeger(L, -2)
-        
+          If lua_tointeger(L, -2) <> 0
+            *mod\aux\workshopID = lua_tointeger(L, -2)
+          EndIf
         Default
           
       EndSelect
