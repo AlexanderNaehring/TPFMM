@@ -76,7 +76,7 @@ Module archive
           CloseProgram(program)
           
           program$ = "7z"
-          parameter$ = "x -y -o"+ReplaceString(directory$, " ", "\ ")+" "+#DQUOTE$+archive$+#DQUOTE$+""
+          parameter$ = "x -y "+#DQUOTE$+"-o"+directory$+#DQUOTE$+" "+#DQUOTE$+archive$+#DQUOTE$
         Else
           debugger::add("archive::extract() - 7z not found, use unzip and unrar")
           debugger::add("archive::extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
@@ -108,7 +108,8 @@ Module archive
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    If exit = 0
+    debugger::add("archive::extract() - exit code "+exit)
+    If exit = 0 Or (exit = 1 And program$ = "7z")
       ProcedureReturn #True
     Else
       ProcedureReturn #False
