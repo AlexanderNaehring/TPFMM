@@ -60,6 +60,8 @@ Module locale
       misc::CreateDirectoryAll(path$)
       misc::extractBinary(path$ + "en.locale", ?DataLocaleEnglish, ?DataLocaleEnglishEnd - ?DataLocaleEnglish, #True)
       misc::extractBinary(path$ + "de.locale", ?DataLocaleGerman, ?DataLocaleGermanEnd - ?DataLocaleGerman, #True)
+      misc::extractBinary(path$ + "en.png", ?DataFlagEnglish, ?DataFlagEnglishEnd - ?DataFlagEnglish, #True)
+      misc::extractBinary(path$ + "de.png", ?DataFlagGerman, ?DataFlagGermanEnd - ?DataFlagGerman, #True)
       
       ; load fallback (EN)
       ClearMap(localeEN$())
@@ -92,7 +94,6 @@ Module locale
           ClosePreferences()
           If name$ <> ""
             debugger::Add("locale:: add localisation to list: {"+locale$+"} = {"+name$+"}")
-;             locale$(lang$) = name$
             AddGadgetItem(ComboBoxGadget, -1, "<"+locale$+">"+" "+name$, getFlag(locale$))
             If current_locale$ = locale$
               SetGadgetState(ComboBoxGadget, count)
@@ -198,30 +199,26 @@ Module locale
     
     OpenPreferences(path$ + locale$ + ".locale")
     flag$ = ReadPreferenceString("flag", "")
-    If flag$ = ""
-      debugger::Add("locale::getFlag() - no hex found in locale file")
-      If FileSize(path$ + locale$ + ".png")
-        flag$ = misc::FileToHexStr(path$ + locale$ + ".png")
-;         DeleteFile(path$ + locale$ + ".png")
-;         debugger::Add("locale::getFlag() - read flag from file: {flag="+flag$+"}")
-;         WritePreferenceString("flag", flag$)
-      EndIf
-    Else
-;       DeleteFile(path$ + locale$ + ".png")
-    EndIf
-    ClosePreferences()
-    
-    *image = misc::HexStrToMem(flag$)
-    If *image
+    If flag$
+      debugger::Add("locale::getFlag() - load flag from hex string")
+      *image = misc::HexStrToMem(flag$)
       im = CatchImage(#PB_Any, *image, MemorySize(*image))
       FreeMemory(*image)
     Else
-      debugger::Add("locale::getFlag() - Error: {*image="+Str(*image)+"}")
+      If FileSize(path$ + locale$ + ".png") > 0
+        debugger::Add("locale::getFlag() - load flag from file")
+        im = LoadImage(#PB_Any, path$ + locale$ + ".png")
+      Else
+        debugger::Add("locale::getFlag() - flag {"+path$ + locale$ + ".png"+"} not found")
+      EndIf
     EndIf
+    ClosePreferences()
     
-    If im
+    If im And IsImage(im)
       flag(locale$) = misc::ResizeCenterImage(im, 20, 20)
       ProcedureReturn ImageID(flag(locale$))
+    Else
+      debugger::add("locale::getFlag() - could not load image")
     EndIf
     ProcedureReturn 0
   EndProcedure
@@ -240,5 +237,13 @@ Module locale
     DataLocaleGerman:
     IncludeBinary "locale/de.locale"
     DataLocaleGermanEnd:
+    
+    DataFlagEnglish:
+    IncludeBinary "locale/en.png"
+    DataFlagEnglishEnd:
+    
+    DataFlagGerman:
+    IncludeBinary "locale/de.png"
+    DataFlagGermanEnd:
   EndDataSection
 EndModule
