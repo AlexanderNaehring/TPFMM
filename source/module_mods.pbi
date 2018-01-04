@@ -1277,10 +1277,11 @@ Module mods
           Select repo_mod\source$
             Case "tpfnet"
               *mod\aux\tfnetID = repo_mod\id
-              *mod\aux\installSource$ = "tpfnet"
+              *mod\aux\installSource$ = "tpfnet/"+repo_mod\id
+              ; store id with installSource for later reference (currently not used anyway)
             Case "workshop"
               *mod\aux\workshopID = repo_mod\id
-              *mod\aux\installSource$ = "workshop"
+              *mod\aux\installSource$ = "workshop/"+repo_mod\id
             Default
               
           EndSelect

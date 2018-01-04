@@ -28,7 +28,8 @@ DeclareModule windowMain
     #MenuItem_ShowDownloads
     #MenuItem_Homepage
     #MenuItem_License
-    #PB_Menu_Log
+    #MenuItem_Log
+    #MenuItem_Enter
   EndEnumeration
   
   Enumeration #PB_Event_FirstCustomValue
@@ -388,6 +389,13 @@ Module windowMain
   Procedure MenuItemExport()
     mods::exportList()
   EndProcedure
+  
+  Procedure MenuItemEnter()
+    If GetActiveGadget() = gadget("repoList")
+      repoDownload()
+    EndIf
+  EndProcedure
+  
   
   ;- GADGETS
   
@@ -819,6 +827,7 @@ Module windowMain
         *file = *repo_mod\files()
         If repository::canDownloadFile(*file) ; search for the single downloadable file
           repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          SetActiveGadget(gadget("repoList"))
           ProcedureReturn #True
         EndIf
       Next
@@ -1395,7 +1404,7 @@ Module windowMain
     CompilerEndIf
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
-    
+    AddKeyboardShortcut(window, #PB_Shortcut_Return, #MenuItem_Enter)
     
     ; Menu
     CreateMenu(0, WindowID(window))
@@ -1416,7 +1425,7 @@ Module windowMain
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
-    MenuItem(#PB_Menu_Log, l("menu","log"))
+    MenuItem(#MenuItem_Log, l("menu","log"))
     
     ; Menu Events
     BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
@@ -1429,7 +1438,8 @@ Module windowMain
     BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
     BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
-    BindMenuEvent(0, #PB_Menu_Log, @MenuItemLog())
+    BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
+    BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
