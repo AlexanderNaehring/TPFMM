@@ -258,6 +258,10 @@ Module windowSettings
     
   EndProcedure
   
+  Procedure showWindow()
+    HideWindow(window, #False, #PB_Window_WindowCentered)
+  EndProcedure
+  
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
@@ -369,6 +373,9 @@ Module windowSettings
     BindGadgetEvent(gadget("colorModLuaError"), @GadgetColor(), #PB_EventType_LeftClick)
     BindGadgetEvent(gadget("colorModHidden"), @GadgetColor(), #PB_EventType_LeftClick)
     
+    ; receive "unhide" event
+    BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
+    
     RefreshDialog(_dialog)
     
     ProcedureReturn #True
@@ -422,7 +429,8 @@ Module windowSettings
     
     ; show window
     RefreshDialog(_dialog)
-    HideWindow(window, #False, #PB_Window_WindowCentered)
+    ;HideWindow(window, #False) ; linux: cannot unhide from other process  (?)
+    PostEvent(#PB_Event_RestoreWindow, window, window)
     DisableWindow(_parentW, #True)
     SetActiveWindow(window)
   EndProcedure
