@@ -63,7 +63,7 @@ Module archive
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         program$ = "7z/7z.exe"
-        parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" -o"+#DQUOTE$+directory$+#DQUOTE$
+        parameter$ = "x "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+"-o"+directory$+#DQUOTE$
         
       CompilerCase #PB_OS_Linux
         ; select archiver based on installed packages
