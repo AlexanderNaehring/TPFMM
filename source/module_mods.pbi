@@ -981,8 +981,8 @@ Module mods
     CopyMap(mods(), saveMods())
     
     ForEach saveMods()
-      saveMods()\aux\tfnetMod = #Null
-      SaveMods()\aux\workshopMod = #Null
+      saveMods()\aux\link_tfnetMod = #Null
+      SaveMods()\aux\link_workshopMod = #Null
     Next
     
     
@@ -1071,23 +1071,30 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    
     ; search for mod in list of installed mods
     LockMutex(mutexMods)
-    If source$ = "tfnet" Or source$ = "tpfnet"
-      ForEach mods()
+    ForEach mods()
+      If StringField(mods()\aux\installSource$, 1, "/") = source$ And 
+         Val(StringField(mods()\aux\installSource$, 2, "/")) = id
+        installed = #True
+        Break
+      EndIf
+      
+      If source$ = "tfnet" Or source$ = "tpfnet"
         If mods()\aux\tfnetID = id
           installed = #True
           Break
         EndIf
-      Next
-    ElseIf source$ = "workshop"
-      ForEach mods()
+        
+      ElseIf source$ = "workshop"
         If mods()\aux\workshopID = id
           installed = #True
           Break
         EndIf
-      Next
-    EndIf
+      EndIf
+      
+    Next
     UnlockMutex(mutexMods)
     
     ProcedureReturn installed
@@ -1108,6 +1115,41 @@ Module mods
     UnlockMutex(mutexMods)
     
     ProcedureReturn installed
+  EndProcedure
+  
+  Procedure.s getDownloadLink(*mod.mod)
+    ; try to get a download link in form of source/id[/fileID]
+    
+    Protected source$
+    Protected id.q, fileID.q
+    
+    If *mod\aux\installSource$
+      source$ = StringField(*mod\aux\installSource$, 1, "/")
+      id      = Val(StringField(*mod\aux\installSource$, 2, "/"))
+      fileID  = Val(StringField(*mod\aux\installSource$, 3, "/"))
+    EndIf
+    
+    If source$ And fileID
+      ProcedureReturn source$+"/"+id+"/"+fileID
+    EndIf
+    
+    If source$ And id
+      ProcedureReturn source$+"/"+id
+    EndIf
+    
+    If (source$ = "tpfnet" Or source$ = "tfnet") And *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf source$ = "workshop" And *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    If *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    ProcedureReturn ""
   EndProcedure
   
   ; actions
