@@ -433,11 +433,7 @@ Module windowMain
   EndProcedure
   
   Procedure MenuItemPackOpen()
-    ;Protected file$
-    ;file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("","lastPackFile"), 
-    windowPack::show(window)
-    ;windowPack::packOpen()
-    
+    windowPack::show(window, #True)
   EndProcedure
   ;- GADGETS
   
@@ -552,6 +548,8 @@ Module windowMain
         modInformation()
       Case #PB_EventType_RightClick
         DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
+      Case #PB_EventType_DragStart
+        DragPrivate(main::#DRAG_MOD)
     EndSelect
   EndProcedure
   

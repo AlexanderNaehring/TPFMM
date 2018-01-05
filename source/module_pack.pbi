@@ -16,6 +16,7 @@ DeclareModule pack
   Declare free(*pack)
   Declare open(file$)
   Declare save(*pack, file$)
+  Declare isPack(*pack)
   
   Declare setName(*pack, name$)
   Declare.s getName(*pack)
@@ -30,14 +31,13 @@ XIncludeFile "module_debugger.pbi"
 
 Module pack
   
-  Structure packFile
+  Global NewMap packs()
+  Global mutex = CreateMutex()
+  
+  Structure pack
     name$
     author$
     List items.packItem()
-  EndStructure
-  
-  Structure pack
-    packFile.packFile ; content actually be written to the pack file
     mutex.i           ; for operations on this pack
   EndStructure
   
@@ -50,21 +50,41 @@ Module pack
     Protected *pack.pack
     
     *pack = AllocateStructure(pack)
-    *pack\packFile\name$   = name$
-    *pack\packFile\author$ = author$
+    *pack\name$   = name$
+    *pack\author$ = author$
     *pack\mutex   = CreateMutex()
+    
+    LockMutex(mutex)
+    AddMapElement(packs(), Str(*pack), #PB_Map_NoElementCheck)
+    UnlockMutex(mutex)
     
     ProcedureReturn *pack
   EndProcedure
   
+  Procedure isPack(*pack)
+    Protected valid.i
+    LockMutex(mutex)
+    valid = FindMapElement(packs(), Str(*pack))
+    UnlockMutex(mutex)
+    ProcedureReturn valid
+  EndProcedure
+  
   Procedure free(*pack.pack)
+    If Not isPack(*pack)
+      debugger::add("pack::free() - WARNING: try to free invalid pack")
+      ProcedureReturn #False
+    EndIf
+    
+    LockMutex(mutex)
+    DeleteMapElement(packs(), Str(*pack))
+    UnlockMutex(mutex)
     FreeMutex(*pack\mutex)
     FreeStructure(*pack)
   EndProcedure
   
   Procedure open(file$)
     Protected json
-    Protected *pack.pack
+    Protected *pack.pack, packMutex
     debugger::add("pack::open() "+file$)
     
     json = LoadJSON(#PB_Any, file$)
@@ -74,7 +94,9 @@ Module pack
     EndIf
     
     *pack = create()
-    ExtractJSONStructure(JSONValue(json), *pack\packFile, packFile)
+    packMutex = *pack\mutex
+    ExtractJSONStructure(JSONValue(json), *pack, pack)
+    *pack\mutex = packMutex
     FreeJSON(json)
     
     ProcedureReturn *pack
@@ -86,7 +108,7 @@ Module pack
     EndIf
     
     Protected json = CreateJSON(#PB_Any)
-    InsertJSONStructure(JSONValue(json), *pack\packFile, packFile)
+    InsertJSONStructure(JSONValue(json), *pack, pack)
     If Not SaveJSON(json, file$, #PB_JSON_PrettyPrint)
       debugger::add("pack::save() - error writing json file {"+file$+"}")
     EndIf
@@ -96,33 +118,33 @@ Module pack
   EndProcedure
   
   Procedure setName(*pack.pack, name$)
-    *pack\packFile\name$ = name$
+    *pack\name$ = name$
   EndProcedure
   
   Procedure.s getName(*pack.pack)
-    ProcedureReturn *pack\packFile\name$
+    ProcedureReturn *pack\name$
   EndProcedure
   
   Procedure setAuthor(*pack.pack, author$)
-    *pack\packFile\author$ = author$
+    *pack\author$ = author$
   EndProcedure
   
   Procedure.s getAuthor(*pack.pack)
-    ProcedureReturn *pack\packFile\author$
+    ProcedureReturn *pack\author$
   EndProcedure
   
-  Procedure getItems(*pack.pack, List *items.packItem())
-    ClearList(*items())
+  Procedure getItems(*pack.pack, List items.packItem())
+    ClearList(items())
     LockMutex(*pack\mutex)
-    CopyList(*pack\packFile\items(), *items())
+    CopyList(*pack\items(), items())
     LockMutex(*pack\mutex)
-    ProcedureReturn ListSize(*items())
+    ProcedureReturn ListSize(items())
   EndProcedure
   
   Procedure addItem(*pack.pack, *item.packItem)
     LockMutex(*pack\mutex)
-    AddElement(*pack\packFile\items())
-    CopyStructure(*item, *pack\packFile\items(), packItem)
+    AddElement(*pack\items())
+    CopyStructure(*item, *pack\items(), packItem)
     UnlockMutex(*pack\mutex)
     ProcedureReturn #True
   EndProcedure
