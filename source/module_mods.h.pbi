@@ -161,6 +161,7 @@
   Declare update(folderID$)
   
   ; export
+  Declare getMods(List *mods.mod())
   Declare exportList(all=#False)
   
   ; display callbacks

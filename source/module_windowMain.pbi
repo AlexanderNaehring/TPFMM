@@ -6,6 +6,7 @@ XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_modInformation.pbi"
 XIncludeFile "module_modSettings.pbi"
+XIncludeFile "module_pack.pbi"
 
 DeclareModule windowMain
   EnableExplicit
@@ -30,6 +31,7 @@ DeclareModule windowMain
     #MenuItem_License
     #MenuItem_Log
     #MenuItem_Enter
+    #MenuItem_SavePack
   EndEnumeration
   
   Enumeration #PB_Event_FirstCustomValue
@@ -396,6 +398,37 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure MenuItemSavePack()
+    ; test: save all mods to pack
+    Protected file$
+    file$ = SaveFileRequester("save pack", GetCurrentDirectory(), "Pack File|*."+pack::#EXTENSION, 0)
+    If file$
+      If FileSize(file$) > 0
+        If MessageRequester("overwrite", "overwrite?", #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
+          ProcedureReturn #False
+        EndIf
+      EndIf
+      
+      Protected *pack
+      Protected packItem.pack::packItem
+      Protected mod.mods::mod
+      Protected NewList *mods.mods::Mod()
+      
+      *pack = pack::create()
+      mods::getMods(*mods())
+      ForEach *mods()
+        packItem\name$      = *mods()\name$
+        packItem\folder$    = *mods()\tpf_id$
+        packItem\download$  = *mods()\aux\installSource$ ; TODO: get download link (source/ID/fileID) from mod module
+        packItem\required   = 1
+        pack::addItem(*pack, packItem)
+      Next
+      
+      pack::save(*pack, file$)
+      pack::free(*pack)
+    EndIf
+    
+  EndProcedure
   
   ;- GADGETS
   
@@ -1416,6 +1449,7 @@ Module windowMain
     MenuTitle(l("menu","mods"))
     MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
     MenuItem(#MenuItem_ExportList, l("menu","mod_export"))
+    MenuItem(#MenuItem_SavePack, "save pack")
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
     MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
@@ -1440,6 +1474,7 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
     BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
+    BindMenuEvent(0, #MenuItem_SavePack, @MenuItemSavePack())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     

@@ -2,54 +2,129 @@
 DeclareModule pack
   EnableExplicit
   
-  Declare create()
+  #EXTENSION = "tpfp"
+  
+  Structure packItem
+    name$
+    folder$ ; = mod_ID (must be unique)
+    download$
+    required.i
+  EndStructure
+  
+  ; functions
+  Declare create(name$="", author$="")
   Declare free(*pack)
   Declare open(file$)
   Declare save(*pack, file$)
   
-  Declare getMods(*pack)
-  Declare addMod(*pack, mod$)
-  
+  Declare setName(*pack, name$)
+  Declare.s getName(*pack)
+  Declare setAuthor(*pack, author$)
+  Declare.s getAuthor(*pack)
+  Declare addItem(*pack, *item.packItem)
+  Declare getItems(*pack, List items())
   
 EndDeclareModule
 
-
+XIncludeFile "module_debugger.pbi"
 
 Module pack
+  
+  Structure packFile
+    name$
+    author$
+    List items.packItem()
+  EndStructure
+  
+  Structure pack
+    packFile.packFile ; content actually be written to the pack file
+    mutex.i           ; for operations on this pack
+  EndStructure
   
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure create(file$)
-    ; create new (empty) *pack
+  Procedure create(name$ = "", author$ = "")
+    Protected *pack.pack
     
+    *pack = AllocateStructure(pack)
+    *pack\packFile\name$   = name$
+    *pack\packFile\author$ = author$
+    *pack\mutex   = CreateMutex()
+    
+    ProcedureReturn *pack
   EndProcedure
   
-  Procedure free(*pack)
-    ; free up memory of pack file
-    
+  Procedure free(*pack.pack)
+    FreeMutex(*pack\mutex)
+    FreeStructure(*pack)
   EndProcedure
   
   Procedure open(file$)
-    ; open a pack file (json), return *pack
+    Protected json
+    Protected *pack.pack
+    debugger::add("pack::open() "+file$)
     
+    json = LoadJSON(#PB_Any, file$)
+    If Not json
+      debugger::add("pack::open() - could not open json file")
+      ProcedureReturn #False
+    EndIf
+    
+    *pack = create()
+    ExtractJSONStructure(JSONValue(json), *pack\packFile, packFile)
+    FreeJSON(json)
+    
+    ProcedureReturn *pack
   EndProcedure
   
-  Procedure save(*pack, file$)
-    ; save list of mods/maps to a pack file
+  Procedure save(*pack.pack, file$)
+    If LCase(GetExtensionPart(file$)) <> #EXTENSION
+      file$ + "." + #EXTENSION
+    EndIf
     
+    Protected json = CreateJSON(#PB_Any)
+    InsertJSONStructure(JSONValue(json), *pack\packFile, packFile)
+    If Not SaveJSON(json, file$, #PB_JSON_PrettyPrint)
+      debugger::add("pack::save() - error writing json file {"+file$+"}")
+    EndIf
+    FreeJSON(json)
+    
+    ProcedureReturn #True
   EndProcedure
   
-  Procedure getMods(*pack)
-    ; get list of mods in pack
-    
+  Procedure setName(*pack.pack, name$)
+    *pack\packFile\name$ = name$
   EndProcedure
   
-  Procedure addMod(*pack, mod$)
-    ; add mod to specified *pack
-    
+  Procedure.s getName(*pack.pack)
+    ProcedureReturn *pack\packFile\name$
+  EndProcedure
+  
+  Procedure setAuthor(*pack.pack, author$)
+    *pack\packFile\author$ = author$
+  EndProcedure
+  
+  Procedure.s getAuthor(*pack.pack)
+    ProcedureReturn *pack\packFile\author$
+  EndProcedure
+  
+  Procedure getItems(*pack.pack, List *items.packItem())
+    ClearList(*items())
+    LockMutex(*pack\mutex)
+    CopyList(*pack\packFile\items(), *items())
+    LockMutex(*pack\mutex)
+    ProcedureReturn ListSize(*items())
+  EndProcedure
+  
+  Procedure addItem(*pack.pack, *item.packItem)
+    LockMutex(*pack\mutex)
+    AddElement(*pack\packFile\items())
+    CopyStructure(*item, *pack\packFile\items(), packItem)
+    UnlockMutex(*pack\mutex)
+    ProcedureReturn #True
   EndProcedure
   
   
