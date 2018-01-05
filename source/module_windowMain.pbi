@@ -22,6 +22,7 @@ DeclareModule windowMain
     #MenuItem_License
     #MenuItem_Log
     #MenuItem_Enter
+    #MenuItem_CtrlA
     #MenuItem_PackNew
     #MenuItem_PackOpen
   EndEnumeration
@@ -401,6 +402,15 @@ Module windowMain
   
   Procedure MenuItemPackNew()
     windowPack::show(window)
+  EndProcedure
+  
+  Procedure MenuItemSelectAll()
+    Protected i
+    If GetActiveGadget() = gadget("modList")
+      For i = 0 To CountGadgetItems(gadget("modList"))-1
+        SetGadgetItemState(gadget("modList"), i, #PB_ListIcon_Selected)
+      Next
+    EndIf
   EndProcedure
   
   Procedure MenuItemPackOpen()
@@ -1416,6 +1426,7 @@ Module windowMain
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
     AddKeyboardShortcut(window, #PB_Shortcut_Return, #MenuItem_Enter)
+    AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_A, #MenuItem_CtrlA)
     
     ; Menu
     CreateMenu(0, WindowID(window))
@@ -1454,6 +1465,7 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
     BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
+    BindMenuEvent(0, #MenuItem_CtrlA, @MenuItemSelectAll())
     BindMenuEvent(0, #MenuItem_PackNew, @MenuItemPackNew())
     BindMenuEvent(0, #MenuItem_PackOpen, @MenuItemPackOpen())
     
