@@ -142,11 +142,20 @@ Module pack
   EndProcedure
   
   Procedure addItem(*pack.pack, *item.packItem)
+    Protected add = #True
     LockMutex(*pack\mutex)
-    AddElement(*pack\items())
-    CopyStructure(*item, *pack\items(), packItem)
+    ForEach *pack\items()
+      If LCase(*pack\items()\folder$) = LCase(*item\folder$)
+        add = #False
+        Break
+      EndIf
+    Next
+    If add
+      AddElement(*pack\items())
+      CopyStructure(*item, *pack\items(), packItem)
+    EndIf
     UnlockMutex(*pack\mutex)
-    ProcedureReturn #True
+    ProcedureReturn add
   EndProcedure
   
   

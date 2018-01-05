@@ -69,8 +69,12 @@ Module windowPack
     
     *pack = pack::open(file$)
     
-    SetGadgetText(gadget("name"), pack::getName(*pack))
-    SetGadgetText(gadget("author"), pack::getAuthor(*pack))
+    If pack::isPack(*pack)
+      SetGadgetText(gadget("name"), pack::getName(*pack))
+      SetGadgetText(gadget("author"), pack::getAuthor(*pack))
+      
+      displayPackItems()
+    EndIf
     
     ProcedureReturn *pack
   EndProcedure
@@ -103,9 +107,9 @@ Module windowPack
     packItem\download$ = *mod\aux\installSource$
     packItem\required = #True
     
-    pack::addItem(*pack, packItem)
-    
-    displayNewPackItem(packItem)
+    If pack::addItem(*pack, packItem)
+      displayNewPackItem(packItem)
+    EndIf
   EndProcedure
   
   
@@ -205,8 +209,9 @@ Module windowPack
     ; handle packages
     ; open a pack file if requested
     If open
-      If packOpen()
-        displayPackItems()
+      If Not packOpen()
+        ; close window if opening is canceled or fails
+        close()
       EndIf
     EndIf
     
