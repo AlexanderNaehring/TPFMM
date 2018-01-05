@@ -99,7 +99,7 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="2216"/>
+      <compilecount enable="1" value="2245"/>
       <buildcount enable="1" value="38"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">

@@ -20,6 +20,7 @@ Module windowPack
     DialogGadget(dialog, name)
   EndMacro
   
+  Declare close()
   
   ; actions
   
@@ -61,14 +62,22 @@ Module windowPack
     
     settings::setString("","lastPackFile",file$)
     
+    If pack::isPack(*pack)
+      pack::free(*pack)
+    EndIf
+    ; TODO : revise handling of open packs etc...
+    
     *pack = pack::open(file$)
+    
+    SetGadgetText(gadget("name"), pack::getName(*pack))
+    SetGadgetText(gadget("author"), pack::getAuthor(*pack))
     
     ProcedureReturn *pack
   EndProcedure
   
   Procedure packSave()
     Protected file$
-    file$ = SaveFileRequester(locale::l("pack","save"), GetCurrentDirectory(), "Pack File|*."+pack::#EXTENSION, 0)
+    file$ = SaveFileRequester(locale::l("pack","save"), settings::getString("","lastPackFile"), "Pack File|*."+pack::#EXTENSION, 0)
     If file$
       If FileSize(file$) > 0
         If MessageRequester(locale::l("pack","overwrite"), locale::l("pack","overwrite_text"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
@@ -76,7 +85,10 @@ Module windowPack
         EndIf
       EndIf
       
-      pack::save(*pack, file$)
+      settings::setString("","lastPackFile",file$)
+      If pack::save(*pack, file$)
+        close()
+      EndIf
     EndIf
   EndProcedure
   
@@ -120,6 +132,14 @@ Module windowPack
     EndIf
   EndProcedure
   
+  Procedure changeName()
+    pack::setName(*pack, GetGadgetText(gadget("name")))
+  EndProcedure
+  
+  Procedure changeAuthor()
+    pack::setAuthor(*pack, GetGadgetText(gadget("author")))
+  EndProcedure
+  
   Procedure gadgetItems()
     
   EndProcedure
@@ -135,19 +155,6 @@ Module windowPack
     EndIf
     
     parent = parentWindow
-    
-    ; open a pack file if requested
-    If open
-      If Not packOpen()
-        ; if user aborted open dialog -> exit
-        ProcedureReturn #False
-      EndIf
-    EndIf
-    
-    ; if no pack open, create new pack
-    If Not pack::isPack(*pack)
-      *pack = pack::create()
-    EndIf
     
     
     UseModule locale ; import namespace "locale" for shorthand "l()" access
@@ -179,6 +186,8 @@ Module windowPack
     SetGadgetText(gadget("install"), l("pack","install"))
     
     BindGadgetEvent(gadget("save"), @packSave())
+    BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("author"), @changeAuthor(), #PB_EventType_Change)
     
     ; enable mods to be dropped in the pack item list
     EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, main::#DRAG_MOD)
@@ -187,10 +196,25 @@ Module windowPack
     ; close event
     BindEvent(#PB_Event_CloseWindow, @close(), window)
     
+    
     ; finish window
-    displayPackItems()
     RefreshDialog(dialog)
     HideWindow(window, #False, #PB_Window_WindowCentered)
+    
+    
+    ; handle packages
+    ; open a pack file if requested
+    If open
+      If packOpen()
+        displayPackItems()
+      EndIf
+    EndIf
+    
+    ; if no pack open, create new pack
+    If Not pack::isPack(*pack)
+      *pack = pack::create()
+    EndIf
+    
     
   EndProcedure
   
