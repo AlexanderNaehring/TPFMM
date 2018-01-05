@@ -209,8 +209,12 @@ filter_steam    = Show Steam Workshop only
 filter_staging  = Show StagingArea only
 
 [pack]
-title       = Mod Packages
-open        = Open pack file
+title       = Mod Package
+open        = Open pack
+save        = Save pack
+install     = Install all missing Mods
+name        = Pack name:
+author      = Created by:
 
 [tags]
 all         = All

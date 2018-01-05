@@ -211,8 +211,13 @@ filter_steam    = Zeige nur Steam Workshop
 filter_staging  = Zeige nur StagingArea
 
 [pack]
-title       = Mod Pakete
-open        = Öffne Paketdatei
+title       = Mod Paket
+open        = Paket öffnen
+save        = Paket speichern
+install     = Alle fehlenden Mods installieren
+name        = Paketname:
+author      = Ersteller:
+
 
 [tags]
 mod         = Modifikation

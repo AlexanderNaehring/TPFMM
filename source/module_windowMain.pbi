@@ -1,14 +1,4 @@
 
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_mods.h.pbi"
-XIncludeFile "module_repository.h.pbi"
-XIncludeFile "module_modInformation.pbi"
-XIncludeFile "module_modSettings.pbi"
-XIncludeFile "module_pack.pbi"
-XIncludeFile "module_windowPack.pbi"
-
 DeclareModule windowMain
   EnableExplicit
   
@@ -50,6 +40,7 @@ DeclareModule windowMain
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
+  Declare getSelectedMods(List *mods())
   
   Declare progressMod(percent, text$=Chr(1))
   Declare progressRepo(percent, text$=Chr(1))
@@ -58,7 +49,15 @@ DeclareModule windowMain
   
 EndDeclareModule
 
-
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_windowSettings.pbi"
+XIncludeFile "module_ListIcon.pbi"
+XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_repository.h.pbi"
+XIncludeFile "module_modInformation.pbi"
+XIncludeFile "module_modSettings.pbi"
+XIncludeFile "module_pack.pbi"
+XIncludeFile "module_windowPack.pbi"
 
 Module windowMain
 
@@ -401,35 +400,7 @@ Module windowMain
   EndProcedure
   
   Procedure MenuItemPackNew()
-    ; test: save all mods to pack
-    Protected file$
-    file$ = SaveFileRequester("save pack", GetCurrentDirectory(), "Pack File|*."+pack::#EXTENSION, 0)
-    If file$
-      If FileSize(file$) > 0
-        If MessageRequester("overwrite", "overwrite?", #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
-          ProcedureReturn #False
-        EndIf
-      EndIf
-      
-      Protected *pack
-      Protected packItem.pack::packItem
-      Protected mod.mods::mod
-      Protected NewList *mods.mods::Mod()
-      
-      *pack = pack::create()
-      mods::getMods(*mods())
-      ForEach *mods()
-        packItem\name$      = *mods()\name$
-        packItem\folder$    = *mods()\tpf_id$
-        packItem\download$  = *mods()\aux\installSource$ ; TODO: get download link (source/ID/fileID) from mod module
-        packItem\required   = 1
-        pack::addItem(*pack, packItem)
-      Next
-      
-      pack::save(*pack, file$)
-      pack::free(*pack)
-    EndIf
-    
+    windowPack::show(window)
   EndProcedure
   
   Procedure MenuItemPackOpen()
@@ -1645,5 +1616,19 @@ Module windowMain
     CreateThread(@repoFindModAndDownloadThread(), *buffer)
   EndProcedure
   
+  Procedure getSelectedMods(List *mods())
+    Protected i, k
+    ClearList(*mods())
+    
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
+        AddElement(*mods())
+        *mods() = GetGadgetItemData(gadget("modList"), i)
+        k + 1
+      EndIf
+    Next
+    
+    ProcedureReturn k
+  EndProcedure
   
 EndModule

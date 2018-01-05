@@ -12,7 +12,7 @@
           <string name='author' text='' />
         </hbox>
       </hbox>
-      <listicon name='items' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+      <listview name='items' flags='#PB_ListView_MultiSelect' />
       <hbox expand='equal'>
         <button name='save' text='Save Pack' />
         <button name='install' text='Install Missing Mods' />
