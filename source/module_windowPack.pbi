@@ -16,6 +16,11 @@ Module windowPack
   Global *pack
   Global NewList items.pack::packItem()
   
+  Enumeration
+    #MenuItem_CtrlA
+    #MenuItem_Del
+  EndEnumeration
+  
   Macro gadget(name)
     DialogGadget(dialog, name)
   EndMacro
@@ -28,7 +33,7 @@ Module windowPack
     SelectElement(items(), index)
     
     AddGadgetItem(gadget("items"), index, items()\name$)
-    SetGadgetItemData(gadget("items"), index, items())
+    SetGadgetItemData(gadget("items"), index, @items())
   EndProcedure
   
   Procedure displayNewPackItem(*packItem.pack::packItem)
@@ -96,16 +101,14 @@ Module windowPack
     EndIf
   EndProcedure
   
-  
   Procedure addModToPack(*pack, *mod.mods::mod)
     debugger::add("windowPack::addModToPack()")
     
     Protected packItem.pack::packItem
     
     packItem\name$ = *mod\name$
-    packItem\folder$ = *mod\tpf_id$
+    packItem\id$ = *mod\tpf_id$
     packItem\download$ = *mod\aux\installSource$
-    packItem\required = #True
     
     If pack::addItem(*pack, packItem)
       displayNewPackItem(packItem)
@@ -146,6 +149,31 @@ Module windowPack
   
   Procedure gadgetItems()
     
+  EndProcedure
+  
+  Procedure selectAll()
+    Protected i
+    For i = 0 To CountGadgetItems(gadget("items"))-1
+      SetGadgetItemState(gadget("items"), i, 1)
+    Next
+  EndProcedure
+  
+  Procedure remove()
+    Protected i, id$, *packItem.pack::packItem
+    For i = CountGadgetItems(gadget("items"))-1 To 0 Step -1
+      If GetGadgetItemState(gadget("items"), i)
+        SelectElement(items(), i)
+        If items() <> GetGadgetItemData(gadget("items"), i)
+          debugger::add("windowPack::remove() - address missmatch")
+        EndIf
+        ChangeCurrentElement(items(), GetGadgetItemData(gadget("items"), i))
+        *packItem = items()
+        id$ = *packItem\id$
+        pack::removeItem(*pack, id$)
+        DeleteElement(items())
+        RemoveGadgetItem(gadget("items"), i)
+      EndIf
+    Next
   EndProcedure
   
   ; public
@@ -192,6 +220,14 @@ Module windowPack
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
     BindGadgetEvent(gadget("author"), @changeAuthor(), #PB_EventType_Change)
+    
+    Protected menu
+    menu = CreateMenu(#PB_Any, WindowID(window))
+    BindMenuEvent(menu, #MenuItem_CtrlA, @selectAll())
+    BindMenuEvent(menu, #MenuItem_Del, @remove())
+    
+    AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_A, #MenuItem_CtrlA)
+    AddKeyboardShortcut(window, #PB_Shortcut_Delete, #MenuItem_Del)
     
     ; enable mods to be dropped in the pack item list
     EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, main::#DRAG_MOD)

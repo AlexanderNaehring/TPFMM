@@ -5,10 +5,9 @@ DeclareModule pack
   #EXTENSION = "tpfp"
   
   Structure packItem
-    name$
-    folder$ ; = mod_ID (must be unique)
-    download$
-    required.i
+    id$         ; folder name
+    name$       ; display name
+    download$   ; download: source/ID/fileID
   EndStructure
   
   ; functions
@@ -24,6 +23,7 @@ DeclareModule pack
   Declare.s getAuthor(*pack)
   Declare addItem(*pack, *item.packItem)
   Declare getItems(*pack, List items())
+  Declare removeItem(*pack, id$)
   
 EndDeclareModule
 
@@ -145,12 +145,13 @@ Module pack
     Protected add = #True
     LockMutex(*pack\mutex)
     ForEach *pack\items()
-      If LCase(*pack\items()\folder$) = LCase(*item\folder$)
+      If LCase(*pack\items()\id$) = LCase(*item\id$)
         add = #False
         Break
       EndIf
     Next
     If add
+      LastElement(*pack\items())
       AddElement(*pack\items())
       CopyStructure(*item, *pack\items(), packItem)
     EndIf
@@ -158,5 +159,15 @@ Module pack
     ProcedureReturn add
   EndProcedure
   
+  Procedure removeItem(*pack.pack, id$)
+    LockMutex(*pack\mutex)
+    ForEach *pack\items()
+      If *pack\items()\id$
+        DeleteElement(*pack\items())
+        Break
+      EndIf
+    Next
+    UnlockMutex(*pack\mutex)
+  EndProcedure
   
 EndModule
