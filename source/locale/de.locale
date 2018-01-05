@@ -22,6 +22,9 @@ repository        = Repository
 repo_refresh      = Aktualisiere Repository
 repo_clear        = Repository Cache für Vorschaubilder leeren
 log               = Zeige Log Datei
+pack              = Mod Pakete
+pack_new          = Erstelle neues Mod Paket
+pack_open         = Öffne ein Mod Paket
 
 [main]
 mods            = Modifikationen
@@ -207,6 +210,9 @@ filter_manual   = Zeige nur "mods" Ordner
 filter_steam    = Zeige nur Steam Workshop
 filter_staging  = Zeige nur StagingArea
 
+[pack]
+title       = Mod Pakete
+open        = Öffne Paketdatei
 
 [tags]
 mod         = Modifikation

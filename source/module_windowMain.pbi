@@ -7,6 +7,7 @@ XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_modInformation.pbi"
 XIncludeFile "module_modSettings.pbi"
 XIncludeFile "module_pack.pbi"
+XIncludeFile "module_windowPack.pbi"
 
 DeclareModule windowMain
   EnableExplicit
@@ -31,7 +32,8 @@ DeclareModule windowMain
     #MenuItem_License
     #MenuItem_Log
     #MenuItem_Enter
-    #MenuItem_SavePack
+    #MenuItem_PackNew
+    #MenuItem_PackOpen
   EndEnumeration
   
   Enumeration #PB_Event_FirstCustomValue
@@ -398,7 +400,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure MenuItemSavePack()
+  Procedure MenuItemPackNew()
     ; test: save all mods to pack
     Protected file$
     file$ = SaveFileRequester("save pack", GetCurrentDirectory(), "Pack File|*."+pack::#EXTENSION, 0)
@@ -430,6 +432,13 @@ Module windowMain
     
   EndProcedure
   
+  Procedure MenuItemPackOpen()
+    ;Protected file$
+    ;file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("","lastPackFile"), 
+    windowPack::show(window)
+    ;windowPack::packOpen()
+    
+  EndProcedure
   ;- GADGETS
   
   Declare backupRefreshList()
@@ -1449,10 +1458,12 @@ Module windowMain
     MenuTitle(l("menu","mods"))
     MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
     MenuItem(#MenuItem_ExportList, l("menu","mod_export"))
-    MenuItem(#MenuItem_SavePack, "save pack")
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
     MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
+    MenuTitle(l("menu","pack"))
+    MenuItem(#MenuItem_PackNew, l("menu","pack_new"))
+    MenuItem(#MenuItem_PackOpen, l("menu","pack_open"))
     MenuTitle(l("menu","repository"))
     MenuItem(#MenuItem_RepositoryRefresh, l("menu","repo_refresh"))
     MenuItem(#MenuItem_RepositoryClearCache, l("menu","repo_clear"))
@@ -1474,7 +1485,8 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
     BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
-    BindMenuEvent(0, #MenuItem_SavePack, @MenuItemSavePack())
+    BindMenuEvent(0, #MenuItem_PackNew, @MenuItemPackNew())
+    BindMenuEvent(0, #MenuItem_PackOpen, @MenuItemPackOpen())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
