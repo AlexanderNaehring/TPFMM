@@ -981,8 +981,8 @@ Module mods
     CopyMap(mods(), saveMods())
     
     ForEach saveMods()
-      saveMods()\aux\tfnetMod = #Null
-      SaveMods()\aux\workshopMod = #Null
+      saveMods()\aux\link_tfnetMod = #Null
+      SaveMods()\aux\link_workshopMod = #Null
     Next
     
     
@@ -1070,6 +1070,8 @@ Module mods
        source$ <> "workshop"
       ProcedureReturn #False
     EndIf
+    
+    ; TODO adjust to also search by "installSource$" string
     
     ; search for mod in list of installed mods
     LockMutex(mutexMods)

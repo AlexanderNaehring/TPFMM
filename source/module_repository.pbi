@@ -407,7 +407,7 @@ Module repository
     
     
     If *file\filename$ = ""
-      *file\filename$ = *mod\source$+"-"+*mod\id+".zip"
+      *file\filename$ = Str(*mod\id)+".zip"
     EndIf
     
     target$ = misc::Path(main::gameDirectory$ + "/TPFMM/download/")
@@ -1270,7 +1270,7 @@ Module repository
     
     LockMutex(mutexRepoMods)
     
-    *mod\aux\tfnetMod = #Null
+    *mod\aux\link_tfnetMod = #Null
     If *mod\aux\tfnetID
       ForEach repo_mods()
         If repo_mods()\repo_info\source$ <> "tpfnet"
@@ -1278,7 +1278,7 @@ Module repository
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\tfnetID
-            *mod\aux\tfnetMod = repo_mods()\mods()
+            *mod\aux\link_tfnetMod = repo_mods()\mods()
             found = #True
             Break 2
           EndIf
@@ -1286,7 +1286,7 @@ Module repository
       Next
     EndIf
     
-    *mod\aux\workshopMod = #Null
+    *mod\aux\link_workshopMod = #Null
     If *mod\aux\workshopID
       ForEach repo_mods()
         If repo_mods()\repo_info\source$ <> "workshop"
@@ -1294,7 +1294,7 @@ Module repository
         EndIf
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\id = *mod\aux\workshopID
-            *mod\aux\workshopMod = repo_mods()\mods()
+            *mod\aux\link_workshopMod = repo_mods()\mods()
             found = #True
             Break 2
           EndIf
@@ -1338,35 +1338,37 @@ Module repository
     EndIf
     
     If *mod
-      If *mod\aux\tfnetMod Or *mod\aux\workshopMod
+      If *mod\aux\link_tfnetMod Or *mod\aux\link_workshopMod
         ; select source based on currently installed version
         ; if folder name = number_1, it is most likely the workshop version
         ; if folder name = some_text_1, it is most likely the tfnet version
         ; if installed using TPFMM online repository, TPFMM saves the installation source as "installSource"
         
-        If *mod\aux\tfnetMod And *mod\aux\workshopMod
+        If *mod\aux\link_tfnetMod And *mod\aux\link_workshopMod
           ; both sources defined
           ; check if installSource was defined during install
-          If *mod\aux\installSource$ = "tpfnet" And *mod\aux\tfnetMod
-            *repoMod = *mod\aux\tfnetMod
-          ElseIf *mod\aux\installSource$ = "workshop" And *mod\aux\workshopMod
-            *repoMod = *mod\aux\workshopMod
+          
+          ; TODO CHANGE THIS!
+          If *mod\aux\installSource$ = "tpfnet" And *mod\aux\link_tfnetMod
+            *repoMod = *mod\aux\link_tfnetMod
+          ElseIf *mod\aux\installSource$ = "workshop" And *mod\aux\link_workshopMod
+            *repoMod = *mod\aux\link_workshopMod
           Else
             ; no installSource or no match-> try to match source using the folder name
             If MatchRegularExpression(regexp, *mod\tpf_id$)
               ; use workshop source
-              *repoMod = *mod\aux\workshopMod
+              *repoMod = *mod\aux\link_workshopMod
             Else
               ; use tpfnet mod
-              *repoMod = *mod\aux\tfnetMod
+              *repoMod = *mod\aux\link_tfnetMod
             EndIf
           EndIf
         Else
           ; only a single source defined
-          If *mod\aux\tfnetMod
-            *repoMod = *mod\aux\tfnetMod
-          ElseIf *mod\aux\workshopMod
-            *repoMod = *mod\aux\workshopMod
+          If *mod\aux\link_tfnetMod
+            *repoMod = *mod\aux\link_tfnetMod
+          ElseIf *mod\aux\link_workshopMod
+            *repoMod = *mod\aux\link_workshopMod
           EndIf
         EndIf
       EndIf
