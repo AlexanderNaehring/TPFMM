@@ -117,7 +117,9 @@ Module windowPack
     name$ = pack::getName(*pack)
     author$ = pack::getAuthor(*pack)
     
-    file$ = SaveFileRequester(locale::l("pack","save"), settings::getString("pack","lastFile"), locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
+    file$ = GetPathPart(settings::getString("pack","lastFile")) + name$ + "." + pack::#EXTENSION
+    
+    file$ = SaveFileRequester(locale::l("pack","save"), file$, locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
     If file$
       If FileSize(file$) > 0
         If MessageRequester(locale::l("management","overwrite_file"), locale::l("management","overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
