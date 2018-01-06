@@ -189,9 +189,11 @@ Module windowPack
   
   Procedure selectAll()
     Protected i
-    For i = 0 To CountGadgetItems(gadget("items"))-1
-      SetGadgetItemState(gadget("items"), i, 1)
-    Next
+    If GetActiveGadget() = gadget("items")
+      For i = 0 To CountGadgetItems(gadget("items"))-1
+        SetGadgetItemState(gadget("items"), i, 1)
+      Next
+    EndIf
   EndProcedure
   
   Procedure remove()
