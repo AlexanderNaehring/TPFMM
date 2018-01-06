@@ -344,11 +344,13 @@ Module repository
       ProcedureReturn #False
     EndIf
     
+    Protected installSource$
     Protected source$, id.q, fileID.q
     source$ = *download\source$
     id      = *download\id
     fileID  = *download\fileID
     FreeStructure(*download)
+    installSource$ = source$+"/"+id+"/"+FileID
     
     ;TODO: allow direct download of HTTP(S) link
     ; if source == a loaded source
@@ -381,11 +383,11 @@ Module repository
     
     
     ; wait for other threads to finish download...
-    Static running
-    While running
-      Delay(100)
-    Wend
-    running = #True
+    Static runningMutex
+    If Not runningMutex 
+      runningMutex = CreateMutex()
+    EndIf
+    LockMutex(runningMutex)
     
     Protected NewMap strings$()
     strings$("modname") = *mod\name$
@@ -425,12 +427,12 @@ Module repository
         If HTTPstatus = 404
           debugger::add("repository::downloadModThread() - server response: 404 File Not Found")
           windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
-          running = #False
+          UnlockMutex(runningMutex)
           ProcedureReturn #False
         ElseIf HTTPstatus = 429
           debugger::add("repository::downloadModThread() - server response: 429 Too Many Requests")
           windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_429", strings$()))
-          running = #False
+          UnlockMutex(runningMutex)
           ProcedureReturn #False
         EndIf
       EndIf
@@ -480,7 +482,7 @@ Module repository
       debugger::add("repository::downloadModThread() - download failed")
       windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
       DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
-      running = #False
+      UnlockMutex(runningMutex)
       ProcedureReturn #False
     EndIf
     
@@ -489,13 +491,14 @@ Module repository
     ; add some meta data...
     json = CreateJSON(#PB_Any)
     If json
+      *mod\installSource$ = installSource$
       InsertJSONStructure(JSONValue(json), *mod, mod)
       SaveJSON(json, file$+".meta", #PB_JSON_PrettyPrint)
       FreeJSON(json)
     EndIf
     
     mods::install(file$)
-    running = #False
+    UnlockMutex(runningMutex)
   EndProcedure
   
   Procedure checkInstalled()
