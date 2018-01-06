@@ -73,6 +73,7 @@ Module windowMain
     #MenuItem_ModFolder
     #MenuItem_RepositoryRefresh
     #MenuItem_RepositoryClearCache
+    #MenuItem_AddToPack
   EndEnumeration
   
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
@@ -227,6 +228,11 @@ Module windowMain
       
     EndIf
     
+    If numSelected = 0
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
+    Else
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
+    EndIf
     
   EndProcedure
   
@@ -928,6 +934,11 @@ Module windowMain
     ProcedureReturn #True
   EndProcedure
   
+  Procedure modAddToPack()
+    windowPack::show(window)
+    windowPack::addSelectedMods()
+  EndProcedure
+  
   ;- backup tab
   
   Procedure backupTree()
@@ -1505,6 +1516,8 @@ Module windowMain
     MenuItem(#MenuItem_Backup, l("main","backup"), ImageID(images::Images("icon_backup")))
     MenuItem(#MenuItem_Uninstall, l("main","uninstall"), ImageID(images::Images("no")))
     MenuBar()
+    MenuItem(#MenuItem_AddToPack, l("main","add_to_pack"), ImageID(images::Images("share")))
+    MenuBar()
     MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
     MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
@@ -1516,6 +1529,7 @@ Module windowMain
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
     BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
+    BindMenuEvent(MenuLibrary, #MenuItem_AddToPack, @modAddToPack())
     
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)

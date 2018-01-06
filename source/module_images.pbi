@@ -19,6 +19,7 @@ Module images
     Images("mod")         = CatchImage(#PB_Any, ?DataImageMod,      ?DataImageModEnd - ?DataImageMod)
     Images("icon_mod_official")    = CatchImage(#PB_Any, ?DataImageTpf,      ?DataImageTpfEnd - ?DataImageTpf)
     Images("avatar")      = CatchImage(#PB_Any, ?DataImageAvatar,   ?DataImageAvatarEnd - ?DataImageAvatar)
+    Images("share")       = CatchImage(#PB_Any, ?DataImageShare,    ?DataImageShareEnd - ?DataImageShare)
     
     ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
     
@@ -30,6 +31,7 @@ Module images
     CompilerIf #PB_Compiler_OS = #PB_OS_Linux Or #True
       ResizeImage(Images("yes"), 16, 16, #PB_Image_Raw)
       ResizeImage(Images("no"), 16, 16, #PB_Image_Raw)
+      ResizeImage(Images("share"), 16, 16, #PB_Image_Raw)
       ResizeImage(Images("icon_backup"), 16, 16, #PB_Image_Smooth)
       ResizeImage(Images("icon_workshop"), 16, 16, #PB_Image_Smooth)
       ResizeImage(Images("icon_tpfnet"), 16, 16, #PB_Image_Smooth)
@@ -79,6 +81,10 @@ Module images
     DataImageAvatar:
     IncludeBinary "images/avatar.png"
     DataImageAvatarEnd:
+    
+    DataImageShare:
+    IncludeBinary "images/share.png"
+    DataImageShareEnd:
     
   EndDataSection
 EndModule

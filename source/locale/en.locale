@@ -74,6 +74,7 @@ backup_collapse = collapse all
 backup_check    = check all
 backup_clear    = uncheck all
 backup_filter   = Search backups
+add_to_pack     = Add to mod pack
 
 [info]
 title           = Mod Information

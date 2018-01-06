@@ -76,6 +76,7 @@ backup_collapse = Alle einklappen
 backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
 backup_filter   = Durchsuche Sicherungen
+add_to_pack     = Zu Mod-Paket hinzufügen
 
 [info]
 title           = Mod Informationen

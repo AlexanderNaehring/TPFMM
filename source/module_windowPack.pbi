@@ -2,6 +2,7 @@
   EnableExplicit
   
   Declare show(parentWindow, open=#False)
+  Declare addSelectedMods()
   
 EndDeclareModule
 
@@ -147,6 +148,13 @@ Module windowPack
     EndIf
   EndProcedure
   
+  Procedure addSelectedMods()
+    Protected NewList *mods()
+    windowMain::getSelectedMods(*mods())
+    ForEach *mods()
+      addModToPack(*pack, *mods())
+    Next
+  EndProcedure
   
   ; events
   
@@ -161,13 +169,7 @@ Module windowPack
   
   Procedure itemsDrop()
     If EventDropPrivate() = main::#DRAG_MOD
-      debugger::add("windowPack::gadgetItems() - mods dropped on pack item list")
-      
-      Protected NewList *mods()
-      windowMain::getSelectedMods(*mods())
-      ForEach *mods()
-        addModToPack(*pack, *mods())
-      Next
+      addSelectedMods()
     EndIf
   EndProcedure
   
@@ -292,6 +294,7 @@ Module windowPack
     
     SetActiveGadget(gadget("name"))
     
+    ProcedureReturn #True
   EndProcedure
   
   
