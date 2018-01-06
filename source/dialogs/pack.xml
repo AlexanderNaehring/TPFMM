@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<dialogs>
+  <window id='#PB_Any' name='pack' text='pack window' minwidth='400' minheight='400' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_SizeGadget | #PB_Window_WindowCentered'>
+    <vbox expand='item:2'>
+      <hbox expand='equal'>
+        <hbox expand='item:2'>
+          <text name='nameText' text='Pack Name:' />
+          <string name='name' text='' />
+        </hbox>
+        <hbox expand='item:2'>
+          <text name='authorText' text='Author:' />
+          <string name='author' text='' />
+        </hbox>
+      </hbox>
+      <listview name='items' flags='#PB_ListView_MultiSelect' />
+      <hbox expand='equal'>
+        <button name='save' text='Save Pack' />
+        <button name='download' text='Download' />
+      </hbox>
+    </vbox>
+  </window>
+</dialogs>

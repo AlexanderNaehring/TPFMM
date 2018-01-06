@@ -20,6 +20,9 @@ repository        = Repository
 repo_refresh      = Refresh Repository
 repo_clear        = Clear repository preview image cache
 log               = Show debug log
+pack              = Mod Packs
+pack_new          = Create new mod pack
+pack_open         = Open a mod pack
 
 [main]
 mods            = Modifications
@@ -71,6 +74,7 @@ backup_collapse = collapse all
 backup_check    = check all
 backup_clear    = uncheck all
 backup_filter   = Search backups
+add_to_pack     = Add to mod pack
 
 [info]
 title           = Mod Information
@@ -204,6 +208,19 @@ filter_all      = Show All Folders
 filter_manual   = Show "mods" Folder only
 filter_steam    = Show Steam Workshop only
 filter_staging  = Show StagingArea only
+
+[pack]
+title       = Mod Package
+open        = Open pack
+save        = Save pack
+download    = Download missing mods
+name        = Pack name:
+author      = Created by:
+installed   = Installed
+not_defined = Download not defined
+not_available = Download not available
+pack_file   = TPFMM Package File
+tip         = Drag & Drop mods from the main window to add them to this pack.
 
 [tags]
 all         = All

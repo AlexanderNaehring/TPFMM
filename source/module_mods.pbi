@@ -1943,6 +1943,21 @@ Module mods
     
   EndProcedure
   
+  Procedure getMods(List *mods.mod())
+    Protected count = 0
+    ClearList(*mods())
+    
+    LockMutex(mutexMods)
+    ForEach mods()
+      AddElement(*mods())
+      *mods() = mods()
+      count +1 
+    Next
+    UnlockMutex(mutexMods)
+    
+    ProcedureReturn count
+  EndProcedure
+  
   Procedure getPreviewImage(*mod.mod, original=#False)
 ;     debugger::add("mods::getPreviewImage("+*mod+", "+original+")")
     Static NewMap previewImages()
