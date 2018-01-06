@@ -1,4 +1,6 @@
-﻿
+﻿; COMMENT: a separate "pack" module is not really required... maybe this will be merge to "windowPack"
+
+
 DeclareModule pack
   EnableExplicit
   

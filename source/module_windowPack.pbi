@@ -1,7 +1,10 @@
-﻿DeclareModule windowPack
+﻿; TODO drag&drop mod pack files on pack window to open
+
+DeclareModule windowPack
   EnableExplicit
   
-  Declare show(parentWindow, open=#False)
+  Declare show(parentWindow)
+  Declare packOpen(file$ = "")
   Declare addSelectedMods()
   
 EndDeclareModule
@@ -84,13 +87,16 @@ Module windowPack
     Next
   EndProcedure
   
-  Procedure packOpen()
+  Procedure packOpen(file$ = "")
     debugger::add("windowPack::packOpen()")
-    Protected file$, pattern$
-    pattern$ = locale::l("pack","pack_file")+"|*."+pack::#EXTENSION+"|"+locale::l("management","files_all")+"|*.*"
-    file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("pack","lastFile"), pattern$, 0)
+    Protected pattern$
+    
     If file$ = ""
-      ProcedureReturn #False
+      pattern$ = locale::l("pack","pack_file")+"|*."+pack::#EXTENSION+"|"+locale::l("management","files_all")+"|*.*"
+      file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("pack","lastFile"), pattern$, 0)
+      If file$ = ""
+        ProcedureReturn #False
+      EndIf
     EndIf
     
     settings::setString("pack","lastFile",file$)
@@ -107,6 +113,8 @@ Module windowPack
       SetGadgetText(gadget("author"), pack::getAuthor(*pack))
       
       displayPackItems()
+    Else
+      *pack = pack::create()
     EndIf
     
     ProcedureReturn *pack
@@ -237,7 +245,7 @@ Module windowPack
   
   ; public
   
-  Procedure show(parentWindow, open=#False)
+  Procedure show(parentWindow)
     debugger::add("packWindow::show()")
     
     If IsWindow(window)
@@ -304,19 +312,8 @@ Module windowPack
     HideWindow(window, #False, #PB_Window_WindowCentered)
     
     
-    ; handle packages
-    ; open a pack file if requested
-    If open
-      If Not packOpen()
-        ; close window if opening is canceled or fails
-        close()
-      EndIf
-    EndIf
-    
-    ; if no pack open, create new pack
-    If Not pack::isPack(*pack)
-      *pack = pack::create()
-    EndIf
+    ; init package
+    *pack = pack::create()
     
     SetActiveGadget(gadget("name"))
     

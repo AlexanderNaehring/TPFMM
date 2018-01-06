@@ -421,7 +421,8 @@ Module windowMain
   EndProcedure
   
   Procedure MenuItemPackOpen()
-    windowPack::show(window, #True)
+    windowPack::show(window)
+    windowPack::packOpen()
   EndProcedure
   ;- GADGETS
   
@@ -1234,7 +1235,13 @@ Module windowMain
     count  = CountString(files$, Chr(10)) + 1
     For i = 1 To count
       file$ = StringField(files$, i, Chr(10))
-      mods::install(file$)
+      
+      If LCase(GetExtensionPart(file$)) = pack::#EXTENSION
+        windowPack::show(window)
+        windowPack::packOpen(file$)
+      Else
+        mods::install(file$)
+      EndIf
     Next i
   EndProcedure
   
