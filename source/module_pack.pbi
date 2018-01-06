@@ -146,7 +146,10 @@ Module pack
     LockMutex(*pack\mutex)
     ForEach *pack\items()
       If LCase(*pack\items()\id$) = LCase(*item\id$)
-        debugger::add("pack::addItem() - duplicate ID #"+*item\id$)
+        debugger::add("pack::addItem() - overwrite duplicate ID #"+*item\id$)
+        ; overwrite with "new" entry in order to maybe get more recent information (name, download id, ...)
+        CopyStructure(*item, *pack\items(), packItem) ; possible memory leak? does copyStructure clear the old strings ? TODO check this
+        
         add = #False
         Break
       EndIf
