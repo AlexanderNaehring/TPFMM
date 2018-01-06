@@ -337,7 +337,7 @@ Module misc
           ProcedureReturn 2
         EndIf
         CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          If FileSize(Dir$ + "TransportFever.exe") > 1 Or FileSize(Dir$ + "TransportFeverLauncher.exe") > 1
+          If FileSize(Dir$ + "TransportFever.exe") > 1 Or FileSize(Dir$ + "TransportFeverLauncher.exe") > 1 Or FileSize(Dir$ + "TransportFever") > 1
             ; TrainFever.exe is located in this path!
             ; seems to be valid
             
