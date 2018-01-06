@@ -39,31 +39,33 @@ Module windowPack
     Protected packItem.pack::packItem
     Protected text$
     Protected gadget = gadget("items")
+    Protected installed$, download$
     
     SelectElement(items(), index)
     packItem = items()
     
     
-    AddGadgetItem(gadget, index, packItem\name$)
-    SetGadgetItemData(gadget, index, @items())
-    
     If mods::isInstalled(packItem\id$)
-      SetGadgetItemText(gadget, index, "["+locale::l("pack","installed")+"] "+packItem\name$)
+      installed$ = locale::l("pack","yes")
     Else
       ; not installed, check if download link available
-      If packItem\download$
-        If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
-          ; download link found :-)
-          SetGadgetItemText(gadget, index, packItem\name$)
-        Else
-          ; not found (may also be if repo not yet loaded)
-          SetGadgetItemText(gadget, index, "["+locale::l("pack","not_available")+"] "+packItem\name$)
-        EndIf
-      Else
-        SetGadgetItemText(gadget, index, "["+locale::l("pack","not_defined")+"] "+packItem\name$)
-      EndIf
+      installed$ = locale::l("pack","no")
     EndIf
     
+    If packItem\download$
+      If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
+        ; download link found :-)
+        download$ = locale::l("pack","available")
+      Else
+        ; mod not found (may also be if repo not yet loaded)
+        download$ = locale::l("pack","invalid")
+      EndIf
+    Else
+      download$ = locale::l("pack","undefined")
+    EndIf
+    
+    AddGadgetItem(gadget, index, packItem\name$+#LF$+installed$+#LF$+download$)
+    SetGadgetItemData(gadget, index, @items())
     
   EndProcedure
   
@@ -221,7 +223,7 @@ Module windowPack
     Protected i
     If GetActiveGadget() = gadget("items")
       For i = 0 To CountGadgetItems(gadget("items"))-1
-        SetGadgetItemState(gadget("items"), i, 1)
+        SetGadgetItemState(gadget("items"), i, #PB_ListIcon_Selected)
       Next
     EndIf
   EndProcedure
@@ -256,9 +258,11 @@ Module windowPack
         fileID  = Val(StringField(items()\download$, 3, "/"))
         
         debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
-        repository::downloadMod(source$, id, fileid)
+        ;repository::downloadMod(source$, id, fileid)
+        windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
       EndIf
     Next
+    close()
   EndProcedure
   
   ; public
@@ -300,9 +304,14 @@ Module windowPack
     SetGadgetText(gadget("nameText"), l("pack","name"))
     SetGadgetText(gadget("authorText"), l("pack","author"))
     SetGadgetText(gadget("save"), l("pack","save"))
-    SetGadgetText(gadget("download"), l("pack","download"))
+    SetGadgetText(gadget("download"), l("pack","download_all"))
     SetGadgetText(gadget("author"), settings::getString("pack","author"))
     GadgetToolTip(gadget("items"), l("pack","tip"))
+    
+    SetGadgetItemAttribute(gadget("items"), 0, #PB_ListIcon_ColumnWidth, 300, 0)
+    SetGadgetItemText(gadget("items"), -1, l("pack","mod"), 0)
+    AddGadgetColumn(gadget("items"), 1, l("pack","installed"), 70)
+    AddGadgetColumn(gadget("items"), 2, l("pack","download"), 70)
     
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
