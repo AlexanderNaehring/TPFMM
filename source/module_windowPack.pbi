@@ -145,7 +145,7 @@ Module windowPack
     
     packItem\name$ = *mod\name$
     packItem\id$ = *mod\tpf_id$
-    packItem\download$ = *mod\aux\installSource$
+    packItem\download$ = mods::getDownloadLink(*mod)
     
     If pack::addItem(*pack, packItem)
       displayNewPackItem(packItem)
