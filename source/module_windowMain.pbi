@@ -212,7 +212,7 @@ Module windowMain
         DisableGadget(gadget("modSettings"), #True)
       EndIf
       
-      
+      DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #False)
     Else
       ; multiple mods or none selected
       
@@ -225,6 +225,7 @@ Module windowMain
       
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
+      DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
     EndIf
     
