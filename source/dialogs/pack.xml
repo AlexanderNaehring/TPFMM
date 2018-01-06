@@ -15,7 +15,7 @@
       <listview name='items' flags='#PB_ListView_MultiSelect' />
       <hbox expand='equal'>
         <button name='save' text='Save Pack' />
-        <button name='install' text='Install Missing Mods' />
+        <button name='download' text='Download' />
       </hbox>
     </vbox>
   </window>

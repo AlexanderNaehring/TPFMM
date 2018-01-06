@@ -10,6 +10,8 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_pack.pbi"
 XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_windowMain.pbi"
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_repository.pbi"
 
 Module windowPack
   
@@ -214,6 +216,23 @@ Module windowPack
     Next
   EndProcedure
   
+  Procedure download()
+    Protected source$, id.q, fileid.q
+    debugger::add("windowPack::dowload()")
+    ForEach items()
+      If Not mods::isInstalled(items()\id$)
+        ; TODO: also set folder name -> used during install to apply identical folder name as during export...
+        
+        source$ =     StringField(items()\download$, 1, "/")
+        id      = Val(StringField(items()\download$, 2, "/"))
+        fileID  = Val(StringField(items()\download$, 3, "/"))
+        
+        debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
+        repository::downloadMod(source$, id, fileid)
+      EndIf
+    Next
+  EndProcedure
+  
   ; public
   
   Procedure show(parentWindow, open=#False)
@@ -253,13 +272,14 @@ Module windowPack
     SetGadgetText(gadget("nameText"), l("pack","name"))
     SetGadgetText(gadget("authorText"), l("pack","author"))
     SetGadgetText(gadget("save"), l("pack","save"))
-    SetGadgetText(gadget("install"), l("pack","install"))
+    SetGadgetText(gadget("download"), l("pack","download"))
     SetGadgetText(gadget("author"), settings::getString("pack","author"))
     GadgetToolTip(gadget("items"), l("pack","tip"))
     
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
     BindGadgetEvent(gadget("author"), @changeAuthor(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("download"), @download())
     
     Protected menu
     menu = CreateMenu(#PB_Any, WindowID(window))
