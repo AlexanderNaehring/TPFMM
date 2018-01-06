@@ -39,31 +39,33 @@ Module windowPack
     Protected packItem.pack::packItem
     Protected text$
     Protected gadget = gadget("items")
+    Protected installed$, download$
     
     SelectElement(items(), index)
     packItem = items()
     
     
-    AddGadgetItem(gadget, index, packItem\name$)
-    SetGadgetItemData(gadget, index, @items())
-    
     If mods::isInstalled(packItem\id$)
-      SetGadgetItemText(gadget, index, "["+locale::l("pack","installed")+"] "+packItem\name$)
+      installed$ = locale::l("pack","yes")
     Else
       ; not installed, check if download link available
-      If packItem\download$
-        If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
-          ; download link found :-)
-          SetGadgetItemText(gadget, index, packItem\name$)
-        Else
-          ; not found (may also be if repo not yet loaded)
-          SetGadgetItemText(gadget, index, "["+locale::l("pack","not_available")+"] "+packItem\name$)
-        EndIf
-      Else
-        SetGadgetItemText(gadget, index, "["+locale::l("pack","not_defined")+"] "+packItem\name$)
-      EndIf
+      installed$ = locale::l("pack","no")
     EndIf
     
+    If packItem\download$
+      If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
+        ; download link found :-)
+        download$ = locale::l("pack","available")
+      Else
+        ; mod not found (may also be if repo not yet loaded)
+        download$ = locale::l("pack","invalid")
+      EndIf
+    Else
+      download$ = locale::l("pack","undefined")
+    EndIf
+    
+    AddGadgetItem(gadget, index, packItem\name$+#LF$+installed$+#LF$+download$)
+    SetGadgetItemData(gadget, index, @items())
     
   EndProcedure
   
@@ -127,10 +129,12 @@ Module windowPack
     name$ = pack::getName(*pack)
     author$ = pack::getAuthor(*pack)
     
-    file$ = GetPathPart(settings::getString("pack","lastFile")) + name$ + "." + pack::#EXTENSION
-    
+    file$ = GetPathPart(settings::getString("pack","lastFile")) + name$
     file$ = SaveFileRequester(locale::l("pack","save"), file$, locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
     If file$
+      If LCase(GetExtensionPart(file$)) <> pack::#EXTENSION
+        file$ + "." + pack::#EXTENSION
+      EndIf
       If FileSize(file$) > 0
         If MessageRequester(locale::l("management","overwrite_file"), locale::l("management","overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
           ProcedureReturn #False
@@ -182,8 +186,24 @@ Module windowPack
   EndProcedure
   
   Procedure itemsDrop()
-    If EventDropPrivate() = main::#DRAG_MOD
-      addSelectedMods()
+    Protected files$, file$, i
+    If EventDropType() = #PB_Drop_Private
+      If EventDropPrivate() = main::#DRAG_MOD
+        addSelectedMods()
+      EndIf
+    Else
+      files$ = EventDropFiles()
+      
+      For i = 1 To CountString(files$, Chr(10)) + 1
+        file$ = StringField(files$, i, Chr(10))
+        
+        If LCase(GetExtensionPart(file$)) = pack::#EXTENSION
+          windowPack::packOpen(file$)
+        Else
+          ; also add other file types?
+          ; not for now...
+        EndIf
+      Next i
     EndIf
   EndProcedure
   
@@ -196,14 +216,33 @@ Module windowPack
   EndProcedure
   
   Procedure gadgetItems()
-    
+    If EventType() = #PB_EventType_LeftDoubleClick
+      debugger::add("windowPack::gadgetItems() - double click")
+      ; download currently selected mod
+      Protected *packItem.pack::packItem
+      Protected source$, id.q, fileID.q
+      *packItem = GetGadgetItemData(gadget("items"), GetGadgetState(gadget("items")))
+      If *packitem
+        If Not mods::isInstalled(*packitem\id$)
+          ; TODO: also set folder name -> used during install to apply identical folder name as during export...
+          
+          source$ =     StringField(*packitem\download$, 1, "/")
+          id      = Val(StringField(*packitem\download$, 2, "/"))
+          fileID  = Val(StringField(*packitem\download$, 3, "/"))
+          
+          debugger::add("windowPack::gadgetItems() - start download of mod "+*packitem\name$+": "+*packitem\download$)
+          ;repository::downloadMod(source$, id, fileid)
+          windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+        EndIf
+      EndIf
+    EndIf
   EndProcedure
   
   Procedure selectAll()
     Protected i
     If GetActiveGadget() = gadget("items")
       For i = 0 To CountGadgetItems(gadget("items"))-1
-        SetGadgetItemState(gadget("items"), i, 1)
+        SetGadgetItemState(gadget("items"), i, #PB_ListIcon_Selected)
       Next
     EndIf
   EndProcedure
@@ -238,9 +277,11 @@ Module windowPack
         fileID  = Val(StringField(items()\download$, 3, "/"))
         
         debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
-        repository::downloadMod(source$, id, fileid)
+        ;repository::downloadMod(source$, id, fileid)
+        windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
       EndIf
     Next
+    close()
   EndProcedure
   
   ; public
@@ -282,10 +323,16 @@ Module windowPack
     SetGadgetText(gadget("nameText"), l("pack","name"))
     SetGadgetText(gadget("authorText"), l("pack","author"))
     SetGadgetText(gadget("save"), l("pack","save"))
-    SetGadgetText(gadget("download"), l("pack","download"))
+    SetGadgetText(gadget("download"), l("pack","download_all"))
     SetGadgetText(gadget("author"), settings::getString("pack","author"))
     GadgetToolTip(gadget("items"), l("pack","tip"))
     
+    SetGadgetItemAttribute(gadget("items"), 0, #PB_ListIcon_ColumnWidth, 300, 0)
+    SetGadgetItemText(gadget("items"), -1, l("pack","mod"), 0)
+    AddGadgetColumn(gadget("items"), 1, l("pack","installed"), 70)
+    AddGadgetColumn(gadget("items"), 2, l("pack","download"), 70)
+    
+    BindGadgetEvent(gadget("items"), @GadgetItems())
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
     BindGadgetEvent(gadget("author"), @changeAuthor(), #PB_EventType_Change)
@@ -301,7 +348,9 @@ Module windowPack
     
     ; enable mods to be dropped in the pack item list
     EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, main::#DRAG_MOD)
+    EnableGadgetDrop(gadget("items"), #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     BindEvent(#PB_Event_GadgetDrop, @itemsDrop(), window, gadget("items"))
+    
     
     ; close event
     BindEvent(#PB_Event_CloseWindow, @close(), window)
@@ -314,6 +363,8 @@ Module windowPack
     
     ; init package
     *pack = pack::create()
+    changeName()
+    changeAuthor()
     
     SetActiveGadget(gadget("name"))
     

@@ -27,9 +27,6 @@ DeclareModule windowMain
     #MenuItem_PackOpen
   EndEnumeration
   
-  Enumeration #PB_Event_FirstCustomValue
-    #Event_Repo_Show_Selection
-  EndEnumeration
   
   Enumeration progress
     #Progress_Hide      = -1
@@ -75,6 +72,11 @@ Module windowMain
     #MenuItem_RepositoryClearCache
     #MenuItem_AddToPack
   EndEnumeration
+  
+  Enumeration #PB_Event_FirstCustomValue
+    #ShowDownloadSelection
+  EndEnumeration
+  
   
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
   
@@ -711,6 +713,7 @@ Module windowMain
   ; repo download file selection window...
   
   Global dialogSelectFiles
+  Global mutexDialogSelectFiles = CreateMutex()
   Global NewMap repoSelectFilesGadget()
   
   Procedure repoSelectFilesClose()
@@ -720,6 +723,7 @@ Module windowMain
       CloseWindow(DialogWindow(dialogSelectFiles))
       FreeDialog(dialogSelectFiles)
     EndIf
+    UnlockMutex(mutexDialogSelectFiles)
   EndProcedure
   
   Procedure repoSelectFilesDownload()
@@ -902,6 +906,8 @@ Module windowMain
     EndIf
     
   EndProcedure
+  
+  ;
   
   Procedure modShowWebsite()
     Protected item, *mod.mods::mod
@@ -1360,7 +1366,7 @@ Module windowMain
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     
-    BindEvent(#Event_Repo_Show_Selection, @repoEventShowSelection())
+    BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
     ; initialize gadgets
     
@@ -1625,7 +1631,8 @@ Module windowMain
         If *repoMod
           ; cannot directly call "repoDownloadShowSelection()" as this procedure is not called in the main thread!
           ; send event to main window to open the selection
-          PostEvent(#Event_Repo_Show_Selection, window, 0, #PB_EventType_FirstCustomValue, *repoMod)
+          LockMutex(mutexDialogSelectFiles)
+          PostEvent(#ShowDownloadSelection, window, 0, #ShowDownloadSelection, *repoMod)
         EndIf
       Else
         repository::downloadMod(source$, id, fileID)
