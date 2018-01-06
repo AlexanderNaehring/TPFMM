@@ -216,7 +216,26 @@ Module windowPack
   EndProcedure
   
   Procedure gadgetItems()
-    
+    If EventType() = #PB_EventType_LeftDoubleClick
+      debugger::add("windowPack::gadgetItems() - double click")
+      ; download currently selected mod
+      Protected *packItem.pack::packItem
+      Protected source$, id.q, fileID.q
+      *packItem = GetGadgetItemData(gadget("items"), GetGadgetState(gadget("items")))
+      If *packitem
+        If Not mods::isInstalled(*packitem\id$)
+          ; TODO: also set folder name -> used during install to apply identical folder name as during export...
+          
+          source$ =     StringField(*packitem\download$, 1, "/")
+          id      = Val(StringField(*packitem\download$, 2, "/"))
+          fileID  = Val(StringField(*packitem\download$, 3, "/"))
+          
+          debugger::add("windowPack::gadgetItems() - start download of mod "+*packitem\name$+": "+*packitem\download$)
+          ;repository::downloadMod(source$, id, fileid)
+          windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+        EndIf
+      EndIf
+    EndIf
   EndProcedure
   
   Procedure selectAll()
@@ -313,6 +332,7 @@ Module windowPack
     AddGadgetColumn(gadget("items"), 1, l("pack","installed"), 70)
     AddGadgetColumn(gadget("items"), 2, l("pack","download"), 70)
     
+    BindGadgetEvent(gadget("items"), @GadgetItems())
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
     BindGadgetEvent(gadget("author"), @changeAuthor(), #PB_EventType_Change)
