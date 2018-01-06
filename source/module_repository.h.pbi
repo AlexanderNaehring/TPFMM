@@ -31,6 +31,7 @@ DeclareModule repository
     List tags$()
     List tagsLocalized$()
     
+    installSource$ ; used when installing after download
     installed.i
   EndStructure
   

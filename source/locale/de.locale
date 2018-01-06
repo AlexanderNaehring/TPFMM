@@ -1,7 +1,6 @@
 ﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
-flag        = 89504E470D0A1A0A0000000D494844520000001A00000010080600000008D16FA8000000017352474200AECE1CE90000000467414D410000B18F0BFC6105000000097048597300000EC400000EC401952B0E1B00000006624B474400FF00FF00FFA0BDA7930000000774494D4507DE0C1210282B36C751700000003E49444154384F63646060F80FC434074C509AE660D422B201E31C3A2506C667F4B2E8EE704BDE8CB7E916473674B2E8FF7D7A59746E982586E16611030300A16F101890BFC8630000000049454E44AE426082
 version     = 1740
 
 [menu]
@@ -23,6 +22,9 @@ repository        = Repository
 repo_refresh      = Aktualisiere Repository
 repo_clear        = Repository Cache für Vorschaubilder leeren
 log               = Zeige Log Datei
+pack              = Mod Pakete
+pack_new          = Erstelle neues Mod Paket
+pack_open         = Öffne ein Mod Paket
 
 [main]
 mods            = Modifikationen
@@ -74,6 +76,7 @@ backup_collapse = Alle einklappen
 backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
 backup_filter   = Durchsuche Sicherungen
+add_to_pack     = Zu Mod-Paket hinzufügen
 
 [info]
 title           = Mod Informationen
@@ -208,6 +211,23 @@ filter_manual   = Zeige nur "mods" Ordner
 filter_steam    = Zeige nur Steam Workshop
 filter_staging  = Zeige nur StagingArea
 
+[pack]
+title       = Mod Paket
+open        = Paket öffnen
+save        = Paket speichern
+download_all= Fehlende Mods herunterladen
+name        = Paketname:
+author      = Ersteller:
+installed   = Installiert
+download    = Download
+mod         = Mod
+yes         = Ja
+no          = Nein
+available   = verfügbar
+undefined   = nicht angegeben
+invalid     = ungültig
+pack_file   = TPFMM Paketdatei
+tip         = Ziehe Mods vom Hauptfenter nach hier, um sie dem Paket hinzuzufügen.
 
 [tags]
 mod         = Modifikation

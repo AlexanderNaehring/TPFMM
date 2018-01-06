@@ -572,6 +572,8 @@ Module mods
     ProcedureReturn str$
   EndProcedure
   
+  ; Backups
+  
   Procedure.s getBackupFolder()
     Protected backupFolder$
     
@@ -979,8 +981,8 @@ Module mods
     CopyMap(mods(), saveMods())
     
     ForEach saveMods()
-      saveMods()\aux\tfnetMod = #Null
-      SaveMods()\aux\workshopMod = #Null
+      saveMods()\aux\link_tfnetMod = #Null
+      SaveMods()\aux\link_workshopMod = #Null
     Next
     
     
@@ -1069,23 +1071,30 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    
     ; search for mod in list of installed mods
     LockMutex(mutexMods)
-    If source$ = "tfnet" Or source$ = "tpfnet"
-      ForEach mods()
+    ForEach mods()
+      If StringField(mods()\aux\installSource$, 1, "/") = source$ And 
+         Val(StringField(mods()\aux\installSource$, 2, "/")) = id
+        installed = #True
+        Break
+      EndIf
+      
+      If source$ = "tfnet" Or source$ = "tpfnet"
         If mods()\aux\tfnetID = id
           installed = #True
           Break
         EndIf
-      Next
-    ElseIf source$ = "workshop"
-      ForEach mods()
+        
+      ElseIf source$ = "workshop"
         If mods()\aux\workshopID = id
           installed = #True
           Break
         EndIf
-      Next
-    EndIf
+      EndIf
+      
+    Next
     UnlockMutex(mutexMods)
     
     ProcedureReturn installed
@@ -1106,6 +1115,41 @@ Module mods
     UnlockMutex(mutexMods)
     
     ProcedureReturn installed
+  EndProcedure
+  
+  Procedure.s getDownloadLink(*mod.mod)
+    ; try to get a download link in form of source/id[/fileID]
+    
+    Protected source$
+    Protected id.q, fileID.q
+    
+    If *mod\aux\installSource$
+      source$ = StringField(*mod\aux\installSource$, 1, "/")
+      id      = Val(StringField(*mod\aux\installSource$, 2, "/"))
+      fileID  = Val(StringField(*mod\aux\installSource$, 3, "/"))
+    EndIf
+    
+    If source$ And fileID
+      ProcedureReturn source$+"/"+id+"/"+fileID
+    EndIf
+    
+    If source$ And id
+      ProcedureReturn source$+"/"+id
+    EndIf
+    
+    If (source$ = "tpfnet" Or source$ = "tfnet") And *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf source$ = "workshop" And *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    If *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    ProcedureReturn ""
   EndProcedure
   
   ; actions
@@ -1274,14 +1318,12 @@ Module mods
           ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
           FreeJSON(json)
           *mod\aux\repoTimeChanged = repo_mod\timechanged
+          *mod\aux\installSource$ = repo_mod\installSource$
           Select repo_mod\source$
             Case "tpfnet"
               *mod\aux\tfnetID = repo_mod\id
-              *mod\aux\installSource$ = "tpfnet/"+repo_mod\id
-              ; store id with installSource for later reference (currently not used anyway)
             Case "workshop"
               *mod\aux\workshopID = repo_mod\id
-              *mod\aux\installSource$ = "workshop/"+repo_mod\id
             Default
               
           EndSelect
@@ -1897,6 +1939,21 @@ Module mods
     HideGadget(_gadgetModList, #False)
     windowMain::stopGUIupdate(#False)
     
+  EndProcedure
+  
+  Procedure getMods(List *mods.mod())
+    Protected count = 0
+    ClearList(*mods())
+    
+    LockMutex(mutexMods)
+    ForEach mods()
+      AddElement(*mods())
+      *mods() = mods()
+      count +1 
+    Next
+    UnlockMutex(mutexMods)
+    
+    ProcedureReturn count
   EndProcedure
   
   Procedure getPreviewImage(*mod.mod, original=#False)

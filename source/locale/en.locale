@@ -1,7 +1,6 @@
 ﻿; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
-flag        = 89504E470D0A1A0A0000000D49484452000000180000000D0806000000B36CAED0000000017352474200AECE1CE90000000467414D410000B18F0BFC6105000000097048597300000EC400000EC401952B0E1B00000006624B474400FF00FF00FFA0BDA7930000005449444154384F63B4B1CEFBCF4004283DB982E13B130B94473C20DA82C347264259A401A22DC83E3A89E13B032394473C18F50141407B1FFC0702289B2680711ED00E289B2660D4070401E30A36291A5AC0C00000B5672F9A813180560000000049454E44AE426082
 version     = 1740
 
 [menu]
@@ -21,6 +20,9 @@ repository        = Repository
 repo_refresh      = Refresh Repository
 repo_clear        = Clear repository preview image cache
 log               = Show debug log
+pack              = Mod Packs
+pack_new          = Create new mod pack
+pack_open         = Open a mod pack
 
 [main]
 mods            = Modifications
@@ -72,6 +74,7 @@ backup_collapse = collapse all
 backup_check    = check all
 backup_clear    = uncheck all
 backup_filter   = Search backups
+add_to_pack     = Add to mod pack
 
 [info]
 title           = Mod Information
@@ -205,6 +208,24 @@ filter_all      = Show All Folders
 filter_manual   = Show "mods" Folder only
 filter_steam    = Show Steam Workshop only
 filter_staging  = Show StagingArea only
+
+[pack]
+title       = Mod Package
+open        = Open pack
+save        = Save pack
+download_all= Download missing mods
+name        = Pack name:
+author      = Created by:
+installed   = Installed
+download    = Download
+mod         = Mod
+yes         = Yes
+no          = No
+available   = available
+undefined   = not defined
+invalid     = link invalid
+pack_file   = TPFMM Package File
+tip         = Drag & Drop mods from the main window to add them to this pack.
 
 [tags]
 all         = All

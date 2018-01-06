@@ -36,6 +36,7 @@ Module settings
   defaultValues$("color/mod_update_available") = Str(RGB($FF, $99, $00))
   defaultValues$("color/mod_lua_error") = Str(RGB($ff, $cc, $cc))
   defaultValues$("color/mod_hidden") = Str(RGB(100, 100, 100))
+  defaultValues$("pack/author") = ComputerName()
   
   
   Procedure setFilename(filename$)

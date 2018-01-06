@@ -21,6 +21,8 @@
   
   #PORT = 14123
   
+  #DRAG_MOD = 1
+  
   Declare init()
   Declare initProxy()
   Declare updateDesktopIntegration()

@@ -1,12 +1,4 @@
 
-XIncludeFile "module_locale.pbi"
-XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
-XIncludeFile "module_mods.h.pbi"
-XIncludeFile "module_repository.h.pbi"
-XIncludeFile "module_modInformation.pbi"
-XIncludeFile "module_modSettings.pbi"
-
 DeclareModule windowMain
   EnableExplicit
   
@@ -30,11 +22,11 @@ DeclareModule windowMain
     #MenuItem_License
     #MenuItem_Log
     #MenuItem_Enter
+    #MenuItem_CtrlA
+    #MenuItem_PackNew
+    #MenuItem_PackOpen
   EndEnumeration
   
-  Enumeration #PB_Event_FirstCustomValue
-    #Event_Repo_Show_Selection
-  EndEnumeration
   
   Enumeration progress
     #Progress_Hide      = -1
@@ -46,6 +38,7 @@ DeclareModule windowMain
   Declare stopGUIupdate(stop = #True)
   Declare setColumnWidths(Array widths(1))
   Declare getColumnWidth(column)
+  Declare getSelectedMods(List *mods())
   
   Declare progressMod(percent, text$=Chr(1))
   Declare progressRepo(percent, text$=Chr(1))
@@ -54,7 +47,15 @@ DeclareModule windowMain
   
 EndDeclareModule
 
-
+XIncludeFile "module_locale.pbi"
+XIncludeFile "module_windowSettings.pbi"
+XIncludeFile "module_ListIcon.pbi"
+XIncludeFile "module_mods.h.pbi"
+XIncludeFile "module_repository.h.pbi"
+XIncludeFile "module_modInformation.pbi"
+XIncludeFile "module_modSettings.pbi"
+XIncludeFile "module_pack.pbi"
+XIncludeFile "module_windowPack.pbi"
 
 Module windowMain
 
@@ -69,7 +70,13 @@ Module windowMain
     #MenuItem_ModFolder
     #MenuItem_RepositoryRefresh
     #MenuItem_RepositoryClearCache
+    #MenuItem_AddToPack
   EndEnumeration
+  
+  Enumeration #PB_Event_FirstCustomValue
+    #ShowDownloadSelection
+  EndEnumeration
+  
   
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
   
@@ -185,7 +192,7 @@ Module windowMain
       ; link to mod in repo
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
       DisableGadget(gadget("modUpdate"), #False)
-      If *mod\aux\tfnetMod Or *mod\aux\workshopMod ; link to online mod known
+      If *mod\aux\link_tfnetMod Or *mod\aux\link_workshopMod ; link to online mod known
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
         SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
       Else ; link unknown
@@ -207,7 +214,7 @@ Module windowMain
         DisableGadget(gadget("modSettings"), #True)
       EndIf
       
-      
+      DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #False)
     Else
       ; multiple mods or none selected
       
@@ -220,9 +227,15 @@ Module windowMain
       
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
+      DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
     EndIf
     
+    If numSelected = 0
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
+    Else
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
+    EndIf
     
   EndProcedure
   
@@ -396,7 +409,23 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure MenuItemPackNew()
+    windowPack::show(window)
+  EndProcedure
   
+  Procedure MenuItemSelectAll()
+    Protected i
+    If GetActiveGadget() = gadget("modList")
+      For i = 0 To CountGadgetItems(gadget("modList"))-1
+        SetGadgetItemState(gadget("modList"), i, #PB_ListIcon_Selected)
+      Next
+    EndIf
+  EndProcedure
+  
+  Procedure MenuItemPackOpen()
+    windowPack::show(window)
+    windowPack::packOpen()
+  EndProcedure
   ;- GADGETS
   
   Declare backupRefreshList()
@@ -510,6 +539,8 @@ Module windowMain
         modInformation()
       Case #PB_EventType_RightClick
         DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
+      Case #PB_EventType_DragStart
+        DragPrivate(main::#DRAG_MOD)
     EndSelect
   EndProcedure
   
@@ -682,6 +713,7 @@ Module windowMain
   ; repo download file selection window...
   
   Global dialogSelectFiles
+  Global mutexDialogSelectFiles = CreateMutex()
   Global NewMap repoSelectFilesGadget()
   
   Procedure repoSelectFilesClose()
@@ -691,6 +723,7 @@ Module windowMain
       CloseWindow(DialogWindow(dialogSelectFiles))
       FreeDialog(dialogSelectFiles)
     EndIf
+    UnlockMutex(mutexDialogSelectFiles)
   EndProcedure
   
   Procedure repoSelectFilesDownload()
@@ -874,6 +907,8 @@ Module windowMain
     
   EndProcedure
   
+  ;
+  
   Procedure modShowWebsite()
     Protected item, *mod.mods::mod
     item = GetGadgetState(gadget("modList"))
@@ -905,6 +940,11 @@ Module windowMain
       EndIf
     EndIf
     ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modAddToPack()
+    windowPack::show(window)
+    windowPack::addSelectedMods()
   EndProcedure
   
   ;- backup tab
@@ -1201,7 +1241,13 @@ Module windowMain
     count  = CountString(files$, Chr(10)) + 1
     For i = 1 To count
       file$ = StringField(files$, i, Chr(10))
-      mods::install(file$)
+      
+      If LCase(GetExtensionPart(file$)) = pack::#EXTENSION
+        windowPack::show(window)
+        windowPack::packOpen(file$)
+      Else
+        mods::install(file$)
+      EndIf
     Next i
   EndProcedure
   
@@ -1320,7 +1366,7 @@ Module windowMain
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     
-    BindEvent(#Event_Repo_Show_Selection, @repoEventShowSelection())
+    BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
     ; initialize gadgets
     
@@ -1405,6 +1451,7 @@ Module windowMain
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_O, #MenuItem_AddMod)
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
     AddKeyboardShortcut(window, #PB_Shortcut_Return, #MenuItem_Enter)
+    AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_A, #MenuItem_CtrlA)
     
     ; Menu
     CreateMenu(0, WindowID(window))
@@ -1419,6 +1466,9 @@ Module windowMain
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
     MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
+    MenuTitle(l("menu","pack"))
+    MenuItem(#MenuItem_PackNew, l("menu","pack_new"))
+    MenuItem(#MenuItem_PackOpen, l("menu","pack_open"))
     MenuTitle(l("menu","repository"))
     MenuItem(#MenuItem_RepositoryRefresh, l("menu","repo_refresh"))
     MenuItem(#MenuItem_RepositoryClearCache, l("menu","repo_clear"))
@@ -1440,6 +1490,9 @@ Module windowMain
     BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
     BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
     BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
+    BindMenuEvent(0, #MenuItem_CtrlA, @MenuItemSelectAll())
+    BindMenuEvent(0, #MenuItem_PackNew, @MenuItemPackNew())
+    BindMenuEvent(0, #MenuItem_PackOpen, @MenuItemPackOpen())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
@@ -1477,6 +1530,8 @@ Module windowMain
     MenuItem(#MenuItem_Backup, l("main","backup"), ImageID(images::Images("icon_backup")))
     MenuItem(#MenuItem_Uninstall, l("main","uninstall"), ImageID(images::Images("no")))
     MenuBar()
+    MenuItem(#MenuItem_AddToPack, l("main","add_to_pack"), ImageID(images::Images("share")))
+    MenuBar()
     MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
     MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
@@ -1488,6 +1543,7 @@ Module windowMain
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
     BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
+    BindMenuEvent(MenuLibrary, #MenuItem_AddToPack, @modAddToPack())
     
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
@@ -1575,7 +1631,8 @@ Module windowMain
         If *repoMod
           ; cannot directly call "repoDownloadShowSelection()" as this procedure is not called in the main thread!
           ; send event to main window to open the selection
-          PostEvent(#Event_Repo_Show_Selection, window, 0, #PB_EventType_FirstCustomValue, *repoMod)
+          LockMutex(mutexDialogSelectFiles)
+          PostEvent(#ShowDownloadSelection, window, 0, #ShowDownloadSelection, *repoMod)
         EndIf
       Else
         repository::downloadMod(source$, id, fileID)
@@ -1600,5 +1657,19 @@ Module windowMain
     CreateThread(@repoFindModAndDownloadThread(), *buffer)
   EndProcedure
   
+  Procedure getSelectedMods(List *mods())
+    Protected i, k
+    ClearList(*mods())
+    
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
+        AddElement(*mods())
+        *mods() = GetGadgetItemData(gadget("modList"), i)
+        k + 1
+      EndIf
+    Next
+    
+    ProcedureReturn k
+  EndProcedure
   
 EndModule
