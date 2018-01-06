@@ -127,10 +127,12 @@ Module windowPack
     name$ = pack::getName(*pack)
     author$ = pack::getAuthor(*pack)
     
-    file$ = GetPathPart(settings::getString("pack","lastFile")) + name$ + "." + pack::#EXTENSION
-    
+    file$ = GetPathPart(settings::getString("pack","lastFile")) + name$
     file$ = SaveFileRequester(locale::l("pack","save"), file$, locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
     If file$
+      If LCase(GetExtensionPart(file$)) <> pack::#EXTENSION
+        file$ + "." + pack::#EXTENSION
+      EndIf
       If FileSize(file$) > 0
         If MessageRequester(locale::l("management","overwrite_file"), locale::l("management","overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
           ProcedureReturn #False
@@ -182,8 +184,24 @@ Module windowPack
   EndProcedure
   
   Procedure itemsDrop()
-    If EventDropPrivate() = main::#DRAG_MOD
-      addSelectedMods()
+    Protected files$, file$, i
+    If EventDropType() = #PB_Drop_Private
+      If EventDropPrivate() = main::#DRAG_MOD
+        addSelectedMods()
+      EndIf
+    Else
+      files$ = EventDropFiles()
+      
+      For i = 1 To CountString(files$, Chr(10)) + 1
+        file$ = StringField(files$, i, Chr(10))
+        
+        If LCase(GetExtensionPart(file$)) = pack::#EXTENSION
+          windowPack::packOpen(file$)
+        Else
+          ; also add other file types?
+          ; not for now...
+        EndIf
+      Next i
     EndIf
   EndProcedure
   
@@ -301,7 +319,9 @@ Module windowPack
     
     ; enable mods to be dropped in the pack item list
     EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, main::#DRAG_MOD)
+    EnableGadgetDrop(gadget("items"), #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     BindEvent(#PB_Event_GadgetDrop, @itemsDrop(), window, gadget("items"))
+    
     
     ; close event
     BindEvent(#PB_Event_CloseWindow, @close(), window)
@@ -314,6 +334,8 @@ Module windowPack
     
     ; init package
     *pack = pack::create()
+    changeName()
+    changeAuthor()
     
     SetActiveGadget(gadget("name"))
     

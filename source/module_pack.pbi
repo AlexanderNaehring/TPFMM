@@ -4,7 +4,7 @@
 DeclareModule pack
   EnableExplicit
   
-  #EXTENSION = "tpfp"
+  #EXTENSION = "tpfmp"
   
   Structure packItem
     id$         ; folder name
@@ -105,10 +105,6 @@ Module pack
   EndProcedure
   
   Procedure save(*pack.pack, file$)
-    If LCase(GetExtensionPart(file$)) <> #EXTENSION
-      file$ + "." + #EXTENSION
-    EndIf
-    
     Protected json = CreateJSON(#PB_Any)
     InsertJSONStructure(JSONValue(json), *pack, pack)
     If Not SaveJSON(json, file$, #PB_JSON_PrettyPrint)

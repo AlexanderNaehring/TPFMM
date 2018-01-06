@@ -12,7 +12,7 @@
           <string name='author' text='' />
         </hbox>
       </hbox>
-      <listview name='items' flags='#PB_ListView_MultiSelect' />
+      <listview name='items' flags='' />
       <hbox expand='equal'>
         <button name='save' text='Save Pack' />
         <button name='download' text='Download' />
