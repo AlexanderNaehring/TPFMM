@@ -219,6 +219,7 @@ installed   = Installed
 not_defined = Download not defined
 not_available = Download not available
 pack_file   = TPFMM Package File
+tip         = Drag & Drop mods from the main window to add them to this pack.
 
 [tags]
 all         = All

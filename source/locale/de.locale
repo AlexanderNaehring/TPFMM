@@ -221,6 +221,7 @@ installed   = Installiert
 not_defined = Kein Download
 not_available = Download nicht verfügbar
 pack_file   = TPFMM Paketdatei
+tip         = Ziehe Mods vom Hauptfenter nach hier, um sie dem Paket hinzuzufügen.
 
 [tags]
 mod         = Modifikation

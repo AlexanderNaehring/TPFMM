@@ -249,6 +249,7 @@ Module windowPack
     SetGadgetText(gadget("save"), l("pack","save"))
     SetGadgetText(gadget("install"), l("pack","install"))
     SetGadgetText(gadget("author"), settings::getString("pack","author"))
+    GadgetToolTip(gadget("items"), l("pack","tip"))
     
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
