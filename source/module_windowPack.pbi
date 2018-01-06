@@ -164,10 +164,12 @@ Module windowPack
   
   Procedure close()
     debugger::add("windowPack::close()")
+    HideWindow(window, #True)
+    
     If pack::isPack(*pack)
       pack::free(*pack)
     EndIf
-    HideWindow(window, #True)
+    ClearList(items())
     CloseWindow(window)
   EndProcedure
   

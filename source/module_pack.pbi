@@ -146,11 +146,13 @@ Module pack
     LockMutex(*pack\mutex)
     ForEach *pack\items()
       If LCase(*pack\items()\id$) = LCase(*item\id$)
+        debugger::add("pack::addItem() - duplicate ID #"+*item\id$)
         add = #False
         Break
       EndIf
     Next
     If add
+      debugger::add("pack::addItem() - add item #"+*item\id$)
       LastElement(*pack\items())
       AddElement(*pack\items())
       CopyStructure(*item, *pack\items(), packItem)
