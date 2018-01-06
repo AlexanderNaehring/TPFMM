@@ -215,6 +215,10 @@ save        = Save pack
 install     = Install all missing Mods
 name        = Pack name:
 author      = Created by:
+installed   = Installed
+not_defined = Download not defined
+not_available = Download not available
+pack_file   = TPFMM Package File
 
 [tags]
 all         = All

@@ -217,7 +217,10 @@ save        = Paket speichern
 install     = Alle fehlenden Mods installieren
 name        = Paketname:
 author      = Ersteller:
-
+installed   = Installiert
+not_defined = Kein Download
+not_available = Download nicht verfügbar
+pack_file   = TPFMM Paketdatei
 
 [tags]
 mod         = Modifikation

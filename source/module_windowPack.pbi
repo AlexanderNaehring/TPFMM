@@ -30,10 +30,35 @@ Module windowPack
   ; actions
   
   Procedure displayItem(index)
-    SelectElement(items(), index)
+    Protected packItem.pack::packItem
+    Protected text$
+    Protected gadget = gadget("items")
     
-    AddGadgetItem(gadget("items"), index, items()\name$)
-    SetGadgetItemData(gadget("items"), index, @items())
+    SelectElement(items(), index)
+    packItem = items()
+    
+    
+    AddGadgetItem(gadget, index, packItem\name$)
+    SetGadgetItemData(gadget, index, @items())
+    
+    If mods::isInstalled(packItem\id$)
+      SetGadgetItemText(gadget, index, "["+locale::l("pack","installed")+"] "+packItem\name$)
+    Else
+      ; not installed, check if download link available
+      If packItem\download$
+        If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
+          ; download link found :-)
+          SetGadgetItemText(gadget, index, packItem\name$)
+        Else
+          ; not found (may also be if repo not yet loaded)
+          SetGadgetItemText(gadget, index, "["+locale::l("pack","not_available")+"] "+packItem\name$)
+        EndIf
+      Else
+        SetGadgetItemText(gadget, index, "["+locale::l("pack","not_defined")+"] "+packItem\name$)
+      EndIf
+    EndIf
+    
+    
   EndProcedure
   
   Procedure displayNewPackItem(*packItem.pack::packItem)
@@ -59,13 +84,13 @@ Module windowPack
   Procedure packOpen()
     debugger::add("windowPack::packOpen()")
     Protected file$, pattern$
-    pattern$ = "pack|*.tpfp|all|*.*"
-    file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("","lastPackFile"), pattern$, 0)
+    pattern$ = locale::l("pack","pack_file")+"|*."+pack::#EXTENSION+"|"+locale::l("management","files_all")+"|*.*"
+    file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("pack","lastFile"), pattern$, 0)
     If file$ = ""
       ProcedureReturn #False
     EndIf
     
-    settings::setString("","lastPackFile",file$)
+    settings::setString("pack","lastFile",file$)
     
     If pack::isPack(*pack)
       pack::free(*pack)
@@ -86,15 +111,22 @@ Module windowPack
   
   Procedure packSave()
     Protected file$
-    file$ = SaveFileRequester(locale::l("pack","save"), settings::getString("","lastPackFile"), "Pack File|*."+pack::#EXTENSION, 0)
+    Protected name$, author$
+    
+    name$ = pack::getName(*pack)
+    author$ = pack::getAuthor(*pack)
+    
+    file$ = SaveFileRequester(locale::l("pack","save"), settings::getString("pack","lastFile"), locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
     If file$
       If FileSize(file$) > 0
-        If MessageRequester(locale::l("pack","overwrite"), locale::l("pack","overwrite_text"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
+        If MessageRequester(locale::l("management","overwrite_file"), locale::l("management","overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
           ProcedureReturn #False
         EndIf
       EndIf
       
-      settings::setString("","lastPackFile",file$)
+      settings::setString("pack","lastFile",file$)
+      settings::setString("pack","author",author$)
+      
       If pack::save(*pack, file$)
         close()
       EndIf
@@ -216,6 +248,7 @@ Module windowPack
     SetGadgetText(gadget("authorText"), l("pack","author"))
     SetGadgetText(gadget("save"), l("pack","save"))
     SetGadgetText(gadget("install"), l("pack","install"))
+    SetGadgetText(gadget("author"), settings::getString("pack","author"))
     
     BindGadgetEvent(gadget("save"), @packSave())
     BindGadgetEvent(gadget("name"), @changeName(), #PB_EventType_Change)
@@ -256,6 +289,7 @@ Module windowPack
       *pack = pack::create()
     EndIf
     
+    SetActiveGadget(gadget("name"))
     
   EndProcedure
   
