@@ -503,14 +503,25 @@ Module repository
   
   Procedure checkInstalled()
     Protected source$, id.i
+    Protected folderName$
     
     LockMutex(mutexRepoMods)
     ForEach repo_mods()
       ForEach repo_mods()\mods()
-        source$ = repo_mods()\mods()\source$
-        id      = repo_mods()\mods()\id
+        ForEach repo_mods()\mods()\files()
+          If repo_mods()\mods()\files()\foldername$
+            folderName$ = repo_mods()\mods()\files()\foldername$
+            repo_mods()\mods()\installed = mods::isInstalled(folderName$)
+          EndIf
+        Next
         
-        repo_mods()\mods()\installed = mods::isInstalledByRemote(source$, id)
+        ; additionally check based on source/id (e.g. if foldername was changed)
+        If Not repo_mods()\mods()\installed
+          source$ = repo_mods()\mods()\source$
+          id      = repo_mods()\mods()\id
+          
+          repo_mods()\mods()\installed = mods::isInstalledByRemote(source$, id)
+        EndIf
       Next
     Next
     UnlockMutex(mutexRepoMods)
@@ -1268,48 +1279,6 @@ Module repository
     CreateThread(@downloadModThread(), *buffer)
   EndProcedure
   
-  Procedure findModOnline(*mod.mods::mod)  ; search for mod in repository, return pointer ro repository::mod
-    Protected found = #False
-    
-    LockMutex(mutexRepoMods)
-    
-    *mod\aux\link_tfnetMod = #Null
-    If *mod\aux\tfnetID
-      ForEach repo_mods()
-        If repo_mods()\repo_info\source$ <> "tpfnet"
-          Continue
-        EndIf
-        ForEach repo_mods()\mods()
-          If repo_mods()\mods()\id = *mod\aux\tfnetID
-            *mod\aux\link_tfnetMod = repo_mods()\mods()
-            found = #True
-            Break 2
-          EndIf
-        Next
-      Next
-    EndIf
-    
-    *mod\aux\link_workshopMod = #Null
-    If *mod\aux\workshopID
-      ForEach repo_mods()
-        If repo_mods()\repo_info\source$ <> "workshop"
-          Continue
-        EndIf
-        ForEach repo_mods()\mods()
-          If repo_mods()\mods()\id = *mod\aux\workshopID
-            *mod\aux\link_workshopMod = repo_mods()\mods()
-            found = #True
-            Break 2
-          EndIf
-        Next
-      Next
-    EndIf
-    
-    UnlockMutex(mutexRepoMods)
-    
-    ProcedureReturn found
-  EndProcedure
-  
   Procedure findModByID(source$, id.q)
     debugger::add("repository::findModByID("+source$+","+id+")")
     Protected *find.mod
@@ -1332,48 +1301,56 @@ Module repository
     ProcedureReturn *find
   EndProcedure
   
+  Procedure findModByFoldername(foldername$)
+    Protected *find.mod
+    foldername$ = LCase(foldername$)
+    
+    LockMutex(mutexRepoMods)
+    ForEach repo_mods()
+      ForEach repo_mods()\mods()
+        ForEach repo_mods()\mods()\files()
+          If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
+            *find = repo_mods()\mods()
+            Break 3
+          EndIf
+        Next
+      Next
+    Next
+    UnlockMutex(mutexRepoMods)
+    
+    If *find
+      debugger::add("found match "+foldername$+"!")
+    Else
+      debugger::add("repository::findModByFoldername("+foldername$+") - not found any match!")
+    EndIf
+    
+    ProcedureReturn *find
+  EndProcedure
+  
   Procedure getRepoMod(*mod.mods::mod) ; get the best fit repo mod (based on linked mods and installSource or folder name)
     Protected *repoMod.repository::mod
+    Protected link$
+    Protected source$, id.q, fileID.q
     
     Static regexp
     If Not regexp
       regexp = CreateRegularExpression(#PB_Any, "^[\*]{0,1}[0-9]+_1$") ; workshop mod
     EndIf
     
+    ; TODO: when a match is found -> store for next question
+    
     If *mod
-      If *mod\aux\link_tfnetMod Or *mod\aux\link_workshopMod
-        ; select source based on currently installed version
-        ; if folder name = number_1, it is most likely the workshop version
-        ; if folder name = some_text_1, it is most likely the tfnet version
-        ; if installed using TPFMM online repository, TPFMM saves the installation source as "installSource"
+      *repoMod = findModByFoldername(*mod\tpf_id$)
+      
+      If Not *repoMod
+        Debug "##### cannot find foldername "+*mod\tpf_id$
+        link$ = mods::getDownloadLink(*mod)
         
-        If *mod\aux\link_tfnetMod And *mod\aux\link_workshopMod
-          ; both sources defined
-          ; check if installSource was defined during install
-          
-          ; TODO CHANGE THIS!
-          If *mod\aux\installSource$ = "tpfnet" And *mod\aux\link_tfnetMod
-            *repoMod = *mod\aux\link_tfnetMod
-          ElseIf *mod\aux\installSource$ = "workshop" And *mod\aux\link_workshopMod
-            *repoMod = *mod\aux\link_workshopMod
-          Else
-            ; no installSource or no match-> try to match source using the folder name
-            If MatchRegularExpression(regexp, *mod\tpf_id$)
-              ; use workshop source
-              *repoMod = *mod\aux\link_workshopMod
-            Else
-              ; use tpfnet mod
-              *repoMod = *mod\aux\link_tfnetMod
-            EndIf
-          EndIf
-        Else
-          ; only a single source defined
-          If *mod\aux\link_tfnetMod
-            *repoMod = *mod\aux\link_tfnetMod
-          ElseIf *mod\aux\link_workshopMod
-            *repoMod = *mod\aux\link_workshopMod
-          EndIf
-        EndIf
+        source$ = StringField(link$, 1, "/")
+        id      = Val(StringField(link$, 2, "/"))
+        fileID  = Val(StringField(link$, 3, "/"))
+        
+        *repoMod = findModByID(source$, id)
       EndIf
       
       ProcedureReturn *repoMod

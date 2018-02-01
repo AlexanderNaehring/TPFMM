@@ -192,7 +192,7 @@ Module windowMain
       ; link to mod in repo
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
       DisableGadget(gadget("modUpdate"), #False)
-      If *mod\aux\link_tfnetMod Or *mod\aux\link_workshopMod ; link to online mod known
+      If repository::getRepoMod(*mod) ; TODO: whole repo <-> local binding should be revised.
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
         SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
       Else ; link unknown

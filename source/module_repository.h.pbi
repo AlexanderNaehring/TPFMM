@@ -13,6 +13,7 @@ DeclareModule repository
     filename$         ; 
     url$              ; url to download this file
     timechanged.i     ; last time this file was changed
+    foldername$       ; the name of the modfolder (after install)
   EndStructure
   
   Structure mod
@@ -113,9 +114,8 @@ DeclareModule repository
   Declare canDownloadMod(*repoMod.mod)
   Declare canDownloadFile(*file.file)
   Declare downloadMod(source$, id.q, fileID.q = 0)
-  Declare findModOnline(*mod.mods::mod)
   Declare findModByID(source$, id.q)
-  
+  Declare findModByFoldername(foldername$)
   Declare getRepoMod(*mod.mods::mod)
   
   ; other

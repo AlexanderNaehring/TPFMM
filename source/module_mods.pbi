@@ -959,7 +959,6 @@ Module mods
   
   Procedure saveList()
     Protected gameDirectory$ = main::gameDirectory$
-    Protected NewMap saveMods.mod()
     
     If Not isLoaded
       ; do not save list when it is not loaded
@@ -978,20 +977,11 @@ Module mods
     EndIf
     
     LockMutex(mutexMods)
-    CopyMap(mods(), saveMods())
-    
-    ForEach saveMods()
-      saveMods()\aux\link_tfnetMod = #Null
-      SaveMods()\aux\link_workshopMod = #Null
-    Next
-    
-    
     Protected json
     json = CreateJSON(#PB_Any)
-    InsertJSONMap(JSONValue(json), saveMods())
+    InsertJSONMap(JSONValue(json), mods())
     SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
-    FreeMap(saveMods())
     
     UnlockMutex(mutexMods)
     
@@ -1892,7 +1882,7 @@ Module mods
           SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_hidden"))
         EndIf
         
-        repository::findModOnline(*mod)
+        
         *repo_mod = repository::getRepoMod(*mod) ; get most appropriate mod from repository based on stored links in *mod
         
         If *repo_mod And Left(\tpf_id$, 1) <> "*"
