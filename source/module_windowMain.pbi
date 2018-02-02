@@ -219,17 +219,16 @@ Module windowMain
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
-      If numSelected = 0
-        ; none selected
-        DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
-      Else
-        ; multiple selected
-        DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
-      EndIf
       
       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
       EndIf
+    EndIf
+    
+    If numSelected = 0
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
+    Else
+      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
     EndIf
     
   EndProcedure

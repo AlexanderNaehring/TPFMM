@@ -1,5 +1,4 @@
-﻿; TODO drag&drop mod pack files on pack window to open
-
+﻿
 DeclareModule windowPack
   EnableExplicit
   
@@ -52,8 +51,13 @@ Module windowPack
       installed$ = locale::l("pack","no")
     EndIf
     
-    If packItem\download$
-      If repository::getModByLink(packItem\download$)
+    download$ = repository::getLinkByFoldername(packItem\id$)
+    If download$ = ""
+      download$ = packItem\download$
+    EndIf
+    
+    If download$
+      If repository::getModByLink(download$)
         ; download link found :-)
         download$ = locale::l("pack","available")
       Else
@@ -264,15 +268,24 @@ Module windowPack
   EndProcedure
   
   Procedure download()
-    Protected source$, id.q, fileid.q
     debugger::add("windowPack::dowload()")
+    Protected link$
+    
     ForEach items()
       If Not mods::isInstalled(items()\id$)
         ; TODO: also set folder name -> used during install to apply identical folder name as during export...
         
-        debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
-        ;repository::downloadMod(source$, id, fileid)
-        windowMain::repoFindModAndDownload(items()\download$) ; will display selection dialog if multiple files in mod
+        link$ = repository::getLinkByFoldername(items()\id$)
+        If link$ = ""
+          link$ = items()\download$
+        EndIf
+        
+        If link$
+          debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
+          windowMain::repoFindModAndDownload(items()\download$) ; will display selection dialog if multiple files in mod
+        Else
+          debugger::add("windowPack::dowload() - cannot download "+items()\name$)
+        EndIf
       EndIf
     Next
     close()
@@ -364,6 +377,5 @@ Module windowPack
     
     ProcedureReturn #True
   EndProcedure
-  
   
 EndModule
