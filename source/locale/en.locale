@@ -75,6 +75,8 @@ backup_check    = check all
 backup_clear    = uncheck all
 backup_filter   = Search backups
 add_to_pack     = Add to mod pack
+update_all      = Update all mods
+update_all_tip  = Update all mods for which a new version is available
 
 [info]
 title           = Mod Information

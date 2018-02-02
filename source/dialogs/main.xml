@@ -35,6 +35,7 @@
                       <button name='modUninstall' text=' ' />
                     </vbox>
                   </frame>
+                  <button name='modUpdateAll' text=' ' />
                 </vbox>
               </hbox>
             </vbox>

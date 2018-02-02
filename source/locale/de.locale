@@ -77,6 +77,8 @@ backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
 backup_filter   = Durchsuche Sicherungen
 add_to_pack     = Zu Mod-Paket hinzufügen
+update_all      = Aktualisiere alle Modifikationen
+update_all_tip  = Aktualisiere alle Mods, für die eine neue Version vorliegt.
 
 [info]
 title           = Mod Informationen

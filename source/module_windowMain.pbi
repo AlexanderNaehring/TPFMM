@@ -612,11 +612,24 @@ Module windowMain
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
     Protected *mod.mods::mod
-    
     Protected i
+    
     For i = 0 To CountGadgetItems(gadget("modList"))-1
       If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
         *mod = GetGadgetItemData(gadget("modList"), i)
+        mods::update(*mod\tpf_id$)
+      EndIf
+    Next
+  EndProcedure
+  
+  Procedure modUpdateAll()
+    debugger::add("windowMain::modUpdateAll()")
+    Protected *mod.mods::mod
+    Protected i
+    
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      *mod = GetGadgetItemData(gadget("modList"), i)
+      If mods::isUpdateAvailable(*mod)
         mods::update(*mod\tpf_id$)
       EndIf
     Next
@@ -1379,6 +1392,8 @@ Module windowMain
     SetGadgetText(gadget("modUpdate"),          l("main","search_online"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
+    SetGadgetText(gadget("modUpdateAll"),       l("main","update_all"))
+    GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
     
     SetGadgetText(gadget("repoFilterFrame"),    l("main","filter"))
     SetGadgetText(gadget("repoManagementFrame"), l("main","management"))
@@ -1403,6 +1418,7 @@ Module windowMain
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
+    BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())
