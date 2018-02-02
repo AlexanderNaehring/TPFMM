@@ -157,7 +157,10 @@ Module windowPack
     
     packItem\name$ = *mod\name$
     packItem\id$ = *mod\tpf_id$
-    packItem\download$ = mods::getDownloadLink(*mod)
+    packItem\download$ = repository::getLinkByFoldername(packItem\id$)
+    If packItem\download$ = ""
+      packItem\download$ = mods::getDownloadLink(*mod)
+    EndIf
     
     If pack::addItem(*pack, packItem)
       displayNewPackItem(packItem)
