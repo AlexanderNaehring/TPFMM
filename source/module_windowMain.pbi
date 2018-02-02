@@ -219,23 +219,31 @@ Module windowMain
     Else
       ; multiple mods or none selected
       
-      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-      EndIf
-      
-      DisableGadget(gadget("modUpdate"), #True)
       DisableGadget(gadget("modSettings"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
-    EndIf
-    
-    If numSelected = 0
-      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
-    Else
-      DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
+      If numSelected = 0
+        ; none selected
+        
+        DisableGadget(gadget("modUpdate"), #True)
+        DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
+      Else
+        ; multiple selected
+        
+        SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
+        DisableGadget(gadget("modUpdate"), #False)
+        
+        DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
+      EndIf
+      
+      
+      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
+        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
+      EndIf
+      
     EndIf
     
   EndProcedure
@@ -603,30 +611,15 @@ Module windowMain
   
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
-    ; currently, supprot only one selected mod in list
-    ; if multiple mods selected, start "repoFindModAndDownload" for each mod
-    ; for this, change repoFindModAndDownloadThread to wait for other instances to finish!
+    Protected *mod.mods::mod
     
-    Protected *mod.mods::mod, *repoMod.repository::mod
-    Protected selected
-    
-    selected = GetGadgetState(gadget("modList"))
-    If selected <> -1
-      *mod = GetGadgetItemData(gadget("modList"), selected)
-    EndIf
-    
-    
-    If *mod
-      ; get best fit repoMod (if any)
-      ; if multiple defined, select same "installSource" or based on folder name
-      
-      If Not mods::update(*mod\tpf_id$)
-        ; show mod in database
-        repository::searchMod(*mod\name$) ; todo search author?
-        SetGadgetState(gadget("panel"), 1)
+    Protected i
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
+        *mod = GetGadgetItemData(gadget("modList"), i)
+        mods::update(*mod\tpf_id$)
       EndIf
-      
-    EndIf
+    Next
   EndProcedure
   
   ;- repo tab
