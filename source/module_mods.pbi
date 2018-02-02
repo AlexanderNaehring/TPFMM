@@ -1142,6 +1142,20 @@ Module mods
     ProcedureReturn ""
   EndProcedure
   
+  Procedure getRepoMod(*mod.mod)
+    Protected *repoMod
+    *repoMod = repository::getModByFoldername(*mod\tpf_id$)
+    If Not *repoMod
+      *repoMod  = repository::getModByLink(getDownloadLink(*mod))
+    EndIf
+    
+    If Not *repoMod
+      debugger::add("mods::getRepoMod() Could not find a mod for "+*mod\name$+" in online repository")
+    EndIf
+    
+    ProcedureReturn *repoMod
+  EndProcedure
+  
   ; actions
   
   Procedure doInstall(file$) ; install mod from file (archive)
@@ -1492,15 +1506,19 @@ Module mods
   Procedure doUpdate(id$)
     debugger::add("mods::doUpdate("+id$+")")
     Protected *mod.mod
-    Protected *repoMod.repository::mod
+    Protected link$
     
-    LockMutex(mutexMods)
-    *mod = FindMapElement(mods(), id$)
-    UnlockMutex(mutexMods)
+    link$ = repository::getLinkByFoldername(id$)
     
-    *repoMod = repository::getRepoMod(*mod) ; if can get a mod
+    If link$ = ""
+      LockMutex(mutexMods)
+      *mod = FindMapElement(mods(), id$)
+      UnlockMutex(mutexMods)
+      link$ = getDownloadLink(*mod)
+    EndIf
+    
     ; send back to windowMain, as there may be the need for a selection window (if mod has multiple files) 
-    windowMain::repoFindModAndDownload(*repoMod\source$, *repoMod\id)
+    windowMain::repoFindModAndDownload(link$)
   EndProcedure
   
   Procedure handleQueue(*dummy)
@@ -1584,21 +1602,9 @@ Module mods
   EndProcedure
   
   Procedure update(id$)
-    Protected *mod.mod
-    Protected *repoMod.repository::mod
-    
-    LockMutex(mutexMods)
-    *mod = FindMapElement(mods(), id$)
-    UnlockMutex(mutexMods)
-    
-    *repoMod = repository::getRepoMod(*mod)
-    
-    If *repoMod And repository::canDownloadMod(*repoMod) ; found an online mod that can be installed
-      addToQueue(#QUEUE_UPDATE, id$)
-      ProcedureReturn #True
-    Else
-      ProcedureReturn #False
-    EndIf
+    ; just add task, check later
+    addToQueue(#QUEUE_UPDATE, id$)
+    ProcedureReturn #True
   EndProcedure
   
   Procedure generateID(*mod.mod, id$ = "")
@@ -1883,8 +1889,7 @@ Module mods
         EndIf
         
         
-        *repo_mod = repository::getRepoMod(*mod) ; get most appropriate mod from repository based on stored links in *mod
-        
+        *repo_mod = getRepoMod(*mod) ; get most appropriate mod from repository
         If *repo_mod And Left(\tpf_id$, 1) <> "*"
           ; link to online mod exists
           ; try to find indication that repo mod is newer than local version
@@ -2118,7 +2123,6 @@ Module mods
     
     ProcedureReturn #True
   EndProcedure
-  
   
   Procedure getBackupList(List backups.backupInfoLocal(), filter$ = "")
     Protected backupFolder$, entry$

@@ -43,7 +43,7 @@ DeclareModule windowMain
   Declare progressMod(percent, text$=Chr(1))
   Declare progressRepo(percent, text$=Chr(1))
   
-  Declare repoFindModAndDownload(source$, id.q, fileID.q = 0)
+  Declare repoFindModAndDownload(link$)
   
 EndDeclareModule
 
@@ -192,7 +192,8 @@ Module windowMain
       ; link to mod in repo
       DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
       DisableGadget(gadget("modUpdate"), #False)
-      If repository::getRepoMod(*mod) ; TODO: whole repo <-> local binding should be revised.
+      
+      If mods::getRepoMod(*mod)
         SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
         SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
       Else ; link unknown
@@ -738,7 +739,7 @@ Module windowMain
             ; init download if selected
             *file = GetGadgetData(repoSelectFilesGadget())
             
-            repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+            repository::download(*repo_mod\source$, *repo_mod\id, *file\fileID)
           EndIf
         EndIf
       Next
@@ -859,7 +860,7 @@ Module windowMain
       ForEach *repo_mod\files()
         *file = *repo_mod\files()
         If repository::canDownloadFile(*file) ; search for the single downloadable file
-          repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          repository::download(*repo_mod\source$, *repo_mod\id, *file\fileID)
           SetActiveGadget(gadget("repoList"))
           ProcedureReturn #True
         EndIf
@@ -894,7 +895,7 @@ Module windowMain
     If item <> -1
       *mod = GetGadgetItemData(gadget("modList"), item)
       If *mod
-        *repoMod = repository::getRepoMod(*mod)
+        *repoMod = mods::getRepoMod(*mod)
         If *repoMod
           repository::selectModInList(*repoMod)
           SetGadgetState(gadget("panel"), 1)
@@ -1631,7 +1632,7 @@ Module windowMain
           PostEvent(#ShowDownloadSelection, window, 0, #ShowDownloadSelection, *repoMod)
         EndIf
       Else
-        repository::downloadMod(source$, id, fileID)
+        repository::download(source$, id, fileID)
       EndIf
     Else
       debugger::add("windowMain::repoFindModAndDownload("+source$+", "+id+", "+fileID+") - ERROR")
@@ -1639,15 +1640,15 @@ Module windowMain
     
   EndProcedure
   
-  Procedure repoFindModAndDownload(source$, id.q, fileID.q = 0)
+  Procedure repoFindModAndDownload(link$)
     ; search for a mod in repo and initiate download
     
     Protected *buffer.findModStruct
     *buffer = AllocateStructure(findModStruct)
     
-    *buffer\source$ = source$
-    *buffer\id      = id
-    *buffer\fileID  = fileID
+    *buffer\source$ =     StringField(link$, 1, "/")
+    *buffer\id      = Val(StringField(link$, 2, "/"))
+    *buffer\fileID  = Val(StringField(link$, 3, "/"))
     
     ; start in thread in order to wait for repository to finish
     CreateThread(@repoFindModAndDownloadThread(), *buffer)

@@ -145,6 +145,7 @@
   Declare isInstalledByRemote(source$, id)
   Declare isInstalled(id$)
   Declare.s getDownloadLink(*mod.mod)
+  Declare getRepoMod(*mod.mod)
   
   Declare getBackupList(List backups.backupInfoLocal(), filter$="")
   Declare backupDelete(file$)

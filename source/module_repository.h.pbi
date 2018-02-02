@@ -113,10 +113,12 @@ DeclareModule repository
   Declare canDownloadModByID(source$, id.q, fileID.q = 0)
   Declare canDownloadMod(*repoMod.mod)
   Declare canDownloadFile(*file.file)
-  Declare downloadMod(source$, id.q, fileID.q = 0)
-  Declare findModByID(source$, id.q)
-  Declare findModByFoldername(foldername$)
-  Declare getRepoMod(*mod.mods::mod)
+  Declare download(source$, id.q, fileID.q = 0)
+  
+  ; search for mod by link or foldername
+  Declare getModByLink(link$)
+  Declare getModByFoldername(foldername$)
+  Declare.s getLinkByFoldername(foldername$)
   
   ; other
   Declare refresh()

@@ -53,7 +53,7 @@ Module windowPack
     EndIf
     
     If packItem\download$
-      If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
+      If repository::getModByLink(packItem\download$)
         ; download link found :-)
         download$ = locale::l("pack","available")
       Else
@@ -220,19 +220,14 @@ Module windowPack
       debugger::add("windowPack::gadgetItems() - double click")
       ; download currently selected mod
       Protected *packItem.pack::packItem
-      Protected source$, id.q, fileID.q
       *packItem = GetGadgetItemData(gadget("items"), GetGadgetState(gadget("items")))
       If *packitem
         If Not mods::isInstalled(*packitem\id$)
           ; TODO: also set folder name -> used during install to apply identical folder name as during export...
           
-          source$ =     StringField(*packitem\download$, 1, "/")
-          id      = Val(StringField(*packitem\download$, 2, "/"))
-          fileID  = Val(StringField(*packitem\download$, 3, "/"))
-          
           debugger::add("windowPack::gadgetItems() - start download of mod "+*packitem\name$+": "+*packitem\download$)
           ;repository::downloadMod(source$, id, fileid)
-          windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+          windowMain::repoFindModAndDownload(*packitem\download$) ; will display selection dialog if multiple files in mod
         EndIf
       EndIf
     EndIf
@@ -272,13 +267,9 @@ Module windowPack
       If Not mods::isInstalled(items()\id$)
         ; TODO: also set folder name -> used during install to apply identical folder name as during export...
         
-        source$ =     StringField(items()\download$, 1, "/")
-        id      = Val(StringField(items()\download$, 2, "/"))
-        fileID  = Val(StringField(items()\download$, 3, "/"))
-        
         debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
         ;repository::downloadMod(source$, id, fileid)
-        windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+        windowMain::repoFindModAndDownload(items()\download$) ; will display selection dialog if multiple files in mod
       EndIf
     Next
     close()

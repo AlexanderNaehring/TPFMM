@@ -339,7 +339,7 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure downloadModThread(*download.download)
+  Procedure downloadThread(*download.download)
     If Not *download Or *download\source$ = "" Or Not *download\id
       ProcedureReturn #False
     EndIf
@@ -1265,8 +1265,8 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure downloadMod(source$, id.q, fileID.q = #Null)
-    debugger::add("repository::downloadMod() download/"+source$+"/"+id+"/"+fileID+"")
+  Procedure download(source$, id.q, fileID.q = #Null)
+    debugger::add("repository::download() download/"+source$+"/"+id+"/"+fileID+"")
     Protected *buffer.download
     
     ; copy structure so that data stays available in thread
@@ -1276,32 +1276,39 @@ Module repository
     *buffer\fileID  = fileID
     
     ; call thread
-    CreateThread(@downloadModThread(), *buffer)
+    CreateThread(@downloadThread(), *buffer)
   EndProcedure
   
-  Procedure findModByID(source$, id.q)
-    debugger::add("repository::findModByID("+source$+","+id+")")
+  
+  ; search for mods in repo by link or foldername
+  Procedure getModByLink(link$)
+    debugger::add("repository::findModByID("+link$+")")
+    Protected source$
+    Protected id.q
     Protected *find.mod
-    LockMutex(mutexRepoMods)
     
+    source$ = StringField(link$, 1, "/") 
+    id      = Val(StringField(link$, 2, "/")) 
+    
+    LockMutex(mutexRepoMods)
     ForEach repo_mods()
       If repo_mods()\repo_info\source$ = source$
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\source$ = source$ And 
              repo_mods()\mods()\id      = id
             *find = repo_mods()\mods()
-            debugger::add("repository::findModByID("+source$+","+id+") - found mod '"+*find\name$+"'")
+            debugger::add("repository::getModByLink("+link$+") - found mod '"+*find\name$+"'")
             Break 2
           EndIf
         Next
       EndIf
     Next
-    
     UnlockMutex(mutexRepoMods)
+    
     ProcedureReturn *find
   EndProcedure
   
-  Procedure findModByFoldername(foldername$)
+  Procedure getModByFoldername(foldername$)
     Protected *find.mod
     foldername$ = LCase(foldername$)
     
@@ -1327,35 +1334,30 @@ Module repository
     ProcedureReturn *find
   EndProcedure
   
-  Procedure getRepoMod(*mod.mods::mod) ; get the best fit repo mod (based on linked mods and installSource or folder name)
-    Protected *repoMod.repository::mod
+  Procedure.s getLinkByFoldername(foldername$)
     Protected link$
-    Protected source$, id.q, fileID.q
+    foldername$ = LCase(foldername$)
     
-    Static regexp
-    If Not regexp
-      regexp = CreateRegularExpression(#PB_Any, "^[\*]{0,1}[0-9]+_1$") ; workshop mod
+    LockMutex(mutexRepoMods)
+    ForEach repo_mods()
+      ForEach repo_mods()\mods()
+        ForEach repo_mods()\mods()\files()
+          If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
+            link$ = repo_mods()\mods()\source$+"/"+Str(repo_mods()\mods()\id)+"/"+Str(repo_mods()\mods()\files()\fileid)
+            Break 3
+          EndIf
+        Next
+      Next
+    Next
+    UnlockMutex(mutexRepoMods)
+    
+    If link$ = ""
+      debugger::add("repository::getDownloadLinkByFoldername("+foldername$+") - not found any match!")
     EndIf
     
-    ; TODO: when a match is found -> store for next question
-    
-    If *mod
-      *repoMod = findModByFoldername(*mod\tpf_id$)
-      
-      If Not *repoMod
-        Debug "##### cannot find foldername "+*mod\tpf_id$
-        link$ = mods::getDownloadLink(*mod)
-        
-        source$ = StringField(link$, 1, "/")
-        id      = Val(StringField(link$, 2, "/"))
-        fileID  = Val(StringField(link$, 3, "/"))
-        
-        *repoMod = findModByID(source$, id)
-      EndIf
-      
-      ProcedureReturn *repoMod
-    EndIf
+    ProcedureReturn link$
   EndProcedure
+  
   
   ; list all available repos in settings gadget
   
