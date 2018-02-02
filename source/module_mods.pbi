@@ -1859,7 +1859,7 @@ Module mods
       With *mod
         Protected supportsModSettings$ = ""
         If ListSize(\settings()) > 0
-          supportsModSettings$ = "✓"
+          supportsModSettings$ = locale::l("main","mod_options")
         EndIf 
         text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$ + #LF$ + supportsModSettings$
         
