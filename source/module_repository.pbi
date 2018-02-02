@@ -1282,21 +1282,29 @@ Module repository
   
   ; search for mods in repo by link or foldername
   Procedure getModByLink(link$)
-    debugger::add("repository::findModByID("+link$+")")
     Protected source$
     Protected id.q
-    Protected *find.mod
+    Protected *find
+    Static NewMap *find()
+    
+    LockMutex(mutexRepoMods)
+    
+    If FindMapElement(*find(), link$)
+      *find = *find()
+      UnlockMutex(mutexRepoMods)
+      ProcedureReturn *find
+    EndIf
     
     source$ = StringField(link$, 1, "/") 
     id      = Val(StringField(link$, 2, "/")) 
     
-    LockMutex(mutexRepoMods)
     ForEach repo_mods()
       If repo_mods()\repo_info\source$ = source$
         ForEach repo_mods()\mods()
           If repo_mods()\mods()\source$ = source$ And 
              repo_mods()\mods()\id      = id
             *find = repo_mods()\mods()
+            *find(link$) = *find
             Break 2
           EndIf
         Next
@@ -1304,57 +1312,63 @@ Module repository
     Next
     UnlockMutex(mutexRepoMods)
     
-    If Not *find
-;       debugger::add("repository::getModByLink("+link$+") not found any match!")
-    EndIf
-    
     ProcedureReturn *find
   EndProcedure
   
   Procedure getModByFoldername(foldername$)
     Protected *find.mod
-    foldername$ = LCase(foldername$)
+    Static NewMap *find()
     
+    foldername$ = LCase(foldername$)
     LockMutex(mutexRepoMods)
+    
+    If FindMapElement(*find(), foldername$)
+      *find = *find()
+      UnlockMutex(mutexRepoMods)
+      ProcedureReturn *find
+    EndIf
+    
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         ForEach repo_mods()\mods()\files()
           If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
             *find = repo_mods()\mods()
+            *find(foldername$) = *find
             Break 3
           EndIf
         Next
       Next
     Next
     UnlockMutex(mutexRepoMods)
-    
-    If Not *find
-;       debugger::add("repository::findModByFoldername("+foldername$+") - not found any match!")
-    EndIf
     
     ProcedureReturn *find
   EndProcedure
   
   Procedure.s getLinkByFoldername(foldername$)
     Protected link$
+    Static NewMap link$()
     foldername$ = LCase(foldername$)
     
     LockMutex(mutexRepoMods)
+    
+    If FindMapElement(link$(), foldername$)
+      link$ = link$()
+      UnlockMutex(mutexRepoMods)
+      ProcedureReturn link$
+    EndIf
+    
     ForEach repo_mods()
       ForEach repo_mods()\mods()
         ForEach repo_mods()\mods()\files()
           If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
             link$ = repo_mods()\mods()\source$+"/"+Str(repo_mods()\mods()\id)+"/"+Str(repo_mods()\mods()\files()\fileid)
+            link$(foldername$) = link$
             Break 3
           EndIf
         Next
       Next
     Next
     UnlockMutex(mutexRepoMods)
-    
-    If link$ = ""
-;       debugger::add("repository::getDownloadLinkByFoldername("+foldername$+") - not found any match!")
-    EndIf
     
     ProcedureReturn link$
   EndProcedure
