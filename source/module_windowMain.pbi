@@ -43,7 +43,7 @@ DeclareModule windowMain
   Declare progressMod(percent, text$=Chr(1))
   Declare progressRepo(percent, text$=Chr(1))
   
-  Declare repoFindModAndDownload(source$, id.q, fileID.q = 0)
+  Declare repoFindModAndDownload(link$)
   
 EndDeclareModule
 
@@ -65,7 +65,6 @@ Module windowMain
     #MenuItem_Information
     #MenuItem_Backup
     #MenuItem_Uninstall
-    #MenuItem_SearchModOnline
     #MenuItem_ModWebsite
     #MenuItem_ModFolder
     #MenuItem_RepositoryRefresh
@@ -189,15 +188,11 @@ Module windowMain
         EndIf
       EndIf
       
-      ; link to mod in repo
-      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
-      DisableGadget(gadget("modUpdate"), #False)
-      If *mod\aux\link_tfnetMod Or *mod\aux\link_workshopMod ; link to online mod known
-        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
-        SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
-      Else ; link unknown
-        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "search_online"))
-        SetGadgetText(gadget("modUpdate"), locale::l("main", "search_online"))
+      
+      If mods::getRepoMod(*mod)
+        DisableGadget(gadget("modUpdate"), #False)
+      Else
+        DisableGadget(gadget("modUpdate"), #True)
       EndIf
       
       ; website 
@@ -218,17 +213,16 @@ Module windowMain
     Else
       ; multiple mods or none selected
       
-      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-      EndIf
-      
-      DisableGadget(gadget("modUpdate"), #True)
       DisableGadget(gadget("modSettings"), #True)
+      DisableGadget(gadget("modUpdate"), #True)
       
-      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
+      
+      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
+        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
+      EndIf
     EndIf
     
     If numSelected = 0
@@ -602,30 +596,28 @@ Module windowMain
   
   Procedure modUpdate()
     debugger::add("windowMain::modUpdate()")
-    ; currently, supprot only one selected mod in list
-    ; if multiple mods selected, start "repoFindModAndDownload" for each mod
-    ; for this, change repoFindModAndDownloadThread to wait for other instances to finish!
+    Protected *mod.mods::mod
+    Protected i
     
-    Protected *mod.mods::mod, *repoMod.repository::mod
-    Protected selected
-    
-    selected = GetGadgetState(gadget("modList"))
-    If selected <> -1
-      *mod = GetGadgetItemData(gadget("modList"), selected)
-    EndIf
-    
-    
-    If *mod
-      ; get best fit repoMod (if any)
-      ; if multiple defined, select same "installSource" or based on folder name
-      
-      If Not mods::update(*mod\tpf_id$)
-        ; show mod in database
-        repository::searchMod(*mod\name$) ; todo search author?
-        SetGadgetState(gadget("panel"), 1)
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
+        *mod = GetGadgetItemData(gadget("modList"), i)
+        mods::update(*mod\tpf_id$)
       EndIf
-      
-    EndIf
+    Next
+  EndProcedure
+  
+  Procedure modUpdateAll()
+    debugger::add("windowMain::modUpdateAll()")
+    Protected *mod.mods::mod
+    Protected i
+    
+    For i = 0 To CountGadgetItems(gadget("modList"))-1
+      *mod = GetGadgetItemData(gadget("modList"), i)
+      If mods::isUpdateAvailable(*mod)
+        mods::update(*mod\tpf_id$)
+      EndIf
+    Next
   EndProcedure
   
   ;- repo tab
@@ -738,7 +730,7 @@ Module windowMain
             ; init download if selected
             *file = GetGadgetData(repoSelectFilesGadget())
             
-            repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+            repository::download(*repo_mod\source$, *repo_mod\id, *file\fileID)
           EndIf
         EndIf
       Next
@@ -859,7 +851,7 @@ Module windowMain
       ForEach *repo_mod\files()
         *file = *repo_mod\files()
         If repository::canDownloadFile(*file) ; search for the single downloadable file
-          repository::downloadMod(*repo_mod\source$, *repo_mod\id, *file\fileID)
+          repository::download(*repo_mod\source$, *repo_mod\id, *file\fileID)
           SetActiveGadget(gadget("repoList"))
           ProcedureReturn #True
         EndIf
@@ -881,30 +873,6 @@ Module windowMain
   Procedure repoClearCache()
     repository::clearCache()
     MessageRequester(locale::l("main","repo_clear_title"), locale::l("main","repo_clear_text"), #PB_MessageRequester_Info)
-  EndProcedure
-  
-  Procedure searchModOnline()
-    ; get selected mod from list
-    
-    Protected *mod.mods::mod
-    Protected *repoMod.repository::mod
-    Protected item
-    
-    item = GetGadgetState(gadget("modList"))
-    If item <> -1
-      *mod = GetGadgetItemData(gadget("modList"), item)
-      If *mod
-        *repoMod = repository::getRepoMod(*mod)
-        If *repoMod
-          repository::selectModInList(*repoMod)
-          SetGadgetState(gadget("panel"), 1)
-        Else
-          repository::searchMod(*mod\name$) ; todo search author?
-          SetGadgetState(gadget("panel"), 1)
-        EndIf
-      EndIf
-    EndIf
-    
   EndProcedure
   
   ;
@@ -1281,10 +1249,6 @@ Module windowMain
     
     If text$ <> Chr(1)
       SetGadgetText(gadget("progressModText"), text$)
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        RefreshDialog(dialog)
-        ; causes segmentation violation in Linux
-      CompilerEndIf
     EndIf
   EndProcedure
   
@@ -1386,9 +1350,12 @@ Module windowMain
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
     SetGadgetText(gadget("modInformation"),     l("main","information"))
     SetGadgetText(gadget("modSettings"),        l("main","settings"))
-    SetGadgetText(gadget("modUpdate"),          l("main","search_online"))
+    SetGadgetText(gadget("modUpdate"),          l("main","update"))
+    GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
+    SetGadgetText(gadget("modUpdateAll"),       l("main","update_all"))
+    GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
     
     SetGadgetText(gadget("repoFilterFrame"),    l("main","filter"))
     SetGadgetText(gadget("repoManagementFrame"), l("main","management"))
@@ -1413,6 +1380,7 @@ Module windowMain
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
+    BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())
@@ -1532,7 +1500,6 @@ Module windowMain
     MenuBar()
     MenuItem(#MenuItem_AddToPack, l("main","add_to_pack"), ImageID(images::Images("share")))
     MenuBar()
-    MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
     MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
     
@@ -1541,7 +1508,6 @@ Module windowMain
     BindMenuEvent(MenuLibrary, #MenuItem_ModFolder, @modOpenModFolder())
     BindMenuEvent(MenuLibrary, #MenuItem_Backup, @modBackup())
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
-    BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
     BindMenuEvent(MenuLibrary, #MenuItem_AddToPack, @modAddToPack())
     
@@ -1635,7 +1601,7 @@ Module windowMain
           PostEvent(#ShowDownloadSelection, window, 0, #ShowDownloadSelection, *repoMod)
         EndIf
       Else
-        repository::downloadMod(source$, id, fileID)
+        repository::download(source$, id, fileID)
       EndIf
     Else
       debugger::add("windowMain::repoFindModAndDownload("+source$+", "+id+", "+fileID+") - ERROR")
@@ -1643,15 +1609,15 @@ Module windowMain
     
   EndProcedure
   
-  Procedure repoFindModAndDownload(source$, id.q, fileID.q = 0)
+  Procedure repoFindModAndDownload(link$)
     ; search for a mod in repo and initiate download
     
     Protected *buffer.findModStruct
     *buffer = AllocateStructure(findModStruct)
     
-    *buffer\source$ = source$
-    *buffer\id      = id
-    *buffer\fileID  = fileID
+    *buffer\source$ =     StringField(link$, 1, "/")
+    *buffer\id      = Val(StringField(link$, 2, "/"))
+    *buffer\fileID  = Val(StringField(link$, 3, "/"))
     
     ; start in thread in order to wait for repository to finish
     CreateThread(@repoFindModAndDownloadThread(), *buffer)

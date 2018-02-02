@@ -959,7 +959,6 @@ Module mods
   
   Procedure saveList()
     Protected gameDirectory$ = main::gameDirectory$
-    Protected NewMap saveMods.mod()
     
     If Not isLoaded
       ; do not save list when it is not loaded
@@ -978,20 +977,11 @@ Module mods
     EndIf
     
     LockMutex(mutexMods)
-    CopyMap(mods(), saveMods())
-    
-    ForEach saveMods()
-      saveMods()\aux\link_tfnetMod = #Null
-      SaveMods()\aux\link_workshopMod = #Null
-    Next
-    
-    
     Protected json
     json = CreateJSON(#PB_Any)
-    InsertJSONMap(JSONValue(json), saveMods())
+    InsertJSONMap(JSONValue(json), mods())
     SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
-    FreeMap(saveMods())
     
     UnlockMutex(mutexMods)
     
@@ -1150,6 +1140,20 @@ Module mods
     EndIf
     
     ProcedureReturn ""
+  EndProcedure
+  
+  Procedure getRepoMod(*mod.mod)
+    Protected *repoMod
+    *repoMod = repository::getModByFoldername(*mod\tpf_id$)
+    If Not *repoMod
+      *repoMod  = repository::getModByLink(getDownloadLink(*mod))
+    EndIf
+    
+    If Not *repoMod
+      debugger::add("mods::getRepoMod() Could not find a mod for "+*mod\name$+" in online repository")
+    EndIf
+    
+    ProcedureReturn *repoMod
   EndProcedure
   
   ; actions
@@ -1502,15 +1506,19 @@ Module mods
   Procedure doUpdate(id$)
     debugger::add("mods::doUpdate("+id$+")")
     Protected *mod.mod
-    Protected *repoMod.repository::mod
+    Protected link$
     
-    LockMutex(mutexMods)
-    *mod = FindMapElement(mods(), id$)
-    UnlockMutex(mutexMods)
+    link$ = repository::getLinkByFoldername(id$)
     
-    *repoMod = repository::getRepoMod(*mod) ; if can get a mod
+    If link$ = ""
+      LockMutex(mutexMods)
+      *mod = FindMapElement(mods(), id$)
+      UnlockMutex(mutexMods)
+      link$ = getDownloadLink(*mod)
+    EndIf
+    
     ; send back to windowMain, as there may be the need for a selection window (if mod has multiple files) 
-    windowMain::repoFindModAndDownload(*repoMod\source$, *repoMod\id)
+    windowMain::repoFindModAndDownload(link$)
   EndProcedure
   
   Procedure handleQueue(*dummy)
@@ -1594,21 +1602,30 @@ Module mods
   EndProcedure
   
   Procedure update(id$)
-    Protected *mod.mod
-    Protected *repoMod.repository::mod
-    
-    LockMutex(mutexMods)
-    *mod = FindMapElement(mods(), id$)
-    UnlockMutex(mutexMods)
-    
-    *repoMod = repository::getRepoMod(*mod)
-    
-    If *repoMod And repository::canDownloadMod(*repoMod) ; found an online mod that can be installed
-      addToQueue(#QUEUE_UPDATE, id$)
-      ProcedureReturn #True
-    Else
-      ProcedureReturn #False
+    ; just add task, check later
+    addToQueue(#QUEUE_UPDATE, id$)
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure isUpdateAvailable(*mod.mod, *repo_mod.repository::mod = 0)
+    If Not *repo_mod
+      *repo_mod = getRepoMod(*mod)
+      If Not *repo_mod
+        ; no online mod found -> no update available
+        ProcedureReturn #False
+      EndIf
     EndIf
+    
+    Protected compare
+    If settings::getInteger("", "compareVersion") And *repo_mod\version$
+      ; use alternative comparison method: version check
+      compare = Bool(*repo_mod\version$ And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\version$))
+    Else
+      ; default compare: date check
+      compare = Bool((*mod\aux\repoTimeChanged And *repo_mod\timechanged > *mod\aux\repoTimeChanged) Or
+                     (*mod\aux\installDate And *repo_mod\timechanged > *mod\aux\installDate))
+    EndIf
+    ProcedureReturn compare
   EndProcedure
   
   Procedure generateID(*mod.mod, id$ = "")
@@ -1761,9 +1778,6 @@ Module mods
     HideGadget(_gadgetModList, #True)
     ListIcon::ClearListItems(_gadgetModList)
     
-    Protected compareVersion
-    compareVersion = settings::getInteger("", "compareVersion")
-    
     
     ; count = number of individual parts of search string
     ; only if all parts are found, show result!
@@ -1861,15 +1875,13 @@ Module mods
     
     misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
     
-    Protected *repo_mod.repository::mod
-    
     ForEach *mods_to_display()
       *mod = *mods_to_display()
       
       With *mod
         Protected supportsModSettings$ = ""
         If ListSize(\settings()) > 0
-          supportsModSettings$ = "✓"
+          supportsModSettings$ = locale::l("main","mod_options")
         EndIf 
         text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$ + #LF$ + supportsModSettings$
         
@@ -1892,24 +1904,11 @@ Module mods
           SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_hidden"))
         EndIf
         
-        repository::findModOnline(*mod)
-        *repo_mod = repository::getRepoMod(*mod) ; get most appropriate mod from repository based on stored links in *mod
         
+        Protected *repo_mod.repository::mod
+        *repo_mod = getRepoMod(*mod) ; get most appropriate mod from repository
         If *repo_mod And Left(\tpf_id$, 1) <> "*"
-          ; link to online mod exists
-          ; try to find indication that repo mod is newer than local version
-          ; do not use "version" for now, as it may not be realiable
-          Protected compare
-          If compareVersion And *repo_mod\version$
-            ; use alternative comparison method: version check
-            compare = Bool(*repo_mod\version$ And \version$ And ValD(\version$) < ValD(*repo_mod\version$))
-          Else
-            ; default compare: date check
-            compare =  Bool((\aux\repoTimeChanged And *repo_mod\timechanged > \aux\repoTimeChanged) Or
-                            (\aux\installDate And *repo_mod\timechanged > \aux\installDate))
-          EndIf
-          
-          If compare
+          If isUpdateAvailable(*mod, *repo_mod)
             ; update available (most likely)
             ; RGB($FF, $99, $00)
             SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
@@ -2128,7 +2127,6 @@ Module mods
     
     ProcedureReturn #True
   EndProcedure
-  
   
   Procedure getBackupList(List backups.backupInfoLocal(), filter$ = "")
     Protected backupFolder$, entry$

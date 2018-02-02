@@ -18,8 +18,6 @@
     tfnetID.i         ; entry ID in transportfever.net download section
     workshopID.q      ; fileID in Steam Workshop
     installSource$    ; name of install source (workshop, tpfnet)
-    *link_tfnetMod         ; (temp) link to mod in repository
-    *link_workshopMod      ; (temp) link to mod in repository
     sv.i              ; scanner version, rescan if newer scanner version is used
     hidden.b          ; hidden from overview ("visible" in mod.lua)
     backup.backup     ; backup information (local)
@@ -76,7 +74,6 @@
   
   Structure mod           ;-- information about mod/dlc
     tpf_id$              ; folder name in game: author_name_version or steam workshop ID
-    uuid$                   ; Universally unique identifier for a single mod (all versions of mod on all online sources)
     name$                   ; name of mod
     majorVersion.i          ; first part of version number, identical to version in ID string
     minorVersion.i          ; latter part of version number
@@ -148,6 +145,7 @@
   Declare isInstalledByRemote(source$, id)
   Declare isInstalled(id$)
   Declare.s getDownloadLink(*mod.mod)
+  Declare getRepoMod(*mod.mod)
   
   Declare getBackupList(List backups.backupInfoLocal(), filter$="")
   Declare backupDelete(file$)
@@ -160,6 +158,8 @@
   Declare uninstall(folderID$)  ; remove mod folder from game, maybe create a security backup by zipping content
   Declare backup(folderID$)     ; backup installed mod
   Declare update(folderID$)
+  
+  Declare isUpdateAvailable(*mod, *repo_mod = 0)
   
   ; export
   Declare getMods(List *mods.mod())

@@ -1,5 +1,4 @@
-﻿; TODO drag&drop mod pack files on pack window to open
-
+﻿
 DeclareModule windowPack
   EnableExplicit
   
@@ -52,8 +51,13 @@ Module windowPack
       installed$ = locale::l("pack","no")
     EndIf
     
-    If packItem\download$
-      If repository::findModByID(StringField(packItem\download$, 1, "/"), Val(StringField(packItem\download$, 2, "/")))
+    download$ = repository::getLinkByFoldername(packItem\id$)
+    If download$ = ""
+      download$ = packItem\download$
+    EndIf
+    
+    If download$
+      If repository::getModByLink(download$)
         ; download link found :-)
         download$ = locale::l("pack","available")
       Else
@@ -157,7 +161,10 @@ Module windowPack
     
     packItem\name$ = *mod\name$
     packItem\id$ = *mod\tpf_id$
-    packItem\download$ = mods::getDownloadLink(*mod)
+    packItem\download$ = repository::getLinkByFoldername(packItem\id$)
+    If packItem\download$ = ""
+      packItem\download$ = mods::getDownloadLink(*mod)
+    EndIf
     
     If pack::addItem(*pack, packItem)
       displayNewPackItem(packItem)
@@ -220,19 +227,14 @@ Module windowPack
       debugger::add("windowPack::gadgetItems() - double click")
       ; download currently selected mod
       Protected *packItem.pack::packItem
-      Protected source$, id.q, fileID.q
       *packItem = GetGadgetItemData(gadget("items"), GetGadgetState(gadget("items")))
       If *packitem
         If Not mods::isInstalled(*packitem\id$)
           ; TODO: also set folder name -> used during install to apply identical folder name as during export...
           
-          source$ =     StringField(*packitem\download$, 1, "/")
-          id      = Val(StringField(*packitem\download$, 2, "/"))
-          fileID  = Val(StringField(*packitem\download$, 3, "/"))
-          
           debugger::add("windowPack::gadgetItems() - start download of mod "+*packitem\name$+": "+*packitem\download$)
           ;repository::downloadMod(source$, id, fileid)
-          windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+          windowMain::repoFindModAndDownload(*packitem\download$) ; will display selection dialog if multiple files in mod
         EndIf
       EndIf
     EndIf
@@ -266,19 +268,24 @@ Module windowPack
   EndProcedure
   
   Procedure download()
-    Protected source$, id.q, fileid.q
     debugger::add("windowPack::dowload()")
+    Protected link$
+    
     ForEach items()
       If Not mods::isInstalled(items()\id$)
         ; TODO: also set folder name -> used during install to apply identical folder name as during export...
         
-        source$ =     StringField(items()\download$, 1, "/")
-        id      = Val(StringField(items()\download$, 2, "/"))
-        fileID  = Val(StringField(items()\download$, 3, "/"))
+        link$ = repository::getLinkByFoldername(items()\id$)
+        If link$ = ""
+          link$ = items()\download$
+        EndIf
         
-        debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
-        ;repository::downloadMod(source$, id, fileid)
-        windowMain::repoFindModAndDownload(source$, id, fileID) ; will display selection dialog if multiple files in mod
+        If link$
+          debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
+          windowMain::repoFindModAndDownload(items()\download$) ; will display selection dialog if multiple files in mod
+        Else
+          debugger::add("windowPack::dowload() - cannot download "+items()\name$)
+        EndIf
       EndIf
     Next
     close()
@@ -370,6 +377,5 @@ Module windowPack
     
     ProcedureReturn #True
   EndProcedure
-  
   
 EndModule
