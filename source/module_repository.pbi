@@ -1297,13 +1297,16 @@ Module repository
           If repo_mods()\mods()\source$ = source$ And 
              repo_mods()\mods()\id      = id
             *find = repo_mods()\mods()
-            debugger::add("repository::getModByLink("+link$+") - found mod '"+*find\name$+"'")
             Break 2
           EndIf
         Next
       EndIf
     Next
     UnlockMutex(mutexRepoMods)
+    
+    If Not *find
+;       debugger::add("repository::getModByLink("+link$+") not found any match!")
+    EndIf
     
     ProcedureReturn *find
   EndProcedure
@@ -1325,10 +1328,8 @@ Module repository
     Next
     UnlockMutex(mutexRepoMods)
     
-    If *find
-      debugger::add("found match "+foldername$+"!")
-    Else
-      debugger::add("repository::findModByFoldername("+foldername$+") - not found any match!")
+    If Not *find
+;       debugger::add("repository::findModByFoldername("+foldername$+") - not found any match!")
     EndIf
     
     ProcedureReturn *find
@@ -1352,7 +1353,7 @@ Module repository
     UnlockMutex(mutexRepoMods)
     
     If link$ = ""
-      debugger::add("repository::getDownloadLinkByFoldername("+foldername$+") - not found any match!")
+;       debugger::add("repository::getDownloadLinkByFoldername("+foldername$+") - not found any match!")
     EndIf
     
     ProcedureReturn link$
