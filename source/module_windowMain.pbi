@@ -65,7 +65,6 @@ Module windowMain
     #MenuItem_Information
     #MenuItem_Backup
     #MenuItem_Uninstall
-    #MenuItem_SearchModOnline
     #MenuItem_ModWebsite
     #MenuItem_ModFolder
     #MenuItem_RepositoryRefresh
@@ -189,16 +188,11 @@ Module windowMain
         EndIf
       EndIf
       
-      ; link to mod in repo
-      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #False)
-      DisableGadget(gadget("modUpdate"), #False)
       
       If mods::getRepoMod(*mod)
-        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "show_online"))
-        SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
-      Else ; link unknown
-        SetMenuItemText(MenuLibrary, #MenuItem_SearchModOnline, locale::l("main", "search_online"))
-        SetGadgetText(gadget("modUpdate"), locale::l("main", "search_online"))
+        DisableGadget(gadget("modUpdate"), #False)
+      Else
+        DisableGadget(gadget("modUpdate"), #True)
       EndIf
       
       ; website 
@@ -220,30 +214,22 @@ Module windowMain
       ; multiple mods or none selected
       
       DisableGadget(gadget("modSettings"), #True)
+      DisableGadget(gadget("modUpdate"), #True)
       
-      DisableMenuItem(MenuLibrary, #MenuItem_SearchModOnline, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
       If numSelected = 0
         ; none selected
-        
-        DisableGadget(gadget("modUpdate"), #True)
         DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #True)
       Else
         ; multiple selected
-        
-        SetGadgetText(gadget("modUpdate"), locale::l("main", "download_current"))
-        DisableGadget(gadget("modUpdate"), #False)
-        
         DisableMenuItem(MenuLibrary, #MenuItem_AddToPack, #False)
       EndIf
-      
       
       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
       EndIf
-      
     EndIf
     
   EndProcedure
@@ -890,30 +876,6 @@ Module windowMain
     MessageRequester(locale::l("main","repo_clear_title"), locale::l("main","repo_clear_text"), #PB_MessageRequester_Info)
   EndProcedure
   
-  Procedure searchModOnline()
-    ; get selected mod from list
-    
-    Protected *mod.mods::mod
-    Protected *repoMod.repository::mod
-    Protected item
-    
-    item = GetGadgetState(gadget("modList"))
-    If item <> -1
-      *mod = GetGadgetItemData(gadget("modList"), item)
-      If *mod
-        *repoMod = mods::getRepoMod(*mod)
-        If *repoMod
-          repository::selectModInList(*repoMod)
-          SetGadgetState(gadget("panel"), 1)
-        Else
-          repository::searchMod(*mod\name$) ; todo search author?
-          SetGadgetState(gadget("panel"), 1)
-        EndIf
-      EndIf
-    EndIf
-    
-  EndProcedure
-  
   ;
   
   Procedure modShowWebsite()
@@ -1389,7 +1351,8 @@ Module windowMain
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
     SetGadgetText(gadget("modInformation"),     l("main","information"))
     SetGadgetText(gadget("modSettings"),        l("main","settings"))
-    SetGadgetText(gadget("modUpdate"),          l("main","search_online"))
+    SetGadgetText(gadget("modUpdate"),          l("main","update"))
+    GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
     SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
     SetGadgetText(gadget("modUpdateAll"),       l("main","update_all"))
@@ -1538,7 +1501,6 @@ Module windowMain
     MenuBar()
     MenuItem(#MenuItem_AddToPack, l("main","add_to_pack"), ImageID(images::Images("share")))
     MenuBar()
-    MenuItem(#MenuItem_SearchModOnline, l("main", "search_online"))
     MenuItem(#MenuItem_ModWebsite, l("main", "mod_website"))
     
     
@@ -1547,7 +1509,6 @@ Module windowMain
     BindMenuEvent(MenuLibrary, #MenuItem_ModFolder, @modOpenModFolder())
     BindMenuEvent(MenuLibrary, #MenuItem_Backup, @modBackup())
     BindMenuEvent(MenuLibrary, #MenuItem_Uninstall, @modUninstall())
-    BindMenuEvent(MenuLibrary, #MenuItem_SearchModOnline, @searchModOnline())
     BindMenuEvent(MenuLibrary, #MenuItem_ModWebsite, @modShowWebsite())
     BindMenuEvent(MenuLibrary, #MenuItem_AddToPack, @modAddToPack())
     
