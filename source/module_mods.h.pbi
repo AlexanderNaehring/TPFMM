@@ -159,6 +159,8 @@
   Declare backup(folderID$)     ; backup installed mod
   Declare update(folderID$)
   
+  Declare isUpdateAvailable(*mod, *repo_mod = 0)
+  
   ; export
   Declare getMods(List *mods.mod())
   Declare exportList(all=#False)

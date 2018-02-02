@@ -1607,6 +1607,27 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
+  Procedure isUpdateAvailable(*mod.mod, *repo_mod.repository::mod = 0)
+    If Not *repo_mod
+      *repo_mod = getRepoMod(*mod)
+      If Not *repo_mod
+        ; no online mod found -> no update available
+        ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    Protected compare
+    If settings::getInteger("", "compareVersion") And *repo_mod\version$
+      ; use alternative comparison method: version check
+      compare = Bool(*repo_mod\version$ And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\version$))
+    Else
+      ; default compare: date check
+      compare = Bool((*mod\aux\repoTimeChanged And *repo_mod\timechanged > *mod\aux\repoTimeChanged) Or
+                     (*mod\aux\installDate And *repo_mod\timechanged > *mod\aux\installDate))
+    EndIf
+    ProcedureReturn compare
+  EndProcedure
+  
   Procedure generateID(*mod.mod, id$ = "")
     debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
@@ -1757,9 +1778,6 @@ Module mods
     HideGadget(_gadgetModList, #True)
     ListIcon::ClearListItems(_gadgetModList)
     
-    Protected compareVersion
-    compareVersion = settings::getInteger("", "compareVersion")
-    
     
     ; count = number of individual parts of search string
     ; only if all parts are found, show result!
@@ -1857,8 +1875,6 @@ Module mods
     
     misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
     
-    Protected *repo_mod.repository::mod
-    
     ForEach *mods_to_display()
       *mod = *mods_to_display()
       
@@ -1889,22 +1905,10 @@ Module mods
         EndIf
         
         
+        Protected *repo_mod.repository::mod
         *repo_mod = getRepoMod(*mod) ; get most appropriate mod from repository
         If *repo_mod And Left(\tpf_id$, 1) <> "*"
-          ; link to online mod exists
-          ; try to find indication that repo mod is newer than local version
-          ; do not use "version" for now, as it may not be realiable
-          Protected compare
-          If compareVersion And *repo_mod\version$
-            ; use alternative comparison method: version check
-            compare = Bool(*repo_mod\version$ And \version$ And ValD(\version$) < ValD(*repo_mod\version$))
-          Else
-            ; default compare: date check
-            compare =  Bool((\aux\repoTimeChanged And *repo_mod\timechanged > \aux\repoTimeChanged) Or
-                            (\aux\installDate And *repo_mod\timechanged > \aux\installDate))
-          EndIf
-          
-          If compare
+          If isUpdateAvailable(*mod, *repo_mod)
             ; update available (most likely)
             ; RGB($FF, $99, $00)
             SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
