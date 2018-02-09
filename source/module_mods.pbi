@@ -275,7 +275,7 @@ Module mods
     
     ; read mod.lua if required
     If *mod\name$ = "" Or                                                 ; no name
-       *mod\aux\luaDate < GetFileDate(luaFile$, #PB_Date_Modified) Or     ; mod.lua modified
+       *mod\aux\luaDate <> GetFileDate(luaFile$, #PB_Date_Modified) Or    ; mod.lua modified
        *mod\aux\sv <> #SCANNER_VERSION Or                                 ; new program version
        *mod\aux\luaLanguage$ <> locale::getCurrentLocale()                ; language changed
       ; load info from mod.lua
@@ -896,7 +896,7 @@ Module mods
     Next
     
     
-    ; second check: added mods
+    ; second check: existing & added mods
     debugger::add("mods::doLoad() - check for added mods")
     count = MapSize(scanner())
     n = 0
@@ -920,7 +920,7 @@ Module mods
         If Not *mod Or Not FindMapElement(mods(), id$)
           ; this should never be reached
           debugger::add("mods::doLoad() - ERROR: failed to add mod to map")
-          Continue
+          End
         EndIf
         
         loadInfo(*mod)
