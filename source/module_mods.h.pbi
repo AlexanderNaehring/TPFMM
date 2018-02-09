@@ -64,14 +64,6 @@
     steamProfile$     ; Steam profile link
   EndStructure
   
-  Structure dependency ;-- dependency information
-    mod$            ; folder name
-    version.i       ; minorVersion
-    steamId.q       ; steam workshop ID
-    tfnetId.i       ; transportfever.net ID
-    exactMatch.b    ; is only exact version match allowed?
-  EndStructure
-  
   Structure mod           ;-- information about mod/dlc
     tpf_id$              ; folder name in game: author_name_version or steam workshop ID
     name$                   ; name of mod
@@ -84,7 +76,7 @@
     List authors.author()   ; information about author(s)
     List tags$()            ; list of tags
     minGameVersion.i        ; minimum required build number of game
-    List dependencies.dependency()    ; list of required mods (folder name of required mod)
+    List dependencies$()    ; list of required mods (folder name of required mod)
     url$                    ; website with further information
     
     List settings.modLuaSetting() ; mod settings (optional)

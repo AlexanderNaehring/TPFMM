@@ -277,6 +277,30 @@ Module luaParser
      lua_pop(L, 1)
   EndProcedure
   
+  Procedure modlua_getDependencies(L, index)
+    Protected val$
+    lua_pushvalue(L, index) 
+    
+    If Not lua_istable(L, -1)
+      debugger::add("lua::modlua_getDependencies() - not a table")
+      lua_pop(L, 1)
+      ProcedureReturn #False
+    EndIf
+    
+    ClearList(lua(Str(L))\mod\dependencies$())
+    
+    lua_pushnil(L)
+    While lua_next(L, -2)
+      val$ = lua_tostring(L, -1)
+      If val$
+        AddElement(lua(Str(L))\mod\dependencies$())
+        lua(Str(L))\mod\dependencies$() = val$
+      EndIf
+      lua_pop(L, 1)
+     Wend
+     lua_pop(L, 1)
+  EndProcedure
+  
   Procedure modlua_iterateInfoTable(L, index)
     Protected key$
     Protected *mod.mods::mod
@@ -320,6 +344,8 @@ Module luaParser
           If lua_tointeger(L, -2) <> 0
             *mod\aux\workshopID = lua_tointeger(L, -2)
           EndIf
+        Case "dependencies"
+          modlua_getDependencies(L, -2)
         Default
           
       EndSelect
