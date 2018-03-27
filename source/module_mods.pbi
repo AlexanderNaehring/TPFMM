@@ -1608,6 +1608,7 @@ Module mods
   EndProcedure
   
   Procedure isUpdateAvailable(*mod.mod, *repo_mod.repository::mod = 0)
+    
     If Not *repo_mod
       *repo_mod = getRepoMod(*mod)
       If Not *repo_mod
@@ -1820,12 +1821,41 @@ Module mods
           For k = 1 To count
             ; tmp_ok = true if this part is found, increase number of total matches by one
             tmp_ok = 0
+            
             str$ = Trim(StringField(filterstring$, k, " "))
             If str$
-              ; search in name, authors, tags
+              
+              ; mod settings
+              If LCase(str$) = "!settings"
+                If ListSize(*mod\settings()) > 0
+                  tmp_ok = 1
+                EndIf
+              EndIf
+              
+              ; update available
+              If LCase(str$) = "!update"
+                ; do not search updates for workshop and staging_area
+                If Left(*mod\tpf_id$, 1) <> "*" And Left(*mod\tpf_id$, 1) <> "?"
+                  If isUpdateAvailable(*mod)
+                    tmp_ok = 1
+                  EndIf
+                EndIf
+              EndIf
+              
+              ; lua error
+              If LCase(str$) = "!error"
+                If *mod\aux\luaParseError
+                  tmp_ok = 1
+                EndIf
+              EndIf
+              
+              ; name
               If FindString(\name$, str$, 1, #PB_String_NoCase)
                 tmp_ok = 1
-              Else
+              EndIf
+              
+              ; authors
+              If Not tmp_ok
                 n = modCountAuthors(*mod)
                 For i = 0 To n-1
                   If modGetAuthor(*mod, i, @author)
@@ -1835,33 +1865,33 @@ Module mods
                     EndIf
                   EndIf
                 Next
-                If Not tmp_ok
-                  n = modCountTags(*mod)
-                  For i = 0 To n-1
-                    If FindString(modGetTag(*mod, i), str$, 1, #PB_String_NoCase)
-                      tmp_ok = 1
-                      Break
-                    EndIf
-                  Next
-                  If Not tmp_ok
-;                     ForEach \tagsLocalized$()
-;                       If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
-;                         tmp_ok = 1
-;                         Break
-;                       EndIf
-;                     Next
-                  EndIf
-                EndIf
               EndIf
+              
+              ; tags
+              If Not tmp_ok
+                n = modCountTags(*mod)
+                For i = 0 To n-1
+                  If FindString(modGetTag(*mod, i), str$, 1, #PB_String_NoCase)
+                    tmp_ok = 1
+                    Break
+                  EndIf
+                Next
+              EndIf
+              
             Else
               tmp_ok = 1 ; empty search string is just ignored (ok)
             EndIf
             
             If tmp_ok
               mod_ok + 1
+            Else
+              ; this substring was not found.
+              ; currently: all parts of search string are "AND", so skip this mod
+              Break ; break out of "For k = 1 To count"
             EndIf
-          Next
+          Next ; For k = 1 To count
         EndIf
+        
         If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
           
           AddElement(*mods_to_display())
