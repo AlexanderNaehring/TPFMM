@@ -1150,7 +1150,7 @@ Module mods
     EndIf
     
     If Not *repoMod
-      debugger::add("mods::getRepoMod() Could not find a mod for "+*mod\name$+" in online repository")
+      ;debugger::add("mods::getRepoMod() Could not find a mod for "+*mod\name$+" in online repository")
     EndIf
     
     ProcedureReturn *repoMod
