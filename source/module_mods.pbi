@@ -1906,9 +1906,8 @@ Module mods
         
         
         Protected *repo_mod.repository::mod
-        *repo_mod = getRepoMod(*mod) ; get most appropriate mod from repository
-        If *repo_mod And Left(\tpf_id$, 1) <> "*"
-          If isUpdateAvailable(*mod, *repo_mod)
+        If Left(\tpf_id$, 1) <> "*" And Left(\tpf_id$, 1) <> "?" ; do not search updates for workshop and staging_area
+          If isUpdateAvailable(*mod)
             ; update available (most likely)
             ; RGB($FF, $99, $00)
             SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
