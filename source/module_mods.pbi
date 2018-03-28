@@ -1937,14 +1937,17 @@ Module mods
         
         Protected *repo_mod.repository::mod
         If Left(\tpf_id$, 1) <> "*" And Left(\tpf_id$, 1) <> "?" ; do not search updates for workshop and staging_area
-          If isUpdateAvailable(*mod)
-            ; update available (most likely)
-            ; RGB($FF, $99, $00)
-            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
-          Else
-            ; no update available (most likely)
-            ; RGB($00, $66, $00)
-            SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
+          *repo_mod = getRepoMod(*mod)
+          If *repo_mod
+            If isUpdateAvailable(*mod, *repo_mod)
+              ; update available (most likely)
+              ; RGB($FF, $99, $00)
+              SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
+            Else
+              ; no update available (most likely)
+              ; RGB($00, $66, $00)
+              SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
+            EndIf
           EndIf
         EndIf
         
