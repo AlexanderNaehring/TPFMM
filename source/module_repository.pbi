@@ -636,13 +636,18 @@ Module repository
     
     time = ElapsedMilliseconds()
     
-    
-    ; clean all lists
-    ClearList(repositories())
+    debugger::add("repository::loadRepositoryList() - clear cache and mods")
     LockMutex(mutexRepoMods)
+    ; reset static search maps
+    getModByFoldername("-reset")
+    getModByLink("-reset")
+    getLinkByFoldername("-reset")
+    ; clean lists
+    ClearList(repositories())
     ClearMap(repo_mods())
     UnlockMutex(mutexRepoMods)
     displayMods() ; show clean gadget list
+    
     
     ; always use official repository
     AddElement(repositories())
@@ -1287,6 +1292,11 @@ Module repository
     Protected *find
     Static NewMap *find()
     
+    If link$ = "-reset"
+      ClearMap(*find())
+      ProcedureReturn #True
+    EndIf
+    
     LockMutex(mutexRepoMods)
     
     If FindMapElement(*find(), link$)
@@ -1319,6 +1329,11 @@ Module repository
     Protected *find.mod
     Static NewMap *find()
     
+    If foldername$ = "-reset"
+      ClearMap(*find())
+      ProcedureReturn #True
+    EndIf
+    
     foldername$ = LCase(foldername$)
     LockMutex(mutexRepoMods)
     
@@ -1348,6 +1363,11 @@ Module repository
     Protected link$
     Static NewMap link$()
     foldername$ = LCase(foldername$)
+    
+    If foldername$ = "-reset"
+      ClearMap(link$())
+      ProcedureReturn ""
+    EndIf
     
     LockMutex(mutexRepoMods)
     

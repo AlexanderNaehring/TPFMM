@@ -1608,6 +1608,7 @@ Module mods
   EndProcedure
   
   Procedure isUpdateAvailable(*mod.mod, *repo_mod.repository::mod = 0)
+    Protected compare
     
     If Not *repo_mod
       *repo_mod = getRepoMod(*mod)
@@ -1617,7 +1618,6 @@ Module mods
       EndIf
     EndIf
     
-    Protected compare
     If settings::getInteger("", "compareVersion") And *repo_mod\version$
       ; use alternative comparison method: version check
       compare = Bool(*repo_mod\version$ And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\version$))
