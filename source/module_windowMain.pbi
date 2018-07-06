@@ -3,10 +3,6 @@ DeclareModule windowMain
   EnableExplicit
   
   Global window, dialog
-  
-  Macro gadget(name)
-    DialogGadget(windowMain::dialog, name)
-  EndMacro
     
   Enumeration FormMenu
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
@@ -58,7 +54,11 @@ XIncludeFile "module_pack.pbi"
 XIncludeFile "module_windowPack.pbi"
 
 Module windowMain
-
+  
+  Macro gadget(name)
+    DialogGadget(windowMain::dialog, name)
+  EndMacro
+  
   ; rightclick menu on library gadget
   Global MenuLibrary
   Enumeration FormMenu
@@ -423,14 +423,57 @@ Module windowMain
   ;- GADGETS
   
   Declare backupRefreshList()
-  Procedure panel()
-    If EventType() = #PB_EventType_Change
-      If GetGadgetState(gadget("panel")) = 2
-        updateBackupButtons()
-        backupRefreshList()
-      EndIf
-    EndIf
+;   Procedure panel()
+;     If EventType() = #PB_EventType_Change
+;       If GetGadgetState(gadget("panel")) = 2
+;         updateBackupButtons()
+;         backupRefreshList()
+;       EndIf
+;     EndIf
+;   EndProcedure
+  
+  Procedure hideAllContainer()
+    HideGadget(Gadget("containerMods"), #True)
+    HideGadget(gadget("containerMaps"), #True)
+    HideGadget(gadget("containerOnline"), #True)
+    HideGadget(gadget("containerBackups"), #True)
+    
+    SetGadgetState(gadget("btnMods"), 0)
+    SetGadgetState(gadget("btnMaps"), 0)
+    SetGadgetState(gadget("btnOnline"), 0)
+    SetGadgetState(gadget("btnBackups"), 0)
+    SetGadgetState(gadget("btnSettings"), 0)
   EndProcedure
+  
+  Procedure btnMods()
+    hideAllContainer()
+    HideGadget(gadget("containerMods"), #False)
+    SetGadgetState(gadget("btnMods"), 1)
+  EndProcedure
+  
+  Procedure btnMaps()
+    hideAllContainer()
+    HideGadget(gadget("containerMaps"), #False)
+    SetGadgetState(gadget("btnMaps"), 1)
+  EndProcedure
+  
+  Procedure btnOnline()
+    hideAllContainer()
+    HideGadget(gadget("containerOnline"), #False)
+    SetGadgetState(gadget("btnOnline"), 1)
+  EndProcedure
+  
+  Procedure btnBackups()
+    hideAllContainer()
+    HideGadget(gadget("containerBackups"), #False)
+    SetGadgetState(gadget("btnBackups"), 1)
+  EndProcedure
+  
+  Procedure btnSettings()
+    MenuItemSettings()
+    SetGadgetState(gadget("btnSettings"), 0)
+  EndProcedure
+  
   
   ;- mod tab
   
@@ -1334,9 +1377,9 @@ Module windowMain
     
     ; initialize gadgets
     
-    SetGadgetItemText(gadget("panel"), 0,       l("main","mods"))
-    SetGadgetItemText(gadget("panel"), 1,       l("main","repository"))
-    SetGadgetItemText(gadget("panel"), 2,       l("main","backups"))
+;     SetGadgetText(gadget("frameMods"),          l("main","mods"))
+;     SetGadgetText(gadget("frameOnline"),        l("main","repository"))
+;     SetGadgetText(gadget("frameBackups"),       l("main","backups"))
     
     RemoveGadgetColumn(gadget("modList"), 0)
     AddGadgetColumn(gadget("modList"), 0,       l("main","name"), 240)
@@ -1373,9 +1416,27 @@ Module windowMain
     SetGadgetText(gadget("backupClear"),        l("main","backup_clear"))
     SetGadgetText(gadget("backupFrameFilter"),  l("main","backup_filter"))
     
+    SetGadgetAttribute(gadget("btnMods"),     #PB_Button_Image,   ImageID(images::Images("navMods")))
+    SetGadgetAttribute(gadget("btnMaps"),     #PB_Button_Image,   ImageID(images::Images("navMaps")))
+    SetGadgetAttribute(gadget("btnOnline"),   #PB_Button_Image,   ImageID(images::Images("navOnline")))
+    SetGadgetAttribute(gadget("btnBackups"),  #PB_Button_Image,   ImageID(images::Images("navBackups")))
+    SetGadgetAttribute(gadget("btnSettings"), #PB_Button_Image,   ImageID(images::Images("navSettings")))
+    
+    GadgetToolTip(gadget("btnMods"),      l("main","mods"))
+    GadgetToolTip(gadget("btnMaps"),      l("main","maps"))
+    GadgetToolTip(gadget("btnOnline"),    l("main","repository"))
+    GadgetToolTip(gadget("btnBackups"),   l("main","backups"))
+    GadgetToolTip(gadget("btnSettings"),  l("menu","settings"))
+    
+    DisableGadget(gadget("btnMaps"), #True)
     
     ; Bind Gadget Events
-    BindGadgetEvent(gadget("panel"),            @panel())
+;     BindGadgetEvent(gadget("panel"),            @panel())
+    BindGadgetEvent(gadget("btnMods"),          @btnMods())
+    BindGadgetEvent(gadget("btnMaps"),          @btnMaps())
+    BindGadgetEvent(gadget("btnOnline"),        @btnOnline())
+    BindGadgetEvent(gadget("btnBackups"),       @btnBackups())
+    BindGadgetEvent(gadget("btnSettings"),      @btnSettings())
     
     BindGadgetEvent(gadget("modInformation"),   @modInformation())
     BindGadgetEvent(gadget("modSettings"),      @modSettings())

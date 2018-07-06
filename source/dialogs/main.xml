@@ -5,106 +5,119 @@
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
         <image name='headerMain' height='8' />
       </singlebox>
+      
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
-        <panel name='panel'>
-          <tab text='Modifications'>
-            <hbox expand='item:1'>
-              <vbox expand='item:2'>
-                <frame name='modFilterFrame' text=' '>
-                  <hbox expand='item:3'>
-                    <combobox name='modFilterFolder' width='160' />
-                    <hbox>
-                      <checkbox name='modFilterHidden' text=' ' />
-                      <checkbox name='modFilterVanilla' text=' ' />
-                    </hbox>
-                    <hbox expand='item:1'>
-                      <string name='modFilterString' text=' ' />
-                      <button name='modFilterReset' text='X' />
-                    </hbox>
-                  </hbox>
-                </frame>
-                <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
-              </vbox>
-                
-              <vbox expand='no'>
-                <image name='modPreviewImage' width='240' height='135' />
-                <frame name='modManagementFrame' text=' '>
-                  <vbox expand='no'>
-                    <button name='modInformation' text=' ' />
-                    <button name='modSettings' text=' ' disabled='yes' />
-                    <button name='modUpdate' text=' ' />
-                    <button name='modBackup' text=' ' />
-                    <button name='modUninstall' text=' ' />
-                  </vbox>
-                </frame>
-                <button name='modUpdateAll' text=' ' />
-              </vbox>
-                
-                
-                
-                
-            </hbox>
-          </tab>
-          <tab text='Online Repositories'>
-            <vbox expand='item:1'>
+        <hbox expand='item:2'>
+          <vbox expand='no' comment='nav-bar on left side'>
+            <buttonimage name='btnMods' width='60' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnMaps' width='60' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnOnline' width='60' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnBackups' width='60' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSettings' width='60' flags='#PB_Button_Toggle' />
+          </vbox>
+          <multibox comment='main content area'>
+            <container name='containerMods' invisible='no' flags=''> <!--#PB_Container_Flat-->
               <hbox expand='item:1'>
-                <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
-                <vbox expand='no'>
-                  <frame name='repoFilterFrame' text=' '>
-                    <vbox expand='no'>
-                      <combobox name='repoFilterSources' />
-                      <combobox name='repoFilterTypes' />
-                      <combobox name='repoFilterInstalled' />
-                      <hbox expand='item:1'>
-                        <string name='repoFilterString' text=' '/>
-                        <button name='repoFilterReset' text='X' />
+                <vbox expand='item:2'>
+                  <frame name='modFilterFrame' text=' '>
+                    <hbox expand='item:3'>
+                      <combobox name='modFilterFolder' width='160' />
+                      <hbox>
+                        <checkbox name='modFilterHidden' text=' ' />
+                        <checkbox name='modFilterVanilla' text=' ' />
                       </hbox>
-                    </vbox>
+                      <hbox expand='item:1'>
+                        <string name='modFilterString' text=' ' />
+                        <button name='modFilterReset' text='X' />
+                      </hbox>
+                    </hbox>
                   </frame>
-                  <frame name='repoManagementFrame' text=' '>
+                  <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                </vbox>
+                  
+                <vbox expand='no'>
+                  <image name='modPreviewImage' width='240' height='135' />
+                  <frame name='modManagementFrame' text=' '>
                     <vbox expand='no'>
-                      <button name='repoWebsite' text=' ' />
-                      <button name='repoInstall' text=' ' />
+                      <button name='modInformation' text=' ' />
+                      <button name='modSettings' text=' ' disabled='yes' />
+                      <button name='modUpdate' text=' ' />
+                      <button name='modBackup' text=' ' />
+                      <button name='modUninstall' text=' ' />
                     </vbox>
                   </frame>
-                  <image name='repoPreviewImage' width='210' height='118' />
+                  <button name='modUpdateAll' text=' ' />
                 </vbox>
               </hbox>
-            </vbox>
-          </tab>
-          <tab text='Backups'>
-            <hbox expand='item:1'>
+            </container>
+            
+            <container name='containerMaps' invisible='yes'>
+            </container>
+            
+            <container name='containerOnline' invisible='yes'>
               <vbox expand='item:1'>
-                <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
-                <hbox expand='item:2'>
-                  <hbox expand='equal'>
-                    <button name='backupExpand' text=' ' />
-                    <button name='backupCollapse' text=' ' />
-                    <button name='backupCheck' text=' ' />
-                    <button name='backupClear' text=' ' />
-                  </hbox>
-                  <empty />
+                <hbox expand='item:1'>
+                  <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                  <vbox expand='no'>
+                    <frame name='repoFilterFrame' text=' '>
+                      <vbox expand='no'>
+                        <combobox name='repoFilterSources' />
+                        <combobox name='repoFilterTypes' />
+                        <combobox name='repoFilterInstalled' />
+                        <hbox expand='item:1'>
+                          <string name='repoFilterString' text=' '/>
+                          <button name='repoFilterReset' text='X' />
+                        </hbox>
+                      </vbox>
+                    </frame>
+                    <frame name='repoManagementFrame' text=' '>
+                      <vbox expand='no'>
+                        <button name='repoWebsite' text=' ' />
+                        <button name='repoInstall' text=' ' />
+                      </vbox>
+                    </frame>
+                    <image name='repoPreviewImage' width='210' height='118' />
+                  </vbox>
                 </hbox>
               </vbox>
-              <vbox expand='no'>
-                <frame name='backupFrameFilter'>
-                  <hbox expand='item:1'>
-                    <string name='backupFilter' text=' ' />
-                    <button name='backupFilterReset' text='X' />
+            </container>
+            
+            <container name='containerBackups' invisible='yes'>
+              <hbox expand='item:1'>
+                <vbox expand='item:1'>
+                  <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
+                  <hbox expand='item:2'>
+                    <hbox expand='equal'>
+                      <button name='backupExpand' text=' ' />
+                      <button name='backupCollapse' text=' ' />
+                      <button name='backupCheck' text=' ' />
+                      <button name='backupClear' text=' ' />
+                    </hbox>
+                    <empty />
                   </hbox>
-                </frame>
-                <frame name='backupFrame' text=' ' width='210'>
-                  <vbox expand='no'>
-                    <!--<button name='backupRefresh' text=' ' />-->
-                    <button name='backupRestore' text=' ' />
-                    <button name='backupDelete' text=' ' />
-                    <button name='backupFolder' text=' ' />
-                  </vbox>
-                </frame>
-              </vbox>
-            </hbox>
-          </tab>
-        </panel>
+                </vbox>
+                <vbox expand='no'>
+                  <frame name='backupFrameFilter'>
+                    <hbox expand='item:1'>
+                      <string name='backupFilter' text=' ' />
+                      <button name='backupFilterReset' text='X' />
+                    </hbox>
+                  </frame>
+                  <frame name='backupFrame' text=' ' width='210'>
+                    <vbox expand='no'>
+                      <!--<button name='backupRefresh' text=' ' />-->
+                      <button name='backupRestore' text=' ' />
+                      <button name='backupDelete' text=' ' />
+                      <button name='backupFolder' text=' ' />
+                    </vbox>
+                  </frame>
+                </vbox>
+              </hbox>
+            </container>
+            
+          </multibox>
+        </hbox>
+        
       </singlebox>
       <hbox expand='item:1' spacing='10'>
         <gridbox columns='3' colexpand='equal' rowexpand='no'>
