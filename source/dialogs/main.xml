@@ -8,37 +8,42 @@
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
         <panel name='panel'>
           <tab text='Modifications'>
-            <vbox expand='item:1'>
-              <hbox expand='item:1'>
+            <hbox expand='item:1'>
+              <vbox expand='item:2'>
+                <frame name='modFilterFrame' text=' '>
+                  <hbox expand='item:3'>
+                    <combobox name='modFilterFolder' width='160' />
+                    <hbox>
+                      <checkbox name='modFilterHidden' text=' ' />
+                      <checkbox name='modFilterVanilla' text=' ' />
+                    </hbox>
+                    <hbox expand='item:1'>
+                      <string name='modFilterString' text=' ' />
+                      <button name='modFilterReset' text='X' />
+                    </hbox>
+                  </hbox>
+                </frame>
                 <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
-                <vbox expand='no'>
-                  <frame name='modFilterFrame' text=' '>
-                    <vbox expand='no'>
-                      <hbox expand='item:1'>
-                        <string name='modFilterString' text=' ' />
-                        <button name='modFilterReset' text='X' />
-                      </hbox>
-                      <combobox name='modFilterFolder' />
-                      <hbox expand='equal'>
-                        <checkbox name='modFilterHidden' text=' ' />
-                        <checkbox name='modFilterVanilla' text=' ' />
-                      </hbox>
-                    </vbox>
-                  </frame>
-                  <image name='modPreviewImage' width='240' height='135' />
-                  <frame name='modManagementFrame' text=' '>
-                    <vbox expand='no'>
-                      <button name='modInformation' text=' ' />
-                      <button name='modSettings' text=' ' disabled='yes' />
-                      <button name='modUpdate' text=' ' />
-                      <button name='modBackup' text=' ' />
-                      <button name='modUninstall' text=' ' />
-                    </vbox>
-                  </frame>
-                  <button name='modUpdateAll' text=' ' />
-                </vbox>
-              </hbox>
-            </vbox>
+              </vbox>
+                
+              <vbox expand='no'>
+                <image name='modPreviewImage' width='240' height='135' />
+                <frame name='modManagementFrame' text=' '>
+                  <vbox expand='no'>
+                    <button name='modInformation' text=' ' />
+                    <button name='modSettings' text=' ' disabled='yes' />
+                    <button name='modUpdate' text=' ' />
+                    <button name='modBackup' text=' ' />
+                    <button name='modUninstall' text=' ' />
+                  </vbox>
+                </frame>
+                <button name='modUpdateAll' text=' ' />
+              </vbox>
+                
+                
+                
+                
+            </hbox>
           </tab>
           <tab text='Online Repositories'>
             <vbox expand='item:1'>

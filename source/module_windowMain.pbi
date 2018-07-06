@@ -1537,14 +1537,14 @@ Module windowMain
     repository::init() ; only starts thread -> returns quickly
     
     
-    ; apply sizes
-    RefreshDialog(dialog)
-    resize()
-    
     ; init gui texts and button states
     updateModButtons()
     updateRepoButtons()
     updateBackupButtons()
+    
+    ; apply sizes
+    RefreshDialog(dialog)
+    resize()
     
     UnuseModule locale
   EndProcedure
