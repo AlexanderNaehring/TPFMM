@@ -162,23 +162,12 @@ Module main
     If Not InitNetwork()
       debugger::Add("ERROR: InitNetwork()")
     EndIf
-    If Not UsePNGImageDecoder() Or
-       Not UsePNGImageEncoder() Or 
-       Not UseJPEGImageDecoder() Or
-       Not UseTGAImageDecoder()
-      debugger::Add("ERROR: ImageDecoder")
-      MessageRequester("Error", "Could not initialize Image Decoder.")
-      End
-    EndIf
     
     ; proxy (read from preferences
     initProxy()
     
     ; desktopIntegration
     updateDesktopIntegration()
-    
-    ; default images and logos
-    images::LoadImages()
     
     ; read gameDirectory from preferences
     gameDirectory$ = settings::getString("", "path")

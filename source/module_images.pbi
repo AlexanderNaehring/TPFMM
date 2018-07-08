@@ -1,6 +1,9 @@
 ﻿DeclareModule images
   Global NewMap Images()  
-  Declare LoadImages()
+EndDeclareModule
+
+Module images
+  EnableExplicit
   
   Macro IncludeAndLoadImage(name, file)
     DataSection
@@ -11,11 +14,6 @@
     
     Images(name) = CatchImage(#PB_Any, ?_image#MacroExpandedCount#Start, ?_image#MacroExpandedCount#End - ?_image#MacroExpandedCount#Start)
   EndMacro
-
-EndDeclareModule
-
-Module images
-  EnableExplicit
   
   Procedure LoadImages()
     debugger::Add("images::loadImages()")
@@ -36,6 +34,11 @@ Module images
     IncludeAndLoadImage("navOnline",    "images/nav/online.png")
     IncludeAndLoadImage("navBackups",   "images/nav/backups.png")
     IncludeAndLoadImage("navSettings",  "images/nav/settings.png")
+    IncludeAndLoadImage("iconFolder",   "images/icons/folder.png")
+    IncludeAndLoadImage("iconInfo",     "images/icons/info.png")
+    IncludeAndLoadImage("iconSettings", "images/icons/settings.png")
+    IncludeAndLoadImage("iconWebsite",  "images/icons/website.png")
+    IncludeAndLoadImage("modDefault",   "images/mod_default.png")
     
     
     ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
@@ -58,4 +61,14 @@ Module images
     CompilerEndIf
   EndProcedure
   
+  ; init
+  If Not UsePNGImageDecoder() Or
+     Not UsePNGImageEncoder() Or 
+     Not UseJPEGImageDecoder() Or
+     Not UseTGAImageDecoder()
+    debugger::Add("ERROR: ImageDecoder")
+    MessageRequester("Error", "Could not initialize Image Decoder.")
+    End
+  EndIf
+  LoadImages()
 EndModule
