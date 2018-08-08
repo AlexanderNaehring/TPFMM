@@ -45,7 +45,6 @@ EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_modInformation.pbi"
@@ -116,7 +115,7 @@ Module windowMain
     numCanBackup    = 0
     
     For i = 0 To CountGadgetItems(gadget("modList")) - 1
-      *mod = ListIcon::GetListItemData(gadget("modList"), i)
+      *mod = GetGadgetItemData(gadget("modList"), i)
       If Not *mod
         Continue
       EndIf
@@ -173,7 +172,7 @@ Module windowMain
     If numSelected = 1
       ; one mod selected
       ; display image
-      *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
+      *mod = GetGadgetItemData(gadget("modList"), GetGadgetState(gadget("modList")))
       
       Protected im
       im = mods::getPreviewImage(*mod)
@@ -507,7 +506,7 @@ Module windowMain
     
     For i = 0 To CountGadgetItems(gadget("modList")) - 1
       If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(gadget("modList"), i)
+        *mod = GetGadgetItemData(gadget("modList"), i)
         If mods::canUninstall(*mod)
           count + 1
         EndIf
@@ -527,7 +526,7 @@ Module windowMain
       If result = #PB_MessageRequester_Yes
         For i = 0 To CountGadgetItems(gadget("modList")) - 1
           If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(gadget("modList"), i)
+            *mod = GetGadgetItemData(gadget("modList"), i)
             If mods::canUninstall(*mod)
 ;               debugger::add("windowMain::GadgetButtonUninstall() - {"+*mod\name$+"}")
               mods::uninstall(*mod\tpf_id$)
@@ -548,7 +547,7 @@ Module windowMain
     
     For i = 0 To CountGadgetItems(gadget("modList")) - 1
       If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(gadget("modList"), i)
+        *mod = GetGadgetItemData(gadget("modList"), i)
         If mods::canBackup(*mod)
           count + 1
         EndIf
@@ -558,7 +557,7 @@ Module windowMain
       
       For i = 0 To CountGadgetItems(gadget("modList")) - 1
         If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-          *mod = ListIcon::GetListItemData(gadget("modList"), i)
+          *mod = GetGadgetItemData(gadget("modList"), i)
           If mods::canBackup(*mod)
             mods::backup(*mod\tpf_id$)
           EndIf
@@ -618,7 +617,7 @@ Module windowMain
   Procedure modInformation()
     Protected *mod.mods::mod
     
-    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
+    *mod = GetGadgetItemData(gadget("modList"), GetGadgetState(gadget("modList")))
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -629,7 +628,7 @@ Module windowMain
   Procedure modSettings()
     Protected *mod.mods::mod
     
-    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
+    *mod = GetGadgetItemData(gadget("modList"), GetGadgetState(gadget("modList")))
     If Not *mod
       ProcedureReturn #False
     EndIf
@@ -1529,7 +1528,6 @@ Module windowMain
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         SetWindowTitle(window, GetWindowTitle(window) + " for Windows")
-        ListIcon::DefineListCallback(gadget("modList"))
       CompilerCase #PB_OS_Linux
         SetWindowTitle(window, GetWindowTitle(window) + " for Linux")
       CompilerCase #PB_OS_MacOS
@@ -1619,8 +1617,6 @@ Module windowMain
     For i = 0 To ArraySize(widths())
       If widths(i)
         SetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, widths(i), i)
-        ; Sorting
-        ListIcon::SetColumnFlag(gadget("modList"), i, ListIcon::#String)
       EndIf
     Next
   EndProcedure

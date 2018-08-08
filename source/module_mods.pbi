@@ -1777,7 +1777,7 @@ Module mods
     
     windowMain::stopGUIupdate()
     HideGadget(_gadgetModList, #True)
-    ListIcon::ClearListItems(_gadgetModList)
+    ClearGadgetItems(_gadgetModList)
     
     
     ; count = number of individual parts of search string
@@ -1915,17 +1915,17 @@ Module mods
         EndIf 
         text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$ + #LF$ + supportsModSettings$
         
-        ListIcon::AddListItem(_gadgetModList, item, text$)
-        ListIcon::SetListItemData(_gadgetModList, item, *mod)
+        AddGadgetItem(_gadgetModList, item, text$)
+        SetGadgetItemData(_gadgetModList, item, *mod)
         ; ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("yes")))
         ;- TODO: image based on online update status or something else?
         If Left(\tpf_id$, 1) = "*"
-          ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_workshop")))
+          SetGadgetItemImage(_gadgetModList, item, ImageID(images::Images("icon_workshop")))
         Else
           If \aux\isVanilla
-            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod_official")))
+            SetGadgetItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod_official")))
           Else
-            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod")))
+            SetGadgetItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod")))
           EndIf
         EndIf
         

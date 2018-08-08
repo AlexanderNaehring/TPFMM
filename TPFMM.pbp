@@ -31,9 +31,6 @@
     <file name="source\module_instance.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
-    <file name="source\module_ListIcon.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
-    </file>
     <file name="source\module_locale.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
