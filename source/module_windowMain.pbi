@@ -89,6 +89,7 @@ Module windowMain
   Declare repoDownload()
   Declare modOpenModFolder()
   Declare modInformation()
+  Declare backupRefreshList()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -422,7 +423,6 @@ Module windowMain
   EndProcedure
   ;- GADGETS
   
-  Declare backupRefreshList()
 ;   Procedure panel()
 ;     If EventType() = #PB_EventType_Change
 ;       If GetGadgetState(gadget("panel")) = 2
