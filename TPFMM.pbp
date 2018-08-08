@@ -19,6 +19,9 @@
     <file name="source\module_archive.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
+    <file name="source\module_canvasList.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+    </file>
     <file name="source\module_debugger.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
