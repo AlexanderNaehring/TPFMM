@@ -1,5 +1,8 @@
 ﻿DeclareModule images
   Global NewMap Images()  
+  
+  Declare ImageFilterGrayscale(x, y, SourceColor, TargetColor)
+  Declare ImageFilterApplyColorToNonWhite(x, y, SourceColor, TargetColor)
 EndDeclareModule
 
 Module images
@@ -14,6 +17,19 @@ Module images
     
     Images(name) = CatchImage(#PB_Any, ?_image#MacroExpandedCount#Start, ?_image#MacroExpandedCount#End - ?_image#MacroExpandedCount#Start)
   EndMacro
+  
+  Procedure ImageFilterGrayscale(x, y, SourceColor, TargetColor)
+    Protected gray = 0.2989 * Red(SourceColor) + 0.5870 * Green(SourceColor) + 0.1140 * Blue(SourceColor)
+    ProcedureReturn RGBA(gray, gray, gray, Alpha(SourceColor))
+  EndProcedure
+    
+  Procedure ImageFilterApplyColorToNonWhite(x, y, SourceColor, TargetColor)
+    If Red(TargetColor) = 255 And Green(TargetColor) = 255 And Blue(TargetColor) = 255
+      ; target is white
+      ProcedureReturn TargetColor
+    EndIf
+    ProcedureReturn RGBA(Red(SourceColor), Green(SourceColor), Blue(SourceColor), Alpha(TargetColor))
+  EndProcedure
   
   Procedure LoadImages()
     debugger::Add("images::loadImages()")
