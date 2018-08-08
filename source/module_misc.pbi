@@ -59,6 +59,7 @@ DeclareModule misc
   Declare registerProtocolHandler(protocol$, program$, description$="")
   Declare time(*tloc = #Null)
   Declare getRowHeight(gadget)
+  Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
 EndDeclareModule
 
@@ -734,7 +735,29 @@ CompilerEndSelect
     
   EndProcedure
   
-
+  Procedure getScrollbarWidth(gadget)
+    Protected oldWidth, oldHeight, oldScrollX, oldScrollY, viewWidth, scrollbarWidth
+    oldWidth  = GetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth)
+    oldHeight = GetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight)
+    oldScrollX = GetGadgetAttribute(gadget, #PB_ScrollArea_X)
+    oldScrollY = GetGadgetAttribute(gadget, #PB_ScrollArea_Y)
+    ; enlarge inner size to force scrollbars
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth, oldWidth + GadgetWidth(gadget))
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight, oldHeight + GadgetHeight(gadget))
+    ; move scroll location to far end
+    SetGadgetAttribute(gadget, #PB_ScrollArea_X, GetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth))
+    ; get scroll position and innerWidth to calculate viewport width
+    viewWidth = GetGadgetAttribute(gadget,#PB_ScrollArea_InnerWidth) - GetGadgetAttribute(gadget,#PB_ScrollArea_X)
+    scrollbarWidth = GadgetWidth(gadget, #PB_Gadget_ActualSize) - viewWidth
+    ; return to old state
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth, oldWidth)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight, oldHeight)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_X, oldScrollX)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_Y, oldScrollY)
+    
+    ProcedureReturn scrollbarWidth
+  EndProcedure
+  
 
   Procedure registerProtocolHandler(protocol$, program$, description$="")
     debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
