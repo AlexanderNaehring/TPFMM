@@ -121,6 +121,7 @@ Module CanvasList
   Structure themeItemImage
     Display.b
     MinHeight.w
+    AspectRatio.d
   EndStructure
   
   Structure themeItem
@@ -490,17 +491,6 @@ Module CanvasList
     Next
   EndProcedure
   
-  Procedure updateItemHeight(*this.gadget)
-    ; height required by lines (text) calculated in updateItemLineFonts()
-    
-;     *this\theme\item\Height = *this\theme\item\Padding ; top padding
-;     For i = 0 To ArraySize(*this\theme\item\Lines())
-;       *this\theme\item\Height + getFontHeightPixel(FontID(*this\theme\item\Lines(i)\fontID)) + *this\theme\item\Padding
-;     Next
-    
-    ; check if image is active and if yes, if it requires more size
-  EndProcedure
-  
   Procedure updateItemLineFonts(*this.gadget) ; required after setting the font information for theme\item\Lines()
     ; load fonts and calculate item height
     *this\theme\item\Height = *this\theme\item\Padding ; top padding
@@ -527,6 +517,14 @@ Module CanvasList
       *this\theme\item\Lines(i)\yOffset = *this\theme\item\Height
       *this\theme\item\Height + getFontHeightPixel(FontID(*this\theme\item\Lines(i)\fontID)) + *this\theme\item\Padding
     Next
+    
+    ; check if image required larger item height
+    If *this\theme\item\Image\Display
+      If *this\theme\item\Image\MinHeight + 2 * *this\theme\item\Padding > *this\theme\item\Height
+        *this\theme\item\Height = *this\theme\item\Image\MinHeight + 2 * *this\theme\item\Padding
+      EndIf
+    EndIf
+    
   EndProcedure
   
   Procedure draw(*this.gadget)
@@ -559,6 +557,26 @@ Module CanvasList
             DrawingMode(#PB_2DDrawing_Default)
             Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, #White)
             
+            ; image
+            Protected iH, iW, iOffset
+            If *this\theme\item\Image\Display
+              iH = *this\theme\item\Height - 2 * padding 
+              iW = iH / *this\theme\item\Image\AspectRatio
+              iOffset = iW+padding
+              If \image And IsImage(\image)
+                DrawingMode(#PB_2DDrawing_AlphaBlend)
+                DrawImage(ImageID(\image), \canvasBox\x + padding, \canvasBox\y + padding, iW, iH)
+              EndIf
+            EndIf
+            
+            ; text
+            DrawingMode(#PB_2DDrawing_Transparent)
+            For i = 0 To ArraySize(*this\theme\item\Lines())
+              line$ = StringField(\text$, i+1, #LF$)
+              DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
+              DrawText(\canvasBox\x + padding + iOffset, \canvasBox\y + *this\theme\item\Lines(i)\yOffset, TextMaxWidth(line$, \canvasBox\width - 2*padding - iOffset), ColorFromHTML(*this\theme\color\ItemText$))
+            Next
+            
             ; selected?
             If \selected
               DrawingMode(#PB_2DDrawing_AlphaBlend)
@@ -571,17 +589,9 @@ Module CanvasList
               Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemHover$))
             EndIf
             
-            ; text
-            DrawingMode(#PB_2DDrawing_Transparent)
-            For i = 0 To ArraySize(*this\theme\item\Lines())
-              line$ = StringField(\text$, i+1, #LF$)
-              DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
-              DrawText(\canvasBox\x + padding, \canvasBox\y + *this\theme\item\Lines(i)\yOffset, TextMaxWidth(line$, \canvasBox\width - 2*padding), ColorFromHTML(*this\theme\color\ItemText$))
-            Next
-            
             ; border
             DrawingMode(#PB_2DDrawing_Outlined)
-            Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, #Black)
+            Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBorder$))
           EndIf
         EndWith
       Next
