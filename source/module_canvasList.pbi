@@ -14,7 +14,7 @@
   EndEnumeration
   
   ; declare public functions
-  Declare NewCanvasScrollbarGadget(x, y, width, height)
+  Declare NewCanvasScrollbarGadget(x, y, width, height, useExistingCanvas = -1)
   Declare Free(*gadget)
   
   Declare Resize(*gadget, x, y, width, height)
@@ -153,6 +153,17 @@ Module CanvasList
     canvasBox.box ; location on canvas stored for speeding up drawing operation
   EndStructure
   
+  Structure scrollbar
+    disabled.b
+    hover.b
+    position.l
+    maximum.l
+    pagelength.l
+    box.box
+    dragActive.b
+    dragOffset.l
+  EndStructure
+  
   Structure gadget
     ; virtual table for OOP
     *vt.CanvasList
@@ -160,7 +171,8 @@ Module CanvasList
     *userdata
     ; gadget data:
     gCanvas.i
-    gScrollbar.i
+    scrollbar.scrollbar
+    hover.b
     ; parameters
     scrollbarWidth.b
     scrollWheelDelta.i
@@ -408,10 +420,10 @@ Module CanvasList
     totalHeight = Round(ListSize(*this\items()) / numColumns, #PB_Round_Up)  * (*this\theme\item\Height + *this\theme\item\Margin) + *this\theme\item\Margin
     
     If totalHeight > GadgetHeight(*this\gCanvas)
-      SetGadgetAttribute(*this\gScrollbar, #PB_ScrollBar_Maximum, totalHeight)
-      DisableGadget(*this\gScrollbar, #False)
+      *this\scrollbar\disabled = #False
+      *this\scrollbar\maximum = totalHeight
     Else
-      DisableGadget(*this\gScrollbar, #True)
+      *this\scrollbar\disabled = #True
     EndIf
   EndProcedure
   
@@ -423,6 +435,18 @@ Module CanvasList
     If *this\pauseDraw
       ProcedureReturn #False
     EndIf
+    
+    
+    ; sanity check
+    ; this may also be animated (overshoot and then slide back...)
+    ; for all animations: requires timer function
+    If *this\scrollbar\position > *this\scrollbar\maximum - *this\scrollbar\pagelength
+      *this\scrollbar\position = *this\scrollbar\maximum - *this\scrollbar\pagelength
+    EndIf
+    If *this\scrollbar\position < 0
+      *this\scrollbar\position = 0
+    EndIf
+    
     
     margin  = *this\theme\item\Margin
     padding = *this\theme\item\Padding
@@ -448,7 +472,7 @@ Module CanvasList
       r = ListIndex(*this\items()) / numColumns
       
       x = *this\theme\item\Margin + c*(width + 2*margin)
-      y = *this\theme\item\Margin + r*(*this\theme\item\Height + *this\theme\item\Margin) - GetGadgetState(*this\gScrollbar)
+      y = *this\theme\item\Margin + r*(*this\theme\item\Height + *this\theme\item\Margin) - *this\scrollbar\position
       
       *this\items()\canvasBox\x = x
       *this\items()\canvasBox\y = y
@@ -510,7 +534,7 @@ Module CanvasList
     If Not BackColor
       BackColor = GetWindowBackgroundColor()
     EndIf
-      
+    
     If StartDrawing(CanvasOutput(*this\gCanvas))
       ; blank the canvas
       DrawingMode(#PB_2DDrawing_Default)
@@ -557,9 +581,28 @@ Module CanvasList
       If *this\selectbox\active = 2 ; only draw the box when already moved some pixels
         FrontColor(ColorFromHTML(*this\theme\color\SelectionBox$))
         DrawingMode(#PB_2DDrawing_AlphaBlend)
-        Box(*this\selectbox\box\x, *this\selectbox\box\y - GetGadgetState(*this\gScrollbar), *this\selectbox\box\width, *this\selectbox\box\height)
+        Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
         DrawingMode(#PB_2DDrawing_Outlined)
-        Box(*this\selectbox\box\x, *this\selectbox\box\y - GetGadgetState(*this\gScrollbar), *this\selectbox\box\width, *this\selectbox\box\height)
+        Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
+      EndIf
+      
+            
+      ; draw scrollbar
+      If *this\hover And Not *this\scrollbar\disabled
+        *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\scrollbarWidth - 2
+        *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2
+        *this\scrollbar\box\width = *this\scrollbarWidth
+        *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum
+        If *this\scrollbar\box\height < *this\scrollbarWidth*2
+          *this\scrollbar\box\height = *this\scrollbarWidth*2
+        EndIf
+        
+        DrawingMode(#PB_2DDrawing_AlphaBlend)
+        If *this\scrollbar\hover
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, RGBA(128, 128, 128, 255))
+        Else
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, RGBA(128, 128, 128, 128))
+        EndIf
       EndIf
       
       ; draw outer border
@@ -580,18 +623,21 @@ Module CanvasList
     Protected *item.item
     Protected p.point
     *this = GetGadgetData(EventGadget())
+    p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
+    p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
     
     Select EventType()
       Case #PB_EventType_MouseWheel
-        SetGadgetState(*this\gScrollbar, GetGadgetState(*this\gScrollbar) - *this\scrollWheelDelta*GetGadgetAttribute(*this\gCanvas, #PB_Canvas_WheelDelta))
+        *this\scrollbar\position - (*this\scrollWheelDelta * GetGadgetAttribute(*this\gCanvas, #PB_Canvas_WheelDelta))
         updateItemPosition(*this)
         draw(*this)
         
       Case #PB_EventType_MouseEnter
         ; SetActiveGadget(*this\gCanvas)
-        
+        *this\hover = #True
         
       Case #PB_EventType_MouseLeave
+        *this\hover = #False
         ForEach *this\items()
           *this\items()\hover = #False
         Next
@@ -603,22 +649,31 @@ Module CanvasList
         
         
       Case #PB_EventType_LeftButtonDown
-        ; start drawing a select box
-        ; only actually show (and apply) the select box if mouse was oved by delta pixels
-        *this\selectbox\active = 1
-        ; store actual x/y (not current display coordinates)
-        *this\selectbox\box\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
-        *this\selectbox\box\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) + GetGadgetState(*this\gScrollbar)
+        ; either drag the scrollbar or draw a selection box for items
+        If *this\scrollbar\hover
+          ; scrollbar shall move with mouse (in y direction)
+          ; store y offset from scrollbar top to mouse position
+          *this\scrollbar\dragActive = #True
+          *this\scrollbar\dragOffset = p\y - *this\scrollbar\box\y
+          
+        Else
+          *this\selectbox\active = 1
+          ; store current x/y (not current display coordinates)
+          *this\selectbox\box\x = p\x
+          *this\selectbox\box\y = p\y + *this\scrollbar\position
+        EndIf
         
       Case #PB_EventType_LeftButtonUp
-        If *this\selectbox\active ; should be always true
-          *this\selectbox\active = 0
+        If *this\scrollbar\dragActive
+          ; end of scrolbar movement
+          *this\scrollbar\dragActive = #False
+          
+        ElseIf *this\selectbox\active
+          ; end of selection box for items
           
           ; also add the current element to the selected items
           ForEach *this\items()
             *item = *this\items()
-            p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
-            p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
             If PointInBox(@p, *item\canvasBox)
               *item\selected | #SelectionTemporary
               Break
@@ -628,7 +683,17 @@ Module CanvasList
           ; if ctrl was pressed, add all "new" selections to the "old"
           ; if ctrl not pressed, remove all old selections
           ForEach *this\items()
-            If Not GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
+            If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
+              ; CTRL is active
+              ; if ctrl is active and only a single click (no select box), then "toggle" the current item!
+              If *this\selectbox\active = 1 ; only click, not moved
+                If *this\items()\selected & #SelectionFinal And *this\items()\selected & #SelectionTemporary
+                  *this\items()\selected = #SelectionNone
+                  Break ; if selectbox = 1, only a single item can be affected -> break loop
+                EndIf
+              EndIf
+            Else
+              ; CTRL is not active
               If *this\items()\selected & #SelectionFinal ; if bit set (dont care about other bits)
                 *this\items()\selected & ~#SelectionFinal ; remove bit
               EndIf
@@ -638,57 +703,89 @@ Module CanvasList
               *this\items()\selected = #SelectionFinal
             EndIf
           Next
-          
-          draw(*this)
         EndIf
         
         
+        *this\selectbox\active = 0
+        draw(*this)
+        
+        
       Case #PB_EventType_MouseMove
-        If *this\selectbox\active = 1
+        If *this\scrollbar\dragActive
+          ; dragging scrollbar
+          
+          ;canvasY = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2
+          ;*this\scrollbar\position = (canvasY - 2) * *this\scrollbar\maximum / (GadgetHeight(*this\gCanvas)-4)
+          ; canvasY = p\y - *this\scrollbar\dragOffset
+          
+          *this\scrollbar\position = (p\y - *this\scrollbar\dragOffset - 2) * *this\scrollbar\maximum / (GadgetHeight(*this\gCanvas)-4)
+          updateItemPosition(*this)
+          draw(*this)
+          
+          
+        ElseIf *this\selectbox\active = 1
           ; if mousedown and moving for some px in either direction, show selectbox (active = 2)
-          If Abs(*this\selectbox\box\x - GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)) > 5 Or
-             Abs(*this\selectbox\box\y - GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) + GetGadgetState(*this\gScrollbar)) > 5
+          If Abs(*this\selectbox\box\x - p\x) > 5 Or
+             Abs(*this\selectbox\box\y - p\y + *this\scrollbar\position) > 5
             *this\selectbox\active = 2
           EndIf
         ElseIf *this\selectbox\active = 2
           ; problem: only works if mouse moving... maybe need a timer ?
           If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) > GadgetHeight(*this\gCanvas) - 25
-            SetGadgetState(*this\gScrollbar, GetGadgetState(*this\gScrollbar) + *this\scrollWheelDelta)
+            *this\scrollbar\position + *this\scrollWheelDelta
             updateItemPosition(*this)
           ElseIf GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) < 25
-            SetGadgetState(*this\gScrollbar, GetGadgetState(*this\gScrollbar) - *this\scrollWheelDelta)
+            *this\scrollbar\position - *this\scrollWheelDelta
             updateItemPosition(*this)
           EndIf
           
-          *this\selectbox\box\width   = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX) - *this\selectbox\box\x
-          *this\selectbox\box\height  = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) + GetGadgetState(*this\gScrollbar) - *this\selectbox\box\y
+          *this\selectbox\box\width   = p\x - *this\selectbox\box\x
+          *this\selectbox\box\height  = p\y + *this\scrollbar\position - *this\selectbox\box\y
           
           ForEach *this\items()
             ; check if is selected by selectionBox
             ; convert canvasBox to realBox (!!!scrollbar offset)
-            *this\items()\canvasBox\y = *this\items()\canvasBox\y + GetGadgetState(*this\gScrollbar)
+            *this\items()\canvasBox\y = *this\items()\canvasBox\y + *this\scrollbar\position
             If BoxCollision(*this\items()\canvasBox, *this\selectbox\box, #True)
               *this\items()\selected | #SelectionTemporary ; set bit
             Else
               *this\items()\selected & ~#SelectionTemporary ; unset bit
             EndIf
             ; convert back to canvasBox
-            *this\items()\canvasBox\y = *this\items()\canvasBox\y - GetGadgetState(*this\gScrollbar)
+            *this\items()\canvasBox\y = *this\items()\canvasBox\y - *this\scrollbar\position
           Next
           
           draw(*this)
           
         Else ; no drawbox active (simple hover)
+          ; mouse position
           p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
           p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
+          
+          ; check scrollbar hover
+          If PointInBox(@p, *this\scrollbar\box)
+            *this\scrollbar\hover = #True
+          Else
+            *this\scrollbar\hover = #False
+          EndIf
+          
+          ; check item hover
+          ; idea: as mouse can only hover on one item, use a SINGLE hover variable that stores what the moouse currently hovers over.
           ForEach *this\items()
-            *item = *this\items()
-            If PointInBox(@p, *item\canvasBox)
-              *item\hover = #True
-            Else
-              *item\hover = #False
-            EndIf
+            *this\items()\hover = #False
           Next
+          If Not *this\scrollbar\hover
+            ; only hover items if not hover on scrollbar
+            ForEach *this\items()
+              *item = *this\items()
+              If PointInBox(@p, *item\canvasBox)
+                *item\hover = #True
+                Break ; can only hover on one item!
+              EndIf
+            Next
+          EndIf
+          
+          
           draw(*this)
         EndIf
         
@@ -744,14 +841,13 @@ Module CanvasList
             EndIf
             
             If redraw
-              
               ; if selected item out of view, move scrollbar
               If *item\canvasBox\y < 0
-                SetGadgetState(*this\gScrollbar, GetGadgetState(*this\gScrollbar) + *item\canvasBox\y - *this\theme\item\Margin)
+                *this\scrollbar\position + (*item\canvasBox\y - *this\theme\item\Margin)
                 updateScrollbar(*this)
                 updateItemPosition(*this)
               ElseIf *item\canvasBox\y + *item\canvasBox\height > GadgetHeight(*this\gCanvas)
-                SetGadgetState(*this\gScrollbar, GetGadgetState(*this\gScrollbar) + (*item\canvasBox\y + *item\canvasBox\height + *this\theme\item\Margin - GadgetHeight(*this\gCanvas)))
+                *this\scrollbar\position + (*item\canvasBox\y + *item\canvasBox\height + *this\theme\item\Margin - GadgetHeight(*this\gCanvas))
                 updateScrollbar(*this)
                 updateItemPosition(*this)
               EndIf
@@ -763,80 +859,42 @@ Module CanvasList
     EndSelect
   EndProcedure
   
-  Procedure EventScrollbar()
-    Protected *this.gadget
-    *this = GetGadgetData(EventGadget())
-    SetActiveGadget(*this\gCanvas) ; give focus to canvas (req. for windows scrolling)
-    updateItemPosition(*this)
-    draw(*this)
-  EndProcedure
-  
   ;- Public Functions
   
-  Procedure NewCanvasScrollbarGadget(x.i, y.i, width.i, height.i)
+  Procedure NewCanvasScrollbarGadget(x, y, width, height, useExistingCanvas = -1)
     Protected *this.gadget
     *this = AllocateStructure(gadget)
     *this\vt = ?vt ; link interface to function addresses
     
     ; set parameters
-    *this\scrollbarWidth = 18
+    *this\scrollbarWidth = 9
     *this\fontHeight = getFontHeightPixel()
     *this\scrollWheelDelta = *this\fontHeight*4
     
     ; theme
     Protected theme$
-    theme$ = ~"{\"item\":{\"Buttons\":[],\"Width\":300,\"Margin\":4,\"Padding\":4,\"Lines\":[{\"REM\":1.6,\"Bold\":1,\"Font\":\"\",\"Italic\":0},{\"REM\":1,\"Bold\":0,\"Font\":\"\",\"Italic\":1}],\"Height\":0,\"Image\":{\"Display\":1,\"MinHeight\":60}},\"responsive\":{\"Columnize\":0,\"ExpandItems\":1},\"color\":{\"ItemText\":\"#00008B\",\"ItemSelected\":\"#007BEE40\",\"ItemBorder\":\"\",\"ItemBackground\":\"\",\"ItemHover\":\"#007BEE10\",\"Background\":\"\",\"SelectionBox\":\"#007BEE80\"}}"
+    theme$ = ~"{\"item\":{\"Buttons\":[],\"Width\":300,\"Margin\":2,\"Padding\":4,\"Lines\":[{\"REM\":1.6,\"Bold\":1,\"Font\":\"\",\"Italic\":0},{\"REM\":1,\"Bold\":0,\"Font\":\"\",\"Italic\":1}],\"Height\":0,\"Image\":{\"Display\":1,\"MinHeight\":60}},\"responsive\":{\"Columnize\":0,\"ExpandItems\":1},\"color\":{\"ItemText\":\"#00008B\",\"ItemSelected\":\"#007BEE40\",\"ItemBorder\":\"\",\"ItemBackground\":\"\",\"ItemHover\":\"#007BEE10\",\"Background\":\"\",\"SelectionBox\":\"#007BEE80\"}}"
     SetTheme(*this, theme$)
     
-;     
-;     *this\theme\item\Margin   = 4
-;     *this\theme\item\Padding  = 4
-;     *this\theme\item\Width    = 300
-; ;     *this\theme\item\Height   = 2* *this\theme\Item\Padding + *this\fontHeight
-;     *this\theme\item\image\display = #True
-;     *this\theme\item\image\minHeight = 60
-;     
-;     *this\theme\responsive\ExpandItems  = #True 
-;     *this\theme\responsive\Columnize    = #False
-;     
-;     *this\theme\color\SelectionBox$ = "#007BEE80"
-;     *this\theme\color\ItemSelected$ = "#007BEE40"
-;     *this\theme\color\ItemHover$    = "#007BEE10"
-;     *this\theme\color\ItemText$     = "#00008B"
-;     
-;     ReDim *this\theme\item\Lines(1)
-;     
-;     *this\theme\item\Lines(0)\font$ = "" ; default font
-;     *this\theme\item\Lines(0)\rem = 1.6
-;     *this\theme\item\Lines(0)\bold = #True
-;     
-;     *this\theme\item\Lines(1)\font$ = "" ; default font
-;     *this\theme\item\Lines(1)\rem = 1
-;     *this\theme\item\Lines(1)\italic = #True
-;     
-;     ; debug: show json
-;     CreateJSON(0)
-;     InsertJSONStructure(JSONValue(0), *this\theme, theme)
-;     Debug ComposeJSON(0);, #PB_JSON_PrettyPrint)
-;     
-;     ; apply theme
-;     updateItemLineFonts(*this)
-;     updateItemHeight(*this)
+    ; create canvas or use existing
+    If useExistingCanvas = -1
+      *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
+    Else
+      If Not IsGadget(useExistingCanvas)
+        ProcedureReturn #False
+      EndIf
+      *this\gCanvas = useExistingCanvas
+      ResizeGadget(*this\gCanvas, x, y, width, height)
+    EndIf
     
-    
-    ; create canvas and scrollbar
-    *this\gCanvas = CanvasGadget(#PB_Any, x, y, width-*this\scrollbarWidth, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
-    *this\gScrollbar = ScrollBarGadget(#PB_Any, x+width-*this\scrollbarWidth, y, *this\scrollbarWidth, height, 0, height, height, #PB_ScrollBar_Vertical)
-    DisableGadget(*this\gScrollbar, #True)
+    *this\scrollbar\pagelength = height
+    *this\scrollbar\disabled = #True
     
     ; set data pointer
     SetGadgetData(*this\gCanvas, *this)
-    SetGadgetData(*this\gScrollbar, *this)
     
     ; bind events on both gadgets
     BindGadgetEvent(*this\gCanvas, @EventCanvas(), #PB_All)
-    BindGadgetEvent(*this\gScrollbar, @EventScrollbar())
-    
     
     ; initial draw
     draw(*this)
@@ -845,7 +903,6 @@ Module CanvasList
   
   Procedure Free(*this.gadget)
     FreeGadget(*this\gCanvas)
-    FreeGadget(*this\gScrollbar)
     FreeStructure(*this)
   EndProcedure
   
@@ -855,9 +912,8 @@ Module CanvasList
     If width = #PB_Ignore : width = GadgetWidth(*this\gCanvas)+*this\scrollbarWidth : EndIf
     If height = #PB_Ignore : height = GadgetHeight(*this\gCanvas) : EndIf
     
-    ResizeGadget(*this\gCanvas, x, y, width-*this\scrollbarWidth, height)
-    ResizeGadget(*this\gScrollbar, x+width-*this\scrollbarWidth, y, *this\scrollbarWidth, height)
-    SetGadgetAttribute(*this\gScrollbar, #PB_ScrollBar_PageLength, height)
+    ResizeGadget(*this\gCanvas, x, y, width, height)
+    *this\scrollbar\pagelength = height
     updateScrollbar(*this)
     updateItemPosition(*this)
     draw(*this)
@@ -970,7 +1026,7 @@ Module CanvasList
     If json
       For i = 0 To ArraySize(*this\theme\item\Lines())
         If *this\theme\item\Lines(i)\FontID And 
-           IsFont(*this\theme\item\Lines(i)\FontID)
+          IsFont(*this\theme\item\Lines(i)\FontID)
           FreeFont(*this\theme\item\Lines(i)\FontID)
           *this\theme\item\Lines(i)\FontID = 0
         EndIf
@@ -979,6 +1035,7 @@ Module CanvasList
       CopyStructure(@theme, *this\theme, theme)
       FreeJSON(json)
       updateItemLineFonts(*this)
+      updateItemHeight(*this)
     Else
       Debug JSONErrorMessage()
     EndIf
@@ -1023,4 +1080,3 @@ Module CanvasList
   EndProcedure
   
 EndModule
-
