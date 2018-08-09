@@ -14,7 +14,7 @@
   EndEnumeration
   
   ; declare public functions
-  Declare NewCanvasScrollbarGadget(x, y, width, height, useExistingCanvas = -1)
+  Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
   Declare Free(*gadget)
   
   Declare Resize(*gadget, x, y, width, height)
@@ -861,7 +861,7 @@ Module CanvasList
   
   ;- Public Functions
   
-  Procedure NewCanvasScrollbarGadget(x, y, width, height, useExistingCanvas = -1)
+  Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
     Protected *this.gadget
     *this = AllocateStructure(gadget)
     *this\vt = ?vt ; link interface to function addresses
