@@ -94,6 +94,9 @@ Module CanvasList
     ItemSelected$
     ItemHover$
     SelectionBox$
+    Border$
+    Scrollbar$
+    ScrollbarHover$
   EndStructure
   
   Structure themeResponsive
@@ -555,7 +558,7 @@ Module CanvasList
           If \canvasBox\y + *this\theme\item\Height > 0 And \canvasBox\y < GadgetHeight(*this\gCanvas)
             ; background
             DrawingMode(#PB_2DDrawing_Default)
-            Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, #White)
+            Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBackground$))
             
             ; image
             Protected iH, iW, iOffset
@@ -618,15 +621,15 @@ Module CanvasList
         
         DrawingMode(#PB_2DDrawing_AlphaBlend)
         If *this\scrollbar\hover
-          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, RGBA(128, 128, 128, 255))
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, ColorFromHTML(*this\theme\color\ScrollbarHover$))
         Else
-          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, RGBA(128, 128, 128, 128))
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, ColorFromHTML(*this\theme\color\Scrollbar$))
         EndIf
       EndIf
       
       ; draw outer border
-      DrawingMode(#PB_2DDrawing_Outlined)
-      Box(0, 0, GadgetWidth(*this\gCanvas), GadgetHeight(*this\gCanvas), #Gray)
+      DrawingMode(#PB_2DDrawing_Outlined|#PB_2DDrawing_AlphaBlend)
+      Box(0, 0, GadgetWidth(*this\gCanvas), GadgetHeight(*this\gCanvas), ColorFromHTML(*this\theme\color\Border$))
       
       ; finished drawing
       StopDrawing()
