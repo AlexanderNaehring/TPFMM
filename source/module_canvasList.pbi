@@ -423,6 +423,8 @@ Module CanvasList
       ProcedureReturn #False
     EndIf
     
+    *this\scrollbar\pagelength = GadgetHeight(*this\gCanvas)
+    
     If *this\theme\responsive\Columnize
       numColumns  = Round((GadgetWidth(*this\gCanvas) - *this\theme\item\margin) / (*this\theme\item\Width + *this\theme\item\Margin), #PB_Round_Down)
       If numColumns < 1 : numColumns = 1 : EndIf
@@ -649,6 +651,11 @@ Module CanvasList
     p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
     
     Select EventType()
+      Case #PB_EventType_Resize
+        updateScrollbar(*this)
+        updateItemPosition(*this)
+        draw(*this)
+        
       Case #PB_EventType_MouseWheel
         *this\scrollbar\position - (*this\scrollWheelDelta * GetGadgetAttribute(*this\gCanvas, #PB_Canvas_WheelDelta))
         updateItemPosition(*this)
@@ -932,16 +939,13 @@ Module CanvasList
   EndProcedure
   
   Procedure Resize(*this.gadget, x, y, width, height)
-    If x = #PB_Ignore : x = GadgetX(*this\gCanvas) : EndIf
-    If y = #PB_Ignore : y = GadgetY(*this\gCanvas) : EndIf
-    If width = #PB_Ignore : width = GadgetWidth(*this\gCanvas)+*this\scrollbarWidth : EndIf
-    If height = #PB_Ignore : height = GadgetHeight(*this\gCanvas) : EndIf
-    
     ResizeGadget(*this\gCanvas, x, y, width, height)
-    *this\scrollbar\pagelength = height
-    updateScrollbar(*this)
-    updateItemPosition(*this)
-    draw(*this)
+    
+    ; should cause resize callback / TODO: CHECK
+    ; not used in this project
+;     updateScrollbar(*this)
+;     updateItemPosition(*this)
+;     draw(*this)
   EndProcedure
     
   Procedure AddItem(*this.gadget, text$, position = -1)
