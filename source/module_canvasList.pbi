@@ -985,7 +985,6 @@ Module CanvasList
       *this\items()\image = image
       draw(*this)
     Else
-      Debug "could not select item"
       ProcedureReturn #False
     EndIf
   EndProcedure
@@ -1064,7 +1063,6 @@ Module CanvasList
       CopyStructure(@theme, *this\theme, theme)
       FreeJSON(json)
       updateItemLineFonts(*this)
-      updateItemHeight(*this)
     Else
       Debug JSONErrorMessage()
     EndIf
