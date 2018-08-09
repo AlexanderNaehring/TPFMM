@@ -18,33 +18,23 @@
           <multibox comment='main content area'>
             <container name='containerMods' invisible='no' flags=''> <!--#PB_Container_Flat-->
               <hbox expand='item:1'>
-                <vbox expand='item:2'>
-                  <frame name='modFilterFrame' text=' '>
-                    <hbox expand='item:3'>
-                      <combobox name='modFilterFolder' width='160' />
-                      <hbox>
-                        <checkbox name='modFilterHidden' text=' ' />
-                        <checkbox name='modFilterVanilla' text=' ' />
-                      </hbox>
-                      <hbox expand='item:1'>
-                        <string name='modFilterString' text=' ' />
-                        <button name='modFilterReset' text='X' />
-                      </hbox>
-                    </hbox>
-                  </frame>
-                  <canvas name='modList' flags='#PB_Canvas_Keyboard' />
-                </vbox>
+                <canvas name='modList' flags='#PB_Canvas_Keyboard' />
                   
-                <vbox expand='no'>
-                  <image name='modPreviewImage' width='240' height='135' />
-                  <frame name='modManagementFrame' text=' '>
-                    <vbox expand='no'>
-                      <button name='modUpdate' text=' ' />
-                      <button name='modBackup' text=' ' />
-                      <button name='modUninstall' text=' ' />
-                      <button name='modUpdateAll' text=' ' />
-                    </vbox>
-                  </frame>
+                <vbox expand='item:3'>
+                  <hbox expand='no' align='center'>
+                    <buttonimage name='btnSortMods' width='25' height='25' />
+                    <buttonimage name='btnFilterMods' width='25' height='25' />
+                  </hbox>
+                  <vbox expand='no'>
+                    <buttonimage name='modInfo' />
+                    <buttonimage name='modUpdate' />
+                    <buttonimage name='modBackup' />
+                    <buttonimage name='modUninstall' />
+                  </vbox>
+                  <empty />
+                  <vbox expand='no'>
+                    <buttonimage name='modUpdateAll' />
+                  </vbox>
                 </vbox>
               </hbox>
             </container>

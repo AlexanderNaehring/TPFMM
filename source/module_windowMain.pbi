@@ -135,9 +135,9 @@ Module windowMain
     Next
     
     If numSelected = 1
-;       DisableGadget(gadget("modInformation"), #False)
+      DisableGadget(gadget("modInfo"), #False)
     Else
-;       DisableGadget(gadget("modInformation"), #True)
+      DisableGadget(gadget("modInfo"), #True)
     EndIf
     
     If numCanBackup = 0
@@ -157,18 +157,14 @@ Module windowMain
     EndIf
     
     If numCanBackup > 1
-      SetGadgetText(gadget("modBackup"),     locale::l("main","backup_pl"))
       SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
     Else
-      SetGadgetText(gadget("modBackup"),     locale::l("main","backup"))
       SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
     EndIf
     
     If numCanUninstall > 1
-      SetGadgetText(gadget("modUninstall"),  locale::l("main","uninstall_pl"))
       SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
     Else
-      SetGadgetText(gadget("modUninstall"),  locale::l("main","uninstall"))
       SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
     EndIf
     
@@ -223,9 +219,9 @@ Module windowMain
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
       
       
-      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-      EndIf
+;       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
+;         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
+;       EndIf
     EndIf
     
     If numSelected = 0
@@ -1410,17 +1406,20 @@ Module windowMain
     
     
     ; initialize gadgets
-    SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
-    SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
-    SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
-    SetGadgetText(gadget("modManagementFrame"), l("main","management"))
-;     SetGadgetText(gadget("modInformation"),     l("main","information"))
+;     SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
+;     SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
+;     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
+;     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
 ;     SetGadgetText(gadget("modSettings"),        l("main","settings"))
-    SetGadgetText(gadget("modUpdate"),          l("main","update"))
+    SetGadgetAttribute(gadget("modInfo"),       #PB_Button_Image, ImageID(images::images("btnInfo")))
+    SetGadgetAttribute(gadget("modUpdate"),     #PB_Button_Image, ImageID(images::images("btnUpdate")))
+    SetGadgetAttribute(gadget("modBackup"),     #PB_Button_Image, ImageID(images::images("btnBackup")))
+    SetGadgetAttribute(gadget("modUninstall"),  #PB_Button_Image, ImageID(images::images("btnUninstall")))
+    SetGadgetAttribute(gadget("modUpdateAll"),  #PB_Button_Image, ImageID(images::images("btnUpdateAll")))
+    GadgetToolTip(gadget("modInfo"),            l("main","information"))
     GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
-    SetGadgetText(gadget("modBackup"),          l("main","backup"))
-    SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
-    SetGadgetText(gadget("modUpdateAll"),       l("main","update_all"))
+    GadgetToolTip(gadget("modBackup"),          l("main","backup"))
+    GadgetToolTip(gadget("modUninstall"),       l("main","uninstall"))
     GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
     
     SetGadgetText(gadget("repoFilterFrame"),    l("main","filter"))
@@ -1461,18 +1460,18 @@ Module windowMain
     BindGadgetEvent(gadget("btnBackups"),       @btnBackups())
     BindGadgetEvent(gadget("btnSettings"),      @btnSettings())
     
-;     BindGadgetEvent(gadget("modInformation"),   @modInformation())
+    BindGadgetEvent(gadget("modInfo"),          @modInformation())
 ;     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())
-    BindGadgetEvent(gadget("modFilterString"),  @modUpdateList(), #PB_EventType_Change)
-    BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
-    BindGadgetEvent(gadget("modFilterHidden"),  @modUpdateList())
-    BindGadgetEvent(gadget("modFilterVanilla"), @modUpdateList())
-    BindGadgetEvent(gadget("modFilterFolder"),  @modUpdateList(), #PB_EventType_Change)
+;     BindGadgetEvent(gadget("modFilterString"),  @modUpdateList(), #PB_EventType_Change)
+;     BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
+;     BindGadgetEvent(gadget("modFilterHidden"),  @modUpdateList())
+;     BindGadgetEvent(gadget("modFilterVanilla"), @modUpdateList())
+;     BindGadgetEvent(gadget("modFilterFolder"),  @modUpdateList(), #PB_EventType_Change)
     
     BindGadgetEvent(gadget("repoList"),         @repoList())
     BindGadgetEvent(gadget("repoList"),         @repoListShowMenu(), #PB_EventType_RightClick)
@@ -1572,7 +1571,7 @@ Module windowMain
     ; load images
     ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), GadgetHeight(gadget("headerMain")), #PB_Image_Raw)
     SetGadgetState(gadget("headerMain"), ImageID(images::Images("headermain")))
-    SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
+;     SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
     
     
     ; right click menu on mod item

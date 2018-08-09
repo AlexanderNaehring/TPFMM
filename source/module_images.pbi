@@ -45,15 +45,24 @@ Module images
     IncludeAndLoadImage("icon_mod_official",  "images/mod_official.png")
     IncludeAndLoadImage("avatar",       "images/avatar.png")
     IncludeAndLoadImage("share",        "images/share.png")
+    
     IncludeAndLoadImage("navMods",      "images/nav/mods.png")
     IncludeAndLoadImage("navMaps",      "images/nav/maps.png")
     IncludeAndLoadImage("navOnline",    "images/nav/online.png")
     IncludeAndLoadImage("navBackups",   "images/nav/backups.png")
     IncludeAndLoadImage("navSettings",  "images/nav/settings.png")
+    
+    IncludeAndLoadImage("btnInfo",      "images/btn/info.png")
+    IncludeAndLoadImage("btnUpdate",    "images/btn/update.png")
+    IncludeAndLoadImage("btnUpdateAll", "images/btn/update_all.png")
+    IncludeAndLoadImage("btnBackup",    "images/btn/backup.png")
+    IncludeAndLoadImage("btnUninstall", "images/btn/uninstall.png")
+    
     IncludeAndLoadImage("iconFolder",   "images/icons/folder.png")
     IncludeAndLoadImage("iconInfo",     "images/icons/info.png")
     IncludeAndLoadImage("iconSettings", "images/icons/settings.png")
     IncludeAndLoadImage("iconWebsite",  "images/icons/website.png")
+    
     IncludeAndLoadImage("modDefault",   "images/mod_default.png")
     
     
