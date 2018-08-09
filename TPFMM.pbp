@@ -65,13 +65,13 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_pack.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_registry.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_repository.h.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_repository.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -83,7 +83,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_windowPack.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_windowSettings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -99,7 +99,7 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="2411"/>
+      <compilecount enable="1" value="2647"/>
       <buildcount enable="1" value="40"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
