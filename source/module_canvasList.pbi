@@ -872,9 +872,12 @@ Module CanvasList
     *this\scrollWheelDelta = *this\fontHeight*4
     
     ; theme
-    Protected theme$
-    theme$ = ~"{\"item\":{\"Buttons\":[],\"Width\":300,\"Margin\":2,\"Padding\":4,\"Lines\":[{\"REM\":1.6,\"Bold\":1,\"Font\":\"\",\"Italic\":0},{\"REM\":1,\"Bold\":0,\"Font\":\"\",\"Italic\":1}],\"Height\":0,\"Image\":{\"Display\":1,\"MinHeight\":60}},\"responsive\":{\"Columnize\":0,\"ExpandItems\":1},\"color\":{\"ItemText\":\"#00008B\",\"ItemSelected\":\"#007BEE40\",\"ItemBorder\":\"\",\"ItemBackground\":\"\",\"ItemHover\":\"#007BEE10\",\"Background\":\"\",\"SelectionBox\":\"#007BEE80\"}}"
-    SetTheme(*this, theme$)
+    DataSection
+      themeStart:
+      IncludeBinary "theme/modList.json"
+      themeEnd:
+    EndDataSection
+    SetTheme(*this, PeekS(?themeStart, ?themeEnd-?themeStart, #PB_UTF8))
     
     ; create canvas or use existing
     If useExistingCanvas = -1
