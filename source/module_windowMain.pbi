@@ -51,6 +51,7 @@ XIncludeFile "module_modInformation.pbi"
 XIncludeFile "module_modSettings.pbi"
 XIncludeFile "module_pack.pbi"
 XIncludeFile "module_windowPack.pbi"
+XIncludeFile "module_canvasList.pbi"
 
 Module windowMain
   
@@ -89,6 +90,8 @@ Module windowMain
   Declare modOpenModFolder()
   Declare modInformation()
   Declare backupRefreshList()
+  
+  Global *modList.CanvasList::CanvasList
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -132,9 +135,9 @@ Module windowMain
     Next
     
     If numSelected = 1
-      DisableGadget(gadget("modInformation"), #False)
+;       DisableGadget(gadget("modInformation"), #False)
     Else
-      DisableGadget(gadget("modInformation"), #True)
+;       DisableGadget(gadget("modInformation"), #True)
     EndIf
     
     If numCanBackup = 0
@@ -213,7 +216,7 @@ Module windowMain
     Else
       ; multiple mods or none selected
       
-      DisableGadget(gadget("modSettings"), #True)
+;       DisableGadget(gadget("modSettings"), #True)
       DisableGadget(gadget("modUpdate"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
@@ -448,6 +451,7 @@ Module windowMain
     hideAllContainer()
     HideGadget(gadget("containerMods"), #False)
     SetGadgetState(gadget("btnMods"), 1)
+    SetActiveGadget(gadget("modList"))
   EndProcedure
   
   Procedure btnMaps()
@@ -597,14 +601,20 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modFilterMods()
-    mods::displayMods()
+  Procedure modUpdateList()
+    ; TODO
+    ; when filter changed, etc...
+    
+    ; sort
+    *modList\SortItems(CanvasList::#SortByText)
+    ; filter
+    
   EndProcedure
   
   Procedure modResetFilterMods()
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
-    mods::displayMods()
+    modUpdateList()
   EndProcedure
   
   Procedure modShowDownloadFolder()
@@ -660,6 +670,27 @@ Module windowMain
         mods::update(*mod\tpf_id$)
       EndIf
     Next
+  EndProcedure
+  
+  ;- mod callbacks
+  
+  Procedure modCallbackNewMod(*mod.mods::mod)
+    Debug "##### DISPLAY MOD: "+*mod\tpf_id$
+    Protected item
+    item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod))
+    *modList\SetItemImage(item, mods::getPreviewImage(*mod))
+    modUpdateList()
+  EndProcedure
+  
+  Procedure modCallbackRemoveMod(modID$)
+    Debug "##### REMOVE MOD: "+modID$
+    ; TODO
+    modUpdateList()
+  EndProcedure
+  
+  Procedure modCallbackStopDraw(stop)
+    Debug "##### STOP DRAW: "+stop
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
   EndProcedure
   
   ;- repo tab
@@ -1371,27 +1402,20 @@ Module windowMain
     BindEvent(#PB_Event_CloseWindow, @close(), window)
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
-    
     BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
+    
+    ; init custom canvas gadgets
+    *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
+    
+    
     ; initialize gadgets
-    
-;     SetGadgetText(gadget("frameMods"),          l("main","mods"))
-;     SetGadgetText(gadget("frameOnline"),        l("main","repository"))
-;     SetGadgetText(gadget("frameBackups"),       l("main","backups"))
-    
-    RemoveGadgetColumn(gadget("modList"), 0)
-    AddGadgetColumn(gadget("modList"), 0,       l("main","name"), 240)
-    AddGadgetColumn(gadget("modList"), 1,       l("main","author"), 90)
-    AddGadgetColumn(gadget("modList"), 2,       l("main","category"), 90)
-    AddGadgetColumn(gadget("modList"), 3,       l("main","version"), 60)
-    AddGadgetColumn(gadget("modList"), 4,       l("main","mod_options"), 25)
     SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
     SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
-    SetGadgetText(gadget("modInformation"),     l("main","information"))
-    SetGadgetText(gadget("modSettings"),        l("main","settings"))
+;     SetGadgetText(gadget("modInformation"),     l("main","information"))
+;     SetGadgetText(gadget("modSettings"),        l("main","settings"))
     SetGadgetText(gadget("modUpdate"),          l("main","update"))
     GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
     SetGadgetText(gadget("modBackup"),          l("main","backup"))
@@ -1437,18 +1461,18 @@ Module windowMain
     BindGadgetEvent(gadget("btnBackups"),       @btnBackups())
     BindGadgetEvent(gadget("btnSettings"),      @btnSettings())
     
-    BindGadgetEvent(gadget("modInformation"),   @modInformation())
-    BindGadgetEvent(gadget("modSettings"),      @modSettings())
+;     BindGadgetEvent(gadget("modInformation"),   @modInformation())
+;     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modList())
-    BindGadgetEvent(gadget("modFilterString"),  @modFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("modFilterString"),  @modUpdateList(), #PB_EventType_Change)
     BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
-    BindGadgetEvent(gadget("modFilterHidden"),  @modFilterMods())
-    BindGadgetEvent(gadget("modFilterVanilla"), @modFilterMods())
-    BindGadgetEvent(gadget("modFilterFolder"),  @modFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("modFilterHidden"),  @modUpdateList())
+    BindGadgetEvent(gadget("modFilterVanilla"), @modUpdateList())
+    BindGadgetEvent(gadget("modFilterFolder"),  @modUpdateList(), #PB_EventType_Change)
     
     BindGadgetEvent(gadget("repoList"),         @repoList())
     BindGadgetEvent(gadget("repoList"),         @repoListShowMenu(), #PB_EventType_RightClick)
@@ -1573,9 +1597,10 @@ Module windowMain
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
-    
-    ; register mods module
-    mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"), gadget("modFilterFolder"))
+    ; mod module
+    mods::BindEventCallback(mods::#CallbackNewMod, @modCallbackNewMod())
+    mods::BindEventCallback(mods::#CallbackRemoveMod, @modCallbackRemoveMod())
+    mods::BindEventCallback(mods::#CallbackStopDraw, @modCallbackStopDraw())
     
     
     ; register to repository module
@@ -1604,6 +1629,7 @@ Module windowMain
     ; apply sizes
     RefreshDialog(dialog)
     resize()
+    btnMods()
     
     UnuseModule locale
   EndProcedure

@@ -3,6 +3,12 @@
   
   #SCANNER_VERSION = #PB_Editor_CompileCount
   
+  Enumeration 0
+    #CallbackNewMod
+    #CallbackRemoveMod
+    #CallbackStopDraw
+  EndEnumeration
+  
   Structure backup  ;-- information about last backup if available
     time.i
     filename$
@@ -110,28 +116,23 @@
   Declare modCountTags(*mod.mod)
   Declare.s modGetTag(*mod.mod, n.i)
   Declare.s modGetTags(*mod.mod)
+  Declare.s getAuthorsString(*mod.mod)
   
   ; mod-list functions:
-  
-  
-  Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
   
   Declare init()    ; allocate new mod structure, return *mod
   Declare freeAll() ; free all mods in map
   Declare saveList()
   
   Declare generateID(*mod.mod, id$ = "")
-  
   Declare.s getModFolder(id$ = "", type$ = "mod")
   
   ; required interfaces:
   ; install(*data) - extract an archive to the game folder
   ; uninstall(*data) - remove a mod folder from the game
-  ; 
   ; download(*data) - provided by repository module! -> dowloads file to temp dir and calls install procedure
   
   ; check mod functions:
-  
   Declare canUninstall(*mod.mod)
   Declare canBackup(*mod.mod)
   Declare isInstalledByRemote(source$, id)
@@ -157,8 +158,10 @@
   Declare getMods(List *mods.mod())
   Declare exportList(all=#False)
   
-  ; display callbacks
-  Declare displayMods()
-  
   Declare getPreviewImage(*mod.mod, original=#False)
+  
+  ; Bind Callback Events
+  Declare BindEventCallback(Event, *callback)
 EndDeclareModule
+
+

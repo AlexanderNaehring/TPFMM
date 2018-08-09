@@ -32,21 +32,19 @@
                       </hbox>
                     </hbox>
                   </frame>
-                  <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                  <canvas name='modList' flags='#PB_Canvas_Keyboard' />
                 </vbox>
                   
                 <vbox expand='no'>
                   <image name='modPreviewImage' width='240' height='135' />
                   <frame name='modManagementFrame' text=' '>
                     <vbox expand='no'>
-                      <button name='modInformation' text=' ' />
-                      <button name='modSettings' text=' ' disabled='yes' />
                       <button name='modUpdate' text=' ' />
                       <button name='modBackup' text=' ' />
                       <button name='modUninstall' text=' ' />
+                      <button name='modUpdateAll' text=' ' />
                     </vbox>
                   </frame>
-                  <button name='modUpdateAll' text=' ' />
                 </vbox>
               </hbox>
             </container>

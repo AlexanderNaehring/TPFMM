@@ -698,7 +698,6 @@ Module repository
     Wend
     loadRepositoryList()
     displayMods() ; initially fill list
-    mods::displayMods()       ; update mod list to show remote links
   EndProcedure
   
   
