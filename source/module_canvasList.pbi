@@ -341,6 +341,12 @@ Module CanvasList
   Procedure.l ColorFromHTML(htmlColor$)
     Protected c.l, c$, tmp$, i.l
     Static NewMap colors$()
+    Static NewMap cache()
+    
+    If FindMapElement(cache(), htmlColor$)
+      ProcedureReturn cache()
+    EndIf
+    
     If MapSize(colors$()) = 0
       colors$("white")  = "#FFFFFF"
       colors$("silver") = "#C0C0C0"
@@ -360,7 +366,7 @@ Module CanvasList
       colors$("purple") = "#800080"
     EndIf
     
-    c$ = LCase(htmlColor$)
+    c$ = UCase(htmlColor$)
     
     ; detect predefined colors
     If FindMapElement(colors$(), c$)
@@ -398,7 +404,10 @@ Module CanvasList
     c = Val("$"+c$)
     
     ; from HTML (RGBA) to internal representation (ABGR)
-    ProcedureReturn (c & $ff) << 24 + (c & $ff00) << 8 + (c >> 8) & $ff00 + (c >> 24) & $ff
+    c = (c & $ff) << 24 + (c & $ff00) << 8 + (c >> 8) & $ff00 + (c >> 24) & $ff
+    cache(htmlColor$) = c
+    cache(c$) = c
+    ProcedureReturn c
   EndProcedure
   
   ;- Private Functions
