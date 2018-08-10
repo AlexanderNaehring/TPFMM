@@ -585,6 +585,7 @@ Module CanvasList
             DrawingMode(#PB_2DDrawing_Default)
             Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBackground$))
             
+            
             ; image
             Protected iH, iW, iOffset
             If *this\theme\item\Image\Display
@@ -597,6 +598,7 @@ Module CanvasList
               EndIf
             EndIf
             
+            
             ; text
             DrawingMode(#PB_2DDrawing_Transparent)
             For i = 0 To ArraySize(*this\theme\item\Lines())
@@ -604,31 +606,6 @@ Module CanvasList
               DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
               DrawText(\canvasBox\x + padding + iOffset, \canvasBox\y + *this\theme\item\Lines(i)\yOffset, TextMaxWidth(line$, \canvasBox\width - 2*padding - iOffset), ColorFromHTML(*this\theme\color\ItemText$))
             Next
-            
-            
-            ; buttons
-            DrawingMode(#PB_2DDrawing_AlphaBlend)
-            If \hover
-              Protected x, y, w, h
-              ForEach *this\itemButtons()
-                x = \canvasBox\x + *this\itemButtons()\box\x
-                y = \canvasBox\y + *this\itemButtons()\box\y
-                w = *this\itemButtons()\box\width
-                h = *this\itemButtons()\box\height
-                ; background for each item button
-                Box(x, y, w, h, #White)
-                
-                If *this\itemButtons()\callback
-                  If *this\itemButtons()\hover
-                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Hover")), x, y, w, h)
-                  Else
-                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$)), x, y, w, h)
-                  EndIf
-                Else ; no callback exists
-                  DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Disabled")), x, y, w, h)
-                EndIf
-              Next
-            EndIf
             
             
             ; selected?
@@ -642,6 +619,32 @@ Module CanvasList
               DrawingMode(#PB_2DDrawing_AlphaBlend)
               Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemHover$))
             EndIf
+            
+            
+            ; buttons
+            DrawingMode(#PB_2DDrawing_AlphaBlend)
+            If \hover
+              Protected x, y, w, h
+              ForEach *this\itemButtons()
+                x = \canvasBox\x + *this\itemButtons()\box\x
+                y = \canvasBox\y + *this\itemButtons()\box\y
+                w = *this\itemButtons()\box\width
+                h = *this\itemButtons()\box\height
+                ; background for each item button
+                Box(x, y, w, h, $C0FFFFFF)
+                
+                If *this\itemButtons()\callback
+                  If *this\itemButtons()\hover
+                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Hover")), x, y, w, h)
+                  Else
+                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$)), x, y, w, h)
+                  EndIf
+                Else ; no callback exists
+                  DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Disabled")), x, y, w, h)
+                EndIf
+              Next
+            EndIf
+            
             
             ; border
             DrawingMode(#PB_2DDrawing_Outlined)
