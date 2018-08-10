@@ -178,6 +178,13 @@ Module CanvasList
     dragOffset.l
   EndStructure
   
+  Structure pendingSort
+    sort.b
+    mode.i
+    *offset
+    options.i
+  EndStructure
+  
   Structure gadget
     ; virtual table for OOP
     *vt.CanvasList
@@ -200,6 +207,7 @@ Module CanvasList
     theme.theme
     ; other attributes
     pauseDraw.b
+    pendingSort.pendingSort
   EndStructure
   ;}
   
@@ -1214,6 +1222,10 @@ Module CanvasList
       Case #AttributePauseDraw
         *this\pauseDraw = value
         If Not *this\pauseDraw
+          If *this\pendingSort\sort
+            Debug "## execute pending sort"
+            SortItems(*this, *this\pendingSort\mode, *this\pendingSort\offset, *this\pendingSort\options)
+          EndIf
           updateItemPosition(*this)
           updateScrollbar(*this)
           draw(*this)
@@ -1295,6 +1307,16 @@ Module CanvasList
   
   Procedure SortItems(*this.gadget, mode, *offset=0, options=#PB_Sort_Ascending)
     ; sort items
+    
+    If *this\pauseDraw
+      *this\pendingSort\sort = #True
+      *this\pendingSort\mode = mode
+      *this\pendingSort\offset = *offset
+      *this\pendingSort\options = options
+      ProcedureReturn #True
+    Else
+      *this\pendingSort\sort = #False
+    EndIf
     
     Select mode
       Case #SortByText
