@@ -1,6 +1,5 @@
 {
   "item"      : {
-    "Buttons": [],
     "Width"  : 300,
     "Margin" : 2,
     "Padding": 4,
@@ -23,12 +22,12 @@
     }
   },
   "responsive": {
-    "Columnize"  : true,
+    "Columnize"  : false,
     "ExpandItems": true
   },
   "color"     : {
     "ItemText"      : "#2F4763",
-    "ItemSelected"  : "#007BEE40",
+    "ItemSelected"  : "#007BEE20",
     "ItemBorder"    : "#829BAF",
     "ItemBackground": "#FFFFFF",
     "ItemHover"     : "#007BEE10",
@@ -36,6 +35,7 @@
     "Background"    : "",
     "Scrollbar"     : "#2F476340",
     "ScrollbarHover": "#2F4763C0",
-    "SelectionBox"  : "#007BEE80"
+    "SelectionBox"  : "#007BEE80",
+    "ItemBtnHover"  : "#007BEE30"
   }
 }

@@ -30,7 +30,7 @@
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
-  Declare AddItemButton(*gadget, name$, *callback)
+  Declare AddItemButton(*gadget, image, *callback)
   
   ; also make functions available as interface
   Interface CanvasList
@@ -48,7 +48,7 @@
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
-    AddItemButton(name$, *callback)
+    AddItemButton(image, *callback)
   EndInterface
   
 EndDeclareModule
@@ -100,6 +100,7 @@ Module CanvasList
     Border$
     Scrollbar$
     ScrollbarHover$
+    ItemBtnHover$
   EndStructure
   
   Structure themeResponsive
@@ -117,13 +118,6 @@ Module CanvasList
     yOffset.i
   EndStructure
   
-  Structure themeItemButton
-    Box.box
-    Hover.b
-    Icon$
-    *callback
-  EndStructure
-  
   Structure themeItemImage
     Display.b
     MinHeight.w
@@ -137,7 +131,6 @@ Module CanvasList
     Padding.w
     Image.themeItemImage
     Array Lines.themeItemLine(0) ; one font definition per line!
-    List Buttons.themeItemButton()
   EndStructure
   
   Structure theme
@@ -162,10 +155,12 @@ Module CanvasList
   
   Prototype itemBtnCallback(*gadget.CanvasList, item, *userdata)
   Structure itemBtn
-    hover.b
-    name$
+    image.i
+    imageHover.i
+    imageDisabled.i
     callback.itemBtnCallback
     box.box
+    hover.b
   EndStructure
   
   Structure scrollbar
@@ -426,6 +421,36 @@ Module CanvasList
     ProcedureReturn c
   EndProcedure
   
+  Procedure MakeDisabledIcon(*this.gadget, icon)
+    Protected width, height, newIcon
+    width   = ImageWidth(icon) 
+    height  = ImageHeight(icon) 
+    newIcon = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent) 
+    If StartDrawing(ImageOutput(newIcon))
+      DrawingMode(#PB_2DDrawing_Default)
+      Box(0, 0, width, height, #Gray) 
+      DrawingMode(#PB_2DDrawing_AlphaChannel) 
+      DrawImage(ImageID(icon), 0, 0) 
+      StopDrawing()
+    EndIf
+    ProcedureReturn newIcon
+  EndProcedure 
+  
+  Procedure MakeHoverIcon(*this.gadget, icon)
+    Protected width, height, newIcon
+    width   = ImageWidth(icon) 
+    height  = ImageHeight(icon) 
+    newIcon = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent) 
+    If StartDrawing(ImageOutput(newIcon)) 
+      DrawingMode(#PB_2DDrawing_AlphaBlend) 
+      Box(0, 0, width, height, RGBA(255, 255, 255, 255)) 
+      Box(0, 0, width, height, ColorFromHTML(*this\theme\color\ItemBtnHover$))
+      DrawImage(ImageID(icon), 0, 0)
+      StopDrawing()
+    EndIf
+    ProcedureReturn newIcon
+  EndProcedure 
+  
   ;- Private Functions
   
   Procedure updateScrollbar(*this.gadget)
@@ -511,7 +536,8 @@ Module CanvasList
     If ListSize(*this\items())
       ForEach *this\itemButtons()
         i = ListSize(*this\itemButtons()) - ListIndex(*this\itemButtons())
-        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize
+        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize - (*this\scrollbarWidth)
+        ; scrollbarwidth offset just the scrollbar not covering the icon btn
         *this\itemButtons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
         *this\itemButtons()\box\width   = iconBtnSize
         *this\itemButtons()\box\height  = iconBtnSize
@@ -614,6 +640,7 @@ Module CanvasList
               Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemSelected$))
             EndIf
             
+            
             ; hover?
             If \hover
               DrawingMode(#PB_2DDrawing_AlphaBlend)
@@ -631,16 +658,15 @@ Module CanvasList
                 w = *this\itemButtons()\box\width
                 h = *this\itemButtons()\box\height
                 ; background for each item button
-                Box(x, y, w, h, $C0FFFFFF)
-                
+                Box(x, y, w, h, $FFFFFFFF)
                 If *this\itemButtons()\callback
                   If *this\itemButtons()\hover
-                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Hover")), x, y, w, h)
+                    DrawImage(ImageID(*this\itemButtons()\imageHover), x, y, w, h)
                   Else
-                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$)), x, y, w, h)
+                    DrawImage(ImageID(*this\itemButtons()\image), x, y, w, h)
                   EndIf
                 Else ; no callback exists
-                  DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Disabled")), x, y, w, h)
+                  DrawImage(ImageID(*this\itemButtons()\imageDisabled), x, y, w, h)
                 EndIf
               Next
             EndIf
@@ -775,7 +801,7 @@ Module CanvasList
                 Protected click.b = #False
                 ForEach *this\itemButtons()
                   If *this\itemButtons()\hover
-                    Debug "click on btn "+*this\itemButtons()\name$+" for item "+ListIndex(*this\items())
+                    Debug "click on btn for item "+ListIndex(*this\items())
                     If *this\itemButtons()\callback
                       *this\itemButtons()\callback(*this, ListIndex(*this\items()), *this\items()\userdata)
                     EndIf
@@ -1205,9 +1231,11 @@ Module CanvasList
     draw(*this)
   EndProcedure
   
-  Procedure AddItemButton(*this.gadget, name$, *callback)
+  Procedure AddItemButton(*this.gadget, image, *callback)
     AddElement(*this\itemButtons())
-    *this\itemButtons()\name$ = name$
+    *this\itemButtons()\image = image
+    *this\itemButtons()\imageHover = MakeHoverIcon(*this, image)
+    *this\itemButtons()\imageDisabled = MakeDisabledIcon(*this, image)
     *this\itemButtons()\callback = *callback
   EndProcedure
   

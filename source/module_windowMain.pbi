@@ -675,6 +675,7 @@ Module windowMain
     Protected item
     item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod))
     *modList\SetItemImage(item, mods::getPreviewImage(*mod))
+    *modList\SetItemUserData(item, *mod)
     modUpdateList()
   EndProcedure
   
@@ -1403,10 +1404,10 @@ Module windowMain
     
     ; init custom canvas gadgets
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
-    *modList\AddItemButton("Info", 0)
-    *modList\AddItemButton("Folder", 0)
-    *modList\AddItemButton("Settings", 0)
-    *modList\AddItemButton("Website", 0)
+    *modList\AddItemButton(images::Images("iconInfo"), 01)
+    *modList\AddItemButton(images::Images("iconFolder"), 0)
+    *modList\AddItemButton(images::Images("iconSettings"), 0)
+    *modList\AddItemButton(images::Images("iconWebsite"), 0)
     
     
     ; initialize gadgets

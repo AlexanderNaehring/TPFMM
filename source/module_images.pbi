@@ -31,19 +31,6 @@ Module images
     ProcedureReturn RGBA(Red(SourceColor), Green(SourceColor), Blue(SourceColor), Alpha(TargetColor))
   EndProcedure
   
-  Procedure DisabledImage(icon$) 
-    Protected width, height 
-    width   = ImageWidth(Images(icon$)) 
-    height  = ImageHeight(Images(icon$)) 
-    Images(icon$+"Disabled") = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent) 
-    If StartDrawing(ImageOutput(Images(icon$+"Disabled"))) 
-      DrawingMode(#PB_2DDrawing_Default) 
-      Box(0, 0, width, height, #Gray) 
-      DrawingMode(#PB_2DDrawing_AlphaChannel) 
-      DrawImage(ImageID(Images(icon$)), 0, 0) 
-      StopDrawing() 
-    EndIf
-  EndProcedure 
   
   Procedure LoadImages()
     debugger::Add("images::loadImages()")
@@ -79,11 +66,6 @@ Module images
     IncludeAndLoadImage("iconInfo",     "images/icons/info.png")
     IncludeAndLoadImage("iconSettings", "images/icons/settings.png")
     IncludeAndLoadImage("iconWebsite",  "images/icons/website.png")
-    
-    DisabledImage("iconFolder")
-    DisabledImage("iconInfo")
-    DisabledImage("iconSettings")
-    DisabledImage("iconWebsite")
     
     IncludeAndLoadImage("modDefault",   "images/mod_default.png")
     
