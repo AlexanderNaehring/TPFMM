@@ -13,6 +13,9 @@
     #SortByUserData
   EndEnumeration
   
+  ; prototype for user sort
+  Prototype.i compare(*element1, *element2, options)
+  
   ; declare public functions
   Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
   Declare Free(*gadget)
@@ -29,7 +32,7 @@
   Declare GetItemUserData(*gadget, position)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
-  Declare SortItems(*gadget, mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
+  Declare SortItems(*gadget, mode, *offset=0, options=#PB_Sort_Ascending)
   Declare AddItemButton(*gadget, image, *callback)
   
   ; also make functions available as interface
@@ -47,7 +50,7 @@
     GetItemUserData(position)
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
-    SortItems(mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
+    SortItems(mode, *offset=0, options=#PB_Sort_Ascending)
     AddItemButton(image, *callback)
   EndInterface
   
@@ -450,6 +453,45 @@ Module CanvasList
     EndIf
     ProcedureReturn newIcon
   EndProcedure 
+  
+  Procedure Quicksort(List items.item(), options, comp.compare, low, high, level=0)
+    Protected.item *midElement, *highElement, *iElement, *wallElement
+    Protected wall, i, sw
+    
+    If high - low < 1
+      ProcedureReturn
+    EndIf
+    
+    ; swap mid element and high element to avoid bad performance with already sorted list
+    *midElement = SelectElement(items(), low + (high-low)/2)
+    *highElement = SelectElement(items(), high)
+    SwapElements(items(), *midElement, *highElement)
+    
+    ; find split point for array
+    wall = low
+    *highElement = SelectElement(items(), high)
+    For i = low To high -1
+      *iElement = SelectElement(items(), i)
+      If comp(*highElement\userdata, *iElement\userdata, options)
+        *wallElement = SelectElement(items(), wall)
+        SwapElements(items(), *iElement, *wallElement)
+        wall +1
+      EndIf
+    Next
+    
+    ; place last (high) value between the two splits
+    
+    *wallElement = SelectElement(items(), wall)
+    *highElement = SelectElement(items(), high)
+    SwapElements(items(), *wallElement, *highElement)
+    
+    ; sort below wall
+    Quicksort(items(), options, comp, low, wall-1, level+1)
+    
+    ; sort above wall
+    Quicksort(items(), options, comp, wall+1, high, level+1)
+    
+  EndProcedure
   
   ;- Private Functions
   
@@ -1206,21 +1248,21 @@ Module CanvasList
     ProcedureReturn json$
   EndProcedure
   
-  Procedure SortItems(*this.gadget, mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
+  Procedure SortItems(*this.gadget, mode, *offset=0, options=#PB_Sort_Ascending)
     ; sort items
     
     Select mode
       Case #SortByText
         ; offset  = line to use for sorting the items
-        ; type    = #PB_String (fixed)
-        ; TODO
+        ;
         ; offset (line number) not yet working (must extract individual lines for sorting...)
         SortStructuredList(*this\items(), options, OffsetOf(item\text$), #PB_String)
         
       Case #SortByUserData
-        ; offset  = offset in bytes in userdata memory
-        ; type    = variable type to use for sorting (string, integer, float, ...)
-        SortStructuredList(*this\items(), options, offset, type)
+        ; offset  = compare function
+        Debug "############## >>>>>>>>>>>>>"
+        Quicksort(*this\items(), options, *offset, 0, ListSize(*this\items())-1)
+        Debug "############## <<<<<<<<<<<<<"
         
       Default
         Debug "unknown sort mode"
