@@ -84,6 +84,7 @@ Module CanvasList
     #SelectionTemporary
   EndEnumeration
   
+  Global mItems = CreateMutex()
   
   ;- Structures
   ;{
@@ -502,6 +503,8 @@ Module CanvasList
       ProcedureReturn #False
     EndIf
     
+    LockMutex(mItems)
+    
     *this\scrollbar\pagelength = GadgetHeight(*this\gCanvas)
     
     If *this\theme\responsive\Columnize
@@ -513,12 +516,15 @@ Module CanvasList
     
     totalHeight = Round(ListSize(*this\items()) / numColumns, #PB_Round_Up)  * (*this\theme\item\Height + *this\theme\item\Margin) + *this\theme\item\Margin
     
+    
     If totalHeight > GadgetHeight(*this\gCanvas)
       *this\scrollbar\disabled = #False
       *this\scrollbar\maximum = totalHeight
     Else
       *this\scrollbar\disabled = #True
     EndIf
+    UnlockMutex(mItems)
+    ProcedureReturn #True
   EndProcedure
   
   Procedure updateItemPosition(*this.gadget)
@@ -530,6 +536,7 @@ Module CanvasList
       ProcedureReturn #False
     EndIf
     
+    LockMutex(mItems)
     
     ; sanity check
     ; this may also be animated (overshoot and then slide back...)
@@ -585,6 +592,9 @@ Module CanvasList
         *this\itemButtons()\box\height  = iconBtnSize
       Next
     EndIf
+    
+    UnlockMutex(mItems)
+    ProcedureReturn #True
   EndProcedure
   
   Procedure updateItemLineFonts(*this.gadget) ; required after setting the font information for theme\item\Lines()
@@ -633,6 +643,8 @@ Module CanvasList
     If *this\pauseDraw
       ProcedureReturn #False
     EndIf
+    
+    LockMutex(mItems)
     
     If Not BackColor
       BackColor = GetWindowBackgroundColor()
@@ -755,8 +767,10 @@ Module CanvasList
       
       ; finished drawing
       StopDrawing()
+      UnlockMutex(mItems)
       ProcedureReturn #False
     Else
+      UnlockMutex(mItems)
       Debug "[!] draw failure"
       ProcedureReturn #False
     EndIf
@@ -787,9 +801,11 @@ Module CanvasList
         
       Case #PB_EventType_MouseLeave
         *this\hover = #False
+        LockMutex(mItems)
         ForEach *this\items()
           *this\items()\hover = #False
         Next
+        UnlockMutex(mItems)
         draw(*this)
         
         
@@ -823,6 +839,7 @@ Module CanvasList
           If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
             ; CTRL click (toggle item selection under mouse)
             
+            LockMutex(mItems)
             ForEach *this\items()
               If *this\items()\hover
                 ; toggle this item
@@ -833,9 +850,11 @@ Module CanvasList
                 EndIf
               EndIf
             Next
-              
+            UnlockMutex(mItems)
+            
           Else
             ; normal click (select item under mouse, deselect all other items)
+            LockMutex(mItems)
             ForEach *this\items()
               If *this\items()\hover
                 ; TODO
@@ -858,6 +877,8 @@ Module CanvasList
                 *this\items()\selected = #SelectionNone
               EndIf
             Next
+            UnlockMutex(mItems)
+            
           EndIf
           
           
@@ -865,6 +886,7 @@ Module CanvasList
           ; selectionbox finished
           
           ; also add the current element to the selected items
+          LockMutex(mItems)
           ForEach *this\items()
             *item = *this\items()
             If PointInBox(@p, *item\canvasBox)
@@ -887,6 +909,7 @@ Module CanvasList
               *this\items()\selected = #SelectionFinal
             EndIf
           Next
+          UnlockMutex(mItems)
         EndIf
         
         
@@ -926,6 +949,7 @@ Module CanvasList
           *this\selectbox\box\width   = p\x - *this\selectbox\box\x
           *this\selectbox\box\height  = p\y + *this\scrollbar\position - *this\selectbox\box\y
           
+          LockMutex(mItems)
           ForEach *this\items()
             ; check if is selected by selectionBox
             ; convert canvasBox to realBox (!!!scrollbar offset)
@@ -938,6 +962,7 @@ Module CanvasList
             ; convert back to canvasBox
             *this\items()\canvasBox\y = *this\items()\canvasBox\y - *this\scrollbar\position
           Next
+          UnlockMutex(mItems)
           
           draw(*this)
           
@@ -955,6 +980,7 @@ Module CanvasList
           
           ; check item hover
           ; idea: as mouse can only hover on one item, use a SINGLE hover variable that stores what the moouse currently hovers over.
+          LockMutex(mItems)
           ForEach *this\items()
             *this\items()\hover = #False
           Next
@@ -980,7 +1006,7 @@ Module CanvasList
               EndIf
             Next
           EndIf
-          
+          UnlockMutex(mItems)
           
           draw(*this)
         EndIf
@@ -991,9 +1017,11 @@ Module CanvasList
           Case #PB_Shortcut_A
             If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
               ; select all
+              LockMutex(mItems)
               ForEach *this\items()
                 *this\items()\selected | #SelectionFinal
               Next
+              UnlockMutex(mItems)
               draw(*this)
             EndIf
         EndSelect
@@ -1007,16 +1035,19 @@ Module CanvasList
           selectedItems = 0
           ; TODO
           ; instead of count selected, save "last selected item" in gadget data
+          LockMutex(mItems)
           ForEach *this\items()
             If *this\items()\selected & #SelectionFinal
               selectedItems + 1
               *item = *this\items()
             EndIf
           Next
+          UnlockMutex(mItems)
           
           
           If selectedItems = 1
             ; if one item selected, select next/previous item in list
+            LockMutex(mItems)
             ChangeCurrentElement(*this\items(), *item)
             If key = #PB_Shortcut_Up
               If ListIndex(*this\items()) > 0
@@ -1035,6 +1066,7 @@ Module CanvasList
                 redraw = #True
               EndIf
             EndIf
+            UnlockMutex(mItems)
             
             If redraw
               ; if selected item out of view, move scrollbar
@@ -1116,6 +1148,7 @@ Module CanvasList
   EndProcedure
     
   Procedure AddItem(*this.gadget, text$, position = -1)
+    LockMutex(mItems)
     If ListSize(*this\items()) > 0
       If position = -1
         position = ListSize(*this\items()) - 1
@@ -1131,6 +1164,8 @@ Module CanvasList
     *this\items()\text$ = text$
     position = ListIndex(*this\items())
     
+    UnlockMutex(mItems)
+    
     updateScrollbar(*this)
     updateItemPosition(*this)
     draw(*this)
@@ -1139,21 +1174,25 @@ Module CanvasList
   EndProcedure
   
   Procedure RemoveItem(*this.gadget, position)
+    LockMutex(mItems)
     If SelectElement(*this\items(), position)
       DeleteElement(*this\items(), 1)
+      UnlockMutex(mItems)
       updateItemPosition(*this)
       updateScrollbar(*this)
       draw(*this)
+    Else
+      UnlockMutex(mItems)
     EndIf
   EndProcedure
   
   Procedure SetItemImage(*this.gadget, position, image)
+    LockMutex(mItems)
     If SelectElement(*this\items(), position)
       *this\items()\image = image
       draw(*this)
-    Else
-      ProcedureReturn #False
     EndIf
+    UnlockMutex(mItems)
   EndProcedure
   
   Procedure SetAttribute(*this.gadget, attribute, value)
@@ -1204,15 +1243,21 @@ Module CanvasList
   EndProcedure
   
   Procedure SetItemUserData(*this.gadget, position, *data)
+    LockMutex(mItems)
     If SelectElement(*this\items(), position)
       *this\items()\userdata = *data
     EndIf
+    UnlockMutex(mItems)
   EndProcedure
   
   Procedure GetItemUserData(*this.gadget, position)
+    Protected *userdata
+    LockMutex(mItems)
     If SelectElement(*this\items(), position)
-      ProcedureReturn *this\items()\userdata
+      *userdata = *this\items()\userdata
     EndIf
+    UnlockMutex(mItems)
+    ProcedureReturn *userdata
   EndProcedure
   
   Procedure SetTheme(*this.gadget, theme$)
@@ -1256,13 +1301,17 @@ Module CanvasList
         ; offset  = line to use for sorting the items
         ;
         ; offset (line number) not yet working (must extract individual lines for sorting...)
+        LockMutex(mItems)
         SortStructuredList(*this\items(), options, OffsetOf(item\text$), #PB_String)
+        UnlockMutex(mItems)
         
       Case #SortByUserData
         ; offset  = compare function
+        LockMutex(mItems)
         Debug "############## >>>>>>>>>>>>>"
         Quicksort(*this\items(), options, *offset, 0, ListSize(*this\items())-1)
         Debug "############## <<<<<<<<<<<<<"
+        UnlockMutex(mItems)
         
       Default
         Debug "unknown sort mode"
