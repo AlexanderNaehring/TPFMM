@@ -1403,6 +1403,10 @@ Module windowMain
     
     ; init custom canvas gadgets
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
+    *modList\AddItemButton("Info", 0)
+    *modList\AddItemButton("Folder", 0)
+    *modList\AddItemButton("Settings", 0)
+    *modList\AddItemButton("Website", 0)
     
     
     ; initialize gadgets

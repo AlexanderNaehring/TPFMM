@@ -30,6 +30,7 @@
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
+  Declare AddItemButton(*gadget, name$, *callback)
   
   ; also make functions available as interface
   Interface CanvasList
@@ -47,6 +48,7 @@
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, offset=0, options=#PB_Sort_Ascending, type=#PB_String)
+    AddItemButton(name$, *callback)
   EndInterface
   
 EndDeclareModule
@@ -69,6 +71,7 @@ Module CanvasList
     Data.i @SetTheme()
     Data.i @GetThemeJSON()
     Data.i @SortItems()
+    Data.i @AddItemButton()
   EndDataSection
   
   ;- Enumerations
@@ -157,6 +160,14 @@ Module CanvasList
     canvasBox.box ; location on canvas stored for speeding up drawing operation
   EndStructure
   
+  Prototype itemBtnCallback(*gadget.CanvasList, item, *userdata)
+  Structure itemBtn
+    hover.b
+    name$
+    callback.itemBtnCallback
+    box.box
+  EndStructure
+  
   Structure scrollbar
     disabled.b
     hover.b
@@ -183,6 +194,7 @@ Module CanvasList
     fontHeight.i
     ; items
     List items.item()
+    List itemButtons.itemBtn() ; same buttons used for all items...
     ; select box
     selectbox.selectbox
     ; theme / color
@@ -494,6 +506,17 @@ Module CanvasList
       *this\items()\canvasBox\width = width
       *this\items()\canvasBox\height = height
     Next
+    
+    Protected iconBtnSize = 24, i
+    If ListSize(*this\items())
+      ForEach *this\itemButtons()
+        i = ListSize(*this\itemButtons()) - ListIndex(*this\itemButtons())
+        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize
+        *this\itemButtons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
+        *this\itemButtons()\box\width   = iconBtnSize
+        *this\itemButtons()\box\height  = iconBtnSize
+      Next
+    EndIf
   EndProcedure
   
   Procedure updateItemLineFonts(*this.gadget) ; required after setting the font information for theme\item\Lines()
@@ -581,6 +604,32 @@ Module CanvasList
               DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
               DrawText(\canvasBox\x + padding + iOffset, \canvasBox\y + *this\theme\item\Lines(i)\yOffset, TextMaxWidth(line$, \canvasBox\width - 2*padding - iOffset), ColorFromHTML(*this\theme\color\ItemText$))
             Next
+            
+            
+            ; buttons
+            DrawingMode(#PB_2DDrawing_AlphaBlend)
+            If \hover
+              Protected x, y, w, h
+              ForEach *this\itemButtons()
+                x = \canvasBox\x + *this\itemButtons()\box\x
+                y = \canvasBox\y + *this\itemButtons()\box\y
+                w = *this\itemButtons()\box\width
+                h = *this\itemButtons()\box\height
+                ; background for each item button
+                Box(x, y, w, h, #White)
+                
+                If *this\itemButtons()\callback
+                  If *this\itemButtons()\hover
+                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Hover")), x, y, w, h)
+                  Else
+                    DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$)), x, y, w, h)
+                  EndIf
+                Else ; no callback exists
+                  DrawImage(ImageID(images::Images("icon"+*this\itemButtons()\name$+"Disabled")), x, y, w, h)
+                EndIf
+              Next
+            EndIf
+            
             
             ; selected?
             If \selected
@@ -676,7 +725,6 @@ Module CanvasList
       Case #PB_EventType_LeftClick
         ; left click is same as down & up...
         
-        
       Case #PB_EventType_LeftButtonDown
         ; either drag the scrollbar or draw a selection box for items
         If *this\scrollbar\hover
@@ -697,8 +745,53 @@ Module CanvasList
           ; end of scrolbar movement
           *this\scrollbar\dragActive = #False
           
-        ElseIf *this\selectbox\active
-          ; end of selection box for items
+          
+        ElseIf *this\selectbox\active = 1
+          ; single click (no selectionbox)
+          
+          If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
+            ; CTRL click (toggle item selection under mouse)
+            
+            ForEach *this\items()
+              If *this\items()\hover
+                ; toggle this item
+                If *this\items()\selected & #SelectionFinal
+                  *this\items()\selected = #SelectionNone
+                Else
+                  *this\items()\selected = #SelectionFinal
+                EndIf
+              EndIf
+            Next
+              
+          Else
+            ; normal click (select item under mouse, deselect all other items)
+            ForEach *this\items()
+              If *this\items()\hover
+                ; TODO
+                ; integrate callback here?
+                Protected click.b = #False
+                ForEach *this\itemButtons()
+                  If *this\itemButtons()\hover
+                    Debug "click on btn "+*this\itemButtons()\name$+" for item "+ListIndex(*this\items())
+                    If *this\itemButtons()\callback
+                      *this\itemButtons()\callback(*this, ListIndex(*this\items()), *this\items()\userdata)
+                    EndIf
+                    click = #True
+                    Break
+                  EndIf
+                Next
+                If Not click
+                  *this\items()\selected = #SelectionFinal
+                EndIf
+              Else
+                *this\items()\selected = #SelectionNone
+              EndIf
+            Next
+          EndIf
+          
+          
+        ElseIf *this\selectbox\active = 2
+          ; selectionbox finished
           
           ; also add the current element to the selected items
           ForEach *this\items()
@@ -712,17 +805,8 @@ Module CanvasList
           ; if ctrl was pressed, add all "new" selections to the "old"
           ; if ctrl not pressed, remove all old selections
           ForEach *this\items()
-            If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
-              ; CTRL is active
-              ; if ctrl is active and only a single click (no select box), then "toggle" the current item!
-              If *this\selectbox\active = 1 ; only click, not moved
-                If *this\items()\selected & #SelectionFinal And *this\items()\selected & #SelectionTemporary
-                  *this\items()\selected = #SelectionNone
-                  Break ; if selectbox = 1, only a single item can be affected -> break loop
-                EndIf
-              EndIf
-            Else
-              ; CTRL is not active
+            If Not GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
+              ; CTRL is not active -> remove old selection
               If *this\items()\selected & #SelectionFinal ; if bit set (dont care about other bits)
                 *this\items()\selected & ~#SelectionFinal ; remove bit
               EndIf
@@ -809,6 +893,18 @@ Module CanvasList
               *item = *this\items()
               If PointInBox(@p, *item\canvasBox)
                 *item\hover = #True
+                ForEach *this\itemButtons()
+                  Protected box.box
+                  box\x = *item\canvasBox\x + *this\itemButtons()\box\x
+                  box\y = *item\canvasBox\y + *this\itemButtons()\box\y
+                  box\width = *this\itemButtons()\box\width
+                  box\height = *this\itemButtons()\box\height
+                  If PointInBox(@p, @box)
+                    *this\itemButtons()\hover = #True
+                  Else
+                    *this\itemButtons()\hover = #False
+                  EndIf
+                Next
                 Break ; can only hover on one item!
               EndIf
             Next
@@ -1104,6 +1200,12 @@ Module CanvasList
     
     updateItemPosition(*this)
     draw(*this)
+  EndProcedure
+  
+  Procedure AddItemButton(*this.gadget, name$, *callback)
+    AddElement(*this\itemButtons())
+    *this\itemButtons()\name$ = name$
+    *this\itemButtons()\callback = *callback
   EndProcedure
   
 EndModule
