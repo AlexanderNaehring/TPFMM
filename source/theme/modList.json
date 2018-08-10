@@ -25,6 +25,7 @@
     "Columnize"  : false,
     "ExpandItems": true
   },
+  "scrollbarWidth": 12,
   "color"     : {
     "ItemText"      : "#2F4763",
     "ItemSelected"  : "#007BEE20",

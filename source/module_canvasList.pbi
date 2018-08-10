@@ -138,6 +138,7 @@ Module CanvasList
   EndStructure
   
   Structure theme
+    scrollbarWidth.b
     color.themeColors
     responsive.themeResponsive
     item.themeItem
@@ -195,7 +196,6 @@ Module CanvasList
     scrollbar.scrollbar
     hover.b
     ; parameters
-    scrollbarWidth.b
     scrollWheelDelta.i
     fontHeight.i
     ; items
@@ -593,7 +593,7 @@ Module CanvasList
     If ListSize(*this\items())
       ForEach *this\itemButtons()
         i = ListSize(*this\itemButtons()) - ListIndex(*this\itemButtons())
-        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize - (*this\scrollbarWidth)
+        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize - (*this\theme\scrollbarWidth)
         ; scrollbarwidth offset just the scrollbar not covering the icon btn
         *this\itemButtons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
         *this\itemButtons()\box\width   = iconBtnSize
@@ -753,19 +753,19 @@ Module CanvasList
             
       ; draw scrollbar
       If *this\hover And Not *this\scrollbar\disabled
-        *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\scrollbarWidth - 2
+        *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - 2
         *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2
-        *this\scrollbar\box\width = *this\scrollbarWidth
+        *this\scrollbar\box\width = *this\theme\scrollbarWidth
         *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum
-        If *this\scrollbar\box\height < *this\scrollbarWidth*2
-          *this\scrollbar\box\height = *this\scrollbarWidth*2
+        If *this\scrollbar\box\height < *this\theme\scrollbarWidth*2
+          *this\scrollbar\box\height = *this\theme\scrollbarWidth*2
         EndIf
         
         DrawingMode(#PB_2DDrawing_AlphaBlend)
         If *this\scrollbar\hover
-          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, ColorFromHTML(*this\theme\color\ScrollbarHover$))
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\theme\scrollbarWidth/2, *this\theme\scrollbarWidth/2, ColorFromHTML(*this\theme\color\ScrollbarHover$))
         Else
-          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\scrollbarWidth/2, *this\scrollbarWidth/2, ColorFromHTML(*this\theme\color\Scrollbar$))
+          RoundBox(*this\scrollbar\box\x, *this\scrollbar\box\y, *this\scrollbar\box\width, *this\scrollbar\box\height, *this\theme\scrollbarWidth/2, *this\theme\scrollbarWidth/2, ColorFromHTML(*this\theme\color\Scrollbar$))
         EndIf
       EndIf
       
@@ -1103,7 +1103,6 @@ Module CanvasList
     *this\vt = ?vt ; link interface to function addresses
     
     ; set parameters
-    *this\scrollbarWidth = 9
     *this\fontHeight = getFontHeightPixel()
     *this\scrollWheelDelta = *this\fontHeight*4
     
