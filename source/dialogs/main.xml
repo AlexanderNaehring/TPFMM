@@ -22,8 +22,8 @@
                   
                 <vbox expand='item:3'>
                   <hbox expand='no' align='center'>
-                    <buttonimage name='btnSortMods' width='25' height='25' />
-                    <buttonimage name='btnFilterMods' width='25' height='25' />
+                    <buttonimage name='modSort' />
+                    <buttonimage name='modFilter' />
                   </hbox>
                   <vbox expand='no'>
                     <buttonimage name='modInfo' />

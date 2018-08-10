@@ -66,6 +66,9 @@ Module images
     IncludeAndLoadImage("navBackups",   "images/nav/backups.png")
     IncludeAndLoadImage("navSettings",  "images/nav/settings.png")
     
+    IncludeAndLoadImage("btnSort",      "images/btn/sort.png")
+    IncludeAndLoadImage("btnFilter",    "images/btn/filter.png")
+    
     IncludeAndLoadImage("btnInfo",      "images/btn/info.png")
     IncludeAndLoadImage("btnUpdate",    "images/btn/update.png")
     IncludeAndLoadImage("btnUpdateAll", "images/btn/update_all.png")

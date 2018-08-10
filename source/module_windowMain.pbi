@@ -1415,6 +1415,13 @@ Module windowMain
 ;     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
 ;     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
 ;     SetGadgetText(gadget("modSettings"),        l("main","settings"))
+    
+    SetGadgetAttribute(gadget("modFilter"),     #PB_Button_Image, ImageID(images::images("btnFilter")))
+    SetGadgetAttribute(gadget("modSort"),       #PB_Button_Image, ImageID(images::images("btnSort")))
+    GadgetToolTip(gadget("modFilter"),          l("main","filter"))
+    GadgetToolTip(gadget("modSort"),            l("main","sort"))
+    
+    
     SetGadgetAttribute(gadget("modInfo"),       #PB_Button_Image, ImageID(images::images("btnInfo")))
     SetGadgetAttribute(gadget("modUpdate"),     #PB_Button_Image, ImageID(images::images("btnUpdate")))
     SetGadgetAttribute(gadget("modBackup"),     #PB_Button_Image, ImageID(images::images("btnBackup")))
