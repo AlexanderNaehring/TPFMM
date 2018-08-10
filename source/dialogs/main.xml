@@ -138,5 +138,26 @@
       </hbox>
     </vbox>
   </window>
+  
+  <window id='#PB_Any' name='modFilter' text='Filter Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='modFilterString' text='' />
+        <button name='modFilterReset' text='X' />
+      </hbox>
+      <checkbox name='modFilterTF'       text='TF Mods' />
+      <checkbox name='modFilterVanilla'  text='Vanilla Mods' />
+      <checkbox name='modFilterHidden'   text='Hidden Mods' />
+      <checkbox name='modFilterWorkshop' text='Steam Workshop Mods' />
+      <checkbox name='modFilterStaging'  text='Staging Area Mods' />
+    </vbox>
+  </window>
+  
+  <window id='#PB_Any' name='modSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='modSortBy' text='Sort by' />
+      <combobox name='modSortBox' width='100' />
+    </hbox>
+  </window>
 
 </dialogs>

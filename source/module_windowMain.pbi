@@ -2,8 +2,8 @@
 DeclareModule windowMain
   EnableExplicit
   
-  Global window, dialog
-    
+  Global window
+  
   Enumeration FormMenu
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       #PB_Menu_Quit
@@ -54,9 +54,12 @@ XIncludeFile "module_windowPack.pbi"
 XIncludeFile "module_canvasList.pbi"
 
 Module windowMain
+  Global dialog
+  Global windowFilter, dialogFilter
+  Global windowSort, dialogSort
   
   Macro gadget(name)
-    DialogGadget(windowMain::dialog, name)
+    DialogGadget(dialog, name)
   EndMacro
   
   ; rightclick menu on library gadget
@@ -607,10 +610,39 @@ Module windowMain
     
   EndProcedure
   
+  
   Procedure modResetFilterMods()
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
     modUpdateList()
+  EndProcedure
+  
+  Procedure modFilterClose()
+    SetActiveWindow(window)
+    HideWindow(EventWindow(), #True)
+  EndProcedure
+  
+  Procedure modFilterShow()
+    ResizeWindow(windowFilter, DesktopMouseX()-WindowWidth(windowFilter)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
+    HideWindow(windowFilter, #False)
+    SetActiveGadget(DialogGadget(dialogFilter, "modFilterString"))
+  EndProcedure
+  
+  
+  Procedure modSortClose()
+    SetActiveWindow(window)
+    HideWindow(EventWindow(), #True)
+  EndProcedure
+  
+  Procedure modSortChange()
+    modUpdateList()
+    modSortClose()
+  EndProcedure
+  
+  Procedure modSortShow()
+    ResizeWindow(windowSort, DesktopMouseX()-WindowWidth(windowSort)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
+    HideWindow(windowSort, #False)
+    SetActiveGadget(DialogGadget(dialogFilter, "modSortBox"))
   EndProcedure
   
   Procedure modShowDownloadFolder()
@@ -1464,14 +1496,16 @@ Module windowMain
     
     DisableGadget(gadget("btnMaps"), #True)
     
+    
     ; Bind Gadget Events
-;     BindGadgetEvent(gadget("panel"),            @panel())
     BindGadgetEvent(gadget("btnMods"),          @btnMods())
     BindGadgetEvent(gadget("btnMaps"),          @btnMaps())
     BindGadgetEvent(gadget("btnOnline"),        @btnOnline())
     BindGadgetEvent(gadget("btnBackups"),       @btnBackups())
     BindGadgetEvent(gadget("btnSettings"),      @btnSettings())
     
+    BindGadgetEvent(gadget("modFilter"),        @modFilterShow())
+    BindGadgetEvent(gadget("modSort"),          @modSortShow())
     BindGadgetEvent(gadget("modInfo"),          @modInformation())
 ;     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
@@ -1630,6 +1664,45 @@ Module windowMain
     repository::registerFilterGadgets(gadget("repoFilterString"), gadget("repoFilterTypes"), gadget("repoFilterSources"), gadget("repoFilterInstalled"))
     
     repository::init() ; only starts thread -> returns quickly
+    
+    
+    
+    ;- dialog windows
+    dialogFilter = CreateDialog(#PB_Any)
+    If Not dialogFilter Or Not OpenXMLDialog(dialogFilter, xml, "modFilter", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+      MessageRequester("Critical Error", "Could not open filter dialog!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    windowFilter = DialogWindow(dialogFilter)
+    BindEvent(#PB_Event_CloseWindow, @modFilterClose(), windowFilter)
+    BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), windowFilter)
+    CreateMenu(0, WindowID(windowFilter)) ; menu required for shortcuts
+    AddKeyboardShortcut(windowFilter, #PB_Shortcut_Return, 1000)
+    AddKeyboardShortcut(windowFilter, #PB_Shortcut_Escape, 1000)
+    BindMenuEvent(0, 1000, @modFilterClose())
+    
+    
+    dialogSort = CreateDialog(#PB_Any)
+    If Not dialogSort Or Not OpenXMLDialog(dialogSort, xml, "modSort", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+      MessageRequester("Critical Error", "Could not open sort dialog!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    windowSort = DialogWindow(dialogSort)
+    BindEvent(#PB_Event_CloseWindow, @modSortClose(), windowSort)
+    BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), windowSort)
+    CreateMenu(0, WindowID(windowSort)) ; menu required for shortcuts
+    AddKeyboardShortcut(windowSort, #PB_Shortcut_Return, 1000)
+    AddKeyboardShortcut(windowSort, #PB_Shortcut_Escape, 1000)
+    BindMenuEvent(0, 1000, @modSortClose())
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Mod Name")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Author Name")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Installation Date")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Folder Size")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Folder Name")
+    SetGadgetState(DialogGadget(dialogSort, "modSortBox"), 0)
+    RefreshDialog(dialogSort)
+    BindGadgetEvent(DialogGadget(dialogSort, "modSortBox"), @modSortChange())
+    
     
     
     ; init gui texts and button states
