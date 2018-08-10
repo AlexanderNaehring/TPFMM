@@ -57,6 +57,7 @@ Module windowMain
   Global dialog
   Global windowFilter, dialogFilter
   Global windowSort, dialogSort
+  Global menu, menuFilter, menuSort
   
   Macro gadget(name)
     DialogGadget(dialog, name)
@@ -1551,7 +1552,7 @@ Module windowMain
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_A, #MenuItem_CtrlA)
     
     ; Menu
-    CreateMenu(0, WindowID(window))
+    menu = CreateMenu(#PB_Any, WindowID(window))
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       MenuTitle(l("menu","file"))
     CompilerEndIf
@@ -1575,21 +1576,21 @@ Module windowMain
     MenuItem(#MenuItem_Log, l("menu","log"))
     
     ; Menu Events
-    BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
-    BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
-    BindMenuEvent(0, #MenuItem_AddMod, @modAddNewMod())
-    BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
-    BindMenuEvent(0, #MenuItem_ShowBackups, @backupFolder())
-    BindMenuEvent(0, #MenuItem_ShowDownloads, @modShowDownloadFolder())
-    BindMenuEvent(0, #MenuItem_RepositoryRefresh, @repoRefresh())
-    BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
-    BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
-    BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
-    BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
-    BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
-    BindMenuEvent(0, #MenuItem_CtrlA, @MenuItemSelectAll())
-    BindMenuEvent(0, #MenuItem_PackNew, @MenuItemPackNew())
-    BindMenuEvent(0, #MenuItem_PackOpen, @MenuItemPackOpen())
+    BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
+    BindMenuEvent(menu, #PB_Menu_Quit, main::@exit())
+    BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
+    BindMenuEvent(menu, #MenuItem_ExportList, @MenuItemExport())
+    BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
+    BindMenuEvent(menu, #MenuItem_ShowDownloads, @modShowDownloadFolder())
+    BindMenuEvent(menu, #MenuItem_RepositoryRefresh, @repoRefresh())
+    BindMenuEvent(menu, #MenuItem_RepositoryClearCache, @repoClearCache())
+    BindMenuEvent(menu, #MenuItem_Homepage, @MenuItemHomepage())
+    BindMenuEvent(menu, #PB_Menu_About, @MenuItemLicense())
+    BindMenuEvent(menu, #MenuItem_Log, @MenuItemLog())
+    BindMenuEvent(menu, #MenuItem_Enter, @MenuItemEnter())
+    BindMenuEvent(menu, #MenuItem_CtrlA, @MenuItemSelectAll())
+    BindMenuEvent(menu, #MenuItem_PackNew, @MenuItemPackNew())
+    BindMenuEvent(menu, #MenuItem_PackOpen, @MenuItemPackOpen())
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
@@ -1676,10 +1677,10 @@ Module windowMain
     windowFilter = DialogWindow(dialogFilter)
     BindEvent(#PB_Event_CloseWindow, @modFilterClose(), windowFilter)
     BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), windowFilter)
-    CreateMenu(0, WindowID(windowFilter)) ; menu required for shortcuts
+    menuFilter = CreateMenu(#PB_Any, WindowID(windowFilter)) ; menu required for shortcuts
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Return, 1000)
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Escape, 1000)
-    BindMenuEvent(0, 1000, @modFilterClose())
+    BindMenuEvent(menuFilter, 1000, @modFilterClose())
     
     
     dialogSort = CreateDialog(#PB_Any)
@@ -1690,10 +1691,10 @@ Module windowMain
     windowSort = DialogWindow(dialogSort)
     BindEvent(#PB_Event_CloseWindow, @modSortClose(), windowSort)
     BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), windowSort)
-    CreateMenu(0, WindowID(windowSort)) ; menu required for shortcuts
+    menuSort = CreateMenu(#PB_Any, WindowID(windowSort)) ; menu required for shortcuts
     AddKeyboardShortcut(windowSort, #PB_Shortcut_Return, 1000)
     AddKeyboardShortcut(windowSort, #PB_Shortcut_Escape, 1000)
-    BindMenuEvent(0, 1000, @modSortClose())
+    BindMenuEvent(menuSort, 1000, @modSortClose())
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Mod Name")
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Author Name")
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Installation Date")
