@@ -51,7 +51,7 @@ DeclareModule misc
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare.s printSize(bytes.q)
   Declare.q getDirectorySize(path$)
-  Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+  Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, *compareFunction=0, low=0, high=-1)
   Declare.s getOSVersion()
   Declare.s getDefaultFontName()
   Declare getDefaultFontSize()
@@ -482,14 +482,23 @@ Module misc
     ProcedureReturn doSwap
   EndProcedure
   
-  Procedure SortStructuredPointerList_Quicksort(List *pointerlist(), options, offset, type, low, high, level=0)
+  Prototype.i compare(*element1, *element2, options, offset, type)
+  
+  Procedure SortStructuredPointerList_Quicksort(List *pointerlist(), options, offset, type, *compare, low, high, level=0)
     Protected *midElement, *highElement, *iElement, *wallElement
-    Protected wall, i
+    Protected wall, i, sw
+    Protected comp.compare
     
     If high - low < 1
       ProcedureReturn
     EndIf
     
+    ; use user function or simpler compare by offset function
+    If *compare
+      comp = *compare
+    Else
+      comp = @compareIsGreater()
+    EndIf
     
     ; swap mid element and high element to avoid bad performance with already sorted list
     *midElement = SelectElement(*pointerlist(), low + (high-low)/2)
@@ -501,7 +510,7 @@ Module misc
     *highElement = SelectElement(*pointerlist(), high)
     For i = low To high -1
       *iElement = SelectElement(*pointerlist(), i)
-      If compareIsGreater(*highElement, *iElement, options, offset, type)
+      If comp(*highElement, *iElement, options, offset, type)
         *wallElement = SelectElement(*pointerlist(), wall)
         SwapElements(*pointerlist(), *iElement, *wallElement)
         wall +1
@@ -515,48 +524,20 @@ Module misc
     SwapElements(*pointerlist(), *wallElement, *highElement)
     
     ; sort below wall
-    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, wall-1, level+1)
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, low, wall-1, level+1)
     
     ; sort above wall
-    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, wall+1, high, level+1)
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, wall+1, high, level+1)
     
   EndProcedure
   
-  Procedure SortStructuredPointerList_SimpleSort(List *pointerlist(), options, offset, type)
-    Protected finished, doSwap
-    Protected *currentListElement, *pointer1, *pointer2
-    Protected val1, val2, str1$, str2$
-    
-    Repeat
-      finished = #True
-      ForEach *pointerlist()
-        *currentListElement = @*pointerlist()
-        While NextElement(*pointerlist())
-          ;compare the current element with others in the list and swap if required
-          
-          If compareIsGreater(*currentListElement, @*pointerlist(), options, offset, type)
-            SwapElements(*pointerList(), *currentListElement, @*pointerlist())
-            finished = #False
-          EndIf
-        Wend
-        ChangeCurrentElement(*pointerlist(), *currentListElement)
-      Next
-    Until finished
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+  Procedure SortStructuredPointerList(List *pointerlist(), options, offset, type, *compare=0, low=0, high=-1)
     ; options = #PB_Sort_Ascending = 0 (default) | #PB_Sort_Descending = 1 | #PB_Sort_NoCase = 2
-    
-;     ; simple sorting algorithm for small lists?
-;     If #False
-;       ProcedureReturn SortStructuredPointerList_SimpleSort(*pointerlist(), options, offset, type)
-;     EndIf
     
     If high = -1
       high = ListSize(*pointerlist()) -1
     EndIf
-    ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, high)
+    ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, low, high)
     
   EndProcedure
   
@@ -668,47 +649,42 @@ Module misc
     Wend
   EndProcedure
   
-  
-CompilerSelect #PB_Compiler_OS
-  CompilerCase #PB_OS_Windows
-    
-    Procedure getRowHeight(gadget)
-      ; ListIconGadget get/set row height: http://www.purebasic.fr/english/viewtopic.php?f=13&t=54533&start=7
+  Procedure getRowHeight(gadget)
+    ; ListIconGadget get/set row height: http://www.purebasic.fr/english/viewtopic.php?f=13&t=54533&start=7
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
       
-      If GadgetType(gadget) = #PB_GadgetType_ListView
-        ProcedureReturn SendMessage_(GadgetID(gadget), #LB_GETITEMHEIGHT, 0, 0)
+        If GadgetType(gadget) = #PB_GadgetType_ListView
+          ProcedureReturn SendMessage_(GadgetID(gadget), #LB_GETITEMHEIGHT, 0, 0)
+          
+        ElseIf GadgetType(gadget) = #PB_GadgetType_ListIcon
+          Protected rectangle.RECT
+          rectangle\left = #LVIR_BOUNDS
+          SendMessage_(GadgetID(gadget), #LVM_GETITEMRECT, 0, rectangle)
+          ProcedureReturn rectangle\bottom - rectangle\top - 1
+          
+        EndIf
         
-      ElseIf GadgetType(gadget) = #PB_GadgetType_ListIcon
-        Protected rectangle.RECT
-        rectangle\left = #LVIR_BOUNDS
-        SendMessage_(GadgetID(gadget), #LVM_GETITEMRECT, 0, rectangle)
-        ProcedureReturn rectangle\bottom - rectangle\top - 1
         
-      EndIf
-    EndProcedure
-    
-  CompilerCase #PB_OS_Linux
-
-    Procedure getRowHeight(gadget)
-      Protected height, yOffset
-      Protected *tree, *tree_column
-      If GadgetType(gadget) = #PB_GadgetType_ListIcon Or
-         GadgetType(gadget) = #PB_GadgetType_ListView
-        
-        *tree = GadgetID(gadget)
-        
-        ; https://developer.gnome.org/gtk3/stable/GtkTreeView.html#gtk-tree-view-get-column
-        *tree_column = gtk_tree_view_get_column_(*tree, 0)
-        
-        ; https://developer.gnome.org/gtk3/stable/GtkTreeViewColumn.html#gtk-tree-view-column-cell-get-size
-        gtk_tree_view_column_cell_get_size_(*tree_column, #Null, #Null, @yOffset, #Null, @height)
-        
-        ProcedureReturn height
-      EndIf
-    EndProcedure
-
-CompilerEndSelect
-
+      CompilerCase #PB_OS_Linux
+        Protected height, yOffset
+        Protected *tree, *tree_column
+        If GadgetType(gadget) = #PB_GadgetType_ListIcon Or
+           GadgetType(gadget) = #PB_GadgetType_ListView
+          
+          *tree = GadgetID(gadget)
+          
+          ; https://developer.gnome.org/gtk3/stable/GtkTreeView.html#gtk-tree-view-get-column
+          *tree_column = gtk_tree_view_get_column_(*tree, 0)
+          
+          ; https://developer.gnome.org/gtk3/stable/GtkTreeViewColumn.html#gtk-tree-view-column-cell-get-size
+          gtk_tree_view_column_cell_get_size_(*tree_column, #Null, #Null, @yOffset, #Null, @height)
+          
+          ProcedureReturn height
+        EndIf
+    CompilerEndSelect
+  EndProcedure
+  
   Procedure getDefaultRowHeight(type=#PB_GadgetType_ListView)
     Static heightLV, heightLI
     Protected window, gadgetLV, gadgetLI
@@ -758,7 +734,6 @@ CompilerEndSelect
     ProcedureReturn scrollbarWidth
   EndProcedure
   
-
   Procedure registerProtocolHandler(protocol$, program$, description$="")
     debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
     CompilerSelect #PB_Compiler_OS
