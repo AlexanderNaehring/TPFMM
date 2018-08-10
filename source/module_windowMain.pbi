@@ -601,12 +601,54 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure compModName(*element1.mods::mod, *element2.mods::mod, options)
+    ProcedureReturn Bool(*element1\name$ > *element2\name$)
+  EndProcedure
+  
+  Procedure compModAuthor(*element1.mods::mod, *element2.mods::mod, options)
+    If Not ListSize(*element1\authors()) Or Not ListSize(*element2\authors())
+      ProcedureReturn #False
+    EndIf
+    
+    SelectElement(*element1\authors(), 0)
+    SelectElement(*element2\authors(), 0)
+    ProcedureReturn Bool(*element1\authors()\name$ > *element2\authors()\name$)
+  EndProcedure
+  
+  Procedure compModInstall(*element1.mods::mod, *element2.mods::mod, options)
+    ProcedureReturn Bool(*element1\aux\installDate > *element2\aux\installDate)
+  EndProcedure
+  
+  Procedure compModSize(*element1.mods::mod, *element2.mods::mod, options)
+    ; to slow, must cache folder size!
+    ProcedureReturn Bool(misc::getDirectorySize(mods::getModFolder(*element1\tpf_id$, *element1\aux\type$)) > misc::getDirectorySize(mods::getModFolder(*element2\tpf_id$, *element2\aux\type$)))
+  EndProcedure
+  
+  Procedure compModID(*element1.mods::mod, *element2.mods::mod, options)
+    ProcedureReturn Bool(*element1\tpf_id$ > *element2\tpf_id$)
+  EndProcedure
+  
   Procedure modUpdateList()
     ; TODO
     ; when filter changed, etc...
     
     ; sort
-    *modList\SortItems(CanvasList::#SortByText)
+    Protected *comp
+    
+    Select GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
+      Case 0
+        *comp = @compModName()
+      Case 1
+        *comp = @compModAuthor()
+      Case 2
+        *comp = @compModInstall()
+      Case 3
+        *comp = @compModID()
+      Default
+        *comp = @compModName()
+    EndSelect
+    
+    *modList\SortItems(CanvasList::#SortByUserData, *comp, #PB_Sort_Ascending)
     ; filter
     
   EndProcedure
@@ -621,6 +663,7 @@ Module windowMain
   Procedure modFilterClose()
     SetActiveWindow(window)
     HideWindow(EventWindow(), #True)
+    PostEvent(#PB_Event_Repaint, window, 0)
   EndProcedure
   
   Procedure modFilterShow()
@@ -633,9 +676,11 @@ Module windowMain
   Procedure modSortClose()
     SetActiveWindow(window)
     HideWindow(EventWindow(), #True)
+    PostEvent(#PB_Event_Repaint, window, 0)
   EndProcedure
   
   Procedure modSortChange()
+    
     modUpdateList()
     modSortClose()
   EndProcedure
