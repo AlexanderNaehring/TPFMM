@@ -1349,9 +1349,7 @@ Module CanvasList
     
     Select mode
       Case #SortByText
-        ; offset  = line to use for sorting the items
-        ;
-        ; offset (line number) not yet working (must extract individual lines for sorting...)
+        ; offset  = line to use for sorting the items (not yet working)
         LockMutex(*this\mItems)
         SortStructuredList(*this\items(), options, OffsetOf(item\text$), #PB_String)
         UnlockMutex(*this\mItems)
@@ -1359,9 +1357,7 @@ Module CanvasList
       Case #SortByUserData
         ; offset  = compare function
         LockMutex(*this\mItems)
-        Debug "############## >>>>>>>>>>>>>"
         Quicksort(*this\items(), options, *offset, 0, ListSize(*this\items())-1)
-        Debug "############## <<<<<<<<<<<<<"
         UnlockMutex(*this\mItems)
         
       Default
