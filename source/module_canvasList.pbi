@@ -30,6 +30,7 @@
   Declare GetUserData(*gadget)
   Declare SetItemUserData(*gadget, position, *data)
   Declare GetItemUserData(*gadget, position)
+  Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, *offset=0, options=#PB_Sort_Ascending)
@@ -49,6 +50,7 @@
     GetUserData()
     SetItemUserData(position, *data)
     GetItemUserData(position)
+    GetItemCount()
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, *offset=0, options=#PB_Sort_Ascending)
@@ -73,6 +75,7 @@ Module CanvasList
     Data.i @GetUserData()
     Data.i @SetItemUserData()
     Data.i @GetItemUserData()
+    Data.i @GetItemCount()
     Data.i @SetTheme()
     Data.i @GetThemeJSON()
     Data.i @SortItems()
@@ -856,7 +859,6 @@ Module CanvasList
           ; store y offset from scrollbar top to mouse position
           *this\scrollbar\dragActive = #True
           *this\scrollbar\dragOffset = p\y - *this\scrollbar\box\y
-          
         Else
           *this\selectbox\active = 1
           ; store current x/y (not current display coordinates)
@@ -1299,6 +1301,14 @@ Module CanvasList
     EndIf
     UnlockMutex(*this\mItems)
     ProcedureReturn *userdata
+  EndProcedure
+  
+  Procedure GetItemCount(*this.gadget)
+    Protected count
+    LockMutex(*this\mItems)
+    count = ListSize(*this\items())
+    UnlockMutex(*this\mItems)
+    ProcedureReturn count
   EndProcedure
   
   Procedure SetTheme(*this.gadget, theme$)
