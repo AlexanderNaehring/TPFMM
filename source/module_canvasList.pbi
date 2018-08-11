@@ -33,7 +33,7 @@
   Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
-  Declare SortItems(*gadget, mode, *offset=0, options=#PB_Sort_Ascending)
+  Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
   Declare AddItemButton(*gadget, image, *callback)
   Declare HideItem(*gadget, item, hidden.b)
   
@@ -53,7 +53,7 @@
     GetItemCount()
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
-    SortItems(mode, *offset=0, options=#PB_Sort_Ascending)
+    SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
     AddItemButton(image, *callback)
     HideItem(item, hidden.b)
   EndInterface
@@ -186,9 +186,10 @@ Module CanvasList
   EndStructure
   
   Structure pendingSort
-    sort.b
+    pending.b
+    persistent.b
     mode.i
-    *offset
+    *sortFun
     options.i
   EndStructure
   
@@ -215,6 +216,7 @@ Module CanvasList
     pauseDraw.b
     pendingSort.pendingSort
     mItems.i
+    mItemAddRemove.i
   EndStructure
   ;}
   
@@ -1131,8 +1133,13 @@ Module CanvasList
   Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
     Protected *this.gadget
     *this = AllocateStructure(gadget)
-    *this\vt = ?vt ; link interface to function addresses
+    
+    ; link interface to function addresses
+    *this\vt = ?vt
+    
+    ; Mutex creation
     *this\mItems = CreateMutex()
+    *this\mItemAddRemove = CreateMutex()
     
     ; set parameters
     *this\fontHeight = getFontHeightPixel()
@@ -1187,7 +1194,9 @@ Module CanvasList
   EndProcedure
     
   Procedure AddItem(*this.gadget, text$, position = -1)
-    LockMutex(*this\mItems)
+    Protected *item
+    LockMutex(*this\mItemAddRemove) ; do not create / destroy items in parallel to keep thread safe!
+    LockMutex(*this\mItems) ; generic item access (as looping through items etc)
     If ListSize(*this\items()) > 0
       If position = -1
         position = ListSize(*this\items()) - 1
@@ -1199,16 +1208,28 @@ Module CanvasList
       EndIf
     EndIf
     
+    ; add element to internal item list
     AddElement(*this\items())
     *this\items()\text$ = text$
-    position = ListIndex(*this\items())
-    
+    *item = *this\items()
     UnlockMutex(*this\mItems)
     
+    ; with persistent sorting active, sort when new element is added
+    If *this\pendingSort\persistent
+      SortItems(*this, *this\pendingSort\mode, *this\pendingSort\sortFun, *this\pendingSort\options, *this\pendingSort\persistent)
+    EndIf
+    
+    ; get element position after potential sorting
+    LockMutex(*this\mItems)
+    ChangeCurrentElement(*this\items(), *item)
+    position = ListIndex(*this\items())
+    UnlockMutex(*this\mItems)
+    
+    ; update gadget and redraw
     updateScrollbar(*this)
     updateItemPosition(*this)
     draw(*this)
-    
+    UnlockMutex(*this\mItemAddRemove)
     ProcedureReturn position
   EndProcedure
   
@@ -1253,9 +1274,9 @@ Module CanvasList
       Case #AttributePauseDraw
         *this\pauseDraw = value
         If Not *this\pauseDraw
-          If *this\pendingSort\sort
+          If *this\pendingSort\pending
             Debug "## execute pending sort"
-            SortItems(*this, *this\pendingSort\mode, *this\pendingSort\offset, *this\pendingSort\options)
+            SortItems(*this, *this\pendingSort\mode, *this\pendingSort\sortFun, *this\pendingSort\options, *this\pendingSort\persistent)
           EndIf
           updateItemPosition(*this)
           updateScrollbar(*this)
@@ -1344,17 +1365,23 @@ Module CanvasList
     ProcedureReturn json$
   EndProcedure
   
-  Procedure SortItems(*this.gadget, mode, *offset=0, options=#PB_Sort_Ascending)
+  Procedure SortItems(*this.gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
     ; sort items
     
+    ; always overwrite the internal "pendingSort" status information
+    ; first: keep for "pending sort" if drawing is paused (speed up)
+    ; second: keep for persistent sorting (automatically sort when adding new items)
+    *this\pendingSort\mode = mode
+    *this\pendingSort\sortFun = *sortFun
+    *this\pendingSort\options = options
+    *this\pendingSort\persistent = persistent
+    
     If *this\pauseDraw
-      *this\pendingSort\sort = #True
-      *this\pendingSort\mode = mode
-      *this\pendingSort\offset = *offset
-      *this\pendingSort\options = options
+      ; if sort is not executed now, activate the pending sort
+      *this\pendingSort\pending = #True
       ProcedureReturn #True
     Else
-      *this\pendingSort\sort = #False
+      *this\pendingSort\pending = #False
     EndIf
     
     Select mode
@@ -1367,7 +1394,7 @@ Module CanvasList
       Case #SortByUserData
         ; offset  = compare function
         LockMutex(*this\mItems)
-        Quicksort(*this\items(), options, *offset, 0, ListSize(*this\items())-1)
+        Quicksort(*this\items(), options, *sortFun, 0, ListSize(*this\items())-1)
         UnlockMutex(*this\mItems)
         
       Default

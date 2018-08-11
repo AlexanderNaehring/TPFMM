@@ -621,30 +621,9 @@ Module windowMain
   EndProcedure
   
   Procedure modUpdateList()
-    ; TODO
-    ; when filter changed, etc...
-    
-    ; sort
-    Protected *comp
-    
-    Select GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
-      Case 0
-        *comp = @compModName()
-      Case 1
-        *comp = @compModAuthor()
-      Case 2
-        *comp = @compModInstall()
-      Case 3
-        *comp = @compModSize()
-      Case 4
-        *comp = @compModID()
-      Default
-        *comp = @compModName()
-    EndSelect
-    
-    *modList\SortItems(CanvasList::#SortByUserData, *comp, #PB_Sort_Ascending)
-    ; filter
-    
+    ; is there needto update the gadget manually?
+    ; sorting is done persistent,
+    ; filtering applied upon filter change (TODO: persistent filtering?)
   EndProcedure
   
   
@@ -669,13 +648,34 @@ Module windowMain
   
   Procedure modSortClose()
     SetActiveWindow(window)
-    HideWindow(EventWindow(), #True)
+    HideWindow(windowSort, #True)
     PostEvent(#PB_Event_Repaint, window, 0)
   EndProcedure
   
   Procedure modSortChange()
+    ; apply sorting to CanvasList
+    Protected *comp
     
-    modUpdateList()
+    ; get corresponding sorting function
+    Select GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
+      Case 0
+        *comp = @compModName()
+      Case 1
+        *comp = @compModAuthor()
+      Case 2
+        *comp = @compModInstall()
+      Case 3
+        *comp = @compModSize()
+      Case 4
+        *comp = @compModID()
+      Default
+        *comp = @compModName()
+    EndSelect
+    
+    ; Sort CanvasList and make persistent sort (gadget will be keept sorted automatically)
+    *modList\SortItems(CanvasList::#SortByUserData, *comp, #PB_Sort_Ascending, #True)
+    
+    ; close the mod sort tool window
     modSortClose()
   EndProcedure
   
@@ -1734,7 +1734,7 @@ Module windowMain
     
     
     
-    ;- dialog windows
+    ;- Filter Dialog
     dialogFilter = CreateDialog(#PB_Any)
     If Not dialogFilter Or Not OpenXMLDialog(dialogFilter, xml, "modFilter", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
       MessageRequester("Critical Error", "Could not open filter dialog!", #PB_MessageRequester_Error)
@@ -1749,18 +1749,22 @@ Module windowMain
     BindMenuEvent(menuFilter, 1000, @modFilterClose())
     
     
+    ;- Sort Dialog
     dialogSort = CreateDialog(#PB_Any)
     If Not dialogSort Or Not OpenXMLDialog(dialogSort, xml, "modSort", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
       MessageRequester("Critical Error", "Could not open sort dialog!", #PB_MessageRequester_Error)
       End
     EndIf
     windowSort = DialogWindow(dialogSort)
+    ; bind window events
     BindEvent(#PB_Event_CloseWindow, @modSortClose(), windowSort)
     BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), windowSort)
+    ; use window menu for keyboard shortcuts
     menuSort = CreateMenu(#PB_Any, WindowID(windowSort)) ; menu required for shortcuts
     AddKeyboardShortcut(windowSort, #PB_Shortcut_Return, 1000)
     AddKeyboardShortcut(windowSort, #PB_Shortcut_Escape, 1000)
     BindMenuEvent(menuSort, 1000, @modSortClose())
+    ; sorting options
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Mod Name")
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Author Name")
     AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Installation Date")
@@ -1769,6 +1773,10 @@ Module windowMain
     SetGadgetState(DialogGadget(dialogSort, "modSortBox"), 0)
     RefreshDialog(dialogSort)
     BindGadgetEvent(DialogGadget(dialogSort, "modSortBox"), @modSortChange())
+    ;TODO load last sorting from settings file
+    ; apply initial sorting
+    modSortChange()
+    
     
     
     
