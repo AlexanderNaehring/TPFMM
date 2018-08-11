@@ -36,6 +36,7 @@
   Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
   Declare AddItemButton(*gadget, image, *callback)
   Declare HideItem(*gadget, item, hidden.b)
+  Declare BindItemEvent(*gadget, event, *callback)
   
   ; also make functions available as interface
   Interface CanvasList
@@ -56,6 +57,7 @@
     SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
     AddItemButton(image, *callback)
     HideItem(item, hidden.b)
+    BindItemEvent(event, *callback)
   EndInterface
   
 EndDeclareModule
@@ -81,6 +83,7 @@ Module CanvasList
     Data.i @SortItems()
     Data.i @AddItemButton()
     Data.i @HideItem()
+    Data.i @BindItemEvent()
   EndDataSection
   
   ;- Enumerations
@@ -174,6 +177,12 @@ Module CanvasList
     hover.b
   EndStructure
   
+  Prototype itemEventCallback(*gadget.CanvasList, item, *userdata, event)
+  Structure itemEvent
+    event.i
+    callback.itemEventCallback
+  EndStructure
+  
   Structure scrollbar
     disabled.b
     hover.b
@@ -208,6 +217,7 @@ Module CanvasList
     ; items
     List items.item()
     List itemButtons.itemBtn() ; same buttons used for all items...
+    List itemEvents.itemEvent()
     ; select box
     selectbox.selectbox
     ; theme / color
@@ -1126,6 +1136,22 @@ Module CanvasList
           EndIf
         EndIf
     EndSelect
+    
+    
+    ; execute event binds
+    LockMutex(*this\mItems)
+    ForEach *this\itemEvents()
+      If EventType() = *this\itemEvents()\event
+        ForEach *this\items()
+          If *this\items()\hover
+            *this\itemEvents()\callback(*this, ListIndex(*this\items()), *this\items()\userdata, *this\itemEvents()\event)
+            Break
+          EndIf
+        Next
+      EndIf
+    Next
+    UnlockMutex(*this\mItems)
+    
   EndProcedure
   
   ;- Public Functions
@@ -1423,6 +1449,13 @@ Module CanvasList
       draw(*this)
     EndIf
     UnlockMutex(*this\mItems)
+  EndProcedure
+  
+  Procedure BindItemEvent(*this.gadget, event, *callback)
+    Protected *el.itemEvent
+    *el = AddElement(*this\itemEvents())
+    *el\event = event
+    *el\callback = *callback
   EndProcedure
   
 EndModule

@@ -762,6 +762,9 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure modDoubleClick(*gadget, item, *mod, event)
+    modIconInfo(*gadget, item, *mod)
+  EndProcedure
   
   ;- mod callbacks
   
@@ -1503,6 +1506,7 @@ Module windowMain
     
     ; init custom canvas gadgets
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
+    *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modDoubleClick())
     *modList\AddItemButton(images::Images("iconInfo"),      @modIconInfo())
     *modList\AddItemButton(images::Images("iconFolder"),    @modIconFolder())
     *modList\AddItemButton(images::Images("iconSettings"),  @modIconSettings())
