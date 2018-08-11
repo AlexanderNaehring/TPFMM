@@ -771,6 +771,9 @@ Module windowMain
     item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod))
     *modList\SetItemImage(item, mods::getPreviewImage(*mod))
     *modList\SetItemUserData(item, *mod)
+    If *mod\aux\isVanilla
+      *modList\HideItem(item, #True)
+    EndIf
     modUpdateList()
   EndProcedure
   

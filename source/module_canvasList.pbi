@@ -34,6 +34,7 @@
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, *offset=0, options=#PB_Sort_Ascending)
   Declare AddItemButton(*gadget, image, *callback)
+  Declare HideItem(*gadget, item, hidden.b)
   
   ; also make functions available as interface
   Interface CanvasList
@@ -52,6 +53,7 @@
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, *offset=0, options=#PB_Sort_Ascending)
     AddItemButton(image, *callback)
+    HideItem(item, hidden.b)
   EndInterface
   
 EndDeclareModule
@@ -75,6 +77,7 @@ Module CanvasList
     Data.i @GetThemeJSON()
     Data.i @SortItems()
     Data.i @AddItemButton()
+    Data.i @HideItem()
   EndDataSection
   
   ;- Enumerations
@@ -153,6 +156,7 @@ Module CanvasList
     image.i       ; display image (if any)
     selected.b    ; item selected?
     hover.b       ; mouse over item?
+    hidden.b      ; item currently not displayed
     *userdata     ; userdata
     canvasBox.box ; location on canvas stored for speeding up drawing operation
   EndStructure
@@ -504,12 +508,26 @@ Module CanvasList
   
   ;- Private Functions
   
+  Procedure countVisibleItems(*this.gadget)
+    Protected count
+    LockMutex(*this\mItems)
+    ForEach *this\items()
+      If Not *this\items()\hidden
+        count + 1
+      EndIf
+    Next
+    UnlockMutex(*this\mItems)
+    ProcedureReturn count
+  EndProcedure
+  
   Procedure updateScrollbar(*this.gadget)
-    Protected totalHeight, numColumns
+    Protected totalHeight, numColumns, numItems
     
     If *this\pauseDraw
       ProcedureReturn #False
     EndIf
+    
+    numItems = countVisibleItems(*this)
     
     LockMutex(*this\mItems)
     
@@ -522,7 +540,8 @@ Module CanvasList
       numColumns = 1
     EndIf
     
-    totalHeight = Round(ListSize(*this\items()) / numColumns, #PB_Round_Up)  * (*this\theme\item\Height + *this\theme\item\Margin) + *this\theme\item\Margin
+    
+    totalHeight = Round(numItems / numColumns, #PB_Round_Up)  * (*this\theme\item\Height + *this\theme\item\Margin) + *this\theme\item\Margin
     
     
     If totalHeight > GadgetHeight(*this\gCanvas)
@@ -537,7 +556,7 @@ Module CanvasList
   
   Procedure updateItemPosition(*this.gadget)
     Protected x, y, width, height
-    Protected numColumns, columnWidth, r, c
+    Protected numColumns, columnWidth, r, c, i
     Protected margin, padding
     
     If *this\pauseDraw
@@ -576,9 +595,13 @@ Module CanvasList
       width = *this\theme\item\Width
     EndIf
     
+    i = 0
     ForEach *this\items()
-      c = Mod(ListIndex(*this\items()), numColumns)
-      r = ListIndex(*this\items()) / numColumns
+      If *this\items()\hidden
+        Continue
+      EndIf
+      c = Mod(i, numColumns)
+      r = i / numColumns
       
       x = *this\theme\item\Margin + c*(width + 2*margin)
       y = *this\theme\item\Margin + r*(*this\theme\item\Height + *this\theme\item\Margin) - *this\scrollbar\position
@@ -587,9 +610,11 @@ Module CanvasList
       *this\items()\canvasBox\y = y
       *this\items()\canvasBox\width = width
       *this\items()\canvasBox\height = height
+      
+      i + 1
     Next
     
-    Protected iconBtnSize = 24, i
+    Protected iconBtnSize = 24
     If ListSize(*this\items())
       ForEach *this\itemButtons()
         i = ListSize(*this\itemButtons()) - ListIndex(*this\itemButtons())
@@ -667,6 +692,10 @@ Module CanvasList
       DrawingFont(GetGadgetFont(#PB_Default))
       ForEach *this\items()
         With *this\items()
+          If \hidden
+            Continue
+          EndIf
+          
           ; only draw if visible
           If \canvasBox\y + *this\theme\item\Height > 0 And \canvasBox\y < GadgetHeight(*this\gCanvas)
             ; background
@@ -1350,6 +1379,17 @@ Module CanvasList
     *this\itemButtons()\imageHover = MakeHoverIcon(*this, image)
     *this\itemButtons()\imageDisabled = MakeDisabledIcon(*this, image)
     *this\itemButtons()\callback = *callback
+  EndProcedure
+  
+  Procedure HideItem(*this.gadget, item, hidden.b)
+    LockMutex(*this\mItems)
+    If SelectElement(*this\items(), item)
+      *this\items()\hidden = hidden
+      updateScrollbar(*this)
+      updateItemPosition(*this)
+      draw(*this)
+    EndIf
+    UnlockMutex(*this\mItems)
   EndProcedure
   
 EndModule
