@@ -28,6 +28,7 @@
     hidden.b          ; hidden from overview ("visible" in mod.lua)
     backup.backup     ; backup information (local)
     luaParseError.b   ; set true if parsing of mod.lua failed
+    size.i
   EndStructure
   
   ; as saved in settings.lua
@@ -117,6 +118,8 @@
   Declare.s modGetTag(*mod.mod, n.i)
   Declare.s modGetTags(*mod.mod)
   Declare.s getAuthorsString(*mod.mod)
+  Declare.i getModSize(*mod.mod, refresh=#False)
+  Declare.s getModWebsite(*mod.mod)
   
   ; mod-list functions:
   

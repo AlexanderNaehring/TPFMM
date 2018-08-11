@@ -423,16 +423,8 @@ Module windowMain
     windowPack::show(window)
     windowPack::packOpen()
   EndProcedure
-  ;- GADGETS
   
-;   Procedure panel()
-;     If EventType() = #PB_EventType_Change
-;       If GetGadgetState(gadget("panel")) = 2
-;         updateBackupButtons()
-;         backupRefreshList()
-;       EndIf
-;     EndIf
-;   EndProcedure
+  ;- GADGETS
   
   Procedure hideAllContainer()
     HideGadget(Gadget("containerMods"), #True)
@@ -601,6 +593,7 @@ Module windowMain
     EndIf
   EndProcedure
   
+  
   Procedure compModName(*element1.mods::mod, *element2.mods::mod, options)
     ProcedureReturn Bool(*element1\name$ > *element2\name$)
   EndProcedure
@@ -620,8 +613,7 @@ Module windowMain
   EndProcedure
   
   Procedure compModSize(*element1.mods::mod, *element2.mods::mod, options)
-    ; to slow, must cache folder size!
-    ProcedureReturn Bool(misc::getDirectorySize(mods::getModFolder(*element1\tpf_id$, *element1\aux\type$)) > misc::getDirectorySize(mods::getModFolder(*element2\tpf_id$, *element2\aux\type$)))
+    ProcedureReturn Bool(mods::getModSize(*element1) > mods::getModSize(*element2))
   EndProcedure
   
   Procedure compModID(*element1.mods::mod, *element2.mods::mod, options)
@@ -643,6 +635,8 @@ Module windowMain
       Case 2
         *comp = @compModInstall()
       Case 3
+        *comp = @compModSize()
+      Case 4
         *comp = @compModID()
       Default
         *comp = @compModName()
@@ -690,6 +684,7 @@ Module windowMain
     HideWindow(windowSort, #False)
     SetActiveGadget(DialogGadget(dialogFilter, "modSortBox"))
   EndProcedure
+  
   
   Procedure modShowDownloadFolder()
     If main::gameDirectory$
@@ -746,6 +741,28 @@ Module windowMain
     Next
   EndProcedure
   
+  
+  Procedure modIconInfo(*gadget, item, *mod)
+    modInformation::modInfoShow(*mod, WindowID(window))
+  EndProcedure
+  
+  Procedure modIconFolder(*gadget, item, *mod.mods::mod)
+    misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
+  EndProcedure
+  
+  Procedure modIconSettings(*gadget, item, *mod)
+    modSettings::show(*mod, WindowID(window))
+  EndProcedure
+  
+  Procedure modIconWebsite(*gadget, item, *mod)
+    Protected website$
+    website$ = mods::getModWebsite(*mod)
+    If website$
+      misc::openLink(website$)
+    EndIf
+  EndProcedure
+  
+  
   ;- mod callbacks
   
   Procedure modCallbackNewMod(*mod.mods::mod)
@@ -767,6 +784,7 @@ Module windowMain
     Debug "##### STOP DRAW: "+stop
     *modList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
   EndProcedure
+  
   
   ;- repo tab
   
@@ -1025,24 +1043,23 @@ Module windowMain
   
   ;
   
+  
   Procedure modShowWebsite()
+    Protected website$
     Protected item, *mod.mods::mod
+    
     item = GetGadgetState(gadget("modList"))
     If item <> -1
       *mod = GetGadgetItemData(gadget("modList"), item)
       If *mod
-        If *mod\url$
-          misc::openLink(*mod\url$)
-        ElseIf *mod\aux\tfnetID
-          misc::openLink("https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID)
-        ElseIf *mod\aux\workshopID
-          misc::openLink("http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID)
+        website$ = mods::getModWebsite(*mod)
+        If website$
+          misc::openLink(website$)
+          ProcedureReturn #True
         EndIf
-        
-        ProcedureReturn #True
       EndIf
     EndIf
-    ProcedureReturn #True
+    ProcedureReturn #False
   EndProcedure
   
   Procedure modOpenModFolder()
@@ -1062,6 +1079,7 @@ Module windowMain
     windowPack::show(window)
     windowPack::addSelectedMods()
   EndProcedure
+  
   
   ;- backup tab
   
@@ -1482,10 +1500,10 @@ Module windowMain
     
     ; init custom canvas gadgets
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
-    *modList\AddItemButton(images::Images("iconInfo"), 01)
-    *modList\AddItemButton(images::Images("iconFolder"), 0)
-    *modList\AddItemButton(images::Images("iconSettings"), 0)
-    *modList\AddItemButton(images::Images("iconWebsite"), 0)
+    *modList\AddItemButton(images::Images("iconInfo"),      @modIconInfo())
+    *modList\AddItemButton(images::Images("iconFolder"),    @modIconFolder())
+    *modList\AddItemButton(images::Images("iconSettings"),  @modIconSettings())
+    *modList\AddItemButton(images::Images("iconWebsite"),   @modIconWebsite())
     
     
     ; initialize gadgets

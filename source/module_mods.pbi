@@ -708,6 +708,25 @@ Module mods
     ProcedureReturn authors$
   EndProcedure
   
+  Procedure getModSize(*mod.mod, refresh=#False)
+    If Not *mod\aux\size Or refresh
+      *mod\aux\size = misc::getDirectorySize(getModFolder(*mod\tpf_id$, *mod\aux\type$))
+    EndIf
+    ProcedureReturn *mod\aux\size
+  EndProcedure
+  
+  Procedure.s getModWebsite(*mod.mod)
+    Protected website$
+    If *mod\url$
+      website$ = *mod\url$
+    ElseIf *mod\aux\tfnetID
+      website$ = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      website$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
+    EndIf
+    ; TODO use repository and mod foldername to get website!
+    ProcedureReturn website$
+  EndProcedure
   
   ;### data structure handling
   
