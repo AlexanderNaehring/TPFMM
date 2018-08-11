@@ -595,7 +595,7 @@ Module windowMain
   
   
   Procedure compModName(*element1.mods::mod, *element2.mods::mod, options)
-    ProcedureReturn Bool(*element1\name$ > *element2\name$)
+    ProcedureReturn Bool(LCase(*element1\name$) > LCase(*element2\name$))
   EndProcedure
   
   Procedure compModAuthor(*element1.mods::mod, *element2.mods::mod, options)
@@ -605,7 +605,7 @@ Module windowMain
     
     SelectElement(*element1\authors(), 0)
     SelectElement(*element2\authors(), 0)
-    ProcedureReturn Bool(*element1\authors()\name$ > *element2\authors()\name$)
+    ProcedureReturn Bool(LCase(*element1\authors()\name$) > LCase(*element2\authors()\name$))
   EndProcedure
   
   Procedure compModInstall(*element1.mods::mod, *element2.mods::mod, options)
