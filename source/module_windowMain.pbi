@@ -595,7 +595,11 @@ Module windowMain
   
   
   Procedure compModName(*element1.mods::mod, *element2.mods::mod, options)
-    ProcedureReturn Bool(LCase(*element1\name$) > LCase(*element2\name$))
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(LCase(*element1\name$) <= LCase(*element2\name$))
+    Else
+      ProcedureReturn Bool(LCase(*element1\name$) > LCase(*element2\name$))
+    EndIf
   EndProcedure
   
   Procedure compModAuthor(*element1.mods::mod, *element2.mods::mod, options)
@@ -605,32 +609,41 @@ Module windowMain
     
     SelectElement(*element1\authors(), 0)
     SelectElement(*element2\authors(), 0)
-    ProcedureReturn Bool(LCase(*element1\authors()\name$) > LCase(*element2\authors()\name$))
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(LCase(*element1\authors()\name$) <= LCase(*element2\authors()\name$))
+    Else
+      ProcedureReturn Bool(LCase(*element1\authors()\name$) > LCase(*element2\authors()\name$))
+    EndIf
   EndProcedure
   
   Procedure compModInstall(*element1.mods::mod, *element2.mods::mod, options)
-    ProcedureReturn Bool(*element1\aux\installDate > *element2\aux\installDate)
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(*element1\aux\installDate <= *element2\aux\installDate)
+    Else
+      ProcedureReturn Bool(*element1\aux\installDate > *element2\aux\installDate)
+    EndIf
   EndProcedure
   
   Procedure compModSize(*element1.mods::mod, *element2.mods::mod, options)
-    ProcedureReturn Bool(mods::getModSize(*element1) > mods::getModSize(*element2))
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(mods::getModSize(*element1) <= mods::getModSize(*element2))
+    Else
+      ProcedureReturn Bool(mods::getModSize(*element1) > mods::getModSize(*element2))
+    EndIf
   EndProcedure
   
   Procedure compModID(*element1.mods::mod, *element2.mods::mod, options)
-    ProcedureReturn Bool(*element1\tpf_id$ > *element2\tpf_id$)
-  EndProcedure
-  
-  Procedure modUpdateList()
-    ; is there needto update the gadget manually?
-    ; sorting is done persistent,
-    ; filtering applied upon filter change (TODO: persistent filtering?)
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(*element1\tpf_id$ <= *element2\tpf_id$)
+    Else
+      ProcedureReturn Bool(*element1\tpf_id$ > *element2\tpf_id$)
+    EndIf
   EndProcedure
   
   
   Procedure modResetFilterMods()
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
-    modUpdateList()
   EndProcedure
   
   Procedure modFilterClose()
@@ -701,7 +714,7 @@ Module windowMain
   
   Procedure modSortChange()
     ; apply sorting to CanvasList
-    Protected *comp, mode
+    Protected *comp, mode, options
     
     mode = GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
     settings::setInteger("sort", "mode", mode)
@@ -710,20 +723,26 @@ Module windowMain
     Select mode
       Case 0
         *comp = @compModName()
+        options = #PB_Sort_Ascending
       Case 1
         *comp = @compModAuthor()
+        options = #PB_Sort_Ascending
       Case 2
         *comp = @compModInstall()
+        options = #PB_Sort_Descending
       Case 3
         *comp = @compModSize()
+        options = #PB_Sort_Ascending
       Case 4
         *comp = @compModID()
+        options = #PB_Sort_Ascending
       Default
         *comp = @compModName()
+        options = #PB_Sort_Ascending
     EndSelect
     
     ; Sort CanvasList and make persistent sort (gadget will be keept sorted automatically)
-    *modList\SortItems(CanvasList::#SortByUserData, *comp, #PB_Sort_Ascending, #True)
+    *modList\SortItems(CanvasList::#SortByUserData, *comp, options, #True)
     
     ; close the mod sort tool window
     modSortClose()
@@ -823,13 +842,11 @@ Module windowMain
     Protected item
     item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
     *modList\SetItemImage(item, mods::getPreviewImage(*mod))
-    modUpdateList()
   EndProcedure
   
   Procedure modCallbackRemoveMod(modID$)
     Debug "# REMOVE MOD: "+modID$
     ; TODO
-    modUpdateList()
   EndProcedure
   
   Procedure modCallbackStopDraw(stop)
