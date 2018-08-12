@@ -30,6 +30,10 @@
   Declare GetAttribute(*gadget, attribute)
   Declare SetUserData(*gadet, *data)
   Declare GetUserData(*gadget)
+  Declare SetSelectedItem(*gadget, *item)
+  Declare GetSelectedItem(*gadget)
+  Declare GetAllSelectedItems(*gadget, Array *items(1))
+  Declare GetAllItems(*gadget, Array *items(1))
   Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
@@ -43,6 +47,8 @@
   Declare ItemGetImage(*item)
   Declare ItemSetUserData(*item, *userdata)
   Declare ItemGetUserData(*item)
+  Declare ItemSetSelected(*item, selected)
+  Declare ItemGetSelected(*item)
   Declare ItemHide(*item, hidden.b)
   Declare ItemIsHidden(*item)
   
@@ -56,6 +62,10 @@
     GetAttribute(attribute)
     SetUserData(*data)
     GetUserData()
+    SetSelectedItem(*item)
+    GetSelectedItem()
+    GetAllSelectedItems(Array *items(1))
+    GetAllItems(Array *items(1))
     GetItemCount()
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
@@ -70,6 +80,8 @@
     GetImage()
     SetUserData(*data)
     GetUserData()
+    SetSelected(selected)
+    GetSelected()
     Hide(hidden.b)
     IsHidden()
   EndInterface
@@ -88,6 +100,10 @@ Module CanvasList
     Data.i @GetAttribute()
     Data.i @SetUserData()
     Data.i @GetUserData()
+    Data.i @SetSelectedItem()
+    Data.i @GetSelectedItem()
+    Data.i @GetAllSelectedItems()
+    Data.i @GetAllItems()
     Data.i @GetItemCount()
     Data.i @SetTheme()
     Data.i @GetThemeJSON()
@@ -101,6 +117,8 @@ Module CanvasList
     Data.i @ItemGetImage()
     Data.i @ItemSetUserData()
     Data.i @ItemGetUserData()
+    Data.i @ItemSetSelected()
+    Data.i @ItemGetSelected()
     Data.i @ItemHide()
     Data.i @ItemIsHidden()
   EndDataSection
@@ -1095,7 +1113,11 @@ Module CanvasList
               ; select all
               LockMutex(*this\mItems)
               ForEach *this\items()
-                *this\items()\selected | #SelectionFinal
+                If Not *this\items()\hidden
+                  *this\items()\selected | #SelectionFinal
+                Else
+                  *this\items()\selected = #SelectionNone
+                EndIf
               Next
               UnlockMutex(*this\mItems)
               draw(*this)
@@ -1361,6 +1383,88 @@ Module CanvasList
     ProcedureReturn *this\userdata
   EndProcedure
   
+  Procedure SetSelectedItem(*this.gadget, *item.item)
+    LockMutex(*this\mItems)
+    ForEach *this\items()
+      *this\items()\selected = #SelectionNone
+      If *this\items() = *item
+        *item\selected = #SelectionFinal
+      EndIf
+    Next
+    UnlockMutex(*this\mItems)
+    
+    draw(*this)
+  EndProcedure
+  
+  Procedure GetSelectedItem(*this.gadget)
+    ; if multiple items are selected, only get first selected item
+    Protected *item.item
+    LockMutex(*this\mItems)
+    ForEach *this\items()
+      If *this\items()\selected & #SelectionFinal
+        *item = *this\items()
+        Break
+      EndIf
+    Next
+    UnlockMutex(*this\mItems)
+    ProcedureReturn *item
+  EndProcedure
+  
+  Procedure GetAllSelectedItems(*this.gadget, Array *items.item(1))
+    Protected i
+    LockMutex(*this\mItems)
+    ; get number of selected items
+    i = 0
+    ForEach *this\items()
+      If *this\items()\selected & #SelectionFinal
+        i + 1
+      EndIf
+    Next
+    
+    If i > 0
+      ReDim *items(i-1)
+      ; store items in array
+      i = 0
+      ForEach *this\items()
+        If *this\items()\selected & #SelectionFinal
+          *items(i) = *this\items()
+          i + 1
+        EndIf
+      Next
+    EndIf
+    
+    UnlockMutex(*this\mItems)
+    If i > 0
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+  EndProcedure
+  
+  Procedure GetAllItems(*this.gadget, Array *items.item(1))
+    Protected i
+    LockMutex(*this\mItems)
+    ; get number of items
+    i = ListSize(*this\items())
+    
+    If i > 0
+      ReDim *items(i-1)
+      ; store items in array
+      i = 0
+      ForEach *this\items()
+        *items(i) = *this\items()
+        i + 1
+      Next
+    EndIf
+    
+    UnlockMutex(*this\mItems)
+    If i > 0
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+  EndProcedure
+  
   Procedure GetItemCount(*this.gadget)
     Protected count
     LockMutex(*this\mItems)
@@ -1500,6 +1604,18 @@ Module CanvasList
   
   Procedure ItemGetUserData(*this.item)
     ProcedureReturn *this\userdata
+  EndProcedure
+  
+  Procedure ItemSetSelected(*this.item, selected)
+    If selected
+      *this\selected | #SelectionFinal
+    Else
+      *this\selected = #SelectionNone
+    EndIf
+  EndProcedure
+  
+  Procedure ItemGetSelected(*this.item)
+    ProcedureReturn Bool(*this\selected & #SelectionFinal)
   EndProcedure
   
   Procedure ItemHide(*this.item, hidden.b)
