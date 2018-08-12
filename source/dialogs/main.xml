@@ -28,6 +28,7 @@
                   <vbox expand='no'>
                     <buttonimage name='modInfo' />
                     <buttonimage name='modUpdate' />
+                    <buttonimage name='modShare' />
                     <buttonimage name='modBackup' />
                     <buttonimage name='modUninstall' />
                   </vbox>

@@ -1527,6 +1527,7 @@ Module windowMain
     
     SetGadgetAttribute(gadget("modInfo"),       #PB_Button_Image, ImageID(images::images("btnInfo")))
     SetGadgetAttribute(gadget("modUpdate"),     #PB_Button_Image, ImageID(images::images("btnUpdate")))
+    SetGadgetAttribute(gadget("modShare"),      #PB_Button_Image, ImageID(images::images("btnShare")))
     SetGadgetAttribute(gadget("modBackup"),     #PB_Button_Image, ImageID(images::images("btnBackup")))
     SetGadgetAttribute(gadget("modUninstall"),  #PB_Button_Image, ImageID(images::images("btnUninstall")))
     SetGadgetAttribute(gadget("modUpdateAll"),  #PB_Button_Image, ImageID(images::images("btnUpdateAll")))

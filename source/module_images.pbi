@@ -58,9 +58,10 @@ Module images
     
     IncludeAndLoadImage("btnInfo",      "images/btn/info.png")
     IncludeAndLoadImage("btnUpdate",    "images/btn/update.png")
-    IncludeAndLoadImage("btnUpdateAll", "images/btn/update_all.png")
+    IncludeAndLoadImage("btnShare",     "images/btn/share.png")
     IncludeAndLoadImage("btnBackup",    "images/btn/backup.png")
     IncludeAndLoadImage("btnUninstall", "images/btn/uninstall.png")
+    IncludeAndLoadImage("btnUpdateAll", "images/btn/update_all.png")
     
     IncludeAndLoadImage("iconFolder",   "images/icons/folder.png")
     IncludeAndLoadImage("iconInfo",     "images/icons/info.png")
