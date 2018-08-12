@@ -4,7 +4,7 @@
   Global _DEBUG     = #True ; write debug messages to log file
   Global _TESTMODE  = #False
   Global gameDirectory$
-  Global VERSION$ = "TPFMM v1.0." + #PB_Editor_BuildCount
+  Global VERSION$ = "TPFMM v1.1." + #PB_Editor_BuildCount
   Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   Global VERSION_FULL$ = VERSION$ + " b" + #PB_Editor_CompileCount
   CompilerSelect #PB_Compiler_OS

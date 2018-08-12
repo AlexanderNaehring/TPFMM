@@ -16,24 +16,23 @@
             <buttonimage name='btnSettings' width='60' flags='#PB_Button_Toggle' />
           </vbox>
           <multibox comment='main content area'>
-            <container name='containerMods' invisible='no' flags=''> <!--#PB_Container_Flat-->
+            <container name='containerMods' invisible='yes' flags=''> <!--#PB_Container_Flat-->
               <hbox expand='item:1'>
                 <canvas name='modList' flags='#PB_Canvas_Keyboard' />
-                  
                 <vbox expand='item:3'>
                   <hbox expand='no' align='center'>
                     <buttonimage name='modSort' />
                     <buttonimage name='modFilter' />
                   </hbox>
-                  <vbox expand='no'>
+                  <vbox expand='no' comment='action for selected mods'>
                     <buttonimage name='modInfo' />
                     <buttonimage name='modUpdate' />
-                    <buttonimage name='modShare' />
                     <buttonimage name='modBackup' />
                     <buttonimage name='modUninstall' />
                   </vbox>
                   <empty />
-                  <vbox expand='no'>
+                  <vbox expand='no' comment='actions for all (visible) mods'>
+                    <buttonimage name='modShare' />
                     <buttonimage name='modUpdateAll' />
                   </vbox>
                 </vbox>
