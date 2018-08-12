@@ -771,9 +771,8 @@ Module windowMain
   Procedure modCallbackNewMod(*mod.mods::mod)
     Debug "##### DISPLAY MOD: "+*mod\tpf_id$
     Protected item
-    item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod))
+    item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
     *modList\SetItemImage(item, mods::getPreviewImage(*mod))
-    *modList\SetItemUserData(item, *mod)
     If *mod\aux\isVanilla
       *modList\HideItem(item, #True)
     EndIf

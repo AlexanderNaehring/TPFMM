@@ -14,14 +14,16 @@
   EndEnumeration
   
   ; prototype for user sort
-  Prototype.i compare(*element1, *element2, options)
+  Prototype.i pCompare(*element1, *element2, options)
+  ; prototype for filter
+  Prototype.i pFilter(*userdata, options)
   
   ; declare public functions
   Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
   Declare Free(*gadget)
   
   Declare Resize(*gadget, x, y, width, height)
-  Declare AddItem(*gadget, text$, position = -1)
+  Declare AddItem(*gadget, text$, *userdata=#Null, position = -1)
   Declare RemoveItem(*gadget, position)
   Declare SetItemImage(*gadget, position, image)
   Declare SetAttribute(*gadget, attribute, value)
@@ -34,6 +36,7 @@
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
+  Declare FilterItems(*gadget, filterFun.pFilter, options=0, persistent.b=#False)
   Declare AddItemButton(*gadget, image, *callback)
   Declare HideItem(*gadget, item, hidden.b)
   Declare BindItemEvent(*gadget, event, *callback)
@@ -42,7 +45,7 @@
   Interface CanvasList
     Free()
     Resize(x, y, width, height)
-    AddItem(text$, position = -1)
+    AddItem(text$, *userdata=#Null, position = -1)
     RemoveItem(position)
     SetItemImage(position, image)
     SetAttribute(attribute, value)
@@ -55,6 +58,7 @@
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
+    FilterItems(filterFun.pFilter, options=0, persistent.b=#False)
     AddItemButton(image, *callback)
     HideItem(item, hidden.b)
     BindItemEvent(event, *callback)
@@ -81,6 +85,7 @@ Module CanvasList
     Data.i @SetTheme()
     Data.i @GetThemeJSON()
     Data.i @SortItems()
+    Data.i @FilterItems()
     Data.i @AddItemButton()
     Data.i @HideItem()
     Data.i @BindItemEvent()
@@ -202,6 +207,11 @@ Module CanvasList
     options.i
   EndStructure
   
+  Structure filter
+    filterFun.pFilter
+    options.i
+  EndStructure
+  
   Structure gadget
     ; virtual table for OOP
     *vt.CanvasList
@@ -225,6 +235,7 @@ Module CanvasList
     ; other attributes
     pauseDraw.b
     pendingSort.pendingSort
+    filter.filter
     mItems.i
     mItemAddRemove.i
   EndStructure
@@ -482,7 +493,7 @@ Module CanvasList
     ProcedureReturn newIcon
   EndProcedure 
   
-  Procedure Quicksort(List items.item(), options, comp.compare, low, high, level=0)
+  Procedure Quicksort(List items.item(), options, comp.pCompare, low, high, level=0)
     Protected.item *midElement, *highElement, *iElement, *wallElement
     Protected wall, i, sw
     
@@ -1102,19 +1113,32 @@ Module CanvasList
             ChangeCurrentElement(*this\items(), *item)
             If key = #PB_Shortcut_Up
               If ListIndex(*this\items()) > 0
-                *this\items()\selected & ~#SelectionFinal
-                PreviousElement(*this\items())
-                *this\items()\selected | #SelectionFinal
-                *item = *this\items()
-                redraw = #True
+                ; items can be hidden -> do not simply select previous/next item but test for next visible item
+                ; old item: *item
+                While PreviousElement(*this\items())
+                  If Not *this\items()\hidden
+                    ; item is visible. use this!
+                    *this\items()\selected | #SelectionFinal
+                    ; unselect "old" item
+                    *item\selected & ~#SelectionFinal
+                    ; schedule redraw and store new item for position test
+                    redraw = #True
+                    *item = *this\items()
+                    Break
+                  EndIf
+                Wend
               EndIf
             ElseIf key = #PB_Shortcut_Down
               If ListIndex(*this\items()) < ListSize(*this\items())
-                *this\items()\selected & ~#SelectionFinal
-                NextElement(*this\items())
-                *this\items()\selected | #SelectionFinal
-                *item = *this\items()
-                redraw = #True
+                While NextElement(*this\items())
+                  If Not *this\items()\hidden
+                    *this\items()\selected | #SelectionFinal
+                    *item\selected & ~#SelectionFinal
+                    redraw = #True
+                    *item = *this\items()
+                    Break
+                  EndIf
+                Wend
               EndIf
             EndIf
             UnlockMutex(*this\mItems)
@@ -1219,8 +1243,8 @@ Module CanvasList
 ;     draw(*this)
   EndProcedure
     
-  Procedure AddItem(*this.gadget, text$, position = -1)
-    Protected *item
+  Procedure AddItem(*this.gadget, text$, *userdata=#Null, position = -1)
+    Protected *item.item
     LockMutex(*this\mItemAddRemove) ; do not create / destroy items in parallel to keep thread safe!
     LockMutex(*this\mItems) ; generic item access (as looping through items etc)
     If ListSize(*this\items()) > 0
@@ -1235,10 +1259,16 @@ Module CanvasList
     EndIf
     
     ; add element to internal item list
-    AddElement(*this\items())
-    *this\items()\text$ = text$
-    *item = *this\items()
+    *item = AddElement(*this\items())
     UnlockMutex(*this\mItems)
+    
+    *item\text$ = text$
+    *item\userdata = *userdata ; must store userdata before filter and sort
+    
+    ; if persistent filter is active, apply filter to new item
+    If *this\filter\filterFun
+      *item\hidden = Bool(Not *this\filter\filterFun(*userdata, *this\filter\options))
+    EndIf
     
     ; with persistent sorting active, sort when new element is added
     If *this\pendingSort\persistent
@@ -1430,6 +1460,26 @@ Module CanvasList
     
     updateItemPosition(*this)
     draw(*this)
+  EndProcedure
+  
+  Procedure FilterItems(*this.gadget, filterFun.pFilter, options=0, persistent.b=#False)
+    ; apply filterFun to all items in gadget and hide is filterFun returns false
+    
+    ; save persistent filter
+    If persistent
+      *this\filter\filterFun = filterFun
+    Else
+      *this\filter\filterFun = #Null
+    EndIf
+    
+    ; apply filter for all items
+    If filterFun
+      LockMutex(*this\mItems)
+      ForEach *this\items()
+        *this\items()\hidden = Bool(Not filterFun(*this\items()\userdata, options))
+      Next
+      UnlockMutex(*this\mItems)
+    EndIf
   EndProcedure
   
   Procedure AddItemButton(*this.gadget, image, *callback)
