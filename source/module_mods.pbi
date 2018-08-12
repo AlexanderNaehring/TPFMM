@@ -1581,16 +1581,13 @@ Module mods
   EndProcedure
   
   Procedure addToQueue(action, string$="")
-    Debug "add to queue- wait for mutex"
     LockMutex(mutexQueue)
-    Debug "got mutex - add"
     LastElement(queue())
     AddElement(queue())
     queue()\action  = action
     queue()\string$ = string$
     
     If Not threadQueue Or Not IsThread(threadQueue)
-      Debug "start thread"
       threadQueue = CreateThread(@handleQueue(), 0)
     EndIf
     

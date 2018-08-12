@@ -25,7 +25,6 @@
                     <buttonimage name='modFilter' />
                   </hbox>
                   <vbox expand='no' comment='action for selected mods'>
-                    <buttonimage name='modInfo' />
                     <buttonimage name='modUpdate' />
                     <buttonimage name='modBackup' />
                     <buttonimage name='modUninstall' />
