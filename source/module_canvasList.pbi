@@ -1480,6 +1480,10 @@ Module CanvasList
       Next
       UnlockMutex(*this\mItems)
     EndIf
+    
+    updateScrollbar(*this)
+    updateItemPosition(*this)
+    draw(*this)
   EndProcedure
   
   Procedure AddItemButton(*this.gadget, image, *callback)
