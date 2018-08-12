@@ -108,8 +108,6 @@ Module windowMain
   EndProcedure
   
   Procedure updateModButtons()
-    Protected i, numSelected, numCanUninstall, numCanBackup
-    Protected *mod.mods::mod
     Protected text$, author$
     
     If _noUpdate
@@ -117,27 +115,27 @@ Module windowMain
     EndIf
     
     
-    numSelected     = 0
-    numCanUninstall = 0
-    numCanBackup    = 0
+    Protected Dim *items(0)
+    Protected *item.CanvasList::CanvasListItem
+    Protected *mod.mods::mod
+    Protected numSelected, numCanUninstall, numCanBackup
+    Protected i
     
-    For i = 0 To CountGadgetItems(gadget("modList")) - 1
-      *mod = GetGadgetItemData(gadget("modList"), i)
-      If Not *mod
-        Continue
-      EndIf
-      
-      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-        numSelected + 1
-        If mods::canUninstall(*mod)
-          numCanUninstall + 1
-        EndIf
+    If *modList\GetAllSelectedItems(*items())
+      numSelected = ArraySize(*items()) + 1
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
         If mods::canBackup(*mod)
           numCanBackup + 1
         EndIf
-      EndIf
-    Next
+        If mods::canUninstall(*mod)
+          numCanUninstall + 1
+        EndIf
+      Next
+    EndIf
     
+  
     If numSelected = 1
       DisableGadget(gadget("modInfo"), #False)
     Else
@@ -150,6 +148,11 @@ Module windowMain
     Else
       DisableGadget(gadget("modBackup"), #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Backup, #False)
+      If numCanBackup > 1
+        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
+      Else
+        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
+      EndIf
     EndIf
     
     If numCanUninstall = 0
@@ -158,39 +161,16 @@ Module windowMain
     Else
       DisableGadget(gadget("modUninstall"),  #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #False)
+      If numCanUninstall > 1
+        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
+      Else
+        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
+      EndIf
     EndIf
     
-    If numCanBackup > 1
-      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
-    Else
-      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
-    EndIf
     
-    If numCanUninstall > 1
-      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
-    Else
-      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
-    EndIf
     
     If numSelected = 1
-      ; one mod selected
-      ; display image
-      *mod = GetGadgetItemData(gadget("modList"), GetGadgetState(gadget("modList")))
-      
-      Protected im
-      im = mods::getPreviewImage(*mod)
-      If IsImage(im)
-        ; display image
-        If GetGadgetState(gadget("modPreviewImage")) <> ImageID(im)
-          SetGadgetState(gadget("modPreviewImage"), ImageID(im))
-        EndIf
-      Else
-        ; else: display normal logo
-        If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-          SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-        EndIf
-      EndIf
-      
       
       If mods::getRepoMod(*mod)
         DisableGadget(gadget("modUpdate"), #False)
@@ -206,26 +186,18 @@ Module windowMain
       EndIf
       
       ; settings
-      If ListSize(*mod\settings()) > 0
-        DisableGadget(gadget("modSettings"), #False)
-      Else
-        DisableGadget(gadget("modSettings"), #True)
-      EndIf
+;       If ListSize(*mod\settings()) > 0
+;         DisableGadget(gadget("modSettings"), #False)
+;       Else
+;         DisableGadget(gadget("modSettings"), #True)
+;       EndIf
       
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #False)
     Else
-      ; multiple mods or none selected
-      
-;       DisableGadget(gadget("modSettings"), #True)
       DisableGadget(gadget("modUpdate"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
-      
-      
-;       If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-;         SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-;       EndIf
     EndIf
     
     If numSelected = 0
@@ -563,19 +535,6 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modList()
-    updateModButtons()
-    
-    Select EventType()
-      Case #PB_EventType_LeftDoubleClick
-        modInformation()
-      Case #PB_EventType_RightClick
-        DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
-      Case #PB_EventType_DragStart
-        DragPrivate(main::#DRAG_MOD)
-    EndSelect
-  EndProcedure
-  
   Procedure websiteTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
@@ -846,29 +805,50 @@ Module windowMain
   EndProcedure
   
   
-  Procedure modIconInfo(*gadget, item, *mod)
+  Procedure modIconInfo(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
     modInformation::modInfoShow(*mod, WindowID(window))
   EndProcedure
   
-  Procedure modIconFolder(*gadget, item, *mod.mods::mod)
+  Procedure modIconFolder(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
     misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
   EndProcedure
   
-  Procedure modIconSettings(*gadget, item, *mod)
+  Procedure modIconSettings(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
     modSettings::show(*mod, WindowID(window))
   EndProcedure
   
-  Procedure modIconWebsite(*gadget, item, *mod)
-    Protected website$
-    website$ = mods::getModWebsite(*mod)
+  Procedure modIconWebsite(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
+    Protected website$ = mods::getModWebsite(*mod)
     If website$
       misc::openLink(website$)
     EndIf
   EndProcedure
   
-  Procedure modDoubleClick(*gadget, item, *mod, event)
-    modIconInfo(*gadget, item, *mod)
+  Procedure modListEvent()
+    Select EventType()
+      Case #PB_EventType_RightClick
+        DisplayPopupMenu(MenuLibrary, WindowID(window))
+      Case #PB_EventType_DragStart
+        DragPrivate(main::#DRAG_MOD)
+    EndSelect
   EndProcedure
+  
+  Procedure modListItemEvent(*item, event)
+    Select event
+      Case #PB_EventType_LeftDoubleClick
+        modIconInfo(*item)
+        
+      Case #PB_EventType_Change
+        ; different item selected
+        updateModButtons()
+    EndSelect
+    
+  EndProcedure
+  
   
   ;- mod callbacks
   
@@ -1605,7 +1585,8 @@ Module windowMain
     
     ; init custom canvas gadgets
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
-    *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modDoubleClick())
+    *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modListItemEvent())
+    *modList\BindItemEvent(#PB_EventType_Change,            @modListItemEvent())
     *modList\AddItemButton(images::Images("iconInfo"),      @modIconInfo())
     *modList\AddItemButton(images::Images("iconFolder"),    @modIconFolder())
     *modList\AddItemButton(images::Images("iconSettings"),  @modIconSettings())
@@ -1683,7 +1664,7 @@ Module windowMain
     BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
-    BindGadgetEvent(gadget("modList"),          @modList())
+    BindGadgetEvent(gadget("modList"),          @modListEvent())
 ;     BindGadgetEvent(gadget("modFilterString"),  @modUpdateList(), #PB_EventType_Change)
 ;     BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
 ;     BindGadgetEvent(gadget("modFilterHidden"),  @modUpdateList())

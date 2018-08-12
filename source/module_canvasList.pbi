@@ -207,7 +207,7 @@ Module CanvasList
     canvasBox.box ; location on canvas stored for speeding up drawing operation
   EndStructure
   
-  Prototype itemBtnCallback(*gadget.CanvasList, item, *userdata)
+  Prototype itemBtnCallback(*item)
   Structure itemBtn
     image.i
     imageHover.i
@@ -217,7 +217,7 @@ Module CanvasList
     hover.b
   EndStructure
   
-  Prototype itemEventCallback(*gadget.CanvasList, item, *userdata, event)
+  Prototype itemEventCallback(*item.CanvasListItem, event)
   Structure itemEvent
     event.i
     callback.itemEventCallback
@@ -875,6 +875,7 @@ Module CanvasList
     Protected *this.gadget
     Protected *item.item
     Protected p.point
+    Protected MyEvent
     *this = GetGadgetData(EventGadget())
     p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
     p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
@@ -907,6 +908,7 @@ Module CanvasList
       Case #PB_EventType_LeftClick
         ; left click is same as down & up...
         
+        
       Case #PB_EventType_LeftButtonDown
         ; either drag the scrollbar or draw a selection box for items
         If *this\scrollbar\hover
@@ -921,11 +923,11 @@ Module CanvasList
           *this\selectbox\box\y = p\y + *this\scrollbar\position
         EndIf
         
+        
       Case #PB_EventType_LeftButtonUp
         If *this\scrollbar\dragActive
           ; end of scrolbar movement
           *this\scrollbar\dragActive = #False
-          
           
         ElseIf *this\selectbox\active = 1
           ; single click (no selectionbox)
@@ -947,37 +949,41 @@ Module CanvasList
             UnlockMutex(*this\mItems)
             
           Else
-            ; normal click (select item under mouse, deselect all other items)
+            ; normal click
             LockMutex(*this\mItems)
+            Protected btnClick.b = #False
+            ; check if item button was clicked
             ForEach *this\items()
               If *this\items()\hover
-                ; TODO
-                ; integrate callback here?
-                Protected click.b = #False
                 ForEach *this\itemButtons()
                   If *this\itemButtons()\hover
-                    Debug "click on btn for item "+ListIndex(*this\items())
                     If *this\itemButtons()\callback
-                      *this\itemButtons()\callback(*this, ListIndex(*this\items()), *this\items()\userdata)
+                      *this\itemButtons()\callback(*this\items())
                     EndIf
-                    click = #True
+                    btnClick = #True
                     Break
                   EndIf
                 Next
-                If Not click
-                  *this\items()\selected = #SelectionFinal
-                EndIf
-              Else
-                *this\items()\selected = #SelectionNone
+                Break
               EndIf
             Next
+            ; if no item btn was clicked, select item and deselect all other items
+            If Not btnClick
+              MyEvent = #PB_EventType_Change
+              ForEach *this\items()
+                If *this\items()\hover
+                  *this\items()\selected = #SelectionFinal
+                Else
+                  *this\items()\selected = #SelectionNone
+                EndIf
+              Next
+            EndIf
             UnlockMutex(*this\mItems)
-            
           EndIf
-          
           
         ElseIf *this\selectbox\active = 2
           ; selectionbox finished
+          MyEvent = #PB_EventType_Change
           
           ; also add the current element to the selected items
           LockMutex(*this\mItems)
@@ -1111,6 +1117,7 @@ Module CanvasList
           Case #PB_Shortcut_A
             If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
               ; select all
+              MyEvent = #PB_EventType_Change
               LockMutex(*this\mItems)
               ForEach *this\items()
                 If Not *this\items()\hidden
@@ -1123,6 +1130,7 @@ Module CanvasList
               draw(*this)
             EndIf
         EndSelect
+        
         
       Case #PB_EventType_KeyDown
         Protected key = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Key)
@@ -1179,7 +1187,8 @@ Module CanvasList
             EndIf
             UnlockMutex(*this\mItems)
             
-            If redraw
+            If redraw ; item changed, redraw gadget
+              MyEvent = #PB_EventType_Change
               ; if selected item out of view, move scrollbar
               If *item\canvasBox\y < 0
                 *this\scrollbar\position + (*item\canvasBox\y - *this\theme\item\Margin)
@@ -1199,15 +1208,25 @@ Module CanvasList
     
     
     ; execute event binds
+    Protected itemEvent
     LockMutex(*this\mItems)
     ForEach *this\itemEvents()
-      If EventType() = *this\itemEvents()\event
+      ; look for bound "item events"
+      If EventType() = *this\itemEvents()\event Or ; standard event
+         (MyEvent And *this\itemEvents()\event = MyEvent) ; manual event triggered e.g. by selecting different item
+        itemEvent = #False
         ForEach *this\items()
+          ; check if the event happens while hovering over an item
           If *this\items()\hover
-            *this\itemEvents()\callback(*this, ListIndex(*this\items()), *this\items(), *this\itemEvents()\event)
+            *this\itemEvents()\callback(*this\items(), *this\itemEvents()\event)
+            itemEvent = #True
             Break
           EndIf
         Next
+        If Not itemEvent
+          ; event not happend on item, call with item = 0
+          *this\itemEvents()\callback(#Null, *this\itemEvents()\event)
+        EndIf
       EndIf
     Next
     UnlockMutex(*this\mItems)
