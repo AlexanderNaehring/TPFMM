@@ -607,6 +607,8 @@ Module CanvasList
       *this\scrollbar\maximum = totalHeight
     Else
       *this\scrollbar\disabled = #True
+      *this\scrollbar\maximum = 0
+      *this\scrollbar\position = 0
     EndIf
     UnlockMutex(*this\mItems)
     ProcedureReturn #True
@@ -1088,6 +1090,10 @@ Module CanvasList
             ; only hover items if not hover on scrollbar
             ForEach *this\items()
               *item = *this\items()
+              If *item\hidden ; cannot hover on hidden items
+                *item\hover = #False
+                Continue
+              EndIf
               If PointInBox(@p, *item\canvasBox)
                 *item\hover = #True
                 ForEach *this\itemButtons()
