@@ -1160,6 +1160,14 @@ Module mods
     ProcedureReturn *repoMod
   EndProcedure
   
+  Procedure isWorkshopMod(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "*")
+  EndProcedure
+  
+  Procedure isStagingAreaMod(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "?")
+  EndProcedure
+  
   ; actions
   
   Procedure doInstall(file$) ; install mod from file (archive)

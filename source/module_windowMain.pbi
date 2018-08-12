@@ -639,6 +639,44 @@ Module windowMain
     PostEvent(#PB_Event_Repaint, window, 0)
   EndProcedure
   
+  Procedure modFilterCallback(*mod.mods::mod, options)
+    ; return true if this mod shall be displayed, false if hidden
+    
+    ; TODO tf mod support not implemented
+    
+    ; check vanilla mod
+    If *mod\aux\isVanilla And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check hidden mod
+    If *mod\aux\hidden And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check workshop mod
+    If mods::isWorkshopMod(*mod) And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check staging area mod
+    If mods::isStagingAreaMod(*mod) And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check for search string
+    ; TODO
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modFilterChange()
+    ; opt 1) gather the "filter options" here (read gadget state and save to some filter flag variable"
+    ; opt 2) trigger filtering, and let the filter callback read the gadget states.
+    ; use opt 2:
+    *modList\FilterItems(@modFilterCallback(), 0, #True)
+  EndProcedure
+  
   Procedure modFilterShow()
     ResizeWindow(windowFilter, DesktopMouseX()-WindowWidth(windowFilter)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
     HideWindow(windowFilter, #False)
@@ -769,18 +807,15 @@ Module windowMain
   ;- mod callbacks
   
   Procedure modCallbackNewMod(*mod.mods::mod)
-    Debug "##### DISPLAY MOD: "+*mod\tpf_id$
+    Debug "# DISPLAY MOD: "+*mod\tpf_id$
     Protected item
     item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
     *modList\SetItemImage(item, mods::getPreviewImage(*mod))
-    If *mod\aux\isVanilla
-      *modList\HideItem(item, #True)
-    EndIf
     modUpdateList()
   EndProcedure
   
   Procedure modCallbackRemoveMod(modID$)
-    Debug "##### REMOVE MOD: "+modID$
+    Debug "# REMOVE MOD: "+modID$
     ; TODO
     modUpdateList()
   EndProcedure
@@ -1751,6 +1786,23 @@ Module windowMain
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Return, 1000)
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Escape, 1000)
     BindMenuEvent(menuFilter, 1000, @modFilterClose())
+    ;TODO load last filter from settings file
+    ; temp:
+    SetGadgetText(DialogGadget(dialogFilter, "modFilterString"), "")
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterTF"), #True)
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"), #False)
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"), #False)
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"), #False)
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"), #False)
+    ; bind events
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterString"), @modFilterChange(), #PB_EventType_Change)
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterTF"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterVanilla"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterHidden"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterWorkshop"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterStaging"), @modFilterChange())
+    ; apply initial filtering
+    modFilterChange()
     
     
     ;- Sort Dialog
