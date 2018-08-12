@@ -839,9 +839,10 @@ Module windowMain
   
   Procedure modCallbackNewMod(*mod.mods::mod)
     Debug "# DISPLAY MOD: "+*mod\tpf_id$
-    Protected item
-    item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
-    *modList\SetItemImage(item, mods::getPreviewImage(*mod))
+    Protected *item.CanvasList::CanvasListItem
+    *item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
+    *item\SetImage(mods::getPreviewImage(*mod))
+    ;TODO link *item to mod?
   EndProcedure
   
   Procedure modCallbackRemoveMod(modID$)

@@ -15,53 +15,63 @@
   
   ; prototype for user sort
   Prototype.i pCompare(*element1, *element2, options)
-  ; prototype for filter
+  ; prototype for user filter
   Prototype.i pFilter(*userdata, options)
   
   ; declare public functions
   Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
   Declare Free(*gadget)
   
+  ; gadget functions
   Declare Resize(*gadget, x, y, width, height)
   Declare AddItem(*gadget, text$, *userdata=#Null, position = -1)
-  Declare RemoveItem(*gadget, position)
-  Declare SetItemImage(*gadget, position, image)
+  Declare RemoveItem(*gadget, *item)
   Declare SetAttribute(*gadget, attribute, value)
   Declare GetAttribute(*gadget, attribute)
   Declare SetUserData(*gadet, *data)
   Declare GetUserData(*gadget)
-  Declare SetItemUserData(*gadget, position, *data)
-  Declare GetItemUserData(*gadget, position)
   Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
   Declare FilterItems(*gadget, filterFun.pFilter, options=0, persistent.b=#False)
   Declare AddItemButton(*gadget, image, *callback)
-  Declare HideItem(*gadget, item, hidden.b)
   Declare BindItemEvent(*gadget, event, *callback)
   
-  ; also make functions available as interface
+  ; item functions
+  Declare ItemSetImage(*item, image)
+  Declare ItemGetImage(*item)
+  Declare ItemSetUserData(*item, *userdata)
+  Declare ItemGetUserData(*item)
+  Declare ItemHide(*item, hidden.b)
+  Declare ItemIsHidden(*item)
+  
+  ;- Interfaces
   Interface CanvasList
     Free()
     Resize(x, y, width, height)
     AddItem(text$, *userdata=#Null, position = -1)
-    RemoveItem(position)
-    SetItemImage(position, image)
+    RemoveItem(*item)
     SetAttribute(attribute, value)
     GetAttribute(attribute)
     SetUserData(*data)
     GetUserData()
-    SetItemUserData(position, *data)
-    GetItemUserData(position)
     GetItemCount()
     SetTheme(theme$)
     GetThemeJSON.s(pretty=#False)
     SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
     FilterItems(filterFun.pFilter, options=0, persistent.b=#False)
     AddItemButton(image, *callback)
-    HideItem(item, hidden.b)
     BindItemEvent(event, *callback)
+  EndInterface
+  
+  Interface CanvasListItem
+    SetImage(image)
+    GetImage()
+    SetUserData(*data)
+    GetUserData()
+    Hide(hidden.b)
+    IsHidden()
   EndInterface
   
 EndDeclareModule
@@ -74,22 +84,27 @@ Module CanvasList
     Data.i @Resize()
     Data.i @AddItem()
     Data.i @RemoveItem()
-    Data.i @SetItemImage()
     Data.i @SetAttribute()
     Data.i @GetAttribute()
     Data.i @SetUserData()
     Data.i @GetUserData()
-    Data.i @SetItemUserData()
-    Data.i @GetItemUserData()
     Data.i @GetItemCount()
     Data.i @SetTheme()
     Data.i @GetThemeJSON()
     Data.i @SortItems()
     Data.i @FilterItems()
     Data.i @AddItemButton()
-    Data.i @HideItem()
     Data.i @BindItemEvent()
+    
+    vtItem:
+    Data.i @ItemSetImage()
+    Data.i @ItemGetImage()
+    Data.i @ItemSetUserData()
+    Data.i @ItemGetUserData()
+    Data.i @ItemHide()
+    Data.i @ItemIsHidden()
   EndDataSection
+  
   
   ;- Enumerations
   EnumerationBinary 0
@@ -163,6 +178,8 @@ Module CanvasList
   EndStructure
   
   Structure item
+    *vt.CanvasListItem
+    *parent       ; gadget pointer
     text$         ; display text
     image.i       ; display image (if any)
     selected.b    ; item selected?
@@ -213,9 +230,7 @@ Module CanvasList
   EndStructure
   
   Structure gadget
-    ; virtual table for OOP
     *vt.CanvasList
-    ; userdata
     *userdata
     ; gadget data:
     gCanvas.i
@@ -241,7 +256,7 @@ Module CanvasList
   EndStructure
   ;}
   
-  ;- Private Support Functions
+  ;- Private Functions
   
   Procedure GetWindowBackgroundColor(hwnd=0)
     ; found on https://www.purebasic.fr/english/viewtopic.php?f=12&t=66974
@@ -532,7 +547,6 @@ Module CanvasList
     
   EndProcedure
   
-  ;- Private Functions
   
   Procedure countVisibleItems(*this.gadget)
     Protected count
@@ -1178,7 +1192,7 @@ Module CanvasList
     
   EndProcedure
   
-  ;- Public Functions
+  ;- Public Gadget Functions
   
   Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
     Protected *this.gadget
@@ -1262,6 +1276,8 @@ Module CanvasList
     *item = AddElement(*this\items())
     UnlockMutex(*this\mItems)
     
+    *item\parent = *this
+    *item\vt = ?vtItem
     *item\text$ = text$
     *item\userdata = *userdata ; must store userdata before filter and sort
     
@@ -1275,40 +1291,23 @@ Module CanvasList
       SortItems(*this, *this\pendingSort\mode, *this\pendingSort\sortFun, *this\pendingSort\options, *this\pendingSort\persistent)
     EndIf
     
-    ; get element position after potential sorting
-    LockMutex(*this\mItems)
-    ChangeCurrentElement(*this\items(), *item)
-    position = ListIndex(*this\items())
-    UnlockMutex(*this\mItems)
-    
     ; update gadget and redraw
     updateScrollbar(*this)
     updateItemPosition(*this)
     draw(*this)
     UnlockMutex(*this\mItemAddRemove)
-    ProcedureReturn position
+    ProcedureReturn *item
   EndProcedure
   
-  Procedure RemoveItem(*this.gadget, position)
+  Procedure RemoveItem(*this.gadget, *item)
     LockMutex(*this\mItems)
-    If SelectElement(*this\items(), position)
+    ChangeCurrentElement(*this\items(), *item) ; no error check, may cause IMA
       DeleteElement(*this\items(), 1)
       UnlockMutex(*this\mItems)
+      
       updateItemPosition(*this)
       updateScrollbar(*this)
       draw(*this)
-    Else
-      UnlockMutex(*this\mItems)
-    EndIf
-  EndProcedure
-  
-  Procedure SetItemImage(*this.gadget, position, image)
-    LockMutex(*this\mItems)
-    If SelectElement(*this\items(), position)
-      *this\items()\image = image
-      draw(*this)
-    EndIf
-    UnlockMutex(*this\mItems)
   EndProcedure
   
   Procedure SetAttribute(*this.gadget, attribute, value)
@@ -1360,24 +1359,6 @@ Module CanvasList
   
   Procedure GetUserData(*this.gadget)
     ProcedureReturn *this\userdata
-  EndProcedure
-  
-  Procedure SetItemUserData(*this.gadget, position, *data)
-    LockMutex(*this\mItems)
-    If SelectElement(*this\items(), position)
-      *this\items()\userdata = *data
-    EndIf
-    UnlockMutex(*this\mItems)
-  EndProcedure
-  
-  Procedure GetItemUserData(*this.gadget, position)
-    Protected *userdata
-    LockMutex(*this\mItems)
-    If SelectElement(*this\items(), position)
-      *userdata = *this\items()\userdata
-    EndIf
-    UnlockMutex(*this\mItems)
-    ProcedureReturn *userdata
   EndProcedure
   
   Procedure GetItemCount(*this.gadget)
@@ -1494,22 +1475,44 @@ Module CanvasList
     *this\itemButtons()\callback = *callback
   EndProcedure
   
-  Procedure HideItem(*this.gadget, item, hidden.b)
-    LockMutex(*this\mItems)
-    If SelectElement(*this\items(), item)
-      *this\items()\hidden = hidden
-      updateScrollbar(*this)
-      updateItemPosition(*this)
-      draw(*this)
-    EndIf
-    UnlockMutex(*this\mItems)
-  EndProcedure
-  
   Procedure BindItemEvent(*this.gadget, event, *callback)
     Protected *el.itemEvent
     *el = AddElement(*this\itemEvents())
     *el\event = event
     *el\callback = *callback
   EndProcedure
+  
+  ;- Public Item Functions
+  
+  Procedure ItemSetImage(*this.item, image)
+    *this\image = image
+    
+    draw(*this\parent)
+  EndProcedure
+  
+  Procedure ItemGetImage(*this.item)
+    ProcedureReturn *this\image
+  EndProcedure
+  
+  Procedure ItemSetUserData(*this.item, *data)
+    *this\userdata = *data
+  EndProcedure
+  
+  Procedure ItemGetUserData(*this.item)
+    ProcedureReturn *this\userdata
+  EndProcedure
+  
+  Procedure ItemHide(*this.item, hidden.b)
+    *this\hidden = hidden
+    
+    updateScrollbar(*this\parent)
+    updateItemPosition(*this\parent)
+    draw(*this\parent)
+  EndProcedure
+  
+  Procedure ItemIsHidden(*this.item)
+    ProcedureReturn *this\hidden
+  EndProcedure
+  
   
 EndModule
