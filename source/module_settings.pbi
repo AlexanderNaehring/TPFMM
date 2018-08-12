@@ -37,6 +37,12 @@ Module settings
   defaultValues$("color/mod_lua_error") = Str(RGB($ff, $cc, $cc))
   defaultValues$("color/mod_hidden") = Str(RGB(100, 100, 100))
   defaultValues$("pack/author") = ComputerName()
+  defaultValues$("filter/tf") = "1"
+  defaultValues$("filter/vanilla") = "0"
+  defaultValues$("filter/hidden") = "0"
+  defaultValues$("filter/workshop") = "0"
+  defaultValues$("filter/staging") = "0"
+  defaultValues$("sort/mode") = "0"
   
   
   Procedure setFilename(filename$)

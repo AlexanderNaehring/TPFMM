@@ -672,6 +672,13 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterChange()
+    ; save current filter to settings
+    settings::setInteger("filter", "tf",        GetGadgetState(DialogGadget(dialogFilter, "modFilterTF")))
+    settings::setInteger("filter", "vanilla",   GetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla")))
+    settings::setInteger("filter", "hidden",    GetGadgetState(DialogGadget(dialogFilter, "modFilterHidden")))
+    settings::setInteger("filter", "workshop",  GetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop")))
+    settings::setInteger("filter", "staging",   GetGadgetState(DialogGadget(dialogFilter, "modFilterStaging")))
+    
     ; opt 1) gather the "filter options" here (read gadget state and save to some filter flag variable"
     ; opt 2) trigger filtering, and let the filter callback read the gadget states.
     ; use opt 2:
@@ -694,10 +701,13 @@ Module windowMain
   
   Procedure modSortChange()
     ; apply sorting to CanvasList
-    Protected *comp
+    Protected *comp, mode
+    
+    mode = GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
+    settings::setInteger("sort", "mode", mode)
     
     ; get corresponding sorting function
-    Select GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
+    Select mode
       Case 0
         *comp = @compModName()
       Case 1
@@ -1701,14 +1711,15 @@ Module windowMain
     
     SetGadgetText(gadget("version"), main::VERSION$)
     
+    
     ; OS specific
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        SetWindowTitle(window, GetWindowTitle(window) + " for Windows")
+        
       CompilerCase #PB_OS_Linux
-        SetWindowTitle(window, GetWindowTitle(window) + " for Linux")
+        
       CompilerCase #PB_OS_MacOS
-        SetWindowTitle(window, GetWindowTitle(window) + " for MacOS")
+        
     CompilerEndSelect
     
     
@@ -1716,6 +1727,7 @@ Module windowMain
     If main::_TESTMODE
       SetWindowTitle(window, GetWindowTitle(window) + " (Test Mode Enabled)")
     EndIf
+    
     
     ; fonts...
     Protected fontMono = LoadFont(#PB_Any, "Courier", misc::getDefaultFontSize())
@@ -1788,14 +1800,12 @@ Module windowMain
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Return, 1000)
     AddKeyboardShortcut(windowFilter, #PB_Shortcut_Escape, 1000)
     BindMenuEvent(menuFilter, 1000, @modFilterClose())
-    ;TODO load last filter from settings file
-    ; temp:
     SetGadgetText(DialogGadget(dialogFilter, "modFilterString"), "")
-    SetGadgetState(DialogGadget(dialogFilter, "modFilterTF"), #True)
-    SetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"), #False)
-    SetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"), #False)
-    SetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"), #False)
-    SetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"), #False)
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterTF"), settings::getInteger("filter", "tf"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"), settings::getInteger("filter", "vanilla"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"), settings::getInteger("filter", "hidden"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"), settings::getInteger("filter", "workshop"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"), settings::getInteger("filter", "staging"))
     ; bind events
     BindGadgetEvent(DialogGadget(dialogFilter, "modFilterString"), @modFilterChange(), #PB_EventType_Change)
     BindGadgetEvent(DialogGadget(dialogFilter, "modFilterTF"), @modFilterChange())
@@ -1831,7 +1841,8 @@ Module windowMain
     SetGadgetState(DialogGadget(dialogSort, "modSortBox"), 0)
     RefreshDialog(dialogSort)
     BindGadgetEvent(DialogGadget(dialogSort, "modSortBox"), @modSortChange())
-    ;TODO load last sorting from settings file
+    ; load settings
+    SetGadgetState(DialogGadget(dialogSort, "modSortBox"), settings::getInteger("sort", "mode"))
     ; apply initial sorting
     modSortChange()
     
