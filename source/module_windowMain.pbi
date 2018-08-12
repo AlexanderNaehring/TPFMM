@@ -594,49 +594,63 @@ Module windowMain
   EndProcedure
   
   
-  Procedure compModName(*element1.mods::mod, *element2.mods::mod, options)
+  Procedure compModName(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
     If options & #PB_Sort_Descending
-      ProcedureReturn Bool(LCase(*element1\name$) <= LCase(*element2\name$))
+      ProcedureReturn Bool(LCase(*mod1\name$) <= LCase(*mod2\name$))
     Else
-      ProcedureReturn Bool(LCase(*element1\name$) > LCase(*element2\name$))
+      ProcedureReturn Bool(LCase(*mod1\name$) > LCase(*mod2\name$))
     EndIf
   EndProcedure
   
-  Procedure compModAuthor(*element1.mods::mod, *element2.mods::mod, options)
-    If Not ListSize(*element1\authors()) Or Not ListSize(*element2\authors())
+  Procedure compModAuthor(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
+    If Not ListSize(*mod1\authors()) Or Not ListSize(*mod2\authors())
       ProcedureReturn #False
     EndIf
     
-    SelectElement(*element1\authors(), 0)
-    SelectElement(*element2\authors(), 0)
+    SelectElement(*mod1\authors(), 0)
+    SelectElement(*mod2\authors(), 0)
     If options & #PB_Sort_Descending
-      ProcedureReturn Bool(LCase(*element1\authors()\name$) <= LCase(*element2\authors()\name$))
+      ProcedureReturn Bool(LCase(*mod1\authors()\name$) <= LCase(*mod2\authors()\name$))
     Else
-      ProcedureReturn Bool(LCase(*element1\authors()\name$) > LCase(*element2\authors()\name$))
+      ProcedureReturn Bool(LCase(*mod1\authors()\name$) > LCase(*mod2\authors()\name$))
     EndIf
   EndProcedure
   
-  Procedure compModInstall(*element1.mods::mod, *element2.mods::mod, options)
+  Procedure compModInstall(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
     If options & #PB_Sort_Descending
-      ProcedureReturn Bool(*element1\aux\installDate <= *element2\aux\installDate)
+      ProcedureReturn Bool(*mod1\aux\installDate <= *mod2\aux\installDate)
     Else
-      ProcedureReturn Bool(*element1\aux\installDate > *element2\aux\installDate)
+      ProcedureReturn Bool(*mod1\aux\installDate > *mod2\aux\installDate)
     EndIf
   EndProcedure
   
-  Procedure compModSize(*element1.mods::mod, *element2.mods::mod, options)
+  Procedure compModSize(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
     If options & #PB_Sort_Descending
-      ProcedureReturn Bool(mods::getModSize(*element1) <= mods::getModSize(*element2))
+      ProcedureReturn Bool(mods::getModSize(*mod1) <= mods::getModSize(*mod2))
     Else
-      ProcedureReturn Bool(mods::getModSize(*element1) > mods::getModSize(*element2))
+      ProcedureReturn Bool(mods::getModSize(*mod1) > mods::getModSize(*mod2))
     EndIf
   EndProcedure
   
-  Procedure compModID(*element1.mods::mod, *element2.mods::mod, options)
+  Procedure compModID(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
     If options & #PB_Sort_Descending
-      ProcedureReturn Bool(*element1\tpf_id$ <= *element2\tpf_id$)
+      ProcedureReturn Bool(*mod1\tpf_id$ <= *mod2\tpf_id$)
     Else
-      ProcedureReturn Bool(*element1\tpf_id$ > *element2\tpf_id$)
+      ProcedureReturn Bool(*mod1\tpf_id$ > *mod2\tpf_id$)
     EndIf
   EndProcedure
   
@@ -653,8 +667,9 @@ Module windowMain
     SetActiveGadget(gadget("modList"))
   EndProcedure
   
-  Procedure modFilterCallback(*mod.mods::mod, options)
+  Procedure modFilterCallback(*item.CanvasList::CanvasListItem, options)
     ; return true if this mod shall be displayed, false if hidden
+    Protected *mod.mods::mod = *item\GetUserData()
     
     ; TODO tf mod support not implemented
     
@@ -742,7 +757,7 @@ Module windowMain
     EndSelect
     
     ; Sort CanvasList and make persistent sort (gadget will be keept sorted automatically)
-    *modList\SortItems(CanvasList::#SortByUserData, *comp, options, #True)
+    *modList\SortItems(CanvasList::#SortByUser, *comp, options, #True)
     
     ; close the mod sort tool window
     modSortClose()

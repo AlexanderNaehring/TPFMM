@@ -10,13 +10,13 @@
   
   Enumeration 0
     #SortByText
-    #SortByUserData
+    #SortByUser
   EndEnumeration
   
   ; prototype for user sort
-  Prototype.i pCompare(*element1, *element2, options)
+  Prototype.i pCompare(*item1, *item2, options)
   ; prototype for user filter
-  Prototype.i pFilter(*userdata, options)
+  Prototype.i pFilter(*item, options)
   
   ; declare public functions
   Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
@@ -544,7 +544,7 @@ Module CanvasList
     *highElement = SelectElement(items(), high)
     For i = low To high -1
       *iElement = SelectElement(items(), i)
-      If comp(*highElement\userdata, *iElement\userdata, options)
+      If comp(*highElement, *iElement, options)
         *wallElement = SelectElement(items(), wall)
         SwapElements(items(), *iElement, *wallElement)
         wall +1
@@ -1204,7 +1204,7 @@ Module CanvasList
       If EventType() = *this\itemEvents()\event
         ForEach *this\items()
           If *this\items()\hover
-            *this\itemEvents()\callback(*this, ListIndex(*this\items()), *this\items()\userdata, *this\itemEvents()\event)
+            *this\itemEvents()\callback(*this, ListIndex(*this\items()), *this\items(), *this\itemEvents()\event)
             Break
           EndIf
         Next
@@ -1305,7 +1305,7 @@ Module CanvasList
     
     ; if persistent filter is active, apply filter to new item
     If *this\filter\filterFun
-      *item\hidden = Bool(Not *this\filter\filterFun(*userdata, *this\filter\options))
+      *item\hidden = Bool(Not *this\filter\filterFun(*item, *this\filter\options))
     EndIf
     
     ; with persistent sorting active, sort when new element is added
@@ -1532,7 +1532,7 @@ Module CanvasList
         SortStructuredList(*this\items(), options, OffsetOf(item\text$), #PB_String)
         UnlockMutex(*this\mItems)
         
-      Case #SortByUserData
+      Case #SortByUser
         ; offset  = compare function
         LockMutex(*this\mItems)
         Quicksort(*this\items(), options, *sortFun, 0, ListSize(*this\items())-1)
@@ -1561,7 +1561,7 @@ Module CanvasList
     If filterFun
       LockMutex(*this\mItems)
       ForEach *this\items()
-        *this\items()\hidden = Bool(Not filterFun(*this\items()\userdata, options))
+        *this\items()\hidden = Bool(Not filterFun(*this\items(), options))
       Next
       UnlockMutex(*this\mItems)
     EndIf
