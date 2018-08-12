@@ -637,6 +637,7 @@ Module windowMain
     SetActiveWindow(window)
     HideWindow(EventWindow(), #True)
     PostEvent(#PB_Event_Repaint, window, 0)
+    SetActiveGadget(gadget("modList"))
   EndProcedure
   
   Procedure modFilterCallback(*mod.mods::mod, options)
@@ -688,6 +689,7 @@ Module windowMain
     SetActiveWindow(window)
     HideWindow(windowSort, #True)
     PostEvent(#PB_Event_Repaint, window, 0)
+    SetActiveGadget(gadget("modList"))
   EndProcedure
   
   Procedure modSortChange()
