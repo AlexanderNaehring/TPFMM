@@ -800,14 +800,34 @@ Module windowMain
   Procedure modUpdateAll()
     debugger::add("windowMain::modUpdateAll()")
     Protected *mod.mods::mod
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
     Protected i
     
-    For i = 0 To CountGadgetItems(gadget("modList"))-1
-      *mod = GetGadgetItemData(gadget("modList"), i)
-      If mods::isUpdateAvailable(*mod)
-        mods::update(*mod\tpf_id$)
-      EndIf
-    Next
+    ; just for DEBUG! / WIP
+    Debug "#### ALL ITEMS:"
+    If *modList\GetAllItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        Debug ~"\t"+*mod\tpf_id$
+      Next
+    Else
+      Debug "no items"
+    EndIf
+    
+    Debug "#### SELECTED ITEMS:"
+    If *modList\GetAllSelectedItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        Debug ~"\t"+*mod\tpf_id$
+      Next
+    Else
+      Debug "no items selected"
+    EndIf
+    
+    Debug "####"
   EndProcedure
   
   
