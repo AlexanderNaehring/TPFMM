@@ -900,6 +900,9 @@ Module mods
     debugger::Add("mods::doLoad() - found "+MapSize(scanner())+" mods in folders")
     If count > 0
       
+      If callbackStopDraw
+        callbackStopDraw(#True)
+      EndIf
       ForEach scanner() ; for each mod found in any of the known mod folders:
         n + 1 ; update progress bar
         windowMain::progressMod(100*n/count)
@@ -914,21 +917,21 @@ Module mods
           *mod = addToMap(id$, scanner()\type$)
         EndIf
         
-        If Not *mod Or Not FindMapElement(mods(), id$)
-          ; this should never be reached
-          debugger::add("mods::doLoad() - ERROR: failed to add mod to map")
-          End
-        EndIf
-        
         loadInfo(*mod)
-        
-        ; no need to load images now, is handled dynamically if mod is selected
         
         If *mod\name$ = ""
           debugger::add("mods::doLoad() - ERROR: no name for mod {"+id$+"}")
         EndIf
         
+        ; Display mods in list gadget
+        If callbackNewMod
+          callbackNewMod(mods())
+        EndIf
+        
       Next
+      If callbackStopDraw
+        callbackStopDraw(#False)
+      EndIf
     EndIf
     
     
@@ -947,14 +950,7 @@ Module mods
     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
     
     
-    ; Display mods in list gadget
-    If callbackNewMod
-      callbackStopDraw(#True)
-      ForEach mods()
-        callbackNewMod(mods())
-      Next
-      callbackStopDraw(#False)
-    EndIf
+    
     
     UnlockMutex(mutexMods)
     
