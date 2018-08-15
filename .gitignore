@@ -27,7 +27,6 @@ Desktop.ini
 
 # TPFMM specific files
 bin/*
-*.json
 project.cfg
 source/repositories/
 */key.aes*

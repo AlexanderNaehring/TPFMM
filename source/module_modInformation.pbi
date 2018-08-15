@@ -186,7 +186,6 @@ Module modInformation
     If Not *mod
       ProcedureReturn #False
     EndIf
-    debugger::add("modInformation::modInfoShow()")
     
     Protected *data.modInfoWindow
     *data = AllocateStructure(modInfoWindow)
@@ -278,7 +277,18 @@ Module modInformation
         EndIf
       EndIf
       
-      
+      ; check if image is available
+      Protected image
+      image = mods::getPreviewImage(*mod)
+      *node = XMLNodeFromID(xml, "image")
+      If image
+        SetXMLAttribute(*node, "invisible", "no")
+        SetXMLAttribute(*node, "width", Str(ImageWidth(image)))
+        SetXMLAttribute(*node, "height", Str(ImageHeight(image)))
+      Else
+        SetXMLAttribute(*node, "invisible", "yes")
+        SetXMLAttribute(*node, "height", "0")
+      EndIf
       
       
       ; show window
@@ -298,7 +308,6 @@ Module modInformation
         
         getGadget("top")
         getGadget("bar")
-        getGadget("name")
         getGadget("descriptionLabel")
         getGadget("description")
         getGadget("info")
@@ -315,6 +324,7 @@ Module modInformation
         getGadget("size")
         getGadget("modSettings")
         getGadget("sourcesLabel")
+        getGadget("image")
         
         UndefineMacro getGadget
         
@@ -332,13 +342,18 @@ Module modInformation
         SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
         
         
-        SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
+;         SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
         SetGadgetText(*data\gadgets("description"),       *mod\description$)
 ;         SetGadgetText(*data\gadgets("uuid"),              *mod\uuid$)
         SetGadgetText(*data\gadgets("folder"),            *mod\tpf_id$)
         SetGadgetText(*data\gadgets("tags"),              mods::modGetTags(*mod))
         SetGadgetText(*data\gadgets("size"),              misc::printSize(misc::getDirectorySize(*data\modFolder$)))
         
+        If image
+          SetGadgetState(*data\gadgets("image"), ImageID(image))
+        EndIf
+        
+        SetWindowTitle(*data\window, *mod\name$+" (v"+*mod\version$+")")
         
         
         Static fontHeader, fontBigger
@@ -348,11 +363,6 @@ Module modInformation
         If Not fontBigger
           fontBigger = LoadFont(#PB_Any, misc::getDefaultFontName(), Round(misc::getDefaultFontSize()*1.4, #PB_Round_Nearest), #PB_Font_Bold)
         EndIf
-        
-        SetGadgetFont(*data\gadgets("name"), FontID(fontHeader))
-        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_FrontColor, RGB($FF, $FF, $FF))
-        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_BackColor, RGB(47, 71, 99))
-        
         
         ; bind events
         BindEvent(#PB_Event_CloseWindow, @ModInfoClose(), *data\window)

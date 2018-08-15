@@ -12,8 +12,6 @@ Module mods
     type$ ; mod, dlc, map
   EndStructure
   
-  Global _window, _gadgetModList, _gadgetFilterString, _gadgetFilterHidden, _gadgetFilterVanilla, _gadgetFilterFolder
-  
   Enumeration
     #FILTER_FOLDER_ALL = 0
     #FILTER_FOLDER_MANUAL
@@ -39,6 +37,13 @@ Module mods
   Global threadQueue
   Global NewMap mods.mod()
   Global NewList queue.queue()
+  
+  Prototype callbackNewMod(*mod.mod)
+  Prototype callbackRemoveMod(*mod.mod)
+  Prototype callbackStopDraw(stop)
+  Global callbackNewMod.callbackNewMod
+  Global callbackRemoveMod.callbackRemoveMod
+  Global callbackStopDraw.callbackStopDraw
   
   Declare doLoad()
   Declare doInstall(file$)
@@ -533,25 +538,6 @@ Module mods
     ProcedureReturn entry$
   EndProcedure
   
-  Procedure.s getAuthorsString(*mod.mod)
-    Protected authors$
-    Protected count, i
-    Protected author.author
-    count = modCountAuthors(*mod)
-    
-    If count
-      For i = 0 To count-1
-        If modGetAuthor(*mod, i, @author)
-          authors$ + author\name$ + ", "
-        EndIf
-      Next
-      If Len(authors$) > 2 ; remove lat ", "
-        authors$ = Left(authors$, Len(authors$)-2)
-      EndIf
-    EndIf
-    ProcedureReturn authors$
-  EndProcedure
-  
   Procedure.s modGetTags(*mod.mod)
     Protected str$, tag$
     Protected count, i
@@ -654,32 +640,6 @@ Module mods
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
-    debugger::Add("mods::register()")
-    _window               = window
-    _gadgetModList        = gadgetModList
-    _gadgetFilterString   = gadgetFilterString
-    _gadgetFilterHidden   = gadgetFilterHidden
-    _gadgetFilterVanilla  = gadgetFilterVanilla
-    _gadgetFilterFolder   = gadgetFilterFolder
-    
-    If IsGadget(_gadgetFilterFolder)
-      ClearGadgetItems(_gadgetFilterFolder)
-      AddGadgetItem(_gadgetFilterFolder,      0, locale::l("mods","filter_all"))
-      SetGadgetItemData(_gadgetFilterFolder,  0, #FILTER_FOLDER_ALL)
-      AddGadgetItem(_gadgetFilterFolder,      1, locale::l("mods","filter_manual"))
-      SetGadgetItemData(_gadgetFilterFolder,  1, #FILTER_FOLDER_MANUAL)
-      AddGadgetItem(_gadgetFilterFolder,      2, locale::l("mods","filter_steam"))
-      SetGadgetItemData(_gadgetFilterFolder,  2, #FILTER_FOLDER_STEAM)
-      AddGadgetItem(_gadgetFilterFolder,      3, locale::l("mods","filter_staging"))
-      SetGadgetItemData(_gadgetFilterFolder,  3, #FILTER_FOLDER_STAGING)
-      SetGadgetState(_gadgetFilterFolder, 0)
-    EndIf
-    
-    
-    ProcedureReturn #True
-  EndProcedure
-  
   
   ; functions working on individual mods
   
@@ -729,7 +689,44 @@ Module mods
     ProcedureReturn tag$
   EndProcedure
   
+  Procedure.s getAuthorsString(*mod.mod)
+    Protected authors$
+    Protected count, i
+    Protected author.author
+    count = modCountAuthors(*mod)
+    
+    If count
+      For i = 0 To count-1
+        If modGetAuthor(*mod, i, @author)
+          authors$ + author\name$ + ", "
+        EndIf
+      Next
+      If Len(authors$) > 2 ; remove last ", "
+        authors$ = Left(authors$, Len(authors$)-2)
+      EndIf
+    EndIf
+    ProcedureReturn authors$
+  EndProcedure
   
+  Procedure getModSize(*mod.mod, refresh=#False)
+    If Not *mod\aux\size Or refresh
+      *mod\aux\size = misc::getDirectorySize(getModFolder(*mod\tpf_id$, *mod\aux\type$))
+    EndIf
+    ProcedureReturn *mod\aux\size
+  EndProcedure
+  
+  Procedure.s getModWebsite(*mod.mod)
+    Protected website$
+    If *mod\url$
+      website$ = *mod\url$
+    ElseIf *mod\aux\tfnetID
+      website$ = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      website$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
+    EndIf
+    ; TODO use repository and mod foldername to get website!
+    ProcedureReturn website$
+  EndProcedure
   
   ;### data structure handling
   
@@ -949,10 +946,17 @@ Module mods
     debugger::add("mods::doLoad() - finished")
     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
     
-    UnlockMutex(mutexMods)
     
     ; Display mods in list gadget
-    displayMods()
+    If callbackNewMod
+      callbackStopDraw(#True)
+      ForEach mods()
+        callbackNewMod(mods())
+      Next
+      callbackStopDraw(#False)
+    EndIf
+    
+    UnlockMutex(mutexMods)
     
     isLoaded = #True
   EndProcedure
@@ -1156,6 +1160,14 @@ Module mods
     ProcedureReturn *repoMod
   EndProcedure
   
+  Procedure isWorkshopMod(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "*")
+  EndProcedure
+  
+  Procedure isStagingAreaMod(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "?")
+  EndProcedure
+  
   ; actions
   
   Procedure doInstall(file$) ; install mod from file (archive)
@@ -1259,6 +1271,15 @@ Module mods
         doBackup(id$)
       EndIf
       
+      If Not canUninstall(*installedMod)
+        debugger::add("mods::doInstall() - WARNING: existing mod must not be uninstalled...")
+        debugger::add("mods::doInstall() - continue with overwrite")
+      EndIf
+      
+      If callbackRemoveMod
+        callbackRemoveMod(*installedMod) ; send pointe for removal, attention: pointer already invalid
+      EndIf
+      
       ; remove mod from internal map.
       LockMutex(mutexMods)
       DeleteMapElement(mods(), id$)
@@ -1343,7 +1364,13 @@ Module mods
     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
     debugger::Add("mods::doInstall() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-    displayMods()
+    
+    ; callback add mod
+    
+    If callbackNewMod
+      callbackNewMod(*mod)
+    EndIf
+    
     debugger::Add("mods::doInstall() - finished")
     
     
@@ -1361,7 +1388,7 @@ Module mods
     
     Protected *mod.mod
     LockMutex(mutexMods)
-    *mod = mods(id$)
+    *mod = FindMapElement(mods(), id$)
     UnlockMutex(mutexMods)
     
     If Not *mod
@@ -1394,7 +1421,10 @@ Module mods
     
     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
     
-    displayMods()
+    ; callback remove mod
+    If callbackRemoveMod
+      callbackRemoveMod(*mod) ; send pointe for removal, attention: pointer already invalid
+    EndIf
     
     ProcedureReturn #True
   EndProcedure
@@ -1566,16 +1596,13 @@ Module mods
   EndProcedure
   
   Procedure addToQueue(action, string$="")
-    Debug "add to queue- wait for mutex"
     LockMutex(mutexQueue)
-    Debug "got mutex - add"
     LastElement(queue())
     AddElement(queue())
     queue()\action  = action
     queue()\string$ = string$
     
     If Not threadQueue Or Not IsThread(threadQueue)
-      Debug "start thread"
       threadQueue = CreateThread(@handleQueue(), 0)
     EndIf
     
@@ -1737,241 +1764,6 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure displayMods()
-    Protected filterString$, showHidden, showVanilla, filterFolder
-    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$
-    Protected NewList *mods_to_display(), *mod.mod
-    Protected *selectedMod.mod
-    Protected i, n, author.author
-    
-;     debugger::add("mods::displayMods()")
-    
-    If Not IsWindow(_window)
-      debugger::add("mods::displayMods() - ERROR: window not valid")
-      ProcedureReturn #False
-    EndIf
-    If Not IsGadget(_gadgetModList)
-      debugger::add("mods::displayMods() - ERROR: #gadget not valid")
-      ProcedureReturn #False
-    EndIf
-    
-    
-    
-    If IsGadget(_gadgetFilterString)
-      filterString$ = GetGadgetText(_gadgetFilterString)
-    EndIf
-    If IsGadget(_gadgetFilterHidden)
-      showHidden = GetGadgetState(_gadgetFilterHidden)
-    EndIf
-    If IsGadget(_gadgetFilterVanilla)
-      showVanilla = GetGadgetState(_gadgetFilterVanilla)
-    EndIf
-    If IsGadget(_gadgetFilterFolder)
-      filterFolder = GetGadgetItemData(_gadgetFilterFolder, GetGadgetState(_gadgetFilterFolder))
-    EndIf
-    
-    If GetGadgetState(_gadgetModList) <> -1
-      *selectedMod = GetGadgetItemData(_gadgetModList, GetGadgetState(_gadgetModList))
-      Debug "selected mod: "+*selectedMod\name$
-    EndIf
-    
-    windowMain::stopGUIupdate()
-    HideGadget(_gadgetModList, #True)
-    ListIcon::ClearListItems(_gadgetModList)
-    
-    
-    ; count = number of individual parts of search string
-    ; only if all parts are found, show result!
-    count = CountString(filterString$, " ") + 1 
-    LockMutex(mutexMods)
-    ForEach mods()
-      *mod = mods()
-      With *mod
-        mod_ok = 0 ; reset ok for every mod entry
-        If \aux\type$ = "dlc"
-          Continue
-        EndIf
-        If \aux\hidden And Not showHidden
-          Continue
-        EndIf
-        If \aux\isVanilla And Not showVanilla
-          Continue
-        EndIf
-        If filterFolder ; 0 = show all
-          If Left(\tpf_id$, 1) = "*"
-            If filterFolder <> #FILTER_FOLDER_STEAM
-              Continue
-            EndIf
-          ElseIf Left(\tpf_id$, 1) = "?"
-            If filterFolder <> #FILTER_FOLDER_STAGING
-              Continue
-            EndIf
-          Else
-            If filterFolder <> #FILTER_FOLDER_MANUAL
-              Continue
-            EndIf
-          EndIf
-        EndIf
-        
-        If filterString$ = ""
-          mod_ok = 1
-          count = 1
-        Else
-          ; check all individual parts of search string
-          For k = 1 To count
-            ; tmp_ok = true if this part is found, increase number of total matches by one
-            tmp_ok = 0
-            
-            str$ = Trim(StringField(filterstring$, k, " "))
-            If str$
-              
-              ; mod settings
-              If LCase(str$) = "!settings"
-                If ListSize(*mod\settings()) > 0
-                  tmp_ok = 1
-                EndIf
-              EndIf
-              
-              ; update available
-              If LCase(str$) = "!update"
-                ; do not search updates for workshop and staging_area
-                If Left(*mod\tpf_id$, 1) <> "*" And Left(*mod\tpf_id$, 1) <> "?"
-                  If isUpdateAvailable(*mod)
-                    tmp_ok = 1
-                  EndIf
-                EndIf
-              EndIf
-              
-              ; lua error
-              If LCase(str$) = "!error"
-                If *mod\aux\luaParseError
-                  tmp_ok = 1
-                EndIf
-              EndIf
-              
-              ; name
-              If FindString(\name$, str$, 1, #PB_String_NoCase)
-                tmp_ok = 1
-              EndIf
-              
-              ; authors
-              If Not tmp_ok
-                n = modCountAuthors(*mod)
-                For i = 0 To n-1
-                  If modGetAuthor(*mod, i, @author)
-                    If FindString(author\name$, str$, 1, #PB_String_NoCase)
-                      tmp_ok = 1
-                      Break
-                    EndIf
-                  EndIf
-                Next
-              EndIf
-              
-              ; tags
-              If Not tmp_ok
-                n = modCountTags(*mod)
-                For i = 0 To n-1
-                  If FindString(modGetTag(*mod, i), str$, 1, #PB_String_NoCase)
-                    tmp_ok = 1
-                    Break
-                  EndIf
-                Next
-              EndIf
-              
-            Else
-              tmp_ok = 1 ; empty search string is just ignored (ok)
-            EndIf
-            
-            If tmp_ok
-              mod_ok + 1
-            Else
-              ; this substring was not found.
-              ; currently: all parts of search string are "AND", so skip this mod
-              Break ; break out of "For k = 1 To count"
-            EndIf
-          Next ; For k = 1 To count
-        EndIf
-        
-        If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-          
-          AddElement(*mods_to_display())
-          *mods_to_display() = mods()
-          
-        EndIf
-      EndWith
-    Next
-    
-    UnlockMutex(mutexMods)
-    
-    misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(mod\name$), #PB_String)
-    
-    ForEach *mods_to_display()
-      *mod = *mods_to_display()
-      
-      With *mod
-        Protected supportsModSettings$ = ""
-        If ListSize(\settings()) > 0
-          supportsModSettings$ = locale::l("main","mod_options")
-        EndIf 
-        text$ = \name$ + #LF$ + getAuthorsString(*mod) + #LF$ + modGetTags(*mod) + #LF$ + \version$ + #LF$ + supportsModSettings$
-        
-        ListIcon::AddListItem(_gadgetModList, item, text$)
-        ListIcon::SetListItemData(_gadgetModList, item, *mod)
-        ; ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("yes")))
-        ;- TODO: image based on online update status or something else?
-        If Left(\tpf_id$, 1) = "*"
-          ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_workshop")))
-        Else
-          If \aux\isVanilla
-            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod_official")))
-          Else
-            ListIcon::SetListItemImage(_gadgetModList, item, ImageID(images::Images("icon_mod")))
-          EndIf
-        EndIf
-        
-        If \aux\hidden
-          ; RGB(100, 100, 100)
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_hidden"))
-        EndIf
-        
-        
-        Protected *repo_mod.repository::mod
-        If Left(\tpf_id$, 1) <> "*" And Left(\tpf_id$, 1) <> "?" ; do not search updates for workshop and staging_area
-          *repo_mod = getRepoMod(*mod)
-          If *repo_mod
-            If isUpdateAvailable(*mod, *repo_mod)
-              ; update available (most likely)
-              ; RGB($FF, $99, $00)
-              SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_update_available"))
-            Else
-              ; no update available (most likely)
-              ; RGB($00, $66, $00)
-              SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
-            EndIf
-          EndIf
-        EndIf
-        
-        If \aux\luaParseError
-          ; RGB($ff, $cc, $cc)
-          SetGadgetItemColor(_gadgetModList, item, #PB_Gadget_BackColor, settings::getInteger("color", "mod_lua_error"))
-        EndIf
-        
-        
-        If *selectedMod And *selectedMod = *mod
-          Debug "reselect mod: "+*mod\name$
-          SetGadgetState(_gadgetModList, item)
-        EndIf
-        
-        item + 1
-      EndWith
-    Next
-    
-    
-    HideGadget(_gadgetModList, #False)
-    windowMain::stopGUIupdate(#False)
-    
-  EndProcedure
-  
   Procedure getMods(List *mods.mod())
     Protected count = 0
     ClearList(*mods())
@@ -2021,10 +1813,10 @@ Module mods
       EndIf
       
       
-      ; mod images: 210x118 (original: 320x180)
+      ; mod images: 210x118 / 240x135 / 320x180
       ; dlc images: 120x80
       previewImagesOriginal(*mod\tpf_id$) = im
-      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 240, 135)
+      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 320, 180)
     EndIf
     
     If original
@@ -2249,5 +2041,17 @@ Module mods
     ProcedureReturn val
   EndProcedure
   
+  ; Callback
+  
+  Procedure BindEventCallback(Event, *callback)
+    Select event
+      Case #CallbackNewMod
+        callbackNewMod = *callback
+      Case #CallbackRemoveMod
+        callbackRemoveMod = *callback
+      Case #CallbackStopDraw
+        callbackStopDraw = *callback
+    EndSelect
+  EndProcedure
   
 EndModule

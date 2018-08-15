@@ -2,12 +2,8 @@
 DeclareModule windowMain
   EnableExplicit
   
-  Global window, dialog
+  Global window
   
-  Macro gadget(name)
-    DialogGadget(windowMain::dialog, name)
-  EndMacro
-    
   Enumeration FormMenu
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       #PB_Menu_Quit
@@ -23,6 +19,7 @@ DeclareModule windowMain
     #MenuItem_Log
     #MenuItem_Enter
     #MenuItem_CtrlA
+    #MenuItem_CtrlF
     #MenuItem_PackNew
     #MenuItem_PackOpen
   EndEnumeration
@@ -49,16 +46,24 @@ EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowSettings.pbi"
-XIncludeFile "module_ListIcon.pbi"
 XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_modInformation.pbi"
 XIncludeFile "module_modSettings.pbi"
 XIncludeFile "module_pack.pbi"
 XIncludeFile "module_windowPack.pbi"
+XIncludeFile "module_canvasList.pbi"
 
 Module windowMain
-
+  Global dialog
+  Global windowFilter, dialogFilter
+  Global windowSort, dialogSort
+  Global menu, menuFilter, menuSort
+  
+  Macro gadget(name)
+    DialogGadget(dialog, name)
+  EndMacro
+  
   ; rightclick menu on library gadget
   Global MenuLibrary
   Enumeration FormMenu
@@ -88,7 +93,9 @@ Module windowMain
   
   Declare repoDownload()
   Declare modOpenModFolder()
-  Declare modInformation()
+  Declare backupRefreshList()
+  
+  Global *modList.CanvasList::CanvasList
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -101,8 +108,6 @@ Module windowMain
   EndProcedure
   
   Procedure updateModButtons()
-    Protected i, numSelected, numCanUninstall, numCanBackup
-    Protected *mod.mods::mod
     Protected text$, author$
     
     If _noUpdate
@@ -110,32 +115,32 @@ Module windowMain
     EndIf
     
     
-    numSelected     = 0
-    numCanUninstall = 0
-    numCanBackup    = 0
+    Protected Dim *items(0)
+    Protected *item.CanvasList::CanvasListItem
+    Protected *mod.mods::mod
+    Protected numSelected, numCanUninstall, numCanBackup
+    Protected i
     
-    For i = 0 To CountGadgetItems(gadget("modList")) - 1
-      *mod = ListIcon::GetListItemData(gadget("modList"), i)
-      If Not *mod
-        Continue
-      EndIf
-      
-      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-        numSelected + 1
-        If mods::canUninstall(*mod)
-          numCanUninstall + 1
-        EndIf
+    If *modList\GetAllSelectedItems(*items())
+      numSelected = ArraySize(*items()) + 1
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
         If mods::canBackup(*mod)
           numCanBackup + 1
         EndIf
-      EndIf
-    Next
-    
-    If numSelected = 1
-      DisableGadget(gadget("modInformation"), #False)
-    Else
-      DisableGadget(gadget("modInformation"), #True)
+        If mods::canUninstall(*mod)
+          numCanUninstall + 1
+        EndIf
+      Next
     EndIf
+    
+  
+;     If numSelected = 1
+;       DisableGadget(gadget("modInfo"), #False)
+;     Else
+;       DisableGadget(gadget("modInfo"), #True)
+;     EndIf
     
     If numCanBackup = 0
       DisableGadget(gadget("modBackup"),  #True)
@@ -143,6 +148,11 @@ Module windowMain
     Else
       DisableGadget(gadget("modBackup"), #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Backup, #False)
+      If numCanBackup > 1
+        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
+      Else
+        SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
+      EndIf
     EndIf
     
     If numCanUninstall = 0
@@ -151,43 +161,16 @@ Module windowMain
     Else
       DisableGadget(gadget("modUninstall"),  #False)
       DisableMenuItem(MenuLibrary, #MenuItem_Uninstall, #False)
+      If numCanUninstall > 1
+        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
+      Else
+        SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
+      EndIf
     EndIf
     
-    If numCanBackup > 1
-      SetGadgetText(gadget("modBackup"),     locale::l("main","backup_pl"))
-      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup_pl"))
-    Else
-      SetGadgetText(gadget("modBackup"),     locale::l("main","backup"))
-      SetMenuItemText(MenuLibrary, #MenuItem_Backup,    locale::l("main","backup"))
-    EndIf
     
-    If numCanUninstall > 1
-      SetGadgetText(gadget("modUninstall"),  locale::l("main","uninstall_pl"))
-      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall_pl"))
-    Else
-      SetGadgetText(gadget("modUninstall"),  locale::l("main","uninstall"))
-      SetMenuItemText(MenuLibrary, #MenuItem_Uninstall, locale::l("main","uninstall"))
-    EndIf
     
     If numSelected = 1
-      ; one mod selected
-      ; display image
-      *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
-      
-      Protected im
-      im = mods::getPreviewImage(*mod)
-      If IsImage(im)
-        ; display image
-        If GetGadgetState(gadget("modPreviewImage")) <> ImageID(im)
-          SetGadgetState(gadget("modPreviewImage"), ImageID(im))
-        EndIf
-      Else
-        ; else: display normal logo
-        If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-          SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-        EndIf
-      EndIf
-      
       
       If mods::getRepoMod(*mod)
         DisableGadget(gadget("modUpdate"), #False)
@@ -203,26 +186,18 @@ Module windowMain
       EndIf
       
       ; settings
-      If ListSize(*mod\settings()) > 0
-        DisableGadget(gadget("modSettings"), #False)
-      Else
-        DisableGadget(gadget("modSettings"), #True)
-      EndIf
+;       If ListSize(*mod\settings()) > 0
+;         DisableGadget(gadget("modSettings"), #False)
+;       Else
+;         DisableGadget(gadget("modSettings"), #True)
+;       EndIf
       
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #False)
     Else
-      ; multiple mods or none selected
-      
-      DisableGadget(gadget("modSettings"), #True)
       DisableGadget(gadget("modUpdate"), #True)
       
       DisableMenuItem(MenuLibrary, #MenuItem_ModWebsite, #True)
       DisableMenuItem(MenuLibrary, #MenuItem_ModFolder, #True)
-      
-      
-      If GetGadgetState(gadget("modPreviewImage")) <> ImageID(images::Images("logo"))
-        SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
-      EndIf
     EndIf
     
     If numSelected = 0
@@ -284,7 +259,6 @@ Module windowMain
   Procedure updateBackupButtons()
     Protected item, checked
     Protected gadgetTree
-    Debug "windowMain::updateBackupButtons()"
     
     If main::gameDirectory$
       gadgetTree = gadget("backupTree")
@@ -315,6 +289,15 @@ Module windowMain
   Procedure close()
     HideWindow(window, #True)
     main::exit()
+  EndProcedure
+  
+  
+  Procedure websiteTrainFeverNet()
+    misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
+  EndProcedure
+  
+  Procedure websiteTrainFeverNetDownloads()
+    misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
   EndProcedure
   
   ;-------------------------------------------------
@@ -420,17 +403,52 @@ Module windowMain
     windowPack::show(window)
     windowPack::packOpen()
   EndProcedure
+  
   ;- GADGETS
   
-  Declare backupRefreshList()
-  Procedure panel()
-    If EventType() = #PB_EventType_Change
-      If GetGadgetState(gadget("panel")) = 2
-        updateBackupButtons()
-        backupRefreshList()
-      EndIf
-    EndIf
+  Procedure hideAllContainer()
+    HideGadget(Gadget("containerMods"), #True)
+    HideGadget(gadget("containerMaps"), #True)
+    HideGadget(gadget("containerOnline"), #True)
+    HideGadget(gadget("containerBackups"), #True)
+    
+    SetGadgetState(gadget("btnMods"), 0)
+    SetGadgetState(gadget("btnMaps"), 0)
+    SetGadgetState(gadget("btnOnline"), 0)
+    SetGadgetState(gadget("btnBackups"), 0)
+    SetGadgetState(gadget("btnSettings"), 0)
   EndProcedure
+  
+  Procedure navBtnMods()
+    hideAllContainer()
+    HideGadget(gadget("containerMods"), #False)
+    SetGadgetState(gadget("btnMods"), 1)
+    SetActiveGadget(gadget("modList"))
+  EndProcedure
+  
+  Procedure navBtnMaps()
+    hideAllContainer()
+    HideGadget(gadget("containerMaps"), #False)
+    SetGadgetState(gadget("btnMaps"), 1)
+  EndProcedure
+  
+  Procedure navBtnOnline()
+    hideAllContainer()
+    HideGadget(gadget("containerOnline"), #False)
+    SetGadgetState(gadget("btnOnline"), 1)
+  EndProcedure
+  
+  Procedure navBtnBackups()
+    hideAllContainer()
+    HideGadget(gadget("containerBackups"), #False)
+    SetGadgetState(gadget("btnBackups"), 1)
+  EndProcedure
+  
+  Procedure navBtnSettings()
+    MenuItemSettings()
+    SetGadgetState(gadget("btnSettings"), 0)
+  EndProcedure
+  
   
   ;- mod tab
   
@@ -457,23 +475,26 @@ Module windowMain
   EndProcedure
   
   Procedure modUninstall() ; Uninstall selected mods (delete from HDD)
-    debugger::Add("windowMain::GadgetButtonUninstall()")
     Protected *mod.mods::mod
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
     Protected i, count, result
     Protected NewMap strings$()
     
-    For i = 0 To CountGadgetItems(gadget("modList")) - 1
-      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(gadget("modList"), i)
+    If *modList\GetAllSelectedItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        
         If mods::canUninstall(*mod)
           count + 1
+          strings$("name") = *mod\name$
         EndIf
-      EndIf
-    Next i
+      Next
+    EndIf
+    
     If count > 0
       If count = 1
-        ClearMap(strings$())
-        strings$("name") = *mod\name$
         result = MessageRequester(locale::l("main","uninstall"), locale::getEx("management", "uninstall1", strings$()), #PB_MessageRequester_YesNo)
       Else
         ClearMap(strings$())
@@ -482,68 +503,63 @@ Module windowMain
       EndIf
       
       If result = #PB_MessageRequester_Yes
-        For i = 0 To CountGadgetItems(gadget("modList")) - 1
-          If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-            *mod = ListIcon::GetListItemData(gadget("modList"), i)
-            If mods::canUninstall(*mod)
-;               debugger::add("windowMain::GadgetButtonUninstall() - {"+*mod\name$+"}")
-              mods::uninstall(*mod\tpf_id$)
-            EndIf
+        For i = 0 To ArraySize(*items())
+          *item = *items(i)
+          *mod = *item\GetUserData()
+          If mods::canUninstall(*mod)
+            mods::uninstall(*mod\tpf_id$)
           EndIf
-        Next i
+        Next
       EndIf
     EndIf
+  EndProcedure
+  
+  Procedure modUpdate()
+    Protected *mod.mods::mod
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
+    Protected i
+    
+    If *modList\GetAllSelectedItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        mods::update(*mod\tpf_id$)
+      Next
+    EndIf
+  EndProcedure
+  
+  Procedure modUpdateAll()
+    Protected *mod.mods::mod
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
+    Protected i
+    
+    If *modList\GetAllItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        mods::update(*mod\tpf_id$)
+      Next
+    EndIf
+    
   EndProcedure
   
   Procedure modBackup()
-    debugger::Add("windowMain::GadgetButtonBackup()")
-    
     Protected *mod.mods::mod
-    Protected i, count
-    Protected backupFolder$
-    Protected NewMap strings$()
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
+    Protected i
     
-    For i = 0 To CountGadgetItems(gadget("modList")) - 1
-      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected 
-        *mod = ListIcon::GetListItemData(gadget("modList"), i)
+    If *modList\GetAllSelectedItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
         If mods::canBackup(*mod)
-          count + 1
+          mods::backup(*mod\tpf_id$)
         EndIf
-      EndIf
-    Next i
-    If count > 0
-      
-      For i = 0 To CountGadgetItems(gadget("modList")) - 1
-        If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-          *mod = ListIcon::GetListItemData(gadget("modList"), i)
-          If mods::canBackup(*mod)
-            mods::backup(*mod\tpf_id$)
-          EndIf
-        EndIf
-      Next i
-      
+      Next
     EndIf
-  EndProcedure
-  
-  Procedure modList()
-    updateModButtons()
-    
-    Select EventType()
-      Case #PB_EventType_LeftDoubleClick
-        modInformation()
-      Case #PB_EventType_RightClick
-        DisplayPopupMenu(MenuLibrary, WindowID(windowMain::window))
-      Case #PB_EventType_DragStart
-        DragPrivate(main::#DRAG_MOD)
-    EndSelect
-  EndProcedure
-  
-  Procedure websiteTrainFeverNet()
-    misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
-  EndProcedure
-  
-  Procedure websiteTrainFeverNetDownloads()
-    misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
   EndProcedure
   
   Procedure modPreviewImage()
@@ -555,15 +571,203 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modFilterMods()
-    mods::displayMods()
+  
+  Procedure compModName(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(LCase(*mod1\name$) <= LCase(*mod2\name$))
+    Else
+      ProcedureReturn Bool(LCase(*mod1\name$) > LCase(*mod2\name$))
+    EndIf
   EndProcedure
+  
+  Procedure compModAuthor(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
+    If Not ListSize(*mod1\authors()) Or Not ListSize(*mod2\authors())
+      ProcedureReturn #False
+    EndIf
+    
+    SelectElement(*mod1\authors(), 0)
+    SelectElement(*mod2\authors(), 0)
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(LCase(*mod1\authors()\name$) <= LCase(*mod2\authors()\name$))
+    Else
+      ProcedureReturn Bool(LCase(*mod1\authors()\name$) > LCase(*mod2\authors()\name$))
+    EndIf
+  EndProcedure
+  
+  Procedure compModInstall(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(*mod1\aux\installDate <= *mod2\aux\installDate)
+    Else
+      ProcedureReturn Bool(*mod1\aux\installDate > *mod2\aux\installDate)
+    EndIf
+  EndProcedure
+  
+  Procedure compModSize(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(mods::getModSize(*mod1) <= mods::getModSize(*mod2))
+    Else
+      ProcedureReturn Bool(mods::getModSize(*mod1) > mods::getModSize(*mod2))
+    EndIf
+  EndProcedure
+  
+  Procedure compModID(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *mod1.mods::mod = *item1\GetUserData()
+    Protected *mod2.mods::mod = *item2\GetUserData()
+    
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(*mod1\tpf_id$ <= *mod2\tpf_id$)
+    Else
+      ProcedureReturn Bool(*mod1\tpf_id$ > *mod2\tpf_id$)
+    EndIf
+  EndProcedure
+  
   
   Procedure modResetFilterMods()
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
-    mods::displayMods()
   EndProcedure
+  
+  Procedure modFilterClose()
+    SetActiveWindow(window)
+    HideWindow(EventWindow(), #True)
+    PostEvent(#PB_Event_Repaint, window, 0)
+    SetActiveGadget(gadget("modList"))
+  EndProcedure
+  
+  Procedure modFilterCallback(*item.CanvasList::CanvasListItem, options)
+    ; return true if this mod shall be displayed, false if hidden
+    Protected *mod.mods::mod = *item\GetUserData()
+    Protected string$, s$, i, n
+    
+    ; TODO tf mod support not implemented
+    
+    ; check vanilla mod
+    If *mod\aux\isVanilla And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check hidden mod
+    If *mod\aux\hidden And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check workshop mod
+    If mods::isWorkshopMod(*mod) And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check staging area mod
+    If mods::isStagingAreaMod(*mod) And Not GetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"))
+      ProcedureReturn #False
+    EndIf
+    
+    ; check for search string
+    string$ = GetGadgetText(DialogGadget(dialogFilter, "modFilterString"))
+    If string$
+      ; split string in parts
+      n = CountString(string$, " ")
+      For i = 1 To n+1
+        s$ = StringField(string$, i, " ")
+        If s$
+          ; check if s$ is found in any of the information of the mod
+          If Not FindString(*mod\name$, s$, 1, #PB_String_NoCase)
+            If Not FindString(mods::getAuthorsString(*mod), s$, 1, #PB_String_NoCase)
+              ; search string was NOT found in this mod
+              ProcedureReturn #False
+            EndIf
+          EndIf
+          
+        EndIf
+      Next
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modFilterChange()
+    ; save current filter to settings
+    settings::setInteger("filter", "tf",        GetGadgetState(DialogGadget(dialogFilter, "modFilterTF")))
+    settings::setInteger("filter", "vanilla",   GetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla")))
+    settings::setInteger("filter", "hidden",    GetGadgetState(DialogGadget(dialogFilter, "modFilterHidden")))
+    settings::setInteger("filter", "workshop",  GetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop")))
+    settings::setInteger("filter", "staging",   GetGadgetState(DialogGadget(dialogFilter, "modFilterStaging")))
+    
+    ; opt 1) gather the "filter options" here (read gadget state and save to some filter flag variable"
+    ; opt 2) trigger filtering, and let the filter callback read the gadget states.
+    ; use opt 2:
+    *modList\FilterItems(@modFilterCallback(), 0, #True)
+  EndProcedure
+  
+  Procedure modFilterShow()
+    ResizeWindow(windowFilter, DesktopMouseX()-WindowWidth(windowFilter)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
+    HideWindow(windowFilter, #False)
+    SetActiveGadget(DialogGadget(dialogFilter, "modFilterString"))
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      SendMessage_(GadgetID(DialogGadget(dialogFilter, "modFilterString")), #EM_SETSEL, 0, -1)
+    CompilerEndIf
+  EndProcedure
+  
+  
+  Procedure modSortClose()
+    SetActiveWindow(window)
+    HideWindow(windowSort, #True)
+    PostEvent(#PB_Event_Repaint, window, 0)
+    SetActiveGadget(gadget("modList"))
+  EndProcedure
+  
+  Procedure modSortChange()
+    ; apply sorting to CanvasList
+    Protected *comp, mode, options
+    
+    mode = GetGadgetState(DialogGadget(dialogSort, "modSortBox"))
+    settings::setInteger("sort", "mode", mode)
+    
+    ; get corresponding sorting function
+    Select mode
+      Case 0
+        *comp = @compModName()
+        options = #PB_Sort_Ascending
+      Case 1
+        *comp = @compModAuthor()
+        options = #PB_Sort_Ascending
+      Case 2
+        *comp = @compModInstall()
+        options = #PB_Sort_Descending
+      Case 3
+        *comp = @compModSize()
+        options = #PB_Sort_Ascending
+      Case 4
+        *comp = @compModID()
+        options = #PB_Sort_Ascending
+      Default
+        *comp = @compModName()
+        options = #PB_Sort_Ascending
+    EndSelect
+    
+    ; Sort CanvasList and make persistent sort (gadget will be keept sorted automatically)
+    *modList\SortItems(CanvasList::#SortByUser, *comp, options, #True)
+    
+    ; close the mod sort tool window
+    modSortClose()
+  EndProcedure
+  
+  Procedure modSortShow()
+    ResizeWindow(windowSort, DesktopMouseX()-WindowWidth(windowSort)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
+    HideWindow(windowSort, #False)
+    SetActiveGadget(DialogGadget(dialogFilter, "modSortBox"))
+  EndProcedure
+  
   
   Procedure modShowDownloadFolder()
     If main::gameDirectory$
@@ -572,53 +776,87 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modInformation()
-    Protected *mod.mods::mod
-    
-    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
-    If Not *mod
-      ProcedureReturn #False
-    EndIf
-    
+  Procedure modIconInfo(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
     modInformation::modInfoShow(*mod, WindowID(window))
   EndProcedure
   
-  Procedure modSettings()
-    Protected *mod.mods::mod
-    
-    *mod = ListIcon::GetListItemData(gadget("modList"), GetGadgetState(gadget("modList")))
-    If Not *mod
-      ProcedureReturn #False
-    EndIf
-    
+  Procedure modIconFolder(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
+    misc::openLink(mods::getModFolder(*mod\tpf_id$, *mod\aux\type$))
+  EndProcedure
+  
+  Procedure modIconSettings(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
     modSettings::show(*mod, WindowID(window))
   EndProcedure
   
-  Procedure modUpdate()
-    debugger::add("windowMain::modUpdate()")
-    Protected *mod.mods::mod
-    Protected i
-    
-    For i = 0 To CountGadgetItems(gadget("modList"))-1
-      If GetGadgetItemState(gadget("modList"), i) & #PB_ListIcon_Selected
-        *mod = GetGadgetItemData(gadget("modList"), i)
-        mods::update(*mod\tpf_id$)
-      EndIf
-    Next
+  Procedure modIconWebsite(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::mod = *item\GetUserData()
+    Protected website$ = mods::getModWebsite(*mod)
+    If website$
+      misc::openLink(website$)
+    EndIf
   EndProcedure
   
-  Procedure modUpdateAll()
-    debugger::add("windowMain::modUpdateAll()")
-    Protected *mod.mods::mod
+  Procedure modListEvent()
+    Select EventType()
+      Case #PB_EventType_RightClick
+        DisplayPopupMenu(MenuLibrary, WindowID(window))
+      Case #PB_EventType_DragStart
+        DragPrivate(main::#DRAG_MOD)
+    EndSelect
+  EndProcedure
+  
+  Procedure modListItemEvent(*item, event)
+    Select event
+      Case #PB_EventType_LeftDoubleClick
+        If *item
+          modIconInfo(*item)
+        EndIf
+        
+      Case #PB_EventType_Change
+        ; different item selected
+        updateModButtons()
+    EndSelect
+    
+  EndProcedure
+  
+  
+  ;- mod callbacks
+  
+  Procedure modCallbackNewMod(*mod.mods::mod)
+    Debug "# DISPLAY MOD: "+*mod\tpf_id$
+    
+    Protected *item.CanvasList::CanvasListItem
+    *item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
+    *item\SetImage(mods::getPreviewImage(*mod))
+    ;TODO link *item to mod?
+  EndProcedure
+  
+  Procedure modCallbackRemoveMod(*mod)
+    Debug "# REMOVE MOD"
+    
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
     Protected i
     
-    For i = 0 To CountGadgetItems(gadget("modList"))-1
-      *mod = GetGadgetItemData(gadget("modList"), i)
-      If mods::isUpdateAvailable(*mod)
-        mods::update(*mod\tpf_id$)
-      EndIf
-    Next
+    If *modList\GetAllItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        If *mod = *item\GetUserData()
+          *modList\RemoveItem(*item)
+          Break
+        EndIf
+      Next
+    EndIf
   EndProcedure
+  
+  Procedure modCallbackStopDraw(stop)
+    Debug "##### STOP DRAW: "+stop
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
+  EndProcedure
+  
   
   ;- repo tab
   
@@ -877,24 +1115,23 @@ Module windowMain
   
   ;
   
+  
   Procedure modShowWebsite()
+    Protected website$
     Protected item, *mod.mods::mod
+    
     item = GetGadgetState(gadget("modList"))
     If item <> -1
       *mod = GetGadgetItemData(gadget("modList"), item)
       If *mod
-        If *mod\url$
-          misc::openLink(*mod\url$)
-        ElseIf *mod\aux\tfnetID
-          misc::openLink("https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID)
-        ElseIf *mod\aux\workshopID
-          misc::openLink("http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID)
+        website$ = mods::getModWebsite(*mod)
+        If website$
+          misc::openLink(website$)
+          ProcedureReturn #True
         EndIf
-        
-        ProcedureReturn #True
       EndIf
     EndIf
-    ProcedureReturn #True
+    ProcedureReturn #False
   EndProcedure
   
   Procedure modOpenModFolder()
@@ -914,6 +1151,7 @@ Module windowMain
     windowPack::show(window)
     windowPack::addSelectedMods()
   EndProcedure
+  
   
   ;- backup tab
   
@@ -1329,32 +1567,42 @@ Module windowMain
     BindEvent(#PB_Event_CloseWindow, @close(), window)
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
-    
     BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
+    
+    ; init custom canvas gadgets
+    *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
+    *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modListItemEvent())
+    *modList\BindItemEvent(#PB_EventType_Change,            @modListItemEvent())
+    *modList\AddItemButton(images::Images("iconInfo"),      @modIconInfo())
+    *modList\AddItemButton(images::Images("iconFolder"),    @modIconFolder())
+    *modList\AddItemButton(images::Images("iconSettings"),  @modIconSettings())
+    *modList\AddItemButton(images::Images("iconWebsite"),   @modIconWebsite())
+    
+    
     ; initialize gadgets
+;     SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
+;     SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
+;     SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
+;     SetGadgetText(gadget("modManagementFrame"), l("main","management"))
+;     SetGadgetText(gadget("modSettings"),        l("main","settings"))
     
-    SetGadgetItemText(gadget("panel"), 0,       l("main","mods"))
-    SetGadgetItemText(gadget("panel"), 1,       l("main","repository"))
-    SetGadgetItemText(gadget("panel"), 2,       l("main","backups"))
+    SetGadgetAttribute(gadget("modFilter"),     #PB_Button_Image, ImageID(images::images("btnFilter")))
+    SetGadgetAttribute(gadget("modSort"),       #PB_Button_Image, ImageID(images::images("btnSort")))
+    GadgetToolTip(gadget("modFilter"),          l("main","filter"))
+    GadgetToolTip(gadget("modSort"),            l("main","sort"))
     
-    RemoveGadgetColumn(gadget("modList"), 0)
-    AddGadgetColumn(gadget("modList"), 0,       l("main","name"), 240)
-    AddGadgetColumn(gadget("modList"), 1,       l("main","author"), 90)
-    AddGadgetColumn(gadget("modList"), 2,       l("main","category"), 90)
-    AddGadgetColumn(gadget("modList"), 3,       l("main","version"), 60)
-    AddGadgetColumn(gadget("modList"), 4,       l("main","mod_options"), 25)
-    SetGadgetText(gadget("modFilterFrame"),     l("main","filter"))
-    SetGadgetText(gadget("modFilterHidden"),    l("main","filter_hidden"))
-    SetGadgetText(gadget("modFilterVanilla"),   l("main","filter_vanilla"))
-    SetGadgetText(gadget("modManagementFrame"), l("main","management"))
-    SetGadgetText(gadget("modInformation"),     l("main","information"))
-    SetGadgetText(gadget("modSettings"),        l("main","settings"))
-    SetGadgetText(gadget("modUpdate"),          l("main","update"))
+    
+;     SetGadgetAttribute(gadget("modInfo"),       #PB_Button_Image, ImageID(images::images("btnInfo")))
+    SetGadgetAttribute(gadget("modUpdate"),     #PB_Button_Image, ImageID(images::images("btnUpdate")))
+    SetGadgetAttribute(gadget("modShare"),      #PB_Button_Image, ImageID(images::images("btnShare")))
+    SetGadgetAttribute(gadget("modBackup"),     #PB_Button_Image, ImageID(images::images("btnBackup")))
+    SetGadgetAttribute(gadget("modUninstall"),  #PB_Button_Image, ImageID(images::images("btnUninstall")))
+    SetGadgetAttribute(gadget("modUpdateAll"),  #PB_Button_Image, ImageID(images::images("btnUpdateAll")))
+;     GadgetToolTip(gadget("modInfo"),            l("main","information"))
     GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
-    SetGadgetText(gadget("modBackup"),          l("main","backup"))
-    SetGadgetText(gadget("modUninstall"),       l("main","uninstall"))
-    SetGadgetText(gadget("modUpdateAll"),       l("main","update_all"))
+    GadgetToolTip(gadget("modBackup"),          l("main","backup"))
+    GadgetToolTip(gadget("modUninstall"),       l("main","uninstall"))
     GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
     
     SetGadgetText(gadget("repoFilterFrame"),    l("main","filter"))
@@ -1373,22 +1621,42 @@ Module windowMain
     SetGadgetText(gadget("backupClear"),        l("main","backup_clear"))
     SetGadgetText(gadget("backupFrameFilter"),  l("main","backup_filter"))
     
+    SetGadgetAttribute(gadget("btnMods"),     #PB_Button_Image,   ImageID(images::Images("navMods")))
+    SetGadgetAttribute(gadget("btnMaps"),     #PB_Button_Image,   ImageID(images::Images("navMaps")))
+    SetGadgetAttribute(gadget("btnOnline"),   #PB_Button_Image,   ImageID(images::Images("navOnline")))
+    SetGadgetAttribute(gadget("btnBackups"),  #PB_Button_Image,   ImageID(images::Images("navBackups")))
+    SetGadgetAttribute(gadget("btnSettings"), #PB_Button_Image,   ImageID(images::Images("navSettings")))
+    
+    GadgetToolTip(gadget("btnMods"),      l("main","mods"))
+    GadgetToolTip(gadget("btnMaps"),      l("main","maps"))
+    GadgetToolTip(gadget("btnOnline"),    l("main","repository"))
+    GadgetToolTip(gadget("btnBackups"),   l("main","backups"))
+    GadgetToolTip(gadget("btnSettings"),  l("menu","settings"))
+    
+    DisableGadget(gadget("btnMaps"), #True)
+    
     
     ; Bind Gadget Events
-    BindGadgetEvent(gadget("panel"),            @panel())
+    BindGadgetEvent(gadget("btnMods"),          @navBtnMods())
+    BindGadgetEvent(gadget("btnMaps"),          @navBtnMaps())
+    BindGadgetEvent(gadget("btnOnline"),        @navBtnOnline())
+    BindGadgetEvent(gadget("btnBackups"),       @navBtnBackups())
+    BindGadgetEvent(gadget("btnSettings"),      @navBtnSettings())
     
-    BindGadgetEvent(gadget("modInformation"),   @modInformation())
-    BindGadgetEvent(gadget("modSettings"),      @modSettings())
+    BindGadgetEvent(gadget("modFilter"),        @modFilterShow())
+    BindGadgetEvent(gadget("modSort"),          @modSortShow())
+;     BindGadgetEvent(gadget("modInfo"),          @modInformation())
+;     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
-    BindGadgetEvent(gadget("modList"),          @modList())
-    BindGadgetEvent(gadget("modFilterString"),  @modFilterMods(), #PB_EventType_Change)
-    BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
-    BindGadgetEvent(gadget("modFilterHidden"),  @modFilterMods())
-    BindGadgetEvent(gadget("modFilterVanilla"), @modFilterMods())
-    BindGadgetEvent(gadget("modFilterFolder"),  @modFilterMods(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("modList"),          @modListEvent())
+;     BindGadgetEvent(gadget("modFilterString"),  @modUpdateList(), #PB_EventType_Change)
+;     BindGadgetEvent(gadget("modFilterReset"),   @modResetFilterMods())
+;     BindGadgetEvent(gadget("modFilterHidden"),  @modUpdateList())
+;     BindGadgetEvent(gadget("modFilterVanilla"), @modUpdateList())
+;     BindGadgetEvent(gadget("modFilterFolder"),  @modUpdateList(), #PB_EventType_Change)
     
     BindGadgetEvent(gadget("repoList"),         @repoList())
     BindGadgetEvent(gadget("repoList"),         @repoListShowMenu(), #PB_EventType_RightClick)
@@ -1420,9 +1688,10 @@ Module windowMain
     AddKeyboardShortcut(window, #PB_Shortcut_F1, #MenuItem_Homepage)
     AddKeyboardShortcut(window, #PB_Shortcut_Return, #MenuItem_Enter)
     AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_A, #MenuItem_CtrlA)
+    AddKeyboardShortcut(window, #PB_Shortcut_Control | #PB_Shortcut_F, #MenuItem_CtrlF)
     
     ; Menu
-    CreateMenu(0, WindowID(window))
+    menu = CreateMenu(#PB_Any, WindowID(window))
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
       MenuTitle(l("menu","file"))
     CompilerEndIf
@@ -1446,33 +1715,34 @@ Module windowMain
     MenuItem(#MenuItem_Log, l("menu","log"))
     
     ; Menu Events
-    BindMenuEvent(0, #PB_Menu_Preferences, @MenuItemSettings())
-    BindMenuEvent(0, #PB_Menu_Quit, main::@exit())
-    BindMenuEvent(0, #MenuItem_AddMod, @modAddNewMod())
-    BindMenuEvent(0, #MenuItem_ExportList, @MenuItemExport())
-    BindMenuEvent(0, #MenuItem_ShowBackups, @backupFolder())
-    BindMenuEvent(0, #MenuItem_ShowDownloads, @modShowDownloadFolder())
-    BindMenuEvent(0, #MenuItem_RepositoryRefresh, @repoRefresh())
-    BindMenuEvent(0, #MenuItem_RepositoryClearCache, @repoClearCache())
-    BindMenuEvent(0, #MenuItem_Homepage, @MenuItemHomepage())
-    BindMenuEvent(0, #PB_Menu_About, @MenuItemLicense())
-    BindMenuEvent(0, #MenuItem_Log, @MenuItemLog())
-    BindMenuEvent(0, #MenuItem_Enter, @MenuItemEnter())
-    BindMenuEvent(0, #MenuItem_CtrlA, @MenuItemSelectAll())
-    BindMenuEvent(0, #MenuItem_PackNew, @MenuItemPackNew())
-    BindMenuEvent(0, #MenuItem_PackOpen, @MenuItemPackOpen())
+    BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
+    BindMenuEvent(menu, #PB_Menu_Quit, main::@exit())
+    BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
+    BindMenuEvent(menu, #MenuItem_ExportList, @MenuItemExport())
+    BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
+    BindMenuEvent(menu, #MenuItem_ShowDownloads, @modShowDownloadFolder())
+    BindMenuEvent(menu, #MenuItem_RepositoryRefresh, @repoRefresh())
+    BindMenuEvent(menu, #MenuItem_RepositoryClearCache, @repoClearCache())
+    BindMenuEvent(menu, #MenuItem_Homepage, @MenuItemHomepage())
+    BindMenuEvent(menu, #PB_Menu_About, @MenuItemLicense())
+    BindMenuEvent(menu, #MenuItem_Log, @MenuItemLog())
+    BindMenuEvent(menu, #MenuItem_Enter, @MenuItemEnter())
+    BindMenuEvent(menu, #MenuItem_CtrlA, @MenuItemSelectAll())
+    BindMenuEvent(menu, #MenuItem_CtrlF, @modFilterShow())
+    BindMenuEvent(menu, #MenuItem_PackNew, @MenuItemPackNew())
+    BindMenuEvent(menu, #MenuItem_PackOpen, @MenuItemPackOpen())
     
     SetGadgetText(gadget("version"), main::VERSION$)
+    
     
     ; OS specific
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
-        SetWindowTitle(window, GetWindowTitle(window) + " for Windows")
-        ListIcon::DefineListCallback(gadget("modList"))
+        
       CompilerCase #PB_OS_Linux
-        SetWindowTitle(window, GetWindowTitle(window) + " for Linux")
+        
       CompilerCase #PB_OS_MacOS
-        SetWindowTitle(window, GetWindowTitle(window) + " for MacOS")
+        
     CompilerEndSelect
     
     
@@ -1480,6 +1750,7 @@ Module windowMain
     If main::_TESTMODE
       SetWindowTitle(window, GetWindowTitle(window) + " (Test Mode Enabled)")
     EndIf
+    
     
     ; fonts...
     Protected fontMono = LoadFont(#PB_Any, "Courier", misc::getDefaultFontSize())
@@ -1489,7 +1760,7 @@ Module windowMain
     ; load images
     ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), GadgetHeight(gadget("headerMain")), #PB_Image_Raw)
     SetGadgetState(gadget("headerMain"), ImageID(images::Images("headermain")))
-    SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
+;     SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
     
     
     ; right click menu on mod item
@@ -1514,9 +1785,10 @@ Module windowMain
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
-    
-    ; register mods module
-    mods::register(window, gadget("modList"), gadget("modFilterString"), gadget("modFilterHidden"), gadget("modFilterVanilla"), gadget("modFilterFolder"))
+    ; mod module
+    mods::BindEventCallback(mods::#CallbackNewMod, @modCallbackNewMod())
+    mods::BindEventCallback(mods::#CallbackRemoveMod, @modCallbackRemoveMod())
+    mods::BindEventCallback(mods::#CallbackStopDraw, @modCallbackStopDraw())
     
     
     ; register to repository module
@@ -1537,6 +1809,69 @@ Module windowMain
     repository::init() ; only starts thread -> returns quickly
     
     
+    
+    ;- Filter Dialog
+    dialogFilter = CreateDialog(#PB_Any)
+    If Not dialogFilter Or Not OpenXMLDialog(dialogFilter, xml, "modFilter", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+      MessageRequester("Critical Error", "Could not open filter dialog!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    windowFilter = DialogWindow(dialogFilter)
+    BindEvent(#PB_Event_CloseWindow, @modFilterClose(), windowFilter)
+    BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), windowFilter)
+    menuFilter = CreateMenu(#PB_Any, WindowID(windowFilter)) ; menu required for shortcuts
+    AddKeyboardShortcut(windowFilter, #PB_Shortcut_Return, 1000)
+    AddKeyboardShortcut(windowFilter, #PB_Shortcut_Escape, 1000)
+    BindMenuEvent(menuFilter, 1000, @modFilterClose())
+    SetGadgetText(DialogGadget(dialogFilter, "modFilterString"), "")
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterTF"), settings::getInteger("filter", "tf"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterVanilla"), settings::getInteger("filter", "vanilla"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterHidden"), settings::getInteger("filter", "hidden"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterWorkshop"), settings::getInteger("filter", "workshop"))
+    SetGadgetState(DialogGadget(dialogFilter, "modFilterStaging"), settings::getInteger("filter", "staging"))
+    ; bind events
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterString"), @modFilterChange(), #PB_EventType_Change)
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterTF"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterVanilla"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterHidden"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterWorkshop"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(dialogFilter, "modFilterStaging"), @modFilterChange())
+    ; apply initial filtering
+    modFilterChange()
+    
+    
+    ;- Sort Dialog
+    dialogSort = CreateDialog(#PB_Any)
+    If Not dialogSort Or Not OpenXMLDialog(dialogSort, xml, "modSort", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+      MessageRequester("Critical Error", "Could not open sort dialog!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    windowSort = DialogWindow(dialogSort)
+    ; bind window events
+    BindEvent(#PB_Event_CloseWindow, @modSortClose(), windowSort)
+    BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), windowSort)
+    ; use window menu for keyboard shortcuts
+    menuSort = CreateMenu(#PB_Any, WindowID(windowSort)) ; menu required for shortcuts
+    AddKeyboardShortcut(windowSort, #PB_Shortcut_Return, 1000)
+    AddKeyboardShortcut(windowSort, #PB_Shortcut_Escape, 1000)
+    BindMenuEvent(menuSort, 1000, @modSortClose())
+    ; sorting options
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Mod Name")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Author Name")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Installation Date")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Folder Size")
+    AddGadgetItem(DialogGadget(dialogSort, "modSortBox"), -1, "Folder Name")
+    SetGadgetState(DialogGadget(dialogSort, "modSortBox"), 0)
+    RefreshDialog(dialogSort)
+    BindGadgetEvent(DialogGadget(dialogSort, "modSortBox"), @modSortChange())
+    ; load settings
+    SetGadgetState(DialogGadget(dialogSort, "modSortBox"), settings::getInteger("sort", "mode"))
+    ; apply initial sorting
+    modSortChange()
+    
+    
+    
+    
     ; init gui texts and button states
     updateModButtons()
     updateRepoButtons()
@@ -1545,6 +1880,7 @@ Module windowMain
     ; apply sizes
     RefreshDialog(dialog)
     resize()
+    navBtnMods()
     
     UnuseModule locale
   EndProcedure
@@ -1558,8 +1894,6 @@ Module windowMain
     For i = 0 To ArraySize(widths())
       If widths(i)
         SetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, widths(i), i)
-        ; Sorting
-        ListIcon::SetColumnFlag(gadget("modList"), i, ListIcon::#String)
       EndIf
     Next
   EndProcedure
