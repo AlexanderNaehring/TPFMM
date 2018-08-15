@@ -39,7 +39,7 @@ Module mods
   Global NewList queue.queue()
   
   Prototype callbackNewMod(*mod.mod)
-  Prototype callbackRemoveMod(modID$)
+  Prototype callbackRemoveMod(*mod.mod)
   Prototype callbackStopDraw(stop)
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
@@ -1271,6 +1271,15 @@ Module mods
         doBackup(id$)
       EndIf
       
+      If Not canUninstall(*installedMod)
+        debugger::add("mods::doInstall() - WARNING: existing mod must not be uninstalled...")
+        debugger::add("mods::doInstall() - continue with overwrite")
+      EndIf
+      
+      If callbackRemoveMod
+        callbackRemoveMod(*installedMod) ; send pointe for removal, attention: pointer already invalid
+      EndIf
+      
       ; remove mod from internal map.
       LockMutex(mutexMods)
       DeleteMapElement(mods(), id$)
@@ -1356,8 +1365,12 @@ Module mods
     debugger::Add("mods::doInstall() - finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     
-    ; TODO
     ; callback add mod
+    
+    If callbackNewMod
+      callbackNewMod(*mod)
+    EndIf
+    
     debugger::Add("mods::doInstall() - finished")
     
     
@@ -1375,7 +1388,7 @@ Module mods
     
     Protected *mod.mod
     LockMutex(mutexMods)
-    *mod = mods(id$)
+    *mod = FindMapElement(mods(), id$)
     UnlockMutex(mutexMods)
     
     If Not *mod
@@ -1408,8 +1421,10 @@ Module mods
     
     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
     
-    ; TODO
     ; callback remove mod
+    If callbackRemoveMod
+      callbackRemoveMod(*mod) ; send pointe for removal, attention: pointer already invalid
+    EndIf
     
     ProcedureReturn #True
   EndProcedure

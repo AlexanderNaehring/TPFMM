@@ -529,6 +529,22 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure modUpdateAll()
+    Protected *mod.mods::mod
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
+    Protected i
+    
+    If *modList\GetAllItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        *mod = *item\GetUserData()
+        mods::update(*mod\tpf_id$)
+      Next
+    EndIf
+    
+  EndProcedure
+  
   Procedure modBackup()
     Protected *mod.mods::mod
     Protected *item.CanvasList::CanvasListItem
@@ -760,40 +776,6 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure modUpdateAll()
-    debugger::add("windowMain::modUpdateAll()")
-    Protected *mod.mods::mod
-    Protected *item.CanvasList::CanvasListItem
-    Protected Dim *items(0)
-    Protected i
-    
-    ; just for DEBUG! / WIP
-    Debug "#### ALL ITEMS:"
-    If *modList\GetAllItems(*items())
-      For i = 0 To ArraySize(*items())
-        *item = *items(i)
-        *mod = *item\GetUserData()
-        Debug ~"\t"+*mod\tpf_id$
-      Next
-    Else
-      Debug "no items"
-    EndIf
-    
-    Debug "#### SELECTED ITEMS:"
-    If *modList\GetAllSelectedItems(*items())
-      For i = 0 To ArraySize(*items())
-        *item = *items(i)
-        *mod = *item\GetUserData()
-        Debug ~"\t"+*mod\tpf_id$
-      Next
-    Else
-      Debug "no items selected"
-    EndIf
-    
-    Debug "####"
-  EndProcedure
-  
-  
   Procedure modIconInfo(*item.CanvasList::CanvasListItem)
     Protected *mod.mods::mod = *item\GetUserData()
     modInformation::modInfoShow(*mod, WindowID(window))
@@ -845,15 +827,29 @@ Module windowMain
   
   Procedure modCallbackNewMod(*mod.mods::mod)
     Debug "# DISPLAY MOD: "+*mod\tpf_id$
+    
     Protected *item.CanvasList::CanvasListItem
     *item = *modList\AddItem(*mod\name$+#LF$+mods::getAuthorsString(*mod), *mod)
     *item\SetImage(mods::getPreviewImage(*mod))
     ;TODO link *item to mod?
   EndProcedure
   
-  Procedure modCallbackRemoveMod(modID$)
-    Debug "# REMOVE MOD: "+modID$
-    ; TODO
+  Procedure modCallbackRemoveMod(*mod)
+    Debug "# REMOVE MOD"
+    
+    Protected *item.CanvasList::CanvasListItem
+    Protected Dim *items(0)
+    Protected i
+    
+    If *modList\GetAllItems(*items())
+      For i = 0 To ArraySize(*items())
+        *item = *items(i)
+        If *mod = *item\GetUserData()
+          *modList\RemoveItem(*item)
+          Break
+        EndIf
+      Next
+    EndIf
   EndProcedure
   
   Procedure modCallbackStopDraw(stop)
