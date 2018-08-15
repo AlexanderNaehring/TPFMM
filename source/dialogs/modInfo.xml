@@ -1,54 +1,48 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <dialogs>
-  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='400' minheight='400' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
+  <window id='#PB_Any' name='modInfo' text='mod info' minwidth='455' minheight='400' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='item:3' spacing='2'> <!-- item:3 = description -->
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0'>
         <vbox colums='2' spacing='0' expand='no'>
-          <canvas name='top' height='5' />
-          <text name='name' text=' ' flags='#PB_Text_Center' />
-          <canvas name='bar' height='6' />
+          <canvas name='top' height='6' />
+          <canvas name='bar' height='4' />
         </vbox>
       </singlebox>
-      <scrollarea scrolling='horizontal' innerheight='auto' innerwidth='auto' flags='#PB_ScrollArea_BorderLess'>
-        <hbox id='infoBoxAuthors' expand='equal' spacing='15'>
-        </hbox>
-      </scrollarea>
 
-      <frame name='descriptionLabel' text=' '>
-        <editor name='description' text=' ' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' height='100' />
-      </frame>
-      <frame name='info' text=' '>
+      <vbox expand='item:3'>
+        <singlebox expand='no' align='center' margin='top:5,bottom:0,horizontal:0'>
+          <image name='image' id='image' />
+        </singlebox>
+        <scrollarea scrolling='horizontal' innerheight='auto' innerwidth='auto' flags='#PB_ScrollArea_BorderLess'>
+          <hbox id='infoBoxAuthors' expand='equal' spacing='15'>
+          </hbox>
+        </scrollarea>
+        <frame name='descriptionLabel' text=' '>
+          <editor name='description' text=' ' flags='#PB_Editor_WordWrap|#PB_Editor_ReadOnly' height='100' />
+        </frame>
+        <frame name='info' text=' '>
+          <hbox expand='item:2'>
+            <vbox expand='no'>
+              <gridbox colexpand='item:2' rowexpand='no' columns='2'>
+                <text name='folderLabel' text=' ' />
+                <hyperlink name='folder' text=' ' />
+                <text name='tagsLabel' text=' ' />
+                <text name='tags' text=' ' />
+                <text name='dependenciesLabel' text=' ' />
+                <hbox id='infoBoxDependencies' expand='no'></hbox>
+                <text name='sizeLabel' text=' ' />
+                <text name='size' text=' ' />
+              </gridbox>
+            </vbox>
+          </hbox>
+        </frame>
         <hbox expand='item:2'>
-          <vbox expand='no'>
-            <gridbox colexpand='item:2' rowexpand='no' columns='2'>
-              <!--
-              <text name='uuidLabel' text=' ' />
-              <text name='uuid' text=' ' />
-              -->
-              <text name='folderLabel' text=' ' />
-              <hyperlink name='folder' text=' ' />
-              <text name='tagsLabel' text=' ' />
-              <text name='tags' text=' ' />
-              <text name='dependenciesLabel' text=' ' />
-              <hbox id='infoBoxDependencies' expand='no'></hbox>
-              <!--
-              <text name='filesLabel' text=' ' />
-              <text name='files' text=' ' />
-              -->
-              <text name='sizeLabel' text=' ' />
-              <text name='size' text=' ' />
-            </gridbox>
-          </vbox>
+          <text name='sourcesLabel' text=' '/>
+          <hbox id='infoBoxSources' expand='no'></hbox>
         </hbox>
-      </frame>
-      <empty />
-      <hbox expand='item:1'>
         <button name='modSettings' text=' ' disabled='yes'/>
-      </hbox>
-      <hbox expand='item:2'>
-        <text name='sourcesLabel' text=' '/>
-        <hbox id='infoBoxSources' expand='no'></hbox>
-      </hbox>
+      </vbox>
+
       <!--
         <hbox expand='item:1'>
           <empty />
