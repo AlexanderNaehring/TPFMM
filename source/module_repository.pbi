@@ -1,1549 +1,887 @@
 ﻿XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_aes.pbi"
 XIncludeFile "module_locale.pbi"
 
 XIncludeFile "module_repository.h.pbi"
 
 Module repository
-  ;TODO: event number has to be unique in windowMain... 
-  #EventShowUpdate = #PB_Event_FirstCustomValue+10
+  UseModule debugger
   
-  Enumeration ; column data type
-    #COL_INT
-    #COL_STR
-  EndEnumeration
-  Structure column_info Extends column
-    offset.i
-    type.i
+  ;{ VT
+  
+  DataSection
+    vtMod:
+    Data.i @modGetName()
+    Data.i @modGetVersion()
+    Data.i @modGetAuthor()
+    Data.i @modGetFiles()
+    Data.i @modIsInstalled()
+    Data.i @modGetSource()
+    Data.i @modCanDownload()
+    Data.i @modDownload()
+    Data.i @modGetLink()
+    Data.i @modGetThumbnailUrl()
+    Data.i @modGetThumbnailFile()
+    Data.i @modGetThumbnailAsync()
+    Data.i @modGetTimeChanged()
+    Data.i @modGetWebsite()
+    Data.i @modSetThumbnailImage()
+    
+    vtFile:
+    Data.i @fileGetMod()
+    Data.i @fileisInstalled()
+    Data.i @fileCanDownload()
+    Data.i @fileDownload()
+    Data.i @fileGetLink()
+    Data.i @fileGetFolderName()
+  EndDataSection
+  
+  ;}
+  
+  ;{ Structures
+  
+  Structure file
+    *vt.RepositoryFile
+    *mod  ; link to "parent" mod
+    
+    fileid.q
+    filename$         ; 
+    url$              ; url to download this file
+    timechanged.i     ; last time this file was changed
+    foldername$       ; the name of the modfolder (after install)
   EndStructure
-  Structure type ; type information (for filtering)
-    key$
-    localized$
+  
+  Structure mod ; each mod in the list has these information
+    *vt.RepositoryMod ; OOP interface table
+    
+    source$
+    id.q
+    name$
+    author$
+    authorid.i
+    version$
+    type$
+    url$
+    thumbnail$
+    timecreated.i
+    timechanged.i
+    List files.file()
+    List tags$()
+    List tagsLocalized$()
+    
+    ; local stuff
+    installSource$ ; used when installing after download
+    thumbnailImage.i
   EndStructure
   
-  Global NewMap repo_mods.repo_mods()
-  Global NewList repositories.repository()
-  Global mutexRepoMods = CreateMutex() ; coordinate access to "repo_mods()" map
+  Structure repo_info ; information about the mod repository
+    name$
+    source$
+    description$
+    maintainer$
+    info_url$
+    terms$
+    changed.i
+  EndStructure
   
-  Global _windowMain, _listGadgetID, _thumbGadgetID, _filterGadgetID, _typeGadgetID, _sourceGadgetID, _installedGadgetID
-  Global Dim _columns.column_info(0)
-  Global currentImageURL$
-  Global NewList stackDisplayThumbnail$(), mutexStackDisplayThumb = CreateMutex()
-  Global Dim type.type(0) ; type information (for filtering)
-  Global _DISABLED = #False
-  Global _UPDATE_URL$ = ""
-  
-  Global NewMap settingsGadget()
-  
-  #DIRECTORY = "repositories"
-  CreateDirectory(#DIRECTORY) ; subdirectory used for all repository related files
-  CreateDirectory(#DIRECTORY + "/thumbnails")
+  Structure modRepository ; the repository.json file
+    repo_info.repo_info
+    mod_base_url$
+    file_base_url$
+    thumbnail_base_url$
+    List mods.mod()
+  EndStructure
   
   
-  ; Create repository list file if not existing and add basic repository
-  If FileSize(#DIRECTORY+"/repositories.list") <= 0
-    debugger::add("repository::init() - create repositories.list")
-    Define file
-    file = CreateFile(#PB_Any, #DIRECTORY+"/repositories.list")
-    If file
-      CloseFile(file)
+  Structure thumbnailAsync
+    *mod.mod
+    callback.CallbackThumbnail
+    *userdata
+  EndStructure
+  
+  Prototype callbackQueue(*userdata)
+  Structure queue
+    callback.callbackQueue
+    *userdata
+  EndStructure
+  ;}
+  
+  ;{ Globals
+  
+  Global NewMap ModRepositories.modRepository() ; allow multiple repositories -> use map, with repository URL as key
+  Global NewMap *filesByFoldername.mod()        ; pointer to original mods in ModRepositories\mods() with foldername as key
+  Global mutexMods = CreateMutex(),
+         mutexFilesMap = CreateMutex()
+         
+  Global CallbackAddMods.CallbackAddMods
+  Global CallbackClearList.CallbackClearList
+  Global CallbackRefreshFinished.CallbackRefreshFinished
+  
+  Global CallbackEventClearList
+  
+  Global *queueThread, queueStop.b,
+         mutexQueue = CreateMutex()
+  Global NewList queue.queue()
+  
+  ;}
+  
+  ;{ init
+  #RepoDirectory$ = "repositories"
+  #RepoCache$     = #RepoDirectory$ + "/cache"
+  #RepoListFile$  = #RepoDirectory$ + "/repositories.txt"
+  #RepoDownloadTimeout = 1000 ; timeout for downloads in milliseconds
+    
+  Procedure init()
+    CreateDirectory(#RepoDirectory$)
+    CreateDirectory(#RepoCache$)
+    
+    If FileSize(#RepoListFile$) <= 0
+      Define file
+      file = CreateFile(#PB_Any, #RepoListFile$)
+      If file
+        CloseFile(file)
+      EndIf
     EndIf
-  EndIf
+    
+    InitNetwork()
+    UseMD5Fingerprint()
+    UsePNGImageDecoder()
+    UseJPEGImageDecoder()
+    UseJPEGImageEncoder()
+  EndProcedure
   
-  If Not InitNetwork()
-    debugger::add("repository::init() - ERROR initializing network")
-    End
-  EndIf
-  UseMD5Fingerprint()
+  init()
+  ;}
+  
   
   ;----------------------------------------------------------------------------
-  ;--------------------------------- PRIVATE ----------------------------------
+  ;---------------------------- PRIVATE FUNCTIONS -----------------------------
   ;----------------------------------------------------------------------------
+  
+  Procedure WriteSourcesFile(List sources$())
+    Protected file
+    file = CreateFile(#PB_Any, #RepoListFile$)
+    If file
+      ForEach sources$()
+        WriteStringN(file, sources$(), #PB_UTF8)
+      Next
+      CloseFile(file)
+    Else
+      deb("repository:: could not access file "+#RepoListFile$)
+    EndIf
+    ProcedureReturn Bool(file)
+  EndProcedure
   
   Procedure.s getRepoFileName(url$)
-    ProcedureReturn #DIRECTORY + "/" + Fingerprint(@url$, StringByteLength(url$), #PB_Cipher_MD5) + ".json"
+    ProcedureReturn #RepoDirectory$ + "/" + Fingerprint(@url$, StringByteLength(url$), #PB_Cipher_MD5) + ".json"
   EndProcedure
   
   Procedure.s getThumbFileName(url$)
-    Protected name$, ext$
-    
+    Protected name$
     If url$
       name$ = Fingerprint(@url$, StringByteLength(url$), #PB_Cipher_MD5)
-      ext$ = GetExtensionPart(url$)
-      If ext$
-        ext$ = "." + ext$
-      EndIf
-      ProcedureReturn #DIRECTORY + "/thumbnails/" + Left(name$, 2) + "/" + name$ + ext$
+      ProcedureReturn #RepoCache$ + "/" + Left(name$, 2) + "/" + name$ + ".jpg"
     Else
       ProcedureReturn ""
     EndIf
   EndProcedure
   
-  Procedure updateSourceGadget() ; add currently known sources to the gadget dropdown
-    Protected item
-    If Not _sourceGadgetID Or Not IsGadget(_sourceGadgetID)
+  Procedure downloadToMemory(url$, timeout=#RepoDownloadTimeout)
+    ; TODO timeout custom function with timeout causes IMA on Win7...
+    ; workaround use default download function
+    ProcedureReturn ReceiveHTTPMemory(url$, 0, main::VERSION_FULL$)
+    
+    Protected con, progress,
+              lastBytes, time,
+              *buffer
+    
+    con = ReceiveHTTPMemory(url$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
+    If con
+      time = ElapsedMilliseconds()
+      Repeat
+        progress = HTTPProgress(con)
+        If progress < 0 ; #PB_Http_Success Or #PB_Http_Failed Or #PB_Http_Aborted
+          *buffer = FinishHTTP(con)
+          Break
+        EndIf
+        
+        If progress = lastBytes
+          If ElapsedMilliseconds() - time > #RepoDownloadTimeout
+            deb("repository:: timeout "+url$)
+            AbortHTTP(con)
+          EndIf
+        Else
+          lastBytes = progress
+          time = ElapsedMilliseconds()
+        EndIf
+        
+        Delay(50)
+      ForEver
+    Else
+      deb("repository:: error "+url$)
+    EndIf
+    
+    If progress = #PB_Http_Success
+      ProcedureReturn *buffer
+    Else
+      ProcedureReturn #Null
+    EndIf
+  EndProcedure
+  
+  Procedure saveMemoryToFile(*buffer, file$)
+    Protected file
+    file = CreateFile(#PB_Any, file$)
+    If file
+      WriteData(file, *buffer, MemorySize(*buffer))
+      CloseFile(file)
+      ProcedureReturn MemorySize(*buffer)
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure openRepositoryFile(url$)
+    Protected file$, *buffer,
+              json, *value,
+              *modRepository.modRepository,
+              NewList *mods.RepositoryMod()
+    
+    file$ = getRepoFileName(url$)
+    
+    ; download
+    *buffer = downloadToMemory(url$)
+    If *buffer
+      saveMemoryToFile(*buffer, file$)
+      FreeMemory(*buffer)
+    Else
+      deb("repository:: download failed: "+url$)
+    EndIf
+    
+    ; check file
+    If FileSize(file$) <= 0
+      deb("repository:: "+file$+" for url "+url$+" does not exist or is empty")
       ProcedureReturn #False
     EndIf
     
-    ClearGadgetItems(_sourceGadgetID)
-    AddGadgetItem(_sourceGadgetID, 0, locale::l("repository", "all_sources"))
-    item = 1
-    LockMutex(mutexRepoMods)
-    ForEach repo_mods()
-      AddGadgetItem(_sourceGadgetID, item, repo_mods()\repo_info\name$)
-      SetGadgetItemData(_sourceGadgetID, item, repo_mods()\repo_info)
-      item + 1
-    Next
-    UnlockMutex(mutexRepoMods)
-    SetGadgetState(_sourceGadgetID, 0)
-    
-  EndProcedure
-  
-  Procedure downloadRepository(url$)
-    debugger::add("repository::downloadRepository("+url$+")")
-    Protected file$, time
-    
-    file$ = getRepoFileName(url$)
-    
-    time = ElapsedMilliseconds()
-    DeleteFile(file$+".tmp")
-    If ReceiveHTTPFile(url$, file$+".tmp", 0, main::VERSION_FULL$)
-      If FileSize(file$)
-        DeleteFile(file$)
-      EndIf
-      RenameFile(file$+".tmp", file$)
-      debugger::add("repository::downloadRepository() - download successfull ("+Str(ElapsedMilliseconds()-time)+" ms)")
-      ProcedureReturn #True
-    EndIf
-    If FileSize(file$+".tmp")
-      DeleteFile(file$+".tmp")
-    EndIf
-    debugger::add("repository::downloadRepository() - ERROR: failed to download repository")
-    ProcedureReturn #False
-    
-  EndProcedure
-  
-  Procedure loadRepositoryMods(url$, enc$ = "")
-    Protected file$ ; parameter: URL -> calculate local filename from url
-    file$ = getRepoFileName(url$)
-    debugger::add("repository::loadRepositoryMods() "+url$)
-    
-    Protected json, value, mods
-    
-    If FileSize(file$) < 0
-      debugger::add("repository::loadRepositoryMods() - download: "+url$)
-      If Not downloadRepository(url$)
-        ; download failed
-        ProcedureReturn #False 
-      EndIf
-    EndIf
-    
-    Select enc$
-      Case "aes_1"
-        debugger::add("repository::loadRepositoryMods() - using AES decryption")
-        Protected size, file, *buffer
-        size = FileSize(file$)
-        file = ReadFile(#PB_Any, file$)
-        If Not file
-          debugger::add("repository::loadRepositoryMods() - ERROR: cannot read file")
-          ProcedureReturn #False
-        EndIf
-        
-        *buffer = AllocateMemory(size)
-        ReadData(file, *buffer, size)
-        CloseFile(file)
-        aes::decrypt(*buffer, size)
-        json = CatchJSON(#PB_Any, *buffer, size)
-        FreeMemory(*buffer)
-        
-      Default
-        json = LoadJSON(#PB_Any, file$)
-    EndSelect
-    
+    ; read JSON
+    json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("repository::loadRepositoryMods() - ERROR: could not parse JSON")
+      deb("repository:: could not parse JSON from "+url$)
       DeleteFile(file$)
       ProcedureReturn #False
     EndIf
     
-    
-    value = JSONValue(json)
-    If JSONType(value) <> #PB_JSON_Object 
-      debugger::add("repository::loadRepositoryMods() - ERROR: mods repository should be of type JSON object")
+    ; check JSON
+    *value = JSONValue(json)
+    If JSONType(*value) <> #PB_JSON_Object 
+      deb("repository:: invalid JSON type in "+url$)
+      FreeJSON(json)
       ProcedureReturn #False
     EndIf
     
-    ; load JSON into memory:
-    ; repository information and complete list of mods
-    LockMutex(mutexRepoMods)
-    ExtractJSONStructure(value, repo_mods(url$), repo_mods)
+    LockMutex(mutexMods)
     
-    ; Sort list for last modification time
-    If ListSize(repo_mods(url$)\mods())
-      SortStructuredList(repo_mods(url$)\mods(), #PB_Sort_Descending, OffsetOf(mod\timechanged), TypeOf(mod\timechanged))
+    ; check if repo already loaded
+    *modRepository = FindMapElement(ModRepositories(), url$)
+    If *modRepository
+      deb("repository:: "+url$+" already loaded")
+      FreeJSON(json)
+      UnlockMutex(mutexMods)
+      ProcedureReturn #False
     EndIf
     
-    ; postprocess some structure fields
-    With repo_mods(url$)\mods()
-      ForEach repo_mods(url$)\mods()
-        ; add base url to mod url
-        If \url$
-          If repo_mods(url$)\mod_base_url$
-            \url$ = repo_mods(url$)\mod_base_url$ + \url$
-          EndIf
-        Else
-          If \url$ = ""
-            If \source$ = "workshop"
-              \url$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+\id
-            ElseIf \source$ = "tpfnet"
-              \url$ = "https://www.transportfever.net/filebase/index.php/Entry/"+\id
-            EndIf
-          EndIf
+    ; load repository
+    *modRepository = AddMapElement(ModRepositories(), url$)
+    ExtractJSONStructure(*value, *modRepository, ModRepository)
+    
+    
+    ; process
+    If *modRepository\repo_info\source$
+      ; TODO check if source name is already used, cannot have two sources with same name
+    Else
+      deb("repository:: "+url$+" has no source information")
+    EndIf
+    
+    
+    ForEach *modRepository\mods()
+      With *modRepository\mods()
+        ; mod vt
+        \vt = ?vtMod
+        ; source
+        \source$ = *modRepository\repo_info\source$
+        ; mod url
+        If \url$ And *modRepository\mod_base_url$
+          \url$ = *modRepository\mod_base_url$ + \url$
         EndIf
-        ; add base url to mod thumbnail
-        If \thumbnail$
-          If repo_mods(url$)\thumbnail_base_url$
-            \thumbnail$ = repo_mods(url$)\thumbnail_base_url$ + \thumbnail$
+        ; thumbnail
+        If \thumbnail$ And *modRepository\thumbnail_base_url$
+          \thumbnail$ = *modRepository\thumbnail_base_url$ + \thumbnail$
+        EndIf
+        ; files
+        ForEach \files()
+          \files()\vt = ?vtFile
+          \files()\mod = *modRepository\mods() ; store "parent" mod for file
+          If \files()\url$ And *modRepository\file_base_url$
+            \files()\url$ = *modRepository\file_base_url$ + \files()\url$
           EndIf
-        EndIf
-        ; add base url to all files
-        If repo_mods(url$)\file_base_url$
-          ForEach \files()
-            If \files()\url$
-              \files()\url$ = repo_mods(url$)\file_base_url$ + \files()\url$
-            EndIf
-          Next
-        EndIf
+        Next
+        ; tags
         ClearList(\tagsLocalized$())
         ForEach \tags$()
           AddElement(\tagsLocalized$())
           \tagsLocalized$() = locale::l("tags", \tags$())
         Next
-      Next
-    EndWith
-    
-    debugger::add("repository::loadRepositoryMods() - " + Str(ListSize(repo_mods(url$)\mods())) + " mods in repository")
-    
-    UnlockMutex(mutexRepoMods)
-    
-    updateSourceGadget(); add this repository as new source
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure thumbnailThread(*dummy)
-    ; waits for new entries in queue and displays them to the registered image gadget
-    ; debugger::add("repository::thumbnailThread()")
-    
-    Protected url$, file$
-    Protected image
-    Protected scale.d
-    Static NewMap images()
-    Static NewMap downloading()
-    
-    LockMutex(mutexStackDisplayThumb)
-    If ListSize(stackDisplayThumbnail$()) <= 0
-      ; no element waiting in stack
-      UnlockMutex(mutexStackDisplayThumb)
-      ProcedureReturn #False
-    EndIf
-    
-    ; display (and if needed download) image from top of the stack (LiFo)
-    LastElement(stackDisplayThumbnail$())
-    url$ = stackDisplayThumbnail$()
-    DeleteElement(stackDisplayThumbnail$())
-    UnlockMutex(mutexStackDisplayThumb)
-    
-    If FindMapElement(downloading(), url$)
-      ; already downloading, skip here!
-      ProcedureReturn #False
-    EndIf
-    
-    file$ = getThumbFileName(url$)
-    ; debugger::add("repository::thumbnailThread() - display image url={"+url$+"}, file={"+file$+"}")
-    If file$ = ""
-      debugger::add("repository::thumbnailThread() - ERROR: thumbnail filename not defined")
-      ProcedureReturn #False
-    EndIf
-    
-    
-    If FindMapElement(images(), file$) And images(file$) And IsImage(images(file$))
-      ; image already loaded in memory
-      image = images(file$)
-    Else
-      ; try to load file from disk if available
-      If FileSize(file$) > 0
-        image = LoadImage(#PB_Any, file$)
-      Else
-        image = #Null
-      EndIf
-      If image And IsImage(image)
-        images(file$) = image
-      Else ; could not load from disk
-        image = #Null
-        ; download image
-        downloading(url$) = #True
-        CreateDirectory(GetPathPart(file$))
-        ReceiveHTTPFile(url$, file$, 0, main::VERSION_FULL$)
-        If FileSize(file$) > 0
-          image = LoadImage(#PB_Any, file$)
-          If image And IsImage(image)
-            images(file$) = image
-          Else
-            DeleteFile(file$)
-            debugger::add("repository::thumbnailThread() - ERROR: could not load image {"+file$+"}")
-          EndIf
-        Else
-          debugger::add("repository::thumbnailThread() - ERROR: download failed: {"+url$+"} -> {"+file$+"}")
-        EndIf
-        DeleteMapElement(downloading(), url$)
-      EndIf
-    EndIf
-    
-    If Not image Or Not _thumbGadgetID Or Not IsGadget(_thumbGadgetID)
-      ProcedureReturn #False
-    EndIf
-    
-    If ImageWidth(image) <> GadgetWidth(_thumbGadgetID)
-      ; TODO also check height
-      scale = GadgetWidth(_thumbGadgetID)/ImageWidth(image)
-      ResizeImage(image, ImageWidth(image) * scale, ImageHeight(image) * scale)
-    EndIf
-    
-    ; check if image that is being handled in this thread is still the current image
-    ; user may have selected a different mod while this thread was downloading an image
-    If currentImageURL$ = url$
-      SetGadgetState(_thumbGadgetID, ImageID(image))
-    EndIf
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure handleEventList() ; click on list gadget
-    Protected *mod.mod
-    Protected selected
-    selected = GetGadgetState(EventGadget())
-    *mod = #Null
-    If selected <> -1
-      *mod = GetGadgetItemData(EventGadget(), selected)
-    EndIf
-    If *mod
-      Select EventType() 
-        Case #PB_EventType_LeftDoubleClick
-          If *mod\url$
-            misc::openLink(*mod\url$)
-          EndIf
-        Case #PB_EventType_Change
-          displayThumbnail(*mod\thumbnail$)
-      EndSelect
-    EndIf
-  EndProcedure
-  
-  Procedure downloadThread(*download.download)
-    If Not *download Or *download\source$ = "" Or Not *download\id
-      ProcedureReturn #False
-    EndIf
-    
-    Protected installSource$
-    Protected source$, id.q, fileID.q
-    source$ = *download\source$
-    id      = *download\id
-    fileID  = *download\fileID
-    FreeStructure(*download)
-    installSource$ = source$+"/"+id+"/"+FileID
-    
-    ;TODO: allow direct download of HTTP(S) link
-    ; if source == a loaded source
-    ; if source = http(s)://...... -> direct download
-    ;
-    ; e.g. getRepoBySource(source$)...
-    ; if no repo found -> try direct download...
-    
-    Protected *mod.mod, *file.file
-    *mod = getModByID(source$, id)
-    *file = getFileByID(*mod, fileID) ; returns vaid pointer even if fileID = 0 when only one file in mod
-    
-    If Not *mod
-      debugger::add("repository::downloadModThread() - Error: could not find modID /"+source$+"/"+id)
-      ProcedureReturn #False
-    EndIf
-    If Not canDownloadMod(*mod)
-      debugger::add("repository::downloadModThread() - Error: cannot download mod")
-      ProcedureReturn #False
-    EndIf
-    If Not *file
-      debugger::add("repository::downloadModThread() - Error: could not find fileID /"+source$+"/"+id+"/"+fileID)
-      ProcedureReturn #False
-    EndIf
-    If Not canDownloadFile(*file)
-      debugger::add("repository::downloadModThread() - Error: cannot download file")
-      ProcedureReturn #False
-    EndIf
-    
-    
-    
-    ; wait for other threads to finish download...
-    Static runningMutex
-    If Not runningMutex 
-      runningMutex = CreateMutex()
-    EndIf
-    LockMutex(runningMutex)
-    
-    Protected NewMap strings$()
-    strings$("modname") = *mod\name$
-    
-    windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_start", strings$()))
-    
-    ; start process...
-    Protected connection, size.q, downloaded.q, progress.q, finish
-    Protected target$, file$, header$
-    Protected json
-    Protected HTTPstatus
-    Static regExpContentLength, regExpHTTPstatus
-    If Not regExpContentLength
-      regExpContentLength = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
-    EndIf
-    If Not regExpHTTPstatus
-      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/1.\d (\d\d\d)")
-    EndIf
-    
-    
-    If *file\filename$ = ""
-      *file\filename$ = Str(*mod\id)+".zip"
-    EndIf
-    
-    target$ = misc::Path(main::gameDirectory$ + "/TPFMM/download/")
-    misc::CreateDirectoryAll(target$)
-;     RunProgram(target$)
-    file$   = target$ + *file\filename$
-    
-    debugger::add("repository::downloadModThread() - {"+*file\url$+"}")
-    header$ = GetHTTPHeader(*file\url$, 0, main::VERSION_FULL$)
-    If header$
-      
-      ExamineRegularExpression(regExpHTTPstatus, header$)
-      If NextRegularExpressionMatch(regExpHTTPstatus)
-        HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
-        If HTTPstatus = 404
-          debugger::add("repository::downloadModThread() - server response: 404 File Not Found")
-          windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
-          UnlockMutex(runningMutex)
-          ProcedureReturn #False
-        ElseIf HTTPstatus = 429
-          debugger::add("repository::downloadModThread() - server response: 429 Too Many Requests")
-          windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_429", strings$()))
-          UnlockMutex(runningMutex)
-          ProcedureReturn #False
-        EndIf
-      EndIf
-      
-      ExamineRegularExpression(regExpContentLength, header$)
-      If NextRegularExpressionMatch(regExpContentLength)
-        size = Val(RegularExpressionGroup(regExpContentLength, 1))
-      EndIf
-      If size
-        debugger::add("repository::downloadModThread() - Content-Length: "+misc::printSize(size))
-      Else
-        ; no progress known...
-      EndIf
-    EndIf
-      
-    connection = ReceiveHTTPFile(*file\url$, file$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
-    windowMain::progressRepo(windowMain::#Progress_NoChange, locale::getEx("repository", "downloading", strings$()))
-    Repeat
-      progress = HTTPProgress(connection)
-      Select progress
-        Case #PB_Http_Success
-          downloaded = FinishHTTP(connection)
-          finish = #True
-        Case #PB_Http_Failed
-          debugger::add("repository::downloadModThread() - Error: download failed {"+*file\url$+"}")
-          finish = #True
-        Case #PB_Http_Aborted
-          debugger::add("repository::downloadModThread() - Error: download aborted {"+*file\url$+"}")
-          finish = #True
-        Default 
-          ; progess = bytes receiuved
-          If size
-            windowMain::progressRepo(100 * progress / size)
-          EndIf
-      EndSelect
-      Delay(50)
-    Until finish
-    
-    If size
-      windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_finish", strings$()))
-    Else
-      ; stop update
-    EndIf
-    
-    If Not downloaded
-      ; cleanup downlaod folder
-      debugger::add("repository::downloadModThread() - download failed")
-      windowMain::progressRepo(windowMain::#Progress_Hide, locale::getEx("repository", "download_fail", strings$()))
-      DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
-      UnlockMutex(runningMutex)
-      ProcedureReturn #False
-    EndIf
-    
-    debugger::add("repository::downloadModThread() - download complete")
-    
-    ; add some meta data...
-    json = CreateJSON(#PB_Any)
-    If json
-      *mod\installSource$ = installSource$
-      InsertJSONStructure(JSONValue(json), *mod, mod)
-      SaveJSON(json, file$+".meta", #PB_JSON_PrettyPrint)
-      FreeJSON(json)
-    EndIf
-    
-    mods::install(file$)
-    UnlockMutex(runningMutex)
-  EndProcedure
-  
-  Procedure checkInstalled()
-    Protected source$, id.i
-    Protected folderName$
-    
-    LockMutex(mutexRepoMods)
-    ForEach repo_mods()
-      ForEach repo_mods()\mods()
-        ForEach repo_mods()\mods()\files()
-          If repo_mods()\mods()\files()\foldername$
-            folderName$ = repo_mods()\mods()\files()\foldername$
-            repo_mods()\mods()\installed = mods::isInstalled(folderName$)
-          EndIf
-        Next
-        
-        ; additionally check based on source/id (e.g. if foldername was changed)
-        If Not repo_mods()\mods()\installed
-          source$ = repo_mods()\mods()\source$
-          id      = repo_mods()\mods()\id
-          
-          repo_mods()\mods()\installed = mods::isInstalledByRemote(source$, id)
-        EndIf
-      Next
-    Next
-    UnlockMutex(mutexRepoMods)
-    
-  EndProcedure
-  
-  Procedure showUpdate()
-    If MessageRequester(locale::l("repository","update"), locale::l("repository","update_text"), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-      If _UPDATE_URL$
-        misc::openLink(_UPDATE_URL$)
-      Else
-        misc::openLink(main::WEBSITE$)
-      EndIf
-      main::exit()
-    EndIf
-  EndProcedure
-  
-  Procedure loadRepository(*repository.repository)
-    Protected file$ ; parameter: URL -> calculate local filename from url
-    
-    file$ = getRepoFileName(*repository\url$)
-    debugger::add("repository::loadRepository() "+*repository\url$)
-    
-    Protected json, value
-    Protected age
-    
-    If _DISABLED
-      ProcedureReturn #False 
-    EndIf
-    
-    ; main repository: always request new version from server!
-    If Not downloadRepository(*repository\url$)
-      ProcedureReturn #False
-    EndIf
-    
-    
-    json = LoadJSON(#PB_Any, file$)
-    If Not json
-      debugger::add("repository::loadRepository() - ERROR opening main repository: "+JSONErrorMessage())
-      ProcedureReturn #False
-    EndIf
-    
-    value = JSONValue(json)
-    If JSONType(value) <> #PB_JSON_Object
-      debugger::add("repository::loadRepository() - Main Repository should be of type JSON Object")
-      ProcedureReturn #False
-    EndIf
-    
-    InitializeStructure(*repository\main_json, main_json)
-    ExtractJSONStructure(value, *repository\main_json, main_json) ; no return value
-    
-    If *repository\main_json\repository\name$ = ""
-      debugger::add("repository::loadRepository() - Basic information missing (name) -> Skip repository")
-      ProcedureReturn #False
-    EndIf
-    
-    debugger::add("repository::loadRepository() |---- Main Repository Info:")
-    debugger::add("repository::loadRepository() | Name: "+*repository\main_json\repository\name$)
-    debugger::add("repository::loadRepository() | Description: "+*repository\main_json\repository\description$)
-    debugger::add("repository::loadRepository() | Maintainer: "+*repository\main_json\repository\maintainer$)
-    debugger::add("repository::loadRepository() | URL: "+*repository\main_json\repository\url$)
-    debugger::add("repository::loadRepository() |----")
-    debugger::add("repository::loadRepository() | Mods Repositories: "+ListSize(*repository\main_json\mods()))
-    debugger::add("repository::loadRepository() |----")
-    
-    If *repository\url$ = #OFFICIAL_REPOSITORY$
-      ; in main repository, check for update of TPFMM
-      If *repository\main_json\TPFMM\build And 
-         *repository\main_json\TPFMM\build > #PB_Editor_CompileCount
-        debugger::add("repository::loadRepository() - TPFMM update available: "+*repository\main_json\TPFMM\version$)
-        
-        CopyStructure(*repository\main_json\TPFMM, TPFMM_UPDATE, tpfmm)
-        _UPDATE_URL$ = *repository\main_json\TPFMM\url$
-        BindEvent(#EventShowUpdate, @showUpdate(), _windowMain)
-        PostEvent(#EventShowUpdate, _windowMain, 0)
-        
-        ; disable repository features for outdated versions?
-        _DISABLED = #True
-        LockMutex(mutexRepoMods)
-        ClearMap(repo_mods())
-        UnlockMutex(mutexRepoMods)
-        ProcedureReturn #False
-      Else
-        debugger::add("repository::loadRepository() - TPFMM is up to date")
-      EndIf
-    EndIf
-    
-    
-    If ListSize(*repository\main_json\mods()) > 0
-      ForEach *repository\main_json\mods()
-        debugger::add("repository::loadRepository() - load mods repository {"+*repository\main_json\mods()\url$+"}...")
-        age = Date() - GetFileDate(getRepoFileName(*repository\main_json\mods()\url$), #PB_Date_Modified)
-        debugger::add("repository::loadRepository() - local age: "+Str(age)+", remote age: "+Str(*repository\main_json\mods()\age)+"")
-        If age > *repository\main_json\mods()\age
-          debugger::add("repository::loadRepository() - local repository not up to date")
-          DeleteFile(getRepoFileName(*repository\main_json\mods()\url$))
-        EndIf
-        ; Load mods from repository file
-        loadRepositoryMods(*repository\main_json\mods()\url$, *repository\main_json\mods()\enc$)
-      Next
-      
-      ProcedureReturn #True
-      
-    EndIf
-    
-    ProcedureReturn #False 
-  EndProcedure
-  
-  Procedure loadRepositoryList()
-    debugger::add("repository::loadRepositoryList()")
-    Protected file, time, success
-    
-    time = ElapsedMilliseconds()
-    
-    debugger::add("repository::loadRepositoryList() - clear cache and mods")
-    LockMutex(mutexRepoMods)
-    ; reset static search maps
-    getModByFoldername("-reset")
-    getModByLink("-reset")
-    getLinkByFoldername("-reset")
-    ; clean lists
-    ClearList(repositories())
-    ClearMap(repo_mods())
-    UnlockMutex(mutexRepoMods)
-    displayMods() ; show clean gadget list
-    
-    
-    ; always use official repository
-    AddElement(repositories())
-    repositories()\url$ = #OFFICIAL_REPOSITORY$
-    
-    ; add user defined repositories from file
-    file = ReadFile(#PB_Any, #DIRECTORY+"/repositories.list", #PB_File_SharedRead)
-    If file
-      While Not Eof(file)
-        AddElement(repositories())
-        repositories()\url$ = ReadString(file)
-      Wend
-      CloseFile(file)
-    Else
-      debugger::add("repository::loadRepositoryList() - cannot read repositories.list")
-    EndIf
-    ;-TODO: save repos as json as well?
-    
-    If ListSize(repositories())
-      windowMain::progressRepo(0, locale::l("repository","load"))
-      ForEach repositories()
-        If loadRepository(repositories())
-          success + 1
-        EndIf
-        windowMain::progressRepo(100*(ListIndex(repositories())+1)/ListSize(repositories()))
-      Next
-      
-      debugger::add("repository::loadRepositoryList() - finished loading repositories in "+Str(ElapsedMilliseconds()-time)+" ms")
-      If success = ListSize(repositories())
-        windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","loaded"))
-      Else
-        windowMain::progressRepo(windowMain::#Progress_Hide, locale::l("repository","load_failed"))
-      EndIf
-      
-      _READY = #True
-      ProcedureReturn #True
-    Else
-      debugger::add("repository::loadRepositoryList() - no repositories in list")
-      ProcedureReturn #False
-    EndIf
-  EndProcedure
-  
-  Procedure initThread(*dummy)
-    _READY = #False
-    While Not mods::isLoaded
-      ; do not start repository update while mods are loading
-      Delay(100)
-    Wend
-    loadRepositoryList()
-    displayMods() ; initially fill list
-  EndProcedure
-  
-  
-  ;----------------------------------------------------------------------------
-  ;---------------------------------- PUBLIC ----------------------------------
-  ;----------------------------------------------------------------------------
-  
-  ; load repositories...
-  
-  Procedure init()
-    debugger::add("repository::init()")
-    
-    Static thread 
-    
-    If thread And IsThread(thread)
-      KillThread(thread)
-    EndIf
-    
-    thread = CreateThread(@initThread(), 0)
-    
-  EndProcedure
-  
-  ; register functions
-  
-  Procedure registerWindow(window)
-    _windowMain = window
-    If IsWindow(_windowMain)
-      ; updateWindowCreate(_windowMain)
-    Else
-      _windowMain = #False
-    EndIf
-    ProcedureReturn _windowMain
-  EndProcedure
-  
-  Procedure registerListGadget(gadget, Array columns.column(1))
-    debugger::add("repository::registerListGadget(" + gadget + ")")
-    Protected col
-    
-    ; set new gadget ID
-    _listGadgetID = gadget
-    If Not IsGadget(_listGadgetID)
-      ; if new id is not valid, return false
-      _listGadgetID = #False
-      ProcedureReturn #False
-    EndIf
-    
-    ; clear gadget item list
-    ClearGadgetItems(_listGadgetID)
-    
-    ; clear columns
-    For col = 0 To 100 ; no native way to get column count
-      RemoveGadgetColumn(_listGadgetID, col)
-    Next
-    
-    ; create _columns array
-    debugger::add("repository::registerListGadget() - generate _columns")
-    FreeArray(_columns())
-    Dim _columns(ArraySize(columns()))
-    ; in PureBasic, Dim Array(10) created array with 11 elements (0 to 10)
-    ; ArraySize() returns the same size that is used with Dim
-    ; therefore, real size of array is one more than returned by ArraySize()
-    For col = 0 To ArraySize(columns())
-      ; user can specify which columns to display
-      ; internal array will save offset for reading value from memory
-      ; and type of value to read (int, string, ...)
-      ; TODO use locale to get translation of column header
-      With _columns(col)
-        ; save name and type depending on offset
-        Select columns(col)\name$ ;{
-          Case "name"
-            \offset = OffsetOf(mod\name$)
-            \name$ = "Mod Name"
-            \type = #COL_STR
-          Case "author"
-            \offset = OffsetOf(mod\authorid)
-            \name$ = "Author ID"
-            \type = #COL_INT
-          Case "author_name"
-            \offset = OffsetOf(mod\author$)
-            \name$ = "Author"
-            \type = #COL_STR
-          Case "thumbnail"
-            Continue
-            \offset = OffsetOf(mod\thumbnail$)
-            \name$ = "Thumbnail"
-            \type = #COL_STR
-;           Case "downloads"
-;             \offset = OffsetOf(mod\downloads)
-;             \name$ = "Downloads"
-;             \type = #COL_INT
-;           Case "likes"
-;             \offset = OffsetOf(mod\likes)
-;             \name$ = "Likes"
-;             \type = #COL_INT
-          Case "timecreated"
-            Continue
-            \offset = OffsetOf(mod\timecreated)
-            \name$ = "Created"
-            \type = #COL_INT
-          Case "timechanged"
-            Continue
-            \offset = OffsetOf(mod\timechanged)
-            \name$ = "Last Modified"
-            \type = #COL_INT
-          Case "version"
-            \offset = OffsetOf(mod\version$)
-            \name$ = "Version"
-            \type = #COL_STR
-          Case "url"
-            \offset = OffsetOf(mod\url$)
-            \name$ = "URL"
-            \type = #COL_STR
-          Case "installed"
-            \offset = OffsetOf(mod\installed)
-            \name$ = "Status"
-            \type = #COL_INT
-            
-          Default
-            Continue
-        EndSelect ;}
-        \width = columns(col)\width
-        ;debugger::add("repository::registerListGadget() - new column: {" + \name$ + "} of width {" + \width + "}")
       EndWith
     Next
-    
-    ; initialize new columns to gadget
-    For col = 0 To ArraySize(_columns())
-      Debug "column: "+_columns(col)\name$+", width = "+ _columns(col)\width
-      AddGadgetColumn(_listGadgetID, col, _columns(col)\name$, _columns(col)\width)
+   
+    ; populate pointer map
+    LockMutex(mutexFilesMap)
+    ForEach *modRepository\mods()
+      ForEach *modRepository\mods()\files()
+        If Not FindMapElement(*filesByFoldername(), *modRepository\mods()\files()\foldername$)
+          *filesByFoldername(*modRepository\mods()\files()\foldername$) = *modRepository\mods()\files()
+        EndIf
+      Next
     Next
+    UnlockMutex(mutexFilesMap)
     
-    ; Bind events for gadget (left click shows image, double click opens webseite, ...)
-    BindGadgetEvent(_listGadgetID, @handleEventList())
-    
-    ; return
-    ProcedureReturn _listGadgetID
-  EndProcedure
-  
-  Procedure registerThumbGadget(gadget)
-    debugger::add("repository::registerThumbGadget(" + gadget + ")")
-    
-    _thumbGadgetID = gadget
-    If Not IsGadget(_thumbGadgetID)
-      _thumbGadgetID = #False
+    Debug "#GUI UPDATE"
+    ; GUI update
+    If ListSize(*modRepository\mods()) > 0 And CallbackAddMods
+;       ReDim *mods(ListSize(*modRepository\mods()) - 1)
+      ClearList(*mods())
+      ForEach *modRepository\mods()
+        AddElement(*mods())
+        *mods() = *modRepository\mods()
+      Next
+      CallbackAddMods(*mods())
+      ClearList(*mods())
     EndIf
     
-    ProcedureReturn _thumbGadgetID
-  EndProcedure
-  
-  Procedure registerFilterGadgets(gadgetString, gadgetType, gadgetSource, gadgetInstalled)
-    Protected i.i
+    UnlockMutex(mutexMods)
     
-    ; string gadget
-    
-    _filterGadgetID = gadgetString
-    If Not IsGadget(_filterGadgetID)
-      _filterGadgetID = #False
-    EndIf
-    BindGadgetEvent(_filterGadgetID, @displayMods())
-    
-    
-    ; combobox: type
-    
-    _typeGadgetID = gadgetType
-    If Not IsGadget(_typeGadgetID)
-      _typeGadgetID = #False
-    EndIf
-    
-    ReDim type.type(3)
-    type(0)\key$ = ""
-    type(0)\localized$ = locale::l("repository", "all_types")
-    type(1)\key$ = "mod"
-    type(1)\localized$ = locale::l("tags", "mod")
-    type(2)\key$ = "map"
-    type(2)\localized$ = locale::l("tags", "map")
-    type(3)\key$ = "dlc"
-    type(3)\localized$ = locale::l("tags", "dlc")
-    
-    
-    ClearGadgetItems(_typeGadgetID)
-    For i = 0 To ArraySize(type())
-      AddGadgetItem(_typeGadgetID, i, type(i)\localized$)
-    Next
-    SetGadgetState(_typeGadgetID, 0)
-    
-    BindGadgetEvent(_typeGadgetID, @displayMods())
-    
-    
-    ; combobox: source
-    
-    _sourceGadgetID = gadgetSource
-    If _sourceGadgetID And IsGadget(_sourceGadgetID)
-      updateSourceGadget()
-      BindGadgetEvent(_sourceGadgetID, @displayMods())
-    Else
-      _sourceGadgetID = #False
-    EndIf
-    
-    
-    ; combobox: installed
-    
-    _installedGadgetID = gadgetInstalled
-    If Not IsGadget(_installedGadgetID)
-      _installedGadgetID = #False
-    EndIf
-    
-    ClearGadgetItems(_installedGadgetID)
-    AddGadgetItem(_installedGadgetID, 0, locale::l("repository", "installed_all"))
-    AddGadgetItem(_installedGadgetID, 1, locale::l("repository", "installed_yes"))
-    AddGadgetItem(_installedGadgetID, 2, locale::l("repository", "installed_no"))
-    SetGadgetState(_installedGadgetID, 0)
-    
-    BindGadgetEvent(_installedGadgetID, @displayMods())
-    
-    
+    ; finished
     ProcedureReturn #True
   EndProcedure
   
+  ; QUEUE
   
-  ; display functions
-  
-  Procedure displayMods()
-    ; debugger::add("repository::displayMods("+search$+")")
-    Protected search$, type$, source$, installed.i
-    Protected *repo_info.repo_info, n.i
-    Protected text$, mod_ok, tmp_ok, count, item, k, col, str$, *base_address.mod, *address
-    Protected *selectedMod.mod
-    Protected NewList *mods_to_display() ; pointer to "mod" structured data
+  Procedure queueRefreshRepositories(*dummy)
+    ; download repositories
     
-    If Not IsWindow(_windowMain) Or Not IsGadget(_listGadgetID)
-      debugger::add("repository::displayMods() - ERROR: window or gadget not valid")
-      ProcedureReturn #False
-    EndIf
+    Protected NewList repositories$()
+    GetRepositories(repositories$())
     
-    If _DISABLED
-      AddGadgetItem(_listGadgetID, 0, locale::l("repository","disabled_update"))
-      SetGadgetItemColor(_listGadgetID, 0, #PB_Gadget_FrontColor, RGB($A0, $00, $00))
-      ProcedureReturn #False
-    EndIf
-    
-    
-    ; get filter parameters
-    If _filterGadgetID And IsGadget(_filterGadgetID)
-      search$ = GetGadgetText(_filterGadgetID)
-    EndIf
-    If _typeGadgetID And IsGadget(_typeGadgetID)
-      n = GetGadgetState(_typeGadgetID)
-      If n >= 0 And n <= ArraySize(type())
-        type$ = type(n)\key$
-      EndIf
-    EndIf
-    If _sourceGadgetID And IsGadget(_sourceGadgetID)
-      *repo_info = GetGadgetItemData(_sourceGadgetID, GetGadgetState(_sourceGadgetID))
-      If *repo_info
-        source$ = *repo_info\source$
-      EndIf
-    EndIf
-    If _installedGadgetID And IsGadget(_installedGadgetID)
-      installed = GetGadgetState(_installedGadgetID)
-      ; 0 = all, 1 = installed, 2 = not installed
-    EndIf
-    
-    
-    
-    
-    
-    HideGadget(_listGadgetID, 1)
-    
-    If GetGadgetState(_listGadgetID) <> -1
-      *selectedMod = GetGadgetItemData(_listGadgetID, GetGadgetState(_listGadgetID))
-    EndIf
-    
-    ClearGadgetItems(_listGadgetID)
-    
-    checkInstalled()
-    
-    count = CountString(search$, " ") + 1
-    
-    LockMutex(mutexRepoMods)
-    
-    ForEach repo_mods()
-      ForEach repo_mods()\mods()
-        With repo_mods()\mods()
-          *base_address = repo_mods()\mods()
-          mod_ok = 0 ; reset ok for every mod entry
-          
-          If type$ And \type$ <> type$
-            ;TODO better way of cheking for localized version of type?
-            Continue
-          EndIf
-          
-          If source$ And \source$ <> source$
-            Continue
-          EndIf
-          
-          If installed ; 1 = only show installed, 2 = only show not installed
-            ; \installed = true/false (actual state)
-            If installed = 1 And \installed = 0
-              Continue
-            ElseIf installed = 2 And \installed = 1
-              Continue
-            EndIf
-          EndIf
-          
-          
-          If search$ = ""
-            mod_ok = 1
-            count = 1
-          Else
-            For k = 1 To count
-              tmp_ok = 0
-              str$ = Trim(StringField(search$, k, " "))
-              If str$
-                ; search in author, name, tags
-                ; author
-                If FindString(\author$, str$, 1, #PB_String_NoCase)
-                  tmp_ok = 1
-                ; name
-                ElseIf FindString(\name$, str$, 1, #PB_String_NoCase)
-                  tmp_ok = 1
-                Else
-                  ; tags
-                  ForEach \tags$()
-                    If FindString(\tags$(), str$, 1, #PB_String_NoCase)
-                      tmp_ok = 1
-                    EndIf
-                  Next
-                  If Not tmp_ok
-                    ; localized tags
-                    ForEach \tagsLocalized$()
-                      If FindString(\tagsLocalized$(), str$, 1, #PB_String_NoCase)
-                        tmp_ok = 1
-                      EndIf
-                    Next
-                  EndIf
-                EndIf
-              Else
-                tmp_ok = 1 ; empty search string is just ignored (ok)
-              EndIf
-              
-              If tmp_ok
-                mod_ok + 1 ; increase "ok-counter"
-              EndIf
-            Next
-          EndIf
-          
-          If mod_ok And mod_ok = count ; all substrings have to be found (ok-counter == count of substrings)
-            ; mod will be shown in list
-            ; add to tmp list:
-            AddElement(*mods_to_display())
-            *mods_to_display() = *base_address
-            
-          EndIf
-        EndWith
-      Next
+    ForEach repositories$()
+      openRepositoryFile(repositories$())
     Next
     
-    UnlockMutex(mutexRepoMods)
-    
-    ; sort list of mods-to-be-displayed
-    misc::SortStructuredPointerList(*mods_to_display(), #PB_Sort_Descending, OffsetOf(mod\timechanged), #PB_Integer)
-    
-    ; display filtered mods:
-    item = 0
-    ForEach *mods_to_display()
-      *base_address = *mods_to_display() ; current mod
-      
-      ; generate text based on specified columns
-      text$ = ""
-      For col = 0 To ArraySize(_columns())
-        *address = *base_address + _columns(col)\offset
-        Select _columns(col)\type
-          Case #COL_INT
-            text$ + Str(PeekI(*address))
-          Case #COL_STR
-            *address = PeekI(*address)
-            If *address
-              text$ + PeekS(*address)
-            EndIf
-        EndSelect
-        If col < ArraySize(_columns())
-          text$ + #LF$
-        EndIf
-      Next
-      
-      ; display
-      AddGadgetItem(_listGadgetID, item, text$)
-      SetGadgetItemData(_listGadgetID, item, *base_address)
-      If *base_address\source$ = "workshop"
-        SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_workshop")))
-      ElseIf *base_address\source$ = "tpfnet"
-        SetGadgetItemImage(_listGadgetID, item, ImageID(images::Images("icon_tpfnet")))
-      EndIf
-      If *base_address\installed
-        SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_FrontColor, settings::getInteger("color", "mod_up_to_date"))
-;         SetGadgetItemColor(_listGadgetID, item, #PB_Gadget_BackColor, RGB($F0, $F0, $F0))
-      EndIf
-      If *selectedMod And *selectedMod = *base_address
-        SetGadgetState(_listGadgetID, item)
-      EndIf
-      
-      item + 1
-    Next
-    
-          
-    HideGadget(_listGadgetID, 0)
-    
-  EndProcedure
-  
-  Procedure displayThumbnail(url$)
-;     debugger::add("repository::displayThumbnail("+url$+")")
-    
-    LockMutex(mutexStackDisplayThumb)
-    LastElement(stackDisplayThumbnail$())
-    AddElement(stackDisplayThumbnail$())
-    stackDisplayThumbnail$() = url$
-    currentImageURL$ = url$
-    UnlockMutex(mutexStackDisplayThumb)
-    
-    CreateThread(@thumbnailThread(), 0)
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure selectModInList(*mod.mod)
-    ; remove all filters
-    Protected item, *mod_in_list.mod
-    If _listGadgetID And IsGadget(_listGadgetID)
-      If _filterGadgetID And IsGadget(_filterGadgetID)
-        SetGadgetText(_filterGadgetID, "")
-      EndIf
-      If _typeGadgetID And IsGadget(_typeGadgetID)
-        SetGadgetState(_typeGadgetID, 0)
-      EndIf
-      If _sourceGadgetID And IsGadget(_sourceGadgetID)
-        SetGadgetState(_sourceGadgetID, 0)
-      EndIf
-      If _installedGadgetID And IsGadget(_installedGadgetID)
-        SetGadgetState(_installedGadgetID, 0)
-      EndIf
-      displayMods()
-      ; trigger "change" event on list for thumbnail preview, button update, etc...
-      PostEvent(#PB_Event_Gadget, _windowMain, _listGadgetID, #PB_EventType_Change)
-      
-      For item = 0 To CountGadgetItems(_listGadgetID) -1
-        *mod_in_list = GetGadgetItemData(_listGadgetID, item)
-        If *mod_in_list = *mod
-          SetGadgetState(_listGadgetID, item)
-          ProcedureReturn #True
-        EndIf
-      Next
-    EndIf
-    
-    ProcedureReturn #False
-  EndProcedure
-  
-  Procedure searchMod(name$, author$="")
-    ; set filters to search for mod
-    If author$
-      name$ + " " + author$
-    EndIf
-    
-    If _listGadgetID And IsGadget(_listGadgetID)
-      If _filterGadgetID And IsGadget(_filterGadgetID)
-        SetGadgetText(_filterGadgetID, name$)
-        displayMods()
-        ; trigger "change" event on list for thumbnail preview, button update, etc...
-        PostEvent(#PB_Event_Gadget, _windowMain, _listGadgetID, #PB_EventType_Change)
-        ProcedureReturn #True
-      EndIf
-    EndIf
-    
-    ProcedureReturn #False
-  EndProcedure
-  
-  
-  ; check functions
-  Procedure canDownloadFile(*file.file)
-    If *file And *file\url$
-      ProcedureReturn #True
+    If CallbackRefreshFinished
+      CallbackRefreshFinished()
     EndIf
   EndProcedure
   
-  Procedure canDownloadMod(*repoMod.mod)
-    Protected nFiles
+  Procedure queueThumbnail(*thumbnailData.thumbnailAsync)
+    Protected url$, file$
+    Protected image, *buffer
+    ; TODO this function can be optimized!
     
-    ; currently, only mods with single file can be downloaded automatically
-    If *repoMod\type$ = "mod"
-      ForEach *repoMod\files()
-        If canDownloadFile(*repoMod\files())
-          nFiles + 1
-        EndIf
-      Next
-    EndIf
+    ; download for same image may be triggered multiple times!
+    ; make sure, same image is not downloaded in parallel
     
-    If nFiles > 0
-      ; start download of file and install automatically
-      ProcedureReturn nFiles
-    EndIf
-    ProcedureReturn #False
-  EndProcedure
-  
-  Procedure getModByID(source$, id.q)
-    Protected *repoMod.mod
-    Protected *file.file
-    
-    LockMutex(mutexRepoMods)
-    ForEach repo_mods()
-      If repo_mods()\repo_info\source$ = source$
-        ForEach repo_mods()\mods()
-          If repo_mods()\mods()\id = id
-            *repoMod = repo_mods()\mods()
-            Break 2
-          EndIf
-        Next
-      EndIf
-    Next
-    UnlockMutex(mutexRepoMods)
-    
-    ProcedureReturn *repoMod
-  EndProcedure
-  
-  Procedure getFileByID(*repoMod.mod, fileID.q)
-    Protected *file.file
-    
-    If *repoMod
-      LockMutex(mutexRepoMods)
-      If fileID 
-        ; fileID given - search for this fileID
-        ForEach *repoMod\files()
-          If *repoMod\files()\fileID = fileID
-            *file = *repoMod\files()
-            Break
-          EndIf
-        Next
-      Else 
-        ; no fileID given
-        If ListSize(*repoMod\files()) = 1
-          ; if only one file in mod - return this file
-          FirstElement(*repoMod\files())
-          *file = *repoMod\files()
-        EndIf
-        ; if more files in mod, return false / null
-      EndIf
-      UnlockMutex(mutexRepoMods)
-    EndIf
-    
-    ProcedureReturn *file
-  EndProcedure
-  
-  Procedure canDownloadModByID(source$, id.q, fileID.q = 0)
-    Protected *repoMod.mod
-    Protected *file.file
-    
-    *repoMod = getModByID(source$, id)
-    
-    If Not *repoMod
-      debugger::add("repository::canDownloadModByID() - Could not find mod "+source$+"-"+id)
-      ProcedureReturn #False
-    EndIf
-    
-    If fileID
-      *file = getFileByID(*repoMod, fileID)
-    EndIf
-    
-    If fileID
-      ProcedureReturn Bool(canDownloadMod(*repoMod) And canDownloadFile(*file))
+    If *thumbnailData\mod\thumbnailImage
+      *thumbnailData\callback(*thumbnailData\mod\thumbnailImage, *thumbnailData\userdata)
     Else
-      ProcedureReturn canDownloadMod(*repoMod)
-    EndIf
-  EndProcedure
-  
-  Procedure download(source$, id.q, fileID.q = #Null)
-    debugger::add("repository::download() download/"+source$+"/"+id+"/"+fileID+"")
-    Protected *buffer.download
-    
-    ; copy structure so that data stays available in thread
-    *buffer = AllocateStructure(download) ; memory is freed in thread function!
-    *buffer\source$ = source$
-    *buffer\id      = id
-    *buffer\fileID  = fileID
-    
-    ; call thread
-    CreateThread(@downloadThread(), *buffer)
-  EndProcedure
-  
-  
-  ; search for mods in repo by link or foldername
-  Procedure getModByLink(link$)
-    Protected source$
-    Protected id.q
-    Protected *find
-    Static NewMap *find()
-    
-    If link$ = "-reset"
-      ClearMap(*find())
-      ProcedureReturn #True
-    EndIf
-    
-    LockMutex(mutexRepoMods)
-    
-    If FindMapElement(*find(), link$)
-      *find = *find()
-      UnlockMutex(mutexRepoMods)
-      ProcedureReturn *find
-    EndIf
-    
-    source$ = StringField(link$, 1, "/") 
-    id      = Val(StringField(link$, 2, "/")) 
-    
-    ForEach repo_mods()
-      If repo_mods()\repo_info\source$ = source$
-        ForEach repo_mods()\mods()
-          If repo_mods()\mods()\source$ = source$ And 
-             repo_mods()\mods()\id      = id
-            *find = repo_mods()\mods()
-            *find(link$) = *find
-            Break 2
+      url$ = *thumbnailData\mod\thumbnail$
+      
+      ; check if image on disk
+      file$ = getThumbFileName(url$)
+      
+      If FileSize(file$) <= 0
+        ; download image
+        deb("Download Thumbnail "+*thumbnailData\mod\thumbnail$)
+        CreateDirectory(GetPathPart(file$))
+        *buffer = downloadToMemory(url$)
+        If *buffer
+          If MemorySize(*buffer) > 1024 ; often rx 92 bytes when proxy error occurs
+            image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
+            If image
+              image = misc::ResizeCenterImage(image, 160, 90)
+              SaveImage(image, file$, #PB_ImagePlugin_JPEG, 7, 24)
+              FreeImage(image)
+            EndIf
           EndIf
-        Next
+          FreeMemory(*buffer)
+        EndIf
       EndIf
-    Next
-    UnlockMutex(mutexRepoMods)
-    
-    ProcedureReturn *find
-  EndProcedure
-  
-  Procedure getModByFoldername(foldername$)
-    Protected *find.mod
-    Static NewMap *find()
-    
-    If foldername$ = "-reset"
-      ClearMap(*find())
-      ProcedureReturn #True
-    EndIf
-    
-    foldername$ = LCase(foldername$)
-    LockMutex(mutexRepoMods)
-    
-    If FindMapElement(*find(), foldername$)
-      *find = *find()
-      UnlockMutex(mutexRepoMods)
-      ProcedureReturn *find
-    EndIf
-    
-    ForEach repo_mods()
-      ForEach repo_mods()\mods()
-        ForEach repo_mods()\mods()\files()
-          If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
-            *find = repo_mods()\mods()
-            *find(foldername$) = *find
-            Break 3
-          EndIf
-        Next
-      Next
-    Next
-    UnlockMutex(mutexRepoMods)
-    
-    ProcedureReturn *find
-  EndProcedure
-  
-  Procedure.s getLinkByFoldername(foldername$)
-    Protected link$
-    Static NewMap link$()
-    foldername$ = LCase(foldername$)
-    
-    If foldername$ = "-reset"
-      ClearMap(link$())
-      ProcedureReturn ""
-    EndIf
-    
-    LockMutex(mutexRepoMods)
-    
-    If FindMapElement(link$(), foldername$)
-      link$ = link$()
-      UnlockMutex(mutexRepoMods)
-      ProcedureReturn link$
-    EndIf
-    
-    ForEach repo_mods()
-      ForEach repo_mods()\mods()
-        ForEach repo_mods()\mods()\files()
-          If LCase(repo_mods()\mods()\files()\foldername$) = foldername$
-            link$ = repo_mods()\mods()\source$+"/"+Str(repo_mods()\mods()\id)+"/"+Str(repo_mods()\mods()\files()\fileid)
-            link$(foldername$) = link$
-            Break 3
-          EndIf
-        Next
-      Next
-    Next
-    UnlockMutex(mutexRepoMods)
-    
-    ProcedureReturn link$
-  EndProcedure
-  
-  
-  ; list all available repos in settings gadget
-  
-  Procedure infoCallback()
-    Protected item, *repository.repository
-    
-    SetGadgetText(settingsGadget("repositoryName"), "")
-    SetGadgetText(settingsGadget("repositoryCurator"), "")
-    SetGadgetText(settingsGadget("repositoryDescription"), "")
-    DisableGadget(settingsGadget("repositoryRemove"), #True)
         
-    item = GetGadgetState(settingsGadget("repositoryList"))
-    If item <> -1
-      *repository = GetGadgetItemData(settingsGadget("repositoryList"), item)
-      If *repository
-        SetGadgetText(settingsGadget("repositoryName"), *repository\main_json\repository\name$)
-        SetGadgetText(settingsGadget("repositoryCurator"), *repository\main_json\repository\maintainer$)
-        SetGadgetText(settingsGadget("repositoryDescription"), *repository\main_json\repository\description$)
-        If *repository\url$ <> #OFFICIAL_REPOSITORY$
-          DisableGadget(settingsGadget("repositoryRemove"), #False)
+      If FileSize(file$) > 0
+        ; file exists, load image
+        image = LoadImage(#PB_Any, file$)
+        If image And IsImage(image)
+          ; cache image
+          *thumbnailData\mod\thumbnailImage = image
+        Else
+          ; local file could not be loaded?
+          DeleteFile(file$)
+          deb("repository:: could not open local thumbnail from "+url$)
         EndIf
+      EndIf
+      
+      If image
+        *thumbnailData\callback(image, *thumbnailData\userdata)
       EndIf
     EndIf
     
+    FreeStructure(*thumbnailData)
   EndProcedure
   
-  Procedure listRepositories(Map gadgets())
-    Protected item
+  Procedure QueueThread(*dummy)
+    Protected callback.callbackQueue
+    Protected *userdata
+    Repeat
+      
+      LockMutex(mutexQueue)
+      If ListSize(queue()) = 0
+        UnlockMutex(mutexQueue)
+        Delay(100)
+        Continue
+      EndIf
+      
+      ; get top item from queue
+      FirstElement(queue())
+      callback = queue()\callback
+      *userdata = queue()\userdata
+      DeleteElement(queue(), 1)
+      UnlockMutex(mutexQueue)
+      
+      ; execute the task
+      Debug "repo queue: start next task"
+      callback(*userdata)
+      
+      ; not hog CPU
+      Delay(10)
+      
+    Until queueStop
+  EndProcedure
+  
+  Procedure addToQueue(callback.callbackQueue, *userdata)
+    LockMutex(mutexQueue)
+    LastElement(queue())
+    AddElement(queue())
+    queue()\callback = callback
+    queue()\userdata = *userdata
+    UnlockMutex(mutexQueue)
     
-    If settingsGadget("repositoryList") And IsGadget(settingsGadget("repositoryList"))
-      UnbindGadgetEvent(settingsGadget("repositoryList"), @infoCallback())
+    If Not *queueThread Or Not IsThread(*queueThread)
+      *queueThread = CreateThread(@QueueThread(), 0)
     EndIf
-    
-    CopyMap(gadgets(), settingsGadget())
-    
-    
-    BindGadgetEvent(settingsGadget("repositoryList"), @infoCallback())
-    
-    ClearGadgetItems(settingsGadget("repositoryList"))
-    
-    ForEach repositories()
-      AddGadgetItem(settingsGadget("repositoryList"), item, repositories()\url$)
-      SetGadgetItemData(settingsGadget("repositoryList"), item, repositories())
-      item + 1
-    Next
-    
   EndProcedure
   
-  Procedure refresh()
-    Protected dir$, entry$, dir
-    
-    dir$ = #DIRECTORY + "/"
-    Debug dir$
-    dir = ExamineDirectory(#PB_Any, dir$, "*.json")
-    If dir
-      While NextDirectoryEntry(dir)
-        entry$ = DirectoryEntryName(dir)
-        Debug entry$
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          DeleteFile(dir$ + entry$)
+  Procedure stopQueue(timeout = 500)
+    Protected time
+    If *queueThread And IsThread(*queueThread)
+      queueStop = #True
+      time = ElapsedMilliseconds()
+      While IsThread(*queueThread)
+        If ElapsedMilliseconds() - time > timeout
+          KillThread(*queueThread)
+          Break
         EndIf
       Wend
-      FinishDirectory(dir)
+      queueStop = #False
+    EndIf
+    *queueThread = #Null
+  EndProcedure
+  
+  
+  
+  ;----------------------------------------------------------------------------
+  ;----------------------------- PUBLIC FUNCTION ------------------------------
+  ;----------------------------------------------------------------------------
+  
+  
+  Procedure refreshRepositories(async=#True)
+    freeAll()
+    
+    ; always add official repositories to sources
+    AddRepository("https://www.transportfevermods.com/repository/mods/tpfnet.json")
+    AddRepository("https://www.transportfevermods.com/repository/mods/workshop.json")
+    
+    If async
+      addToQueue(@queueRefreshRepositories(), #Null)
+    Else
+      queueRefreshRepositories(0)
+    EndIf
+  EndProcedure
+  
+  Procedure freeAll()
+    deb("repository:: free all")
+    
+    Debug "stop queue"
+    stopQueue()
+    
+    Debug "lock mutex"
+    LockMutex(mutexMods)
+    LockMutex(mutexFilesMap)
+    
+    Debug "call callback"
+    If CallbackClearList
+      CallbackClearList()
+    EndIf
+    If CallbackEventClearList
+      PostEvent(CallbackEventClearList)
     EndIf
     
-    init()
+    Debug "clear map"
+    ClearMap(ModRepositories())
+    ClearMap(*filesByFoldername())
     
-    ProcedureReturn #True
+    Debug "unlock"
+    UnlockMutex(mutexFilesMap)
+    UnlockMutex(mutexMods)
+    
+    Debug "fin"
   EndProcedure
   
   Procedure clearCache()
     Protected dir$
     
-    dir$ = #DIRECTORY + "/thumbnails/"
-    DeleteDirectory(dir$, "", #PB_FileSystem_Recursive)
-    CreateDirectory(dir$)
+    DeleteDirectory(#RepoCache$, "", #PB_FileSystem_Recursive)
+    CreateDirectory(#RepoCache$)
     
     ProcedureReturn #True
   EndProcedure
   
+  ; source handling
   
-EndModule
-
-CompilerIf #PB_Compiler_IsMainFile
-  Define text$, event
-  
-  UsePNGImageDecoder()
-  UseJPEGImageDecoder()
-  debugger::setlogfile("output.log")
-  
-  repository::loadRepositoryList()
-  
-  If OpenWindow(0, 0, 0, 800, 600, "Repository Test", #PB_Window_SystemMenu|#PB_Window_MinimizeGadget|#PB_Window_ScreenCentered)
-    ListIconGadget(0, 0, 30, 600, 570, "", 0, #PB_ListIcon_FullRowSelect)
+  Procedure AddRepository(url$)
+    Protected inlist.b
+    Protected NewList sources$()
+    Debug "add repository "+url$
     
-    Define Dim columns.repository::column(0)
+    url$ = Trim(url$)
+    GetRepositories(sources$())
     
-    ; load column definition
-    Define *json, *value, json$
-    ; load old column settings
-    *json = LoadJSON(#PB_Any, "columns.json")
-    If Not *json
-      ; if no column settings found, initialize with base columns
-      json$ = ReplaceString("[{'width':240,'name':'name'},"+
-                            "{'width':60,'name':'version'},"+
-                            "{'width':100,'name':'author_name'},"+
-                            "{'width':60,'name':'state'},"+
-                            "{'width':200,'name':'tags_string'},"+
-                            "{'width':60,'name':'downloads'},"+
-                            "{'width':40,'name':'likes'}]", "'", #DQUOTE$)
-      *json = ParseJSON(#PB_Any, json$)
-      If Not *json
-        Debug "Error loading json"
-        End
+    ForEach sources$()
+      If url$ = sources$()
+        ; source already in list
+        inList = #True
+        Break
+      EndIf
+    Next
+    
+    If inlist
+      Debug "repo already in list"
+    Else
+      LastElement(sources$())
+      AddElement(sources$())
+      sources$() = url$
+      WriteSourcesFile(sources$())
+    EndIf
+  EndProcedure
+  
+  Procedure CanRemoveRepository(url$)
+    url$ = Trim(url$)
+    
+    If url$ = "https://www.transportfevermods.com/repository/mods/tpfnet.json" Or 
+       url$ = "https://www.transportfevermods.com/repository/mods/workshop.json"
+      ProcedureReturn #False
+    Else
+      ProcedureReturn #True
+    EndIf
+  EndProcedure
+  
+  Procedure RemoveRepository(url$)
+    Protected deleted.b
+    Protected NewList sources$()
+    
+    GetRepositories(sources$())
+    
+    ForEach sources$()
+      If url$ = sources$()
+        If CanRemoveRepository(url$)
+          DeleteElement(sources$())
+          deleted = #True
+          Break
+        EndIf
+      EndIf
+    Next
+    
+    If deleted
+      WriteSourcesFile(sources$())
+    EndIf
+  EndProcedure
+  
+  Procedure GetRepositories(List sources$())
+    Protected file, url$
+    ClearList(sources$())
+    file = OpenFile(#PB_Any, #RepoListFile$)
+    If file
+      While Not Eof(file)
+        url$ = Trim(ReadString(file, #PB_UTF8))
+        If url$
+          AddElement(sources$())
+          sources$() = url$
+        EndIf
+      Wend
+      CloseFile(file)
+    Else
+      deb("repository:: could not read repository file "+#RepoListFile$)
+    EndIf
+    
+    If ListSize(sources$()) > 0
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
+  EndProcedure
+  
+  Procedure GetRepositoryModCount(url$)
+    Protected count, *ModRepository.ModRepository
+;     LockMutex(mutexMods)
+    *ModRepository = FindMapElement(ModRepositories(), url$)
+    If *ModRepository
+      count = ListSize(*ModRepository\mods())
+    Else
+      count = -1 ; not loaded
+    EndIf
+;     UnlockMutex(mutexMods)
+    ProcedureReturn count
+  EndProcedure
+  
+  ; get mod object
+  
+  Procedure getModByFoldername(foldername$)
+    Protected *mod.mod, *file.file
+    
+    *file = getFileByFoldername(foldername$)
+    *mod = fileGetMod(*file)
+    
+    ProcedureReturn *mod
+  EndProcedure
+  
+  Procedure getModByLink(link$)
+    ; TODO getModByLink()
+    ProcedureReturn 0
+  EndProcedure
+  
+  Procedure getFileByFoldername(foldername$)
+    Protected *file, regExpFolder, version
+    Static regexp
+    If Not regexp
+      regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
+    EndIf
+    
+    LockMutex(mutexFilesMap)
+    ; check if "foldername" is version independend, e.g. "urbangames_vehicles_no_end_year" (no _1 at the end)
+    If Not MatchRegularExpression(regexp, foldername$)
+      Debug "search version for foldername "+#DQUOTE$+foldername$+#DQUOTE$+" version independend"
+      ; try to find a file matching the foldername without the version
+      regExpFolder = CreateRegularExpression(#PB_Any, "^"+foldername$+"_([0-9]+)$")
+      If regExpFolder
+        version = -1
+        ForEach *filesByFoldername()
+          If MatchRegularExpression(regExpFolder, MapKey(*filesByFoldername()))
+            ; found a match, keep on searching for a higher version number (e.g.: if version _1 and _2 are found, use _2)
+            ; try to extract version number
+            If ExamineRegularExpression(regExpFolder, MapKey(*filesByFoldername()))
+              If NextRegularExpressionMatch(regExpFolder)
+                If Val(RegularExpressionGroup(regExpFolder, 1)) > version
+                  ; if version is higher, save version and file link
+                  version = Val(RegularExpressionGroup(regExpFolder, 1))
+                  *file = *filesByFoldername()
+                EndIf
+              EndIf
+            EndIf
+          EndIf
+        Next
+        FreeRegularExpression(regExpFolder)
+      Else
+        deb("repository:: could not create regexp "+#DQUOTE$+"^"+foldername$+"_([0-9]+)$"+#DQUOTE$)
+        Debug RegularExpressionError()
+      EndIf
+    Else
+      ;notice attention: folderByFoldername only has "last" source, if multiple sources have mod with same foldername
+      If FindMapElement(*filesByFoldername(), foldername$)
+        *file = *filesByFoldername()
       EndIf
     EndIf
-    ExtractJSONArray(JSONValue(*json), columns())
-    FreeJSON(*json)
+    UnlockMutex(mutexFilesMap)
     
-    repository::registerWindow(0)
-    repository::registerListGadget(0, columns())
-    
-    ; save current configuration to json file
-    *json = CreateJSON(#PB_Any)
-    InsertJSONArray(JSONValue(*json), columns())
-    SaveJSON(*json, "columns.json", #PB_JSON_PrettyPrint)
-    FreeJSON(*json)
-    
-    TextGadget(3, 515, 7, 50, 18, "Search:", #PB_Text_Right)
-    StringGadget(1, 570, 5, 200, 20, "")
-    ButtonGadget(2, 775, 5, 20, 20, "X")
-    ImageGadget(3, 610, 30, 180, 500, 0)
-    repository::registerThumbGadget(3)
-    
-    repository::filterMods("") ; initially fill list
-    
-    Repeat
-      event = WaitWindowEvent()
-      Select event
-        Case #PB_Event_CloseWindow
-          Break
-        Case #PB_Event_Gadget
-          Select EventGadget()
-            Case 2 ; push "x" button
-              SetGadgetText(1, "")
-          EndSelect
-      EndSelect
-      If GetGadgetText(1) <> text$
-        text$ = GetGadgetText(1)
-        repository::filterMods(text$)
-      EndIf
-    ForEver 
-  EndIf
+    ProcedureReturn *file
+  EndProcedure
   
-CompilerEndIf
+  Procedure getFileByLink(link$)
+    ; TODO getFileByLink()
+  EndProcedure
+  
+  ; work on mod object
+  
+  Procedure.s modGetName(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\name$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetVersion(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\version$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetAuthor(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\author$
+    EndIf
+  EndProcedure
+  
+  Procedure modGetFiles(*mod.mod, List *files.RepositoryFile())
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If ListSize(*mod\files()) > 0
+;       ReDim *files(ListSize(*mod\files()) -1)
+;       ForEach *mod\files()
+;         *files(ListIndex(*mod\files())) = *mod\files()
+;       Next
+      ClearList(*files())
+      ForEach *mod\files()
+        AddElement(*files())
+        *files() = *mod\files()
+      Next
+    EndIf
+    
+    ProcedureReturn ListSize(*mod\files())
+  EndProcedure
+  
+  Procedure modIsInstalled(*mod.mod)
+    ; TODO modIsInstalled()
+    ; idea: for all files in mod, check if installed -> c.f. fileIsInstalled
+  EndProcedure
+  
+  Procedure.s modGetSource(*mod.mod)
+    ProcedureReturn *mod\source$
+  EndProcedure
+  
+  Procedure modCanDownload(*mod.mod)
+    Protected nFiles
+    ForEach *mod\files()
+      If fileCanDownload(*mod\files())
+        nFiles + 1
+      EndIf
+    Next
+    ProcedureReturn nFiles
+  EndProcedure
+  
+  Procedure modDownload(*mod)
+    ; TODO modDownload()
+  EndProcedure
+  
+  Procedure.s modGetLink(*mod)
+    ; TODO modGetLink()
+  EndProcedure
+  
+  Procedure.s modGetThumbnailUrl(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\thumbnail$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetThumbnailFile(*mod.mod)
+    Protected url$
+    url$ = modGetThumbnailUrl(*mod)
+    If url$
+      ProcedureReturn getThumbFileName(url$)
+    EndIf
+  EndProcedure
+  
+  Procedure modGetThumbnailAsync(*mod.mod, callback.CallbackThumbnail, *userdata=#Null)
+    Protected *thumbnailData.thumbnailAsync
+    Protected url$, file$, image
+    
+    If *mod
+      ; image not yet available -> send to queue for image download
+      *thumbnailData = AllocateStructure(thumbnailAsync)
+      *thumbnailData\mod = *mod
+      *thumbnailData\callback = callback
+      *thumbnailData\userdata = *userdata
+      
+      addToQueue(@queueThumbnail(), *thumbnailData)
+    EndIf
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modGetTimeChanged(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\timechanged
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetWebsite(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\url$
+    EndIf
+  EndProcedure
+  
+  Procedure modSetThumbnailImage(*mod.mod, image)
+    If *mod
+      *mod\thumbnailImage = image
+    EndIf
+  EndProcedure
+  
+  ; work on file object
+  
+  Procedure fileGetMod(*file.file)
+    If *file
+      ProcedureReturn *file\mod
+    EndIf
+  EndProcedure
+  
+  Procedure fileCanDownload(*file.file)
+    If *file And *file\url$
+      ProcedureReturn #True
+    EndIf
+  EndProcedure
+  
+  Procedure fileDownload(*file.file)
+    ; TODO fileDownload()
+  EndProcedure
+  
+  Procedure.s fileGetLink(*file.file)
+    ; TODO fileGetLink()
+  EndProcedure
+  
+  Procedure.s fileGetFolderName(*file.file)
+    ProcedureReturn *file\foldername$
+  EndProcedure
+  
+  Procedure fileIsInstalled(*file.file)
+    ; TODO fileIsInstalled()
+    ; idea: use mods module to check for foldername
+    ; if file has not foldername, check for ID? (optional)
+  EndProcedure
+  
+  ; Callbacks to GUI
+  
+  Procedure BindEventCallback(Event, *callback)
+    ; function callbacks - will be called in sync as function
+    Select event
+      Case #CallbackAddMods
+        CallbackAddMods = *callback
+      Case #CallbackClearList
+        CallbackClearList = *callback
+      Case #CallbackRefreshFinished
+        CallbackRefreshFinished = *callback
+    EndSelect
+  EndProcedure
+  
+  Procedure BindEventPost(Event, Post)
+    ; event based callbacks, will trigger an event that must be handled by the event loop
+    Select event
+      Case #CallbackClearList
+        CallbackEventClearList = Post
+    EndSelect
+    
+  EndProcedure
+  
+EndModule

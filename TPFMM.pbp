@@ -41,7 +41,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_luaParser.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_main.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -50,7 +50,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_misc.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_modInformation.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -71,13 +71,19 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_repository.h.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_repository.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
     </file>
     <file name="source\module_settings.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+    </file>
+    <file name="source\module_tfsave.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
+    </file>
+    <file name="source\module_windowLicense.pbi">
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_windowMain.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -99,8 +105,8 @@
       <purifier enable="1" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="3227"/>
-      <buildcount enable="1" value="41"/>
+      <compilecount enable="1" value="3901"/>
+      <buildcount enable="1" value="44"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,1,%BUILDCOUNT,%COMPILECOUNT"/>

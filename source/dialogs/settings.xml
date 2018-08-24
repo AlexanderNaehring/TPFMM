@@ -84,29 +84,15 @@
           </vbox>
         </tab>
 
-<!--
         <tab text='Online Repositories'>
-          <hbox expand='equal'>
-            <vbox expand='item:1'>
-              <listview name='repositoryList' />
-              <hbox expand='item:2'>
-                <button name='repositoryAdd' text='Add new Repository' disabled='yes' />
-                <empty />
-                <button name='repositoryRemove' text='Remove selected' disabled='yes' />
-              </hbox>
-
+          <hbox expand='item:1'>
+            <listicon name='repositoryList' flags='#PB_ListIcon_FullRowSelect|#PB_ListIcon_AlwaysShowSelection' />
+            <vbox expand='no'>
+              <button name='repositoryAdd' text='Add new' />
+              <button name='repositoryRemove' text='Remove selected' />
             </vbox>
-            <gridbox colexpand='item:2' rowexpand='item:3'>
-              <text   name='repositoryNameLabel' />
-              <string name='repositoryName' flags='#PB_String_ReadOnly' />
-              <text   name='repositoryCuratorLabel' />
-              <string name='repositoryCurator' flags='#PB_String_ReadOnly' />
-              <text   name='repositoryDescriptionLabel' />
-              <editor name='repositoryDescription' flags='#PB_Editor_ReadOnly|#PB_Editor_WordWrap' />
-            </gridbox>
           </hbox>
         </tab>
--->
 
         <!--
           <tab text='Licenses'>

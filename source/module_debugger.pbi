@@ -4,7 +4,7 @@ DeclareModule debugger
   Declare SetLogFile(file$)
   Declare.s GetLogFile()
   Declare DeleteLogFile()
-  Declare add(str$)
+  Declare deb(str$)
   Declare.s getLog()
 EndDeclareModule
 
@@ -29,10 +29,10 @@ Module debugger
     UnlockMutex(mutexDebug)
   EndProcedure
   
-  Procedure add(str$)
+  Procedure deb(str$)
     Static file
     LockMutex(mutexDebug)
-    Debug str$
+    Debug "| "+str$
     
     log$ + #CRLF$ + str$
     If LogFile$ <> ""
@@ -45,6 +45,7 @@ Module debugger
     EndIf
     UnlockMutex(mutexDebug)
   EndProcedure
+  
   Procedure.s getLog()
     Protected str$
     LockMutex(mutexDebug)

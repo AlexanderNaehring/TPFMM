@@ -15,6 +15,7 @@ Module settings
   Global accessMutex = CreateMutex()
   Global settingsFile$
   Global NewMap defaultValues$()
+  Global NewMap values$() ; cache
   
   ; define all default values..
   defaultValues$("/locale") = "en"
@@ -51,29 +52,43 @@ Module settings
   
   Procedure setInteger(group$, key$, value)
     LockMutex(accessMutex)
+    ; write to file
     OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
     PreferenceGroup(group$)
     WritePreferenceInteger(key$, value)
     ClosePreferences()
+    ; also write to cache
+    values$(group$+"/"+key$) = Str(value)
     UnlockMutex(accessMutex)
   EndProcedure
   
   Procedure setString(group$, key$, value$)
     LockMutex(accessMutex)
+    ; write to file
     OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
     PreferenceGroup(group$)
     WritePreferenceString(key$, value$)
     ClosePreferences()
+    ; also write to cache
+    values$(group$+"/"+key$) = value$
     UnlockMutex(accessMutex)
   EndProcedure
   
   Procedure getInteger(group$, key$)
     Protected value
     LockMutex(accessMutex)
-    OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
-    PreferenceGroup(group$)
-    value = ReadPreferenceInteger(key$, Val(defaultValues$(group$+"/"+key$)))
-    ClosePreferences()
+    If FindMapElement(values$(), group$+"/"+key$)
+      ; use cache
+      value = Val(values$(group$+"/"+key$))
+    Else
+      ; not in cache, read from file
+      OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
+      PreferenceGroup(group$)
+      value = ReadPreferenceInteger(key$, Val(defaultValues$(group$+"/"+key$)))
+      ClosePreferences()
+      ; save to cache for next time
+      values$(group$+"/"+key$) = Str(value)
+    EndIf
     UnlockMutex(accessMutex)
     ProcedureReturn value
   EndProcedure
@@ -81,10 +96,18 @@ Module settings
   Procedure.s getString(group$, key$)
     Protected value$
     LockMutex(accessMutex)
-    OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
-    PreferenceGroup(group$)
-    value$ = ReadPreferenceString(key$, defaultValues$(group$+"/"+key$))
-    ClosePreferences()
+    If FindMapElement(values$(), group$+"/"+key$)
+      ; use cache
+      value$ = values$(group$+"/"+key$)
+    Else
+      ; not in cache, read from file
+      OpenPreferences(settingsFile$, #PB_Preference_GroupSeparator)
+      PreferenceGroup(group$)
+      value$ = ReadPreferenceString(key$, defaultValues$(group$+"/"+key$))
+      ClosePreferences()
+      ; save to cache for next time
+      values$(group$+"/"+key$) = value$
+    EndIf
     UnlockMutex(accessMutex)
     ProcedureReturn value$
   EndProcedure

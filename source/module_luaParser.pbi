@@ -2,26 +2,24 @@
   XIncludeFile "module_main.pbi"
 CompilerEndIf
 
-XIncludeFile "module_mods.h.pbi"
 XIncludeFile "module_lua.pbi"
+XIncludeFile "module_mods.h.pbi"
 
 DeclareModule luaParser
   EnableExplicit
   
-  Declare parseModLua(modfolder$, *mod.mods::mod, language$="")
+  Declare parseModLua(modfolder$, *mod, language$="")
   Declare parseSettingsLua(modfolder$, Map settings.mods::modSetting(), language$="")
   
 EndDeclareModule
-
 
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 
-
-
 Module luaParser
   UseModule lua
+  UseModule debugger
   
   CreateDirectory("lua")
   
@@ -45,7 +43,7 @@ Module luaParser
   
   
   If Not Lua_Initialize("lua/")
-    debugger::add("lua::Lua_Initialize() - ERROR: cannot load lua")
+    deb("lua:: cannot load lua")
     End
   EndIf
   
@@ -56,7 +54,7 @@ Module luaParser
   Structure lua
     language$ ; currently used language for translations
     Map languages.language() ; map of all languages in strings.lua
-    *mod.mods::mod
+    *mod.mods::LocalMod
   EndStructure
   
   Global NewMap lua.lua()
@@ -115,7 +113,7 @@ Module luaParser
     lua_pop(L, 1); pop argument
     
     If Not *string
-      debugger::add("lua::lua_translate() - LUA ERROR: no string pointer")
+      deb("lua:: no string pointer")
       lua_pushstring(L, "[[invalid argument]]")
       ProcedureReturn 1 ; number of arguments pushed
     EndIf
@@ -127,7 +125,7 @@ Module luaParser
       ; find translation for current language
       lang$ = \language$
       If lang$ = ""
-        debugger::add("lua::lua_translate() - no language set, fallback to english")
+        deb("lua:: no language set, fallback to english")
         lang$ = "en"
       EndIf
       
@@ -177,14 +175,13 @@ Module luaParser
     lua_pushvalue(L, index) ; copy table
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::getAuthor() - lua_istable ERROR: not a table")
+      deb("lua:: lua_istable ERROR: not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
     Protected *author.mods::author
-    ListSize( lua(Str(L))\mod\authors())
-    *author = AddElement(lua(Str(L))\mod\authors())
+    *author = lua(Str(L))\mod\addAuthor()
     
     lua_pushnil(L)
     While lua_next(L, -2)
@@ -229,13 +226,13 @@ Module luaParser
     lua_pushvalue(L, index) ; copy table
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::getAuthors() - lua_istable ERROR: not a table")
+      deb("lua:: authors not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
     ; authors found, delete old authors
-    ClearList(lua(Str(L))\mod\authors())
+    lua(Str(L))\mod\clearAuthors()
     
     lua_pushnil(L)
     While lua_next(L, -2)
@@ -258,19 +255,18 @@ Module luaParser
     lua_pushvalue(L, index) 
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::modlua_getTags() - lua_istable ERROR: not a table")
+      deb("lua:: tags not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
-    ClearList(lua(Str(L))\mod\tags$())
+    lua(Str(L))\mod\clearTags()
     
     lua_pushnil(L)
     While lua_next(L, -2)
       val$ = lua_tostring(L, -1) ; value at -1
       If val$
-        AddElement(lua(Str(L))\mod\tags$())
-        lua(Str(L))\mod\tags$() = val$
+        lua(Str(L))\mod\addTag(val$)
       EndIf
       lua_pop(L, 1) ; pop value
      Wend
@@ -282,19 +278,18 @@ Module luaParser
     lua_pushvalue(L, index) 
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::modlua_getDependencies() - not a table")
+      deb("lua:: dependencies not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
-    ClearList(lua(Str(L))\mod\dependencies$())
+    lua(Str(L))\mod\clearDependencies()
     
     lua_pushnil(L)
     While lua_next(L, -2)
       val$ = lua_tostring(L, -1)
       If val$
-        AddElement(lua(Str(L))\mod\dependencies$())
-        lua(Str(L))\mod\dependencies$() = val$
+        lua(Str(L))\mod\addDependency(val$)
       EndIf
       lua_pop(L, 1)
      Wend
@@ -302,8 +297,8 @@ Module luaParser
   EndProcedure
   
   Procedure modlua_iterateInfoTable(L, index)
-    Protected key$
-    Protected *mod.mods::mod
+    Protected key$, val$
+    Protected *mod.mods::LocalMod
     *mod = lua(Str(L))\mod
     
     lua_pushvalue(L, index) ; push info-table to top of stack (copy)
@@ -317,32 +312,33 @@ Module luaParser
       ; stack now contains: -1 => key; -2 => value; -3 => key; -4 => table
       
       key$    = lua_tostring(L, -1)
-      
       Select key$
         Case "name"
-          *mod\name$ = lua_tostring(L, -2)
+          val$ =  lua_tostring(L, -2)
+          
+          *mod\setName(val$)
         Case "description"
-          *mod\description$ = lua_tostring(L, -2)
+          *mod\setDescription(lua_tostring(L, -2))
         Case "minorVersion"
-          *mod\minorVersion = lua_tointeger(L, -2)
+          *mod\setMinorVersion(lua_tointeger(L, -2))
         Case "authors"
           modlua_getAuthors(L, -2)
         Case "tags"
           modlua_getTags(L, -2)
         Case "visible"
-          *mod\aux\hidden = Bool(Not lua_toboolean(L, -2))
+          *mod\setHidden(Bool(Not lua_toboolean(L, -2)))
         Case "tfnetId"
           ; only store if <> zero (especially: do not overwrite info saved during install)
           If lua_tointeger(L, -2) <> 0
-            *mod\aux\tfnetID = lua_tointeger(L, -2)
+            *mod\setTFNET(lua_tointeger(L, -2))
           EndIf
         Case "steamId"
           If lua_tointeger(L, -2) <> 0
-            *mod\aux\workshopID = lua_tointeger(L, -2)
+            *mod\setWorkshop(lua_tointeger(L, -2))
           EndIf
         Case "workshop"
           If lua_tointeger(L, -2) <> 0
-            *mod\aux\workshopID = lua_tointeger(L, -2)
+            *mod\setWorkshop(lua_tointeger(L, -2))
           EndIf
         Case "dependencies"
           modlua_getDependencies(L, -2)
@@ -364,8 +360,6 @@ Module luaParser
   
   Procedure modlua_readSettingsDefaultTable(L, index, *setting.mods::modLuaSetting)
     Protected value$
-    Protected *mod.mods::mod
-    *mod = lua(Str(L))\mod
     
     ; format: tables in table:
     ; default = { value1, value2, value3 }
@@ -393,8 +387,6 @@ Module luaParser
   Procedure modlua_readSettingsValuesTable(L, index, *setting.mods::modLuaSetting)
     ; read the possible values for the "table" type mod setting
     Protected key$, text$, value$
-    Protected *mod.mods::mod
-    *mod = lua(Str(L))\mod
     
     ; format: tables in table:
     ; values = {
@@ -446,8 +438,6 @@ Module luaParser
   
   Procedure modlua_readSettingsTableOption(L, index, *setting.mods::modLuaSetting)
     Protected key$
-    Protected *mod.mods::mod
-    *mod = lua(Str(L))\mod
     
     lua_pushvalue(L, index)
     lua_pushnil(L)
@@ -500,14 +490,14 @@ Module luaParser
   
   Procedure modlua_iterateSettingsTable(L, index)
     Protected key$
-    Protected *mod.mods::mod
-    Protected *setting.mods::modLuaSetting
+    Protected *setting.mods::modLuaSetting,
+              *modSetting.mods::modLuaSetting
     Protected order.i
+    Protected *mod.mods::LocalMod
     *mod = lua(Str(L))\mod
     
     ; clear list bevor reading new settings...
-    Debug "clear mod settings list"
-    ClearList(*mod\settings())
+    *mod\clearSettings()
     
     lua_pushvalue(L, index) 
     lua_pushnil(L)
@@ -516,20 +506,8 @@ Module luaParser
       
       key$ = lua_tostring(L, -1) ; name of this parameter
       
-      ; check if another setting with this key exists?
-      Protected addSetting = #True
-      ForEach *mod\settings()
-        If *mod\settings()\key$ = key$
-          debugger::add("luaParser::modlua_iterateSettingsTable() - Error: double key value!")
-          ; this should never happen, as key should be unique in LUA table
-          addSetting = #False
-          Break
-        EndIf
-      Next
-      If addSetting
-        *setting = AddElement(*mod\settings())
-        *setting\key$ = key$
-      EndIf
+      *setting = AllocateStructure(mods::modLuaSetting)
+      *setting\key$ = key$
       
       *setting\order = order
       order + 1
@@ -542,31 +520,31 @@ Module luaParser
       ; read type, default value and name of this parameter
       modlua_readSettingsTableOption(L, -2, *setting) 
       
-      Protected delete = #False
+      Protected addToMod = #True
       Select *setting\type$
         Case "boolean"
         Case "string"
         Case "number"
         Case "table"
         Default
-          delete = #True
+          addToMod = #False
       EndSelect
       If *setting\name$ = ""
-        delete = #True
+        addToMod = #False
       EndIf
       
-      If delete
-        ChangeCurrentElement(*mod\settings(), *setting)
-        DeleteElement(*mod\settings())
+      If addToMod
+        *modSetting = *mod\addSetting()
+        CopyStructure(*setting, *modSetting, mods::modLuaSetting)
       EndIf
       
+      FreeStructure(*setting)
       
       lua_pop(L, 2)
      Wend
      lua_pop(L, 1)
      
-     ; sort settings by "order"
-     SortStructuredList(*mod\settings(), #PB_Sort_Ascending, OffsetOf(mods::modLuaSetting\order), TypeOf(mods::modLuaSetting\order))
+     *mod\sortSettings()
      
   EndProcedure
   
@@ -609,7 +587,7 @@ Module luaParser
     ; open and parse mod.lua
     removeBOM(file$)
     If luaL_dofile(L, file$) <> 0
-      debugger::add("lua::openModLua() - lua_dofile ERROR: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
+      deb("lua:: lua_dofile: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -618,20 +596,20 @@ Module luaParser
     lua_getglobal(L, "data")
     If Not lua_isfunction(L, -1)
       lua_pop(L, 1)
-      debugger::add("lua::openModLua() - lua_isfunction ERROR: data is not a function")
+      deb("lua:: lua_isfunction: 'data' is not a function")
       ProcedureReturn #False
     EndIf
     
     ; call data()
     If lua_pcall(L, 0, 1, 0) <> 0 ; call with 0 arguments and 1 result expected
-      debugger::add("lua::openModLua() - lua_pcall ERROR: "+lua_tostring(L, -1))
+      deb("lua:: lua_pcall: "+lua_tostring(L, -1))
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
     ; check that return value is a table
     If Not lua_istable(L, -1)
-      debugger::add("lua::openModLua() - lua_istable ERROR: not a table")
+      deb("lua:: data return value not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -689,7 +667,7 @@ Module luaParser
     ; open and parse strings.lua
     removeBOM(file$)
     If luaL_dofile(L, file$) <> 0
-      debugger::add("lua::openStringsLua() - lua_dofile ERROR: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
+      deb("lua::openStringsLua() - lua_dofile: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -698,20 +676,20 @@ Module luaParser
     lua_getglobal(L, "data")
     If Not lua_isfunction(L, -1)
       lua_pop(L, 1)
-      debugger::add("lua::openStringsLua() - lua_isfunction ERROR: data is not a function")
+      deb("lua::openStringsLua() - lua_isfunction: data is not a function")
       ProcedureReturn #False
     EndIf
     
     ; call data()
     If lua_pcall(L, 0, 1, 0) <> 0 ; call with 0 arguments and 1 result expected
-      debugger::add("lua::openStringsLua() - lua_pcall ERROR: "+lua_tostring(L, -1))
+      deb("lua::openStringsLua() - lua_pcall: "+lua_tostring(L, -1))
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
     ; check that return value is a table
     If Not lua_istable(L, -1)
-      debugger::add("lua::openStringsLua() - lua_istable ERROR: not a table")
+      deb("lua::openStringsLua() - lua_istable: not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -777,13 +755,13 @@ Module luaParser
     removeBOM(file$)
     
     If luaL_dofile(L, file$) <> 0
-      debugger::add("lua::openSettingsLua() - lua_dofile ERROR: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
+      deb("lua:: lua_dofile: {"+lua_tostring(L, -1)+"} in file {"+file$+"}")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
     
     If Not lua_istable(L, -1)
-      debugger::add("lua::openSettingsLua() - lua_istable ERROR: not a table")
+      deb("lua:: settings not a table")
       lua_pop(L, 1)
       ProcedureReturn #False
     EndIf
@@ -808,7 +786,7 @@ Module luaParser
 ;     luaopen_base(L)	; base lib laden , fuer print usw
     
     ; add search path for require function:
-    tmp$ = misc::path(main::gameDirectory$, "/")
+    tmp$ = misc::path(settings::getString("", "path"), "/")
     string$ = "package.path = '"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;"+misc::path(modfolder$, "/")+"res/scripts/?.lua';"
     luaL_dostring(L, string$)
     
@@ -835,22 +813,20 @@ Module luaParser
   
   ;- PUBLIC FUNCTIONS
   
-  Procedure parseModLua(modfolder$, *mod.mods::mod, language$="")
+  Procedure parseModLua(modfolder$, *mod.mods::LocalMod, language$="")
     If modfolder$ = "" Or FileSize(modfolder$) <> -2
-      debugger::add("lua::parseModLua() - Error: {"+modfolder$+"} not found")
+      deb("lua:: {"+modfolder$+"} not found")
       ProcedureReturn #False
     EndIf
     
     If Not *mod
-      debugger::add("lua::parseModLua() - Error: no *mod pointer provided")
+      deb("lua:: no *mod pointer provided")
       ProcedureReturn #False
     EndIf
     
     If language$=""
       language$ = locale::getCurrentLocale()
     EndIf
-    
-    debugger::add("lua::parseModLua() - read {"+language$+"} from {"+modfolder$+"}")
     
     Protected stringsLua$, modLua$
     Protected string$, tmp$
@@ -859,7 +835,7 @@ Module luaParser
     stringsLua$ = modfolder$ + "strings.lua"
     
     If FileSize(modLua$) <= 0
-      debugger::add("lua::parseModLua() - Error: {"+modLua$+"} not found")
+      deb("lua:: {"+modLua$+"} not found")
       ProcedureReturn #False
     EndIf
     
@@ -879,12 +855,12 @@ Module luaParser
     Protected success = #False
     
     If modlua_open(L, modLua$)
-      *mod\aux\luaDate = GetFileDate(modLua$, #PB_Date_Modified)
-      *mod\aux\luaLanguage$ = locale::getCurrentLocale()
+      *mod\setLuaDate(GetFileDate(modLua$, #PB_Date_Modified))
+      *mod\setLuaLanguage(locale::getCurrentLocale())
       
       success = #True
     Else
-      debugger::add("lua::parseModLua() - Error: could not read mod.lua")
+      deb("lua:: could not read "+modLua$)
     EndIf
     
     DeleteMapElement(lua(), Str(L))
@@ -894,7 +870,6 @@ Module luaParser
   EndProcedure
   
   Procedure parseSettingsLua(modfolder$, Map settings.mods::modSetting(), language$="")
-    debugger::add("luaParser::parseModSettings()")
     modfolder$ = misc::path(modfolder$)
     
     Protected settingsLua$ = modfolder$ + "settings.lua"
@@ -904,16 +879,14 @@ Module luaParser
       ProcedureReturn #False
     EndIf
     
-    If language$=""
+    If language$ = ""
       language$ = locale::getCurrentLocale()
     EndIf
-    
     
     Protected L
     L = initLUA(modfolder$)
     
     lua(Str(L))\language$ = language$
-    
     
     If FileSize(stringsLua$) > 0
       openStringsLua(L, stringsLua$)
@@ -926,23 +899,19 @@ Module luaParser
     
   EndProcedure
   
-  
 EndModule
 
 
 
 CompilerIf #PB_Compiler_IsMainFile
-
   Define *mod.mods::mod
   *mod = AllocateStructure(mods::mod)
   
-  lua::parseModLua("lua/mod/", *mod, "de")
-  
+  luaParser::parseModLua("lua/mod/", *mod, "de")
   
   Define json
   json = CreateJSON(#PB_Any)
   InsertJSONStructure(JSONValue(json), *mod, mods::mod)
   Debug ComposeJSON(json, #PB_JSON_PrettyPrint)
   FreeJSON(json)
-  
 CompilerEndIf

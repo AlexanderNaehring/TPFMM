@@ -8,15 +8,64 @@
     #AttributeDisplayImages
   EndEnumeration
   
+  Enumeration -1 Step -1 ; use negative numbers for events as "EventType()" values are positive
+    #OnItemVisible
+    #OnItemInvisible
+    #OnItemFirstVisible
+  EndEnumeration
+  
   Enumeration 0
     #SortByText
     #SortByUser
+  EndEnumeration
+  
+  Enumeration 0
+    #AlignLeft
+    #AlignRight
   EndEnumeration
   
   ; prototype for user sort
   Prototype.i pCompare(*item1, *item2, options)
   ; prototype for user filter
   Prototype.i pFilter(*item, options)
+  
+  ;- Interfaces
+  Interface CanvasListItem
+    SetImage(image)
+    GetImage()
+    SetUserData(*data)
+    GetUserData()
+    SetSelected(selected)
+    GetSelected()
+    Hide(hidden.b)
+    IsHidden()
+    AddIcon(image, align=#AlignRight)
+    ClearIcons()
+    AddButton(*callback, image, imageHover, imageDisabled)
+    ClearButtons()
+  EndInterface
+  
+  Interface CanvasList
+    Free()
+    Resize(x, y, width, height)
+    AddItem(text$, *userdata=#Null, position = -1)
+    RemoveItem(*item)
+    ClearItems()
+    SetAttribute(attribute, value)
+    GetAttribute(attribute)
+    SetUserData(*data)
+    GetUserData()
+    SetSelectedItem(*item)
+    GetSelectedItem()
+    GetAllSelectedItems(List *items.CanvasListItem())
+    GetAllItems(List *items.CanvasListItem())
+    GetItemCount()
+    SetTheme(theme$)
+    GetThemeJSON.s(pretty=#False)
+    SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
+    FilterItems(filterFun.pFilter, options=0, persistent.b=#False)
+    BindItemEvent(event, *callback)
+  EndInterface
   
   ; declare public functions
   Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
@@ -26,20 +75,20 @@
   Declare Resize(*gadget, x, y, width, height)
   Declare AddItem(*gadget, text$, *userdata=#Null, position = -1)
   Declare RemoveItem(*gadget, *item)
+  Declare ClearItems(*gadget)
   Declare SetAttribute(*gadget, attribute, value)
   Declare GetAttribute(*gadget, attribute)
   Declare SetUserData(*gadet, *data)
   Declare GetUserData(*gadget)
   Declare SetSelectedItem(*gadget, *item)
   Declare GetSelectedItem(*gadget)
-  Declare GetAllSelectedItems(*gadget, Array *items(1))
-  Declare GetAllItems(*gadget, Array *items(1))
+  Declare GetAllSelectedItems(*gadget, List *items.CanvasListItem())
+  Declare GetAllItems(*gadget, List *item.CanvasListItem())
   Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
   Declare.s GetThemeJSON(*gadget, pretty=#False)
   Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
   Declare FilterItems(*gadget, filterFun.pFilter, options=0, persistent.b=#False)
-  Declare AddItemButton(*gadget, image, *callback)
   Declare BindItemEvent(*gadget, event, *callback)
   
   ; item functions
@@ -51,51 +100,24 @@
   Declare ItemGetSelected(*item)
   Declare ItemHide(*item, hidden.b)
   Declare ItemIsHidden(*item)
+  Declare ItemAddIcon(*item, image, align=#AlignRight)
+  Declare ItemClearIcons(*item)
+  Declare ItemAddButton(*item, *callback, image, imageHover, imageDisabled)
+  Declare ItemClearButtons(*item)
   
-  ;- Interfaces
-  Interface CanvasList
-    Free()
-    Resize(x, y, width, height)
-    AddItem(text$, *userdata=#Null, position = -1)
-    RemoveItem(*item)
-    SetAttribute(attribute, value)
-    GetAttribute(attribute)
-    SetUserData(*data)
-    GetUserData()
-    SetSelectedItem(*item)
-    GetSelectedItem()
-    GetAllSelectedItems(Array *items(1))
-    GetAllItems(Array *items(1))
-    GetItemCount()
-    SetTheme(theme$)
-    GetThemeJSON.s(pretty=#False)
-    SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
-    FilterItems(filterFun.pFilter, options=0, persistent.b=#False)
-    AddItemButton(image, *callback)
-    BindItemEvent(event, *callback)
-  EndInterface
-  
-  Interface CanvasListItem
-    SetImage(image)
-    GetImage()
-    SetUserData(*data)
-    GetUserData()
-    SetSelected(selected)
-    GetSelected()
-    Hide(hidden.b)
-    IsHidden()
-  EndInterface
   
 EndDeclareModule
 
 Module CanvasList
   
+  ;{ VT
   DataSection
     vt:
     Data.i @Free()
     Data.i @Resize()
     Data.i @AddItem()
     Data.i @RemoveItem()
+    Data.i @ClearItems()
     Data.i @SetAttribute()
     Data.i @GetAttribute()
     Data.i @SetUserData()
@@ -109,7 +131,6 @@ Module CanvasList
     Data.i @GetThemeJSON()
     Data.i @SortItems()
     Data.i @FilterItems()
-    Data.i @AddItemButton()
     Data.i @BindItemEvent()
     
     vtItem:
@@ -121,24 +142,28 @@ Module CanvasList
     Data.i @ItemGetSelected()
     Data.i @ItemHide()
     Data.i @ItemIsHidden()
+    Data.i @ItemAddIcon()
+    Data.i @ItemClearIcons()
+    Data.i @ItemAddButton()
+    Data.i @ItemClearButtons()
   EndDataSection
+  ;}
   
-  
-  ;- Enumerations
+  ;{ Enumerations
   EnumerationBinary 0
     #SelectionNone
     #SelectionFinal
     #SelectionTemporary
   EndEnumeration
+  ;}
   
-  
-  ;- Structures
-  ;{
+  ;{ Structures
   Structure box Extends Point
     width.i
     height.i
   EndStructure
   
+  ; theme
   Structure themeColors
     Background$
     ItemBackground$
@@ -150,7 +175,6 @@ Module CanvasList
     Border$
     Scrollbar$
     ScrollbarHover$
-    ItemBtnHover$
   EndStructure
   
   Structure themeResponsive
@@ -190,39 +214,13 @@ Module CanvasList
     item.themeItem
   EndStructure
   
+  ; selectbox
   Structure selectbox
     active.b ; 0 = not active, 1 = init, 2 = active
     box.box
   EndStructure
   
-  Structure item
-    *vt.CanvasListItem
-    *parent       ; gadget pointer
-    text$         ; display text
-    image.i       ; display image (if any)
-    selected.b    ; item selected?
-    hover.b       ; mouse over item?
-    hidden.b      ; item currently not displayed
-    *userdata     ; userdata
-    canvasBox.box ; location on canvas stored for speeding up drawing operation
-  EndStructure
-  
-  Prototype itemBtnCallback(*item)
-  Structure itemBtn
-    image.i
-    imageHover.i
-    imageDisabled.i
-    callback.itemBtnCallback
-    box.box
-    hover.b
-  EndStructure
-  
-  Prototype itemEventCallback(*item.CanvasListItem, event)
-  Structure itemEvent
-    event.i
-    callback.itemEventCallback
-  EndStructure
-  
+  ; scrollbar
   Structure scrollbar
     disabled.b
     hover.b
@@ -234,6 +232,7 @@ Module CanvasList
     dragOffset.l
   EndStructure
   
+  ; sort & filter
   Structure pendingSort
     pending.b
     persistent.b
@@ -247,6 +246,45 @@ Module CanvasList
     options.i
   EndStructure
   
+  ; item
+  Prototype itemBtnCallback(*item)
+  Structure itemBtn
+    image.i
+    imageHover.i
+    imageDisabled.i
+    callback.itemBtnCallback
+    box.box
+    hover.b
+  EndStructure
+  
+  Structure itemIcon
+    image.i
+    align.b
+  EndStructure
+  
+  Structure item
+    *vt.CanvasListItem
+    *parent       ; gadget pointer
+    text$         ; display text
+    image.i       ; user image per item (optional)
+    selected.b    ; item selected?
+    hover.b       ; mouse over item?
+    hidden.b      ; item currently not displayed
+    isOnCanvas.b  ; item is currently visible on the canvas
+    wasVisible.b  ; item was visible at some point in the past (used for event "onFirstVisible")
+    List icons.itemIcon() ; multiple (optional) user icons displayed on the item
+    List buttons.itemBtn() ; same buttons used for all items...
+    *userdata     ; userdata
+    canvasBox.box ; location on canvas stored for speeding up drawing operation
+  EndStructure
+  
+  Prototype itemEventCallback(*item.CanvasListItem, event)
+  Structure itemEvent
+    event.i
+    callback.itemEventCallback
+  EndStructure
+  
+  ; gadget
   Structure gadget
     *vt.CanvasList
     *userdata
@@ -259,7 +297,6 @@ Module CanvasList
     fontHeight.i
     ; items
     List items.item()
-    List itemButtons.itemBtn() ; same buttons used for all items...
     List itemEvents.itemEvent()
     ; select box
     selectbox.selectbox
@@ -496,36 +533,6 @@ Module CanvasList
     ProcedureReturn c
   EndProcedure
   
-  Procedure MakeDisabledIcon(*this.gadget, icon)
-    Protected width, height, newIcon
-    width   = ImageWidth(icon) 
-    height  = ImageHeight(icon) 
-    newIcon = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent) 
-    If StartDrawing(ImageOutput(newIcon))
-      DrawingMode(#PB_2DDrawing_Default)
-      Box(0, 0, width, height, #Gray) 
-      DrawingMode(#PB_2DDrawing_AlphaChannel) 
-      DrawImage(ImageID(icon), 0, 0) 
-      StopDrawing()
-    EndIf
-    ProcedureReturn newIcon
-  EndProcedure 
-  
-  Procedure MakeHoverIcon(*this.gadget, icon)
-    Protected width, height, newIcon
-    width   = ImageWidth(icon) 
-    height  = ImageHeight(icon) 
-    newIcon = CreateImage(#PB_Any, width, height, 32, #PB_Image_Transparent) 
-    If StartDrawing(ImageOutput(newIcon)) 
-      DrawingMode(#PB_2DDrawing_AlphaBlend) 
-      Box(0, 0, width, height, RGBA(255, 255, 255, 255)) 
-      Box(0, 0, width, height, ColorFromHTML(*this\theme\color\ItemBtnHover$))
-      DrawImage(ImageID(icon), 0, 0)
-      StopDrawing()
-    EndIf
-    ProcedureReturn newIcon
-  EndProcedure 
-  
   Procedure Quicksort(List items.item(), options, comp.pCompare, low, high, level=0)
     Protected.item *midElement, *highElement, *iElement, *wallElement
     Protected wall, i, sw
@@ -616,7 +623,7 @@ Module CanvasList
   
   Procedure updateItemPosition(*this.gadget)
     Protected x, y, width, height
-    Protected numColumns, columnWidth, r, c, i
+    Protected numColumns, columnWidth, r, c, i, k
     Protected margin, padding
     
     If *this\pauseDraw
@@ -658,6 +665,7 @@ Module CanvasList
     i = 0
     ForEach *this\items()
       If *this\items()\hidden
+        *this\items()\isOnCanvas = #False
         Continue
       EndIf
       c = Mod(i, numColumns)
@@ -671,20 +679,50 @@ Module CanvasList
       *this\items()\canvasBox\width = width
       *this\items()\canvasBox\height = height
       
+      If *this\items()\canvasBox\y + *this\theme\item\Height > 0 And *this\items()\canvasBox\y < GadgetHeight(*this\gCanvas)
+        ; item is visible
+        If Not *this\items()\isOnCanvas
+          ; was not visible before
+          ; execute callback if exists
+          ForEach *this\itemEvents()
+            If *this\itemEvents()\event = #OnItemVisible
+              *this\itemEvents()\callback(*this\items(), #OnItemVisible)
+            ElseIf Not *this\items()\wasVisible And *this\itemEvents()\event = #OnItemFirstVisible
+              *this\itemEvents()\callback(*this\items(), #OnItemFirstVisible)
+            EndIf
+          Next
+        EndIf
+        *this\items()\isOnCanvas = #True
+        *this\items()\wasVisible = #True
+      Else
+        ; item not visible
+        If *this\items()\isOnCanvas
+          ; was visible before
+          ; execute callback if exists
+          ForEach *this\itemEvents()
+            If *this\itemEvents()\event = #OnItemInvisible
+              *this\itemEvents()\callback(*this\items(), #OnItemInvisible)
+            EndIf
+          Next
+        EndIf
+        *this\items()\isOnCanvas = #False
+      EndIf
+      
+      
+      Protected iconBtnSize = 24
+      ForEach *this\items()\buttons()
+        ; position relative to item!
+        k = ListSize(*this\items()\buttons()) - ListIndex(*this\items()\buttons())
+        *this\items()\buttons()\box\x       = *this\items()\canvasBox\width - k * padding - k * iconBtnSize - (*this\theme\scrollbarWidth)
+        ; scrollbarwidth offset just the scrollbar not covering the icon btn
+        *this\items()\buttons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
+        *this\items()\buttons()\box\width   = iconBtnSize
+        *this\items()\buttons()\box\height  = iconBtnSize
+      Next
+      
       i + 1
     Next
     
-    Protected iconBtnSize = 24
-    If ListSize(*this\items())
-      ForEach *this\itemButtons()
-        i = ListSize(*this\itemButtons()) - ListIndex(*this\itemButtons())
-        *this\itemButtons()\box\x       = *this\items()\canvasBox\width - i * padding - i * iconBtnSize - (*this\theme\scrollbarWidth)
-        ; scrollbarwidth offset just the scrollbar not covering the icon btn
-        *this\itemButtons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
-        *this\itemButtons()\box\width   = iconBtnSize
-        *this\itemButtons()\box\height  = iconBtnSize
-      Next
-    EndIf
     
     UnlockMutex(*this\mItems)
     ProcedureReturn #True
@@ -730,6 +768,7 @@ Module CanvasList
     Protected margin, padding
     Protected i, line$
     Static BackColor
+    Protected x, y, w, h
     margin = *this\theme\Item\Margin
     padding = *this\theme\Item\Padding
     
@@ -757,7 +796,7 @@ Module CanvasList
           EndIf
           
           ; only draw if visible
-          If \canvasBox\y + *this\theme\item\Height > 0 And \canvasBox\y < GadgetHeight(*this\gCanvas)
+          If \isOnCanvas
             ; background
             DrawingMode(#PB_2DDrawing_Default)
             Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBackground$))
@@ -776,12 +815,48 @@ Module CanvasList
             EndIf
             
             
+            ; icons
+            If ListSize(\icons()) > 0
+              DrawingMode(#PB_2DDrawing_AlphaBlend)
+              ; draw icons in "first line", use same size as text in first line
+              Protected size = *this\theme\item\Lines(0)\REM * *this\fontHeight
+              Protected nl, nr
+              Protected iconOffsetL, iconOffsetR
+              nl = 0 : nr = 0 
+              iconOffsetL = 0 : iconOffsetR = 0
+              ForEach \icons()
+                ; left overlay, ignore other objects: x = \canvasBox\x + nl * size + padding
+                If \icons()\align = #AlignLeft
+                  x = \canvasBox\x + iOffset + nl * (size + padding) + padding
+                  iconOffsetL = (nl+1) * (size + padding) + padding
+                  nl + 1
+                ElseIf \icons()\align = #AlignRight
+                  x = \canvasBox\x + \canvasBox\width - ((nr+1) * (size + padding) + *this\theme\scrollbarWidth )
+                  iconOffsetR = (nr+2) * (size + padding) + *this\theme\scrollbarWidth
+                  nr + 1
+                EndIf
+                y = \canvasBox\y + padding
+                w = size
+                h = size
+                DrawImage(ImageID(\icons()\image), x, y, w, h)
+              Next
+            EndIf
+            
+            
             ; text
             DrawingMode(#PB_2DDrawing_Transparent)
             For i = 0 To ArraySize(*this\theme\item\Lines())
               line$ = StringField(\text$, i+1, #LF$)
               DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
-              DrawText(\canvasBox\x + padding + iOffset, \canvasBox\y + *this\theme\item\Lines(i)\yOffset, TextMaxWidth(line$, \canvasBox\width - 2*padding - iOffset), ColorFromHTML(*this\theme\color\ItemText$))
+              ; icon offset only in first line:
+              x = \canvasBox\x + padding + iOffset
+              y = \canvasBox\y + *this\theme\item\Lines(i)\yOffset
+              w = \canvasBox\width - 2*padding - iOffset
+              If i = 0
+                x + iconOffsetL
+                w - iconOffsetL - iconOffsetR
+              EndIf
+              DrawText(x, y, TextMaxWidth(line$, w), ColorFromHTML(*this\theme\color\ItemText$))
             Next
             
             
@@ -800,24 +875,23 @@ Module CanvasList
             
             
             ; buttons
-            DrawingMode(#PB_2DDrawing_AlphaBlend)
             If \hover
-              Protected x, y, w, h
-              ForEach *this\itemButtons()
-                x = \canvasBox\x + *this\itemButtons()\box\x
-                y = \canvasBox\y + *this\itemButtons()\box\y
-                w = *this\itemButtons()\box\width
-                h = *this\itemButtons()\box\height
+              DrawingMode(#PB_2DDrawing_AlphaBlend)
+              ForEach \buttons()
+                x = \canvasBox\x + \buttons()\box\x
+                y = \canvasBox\y + \buttons()\box\y
+                w = \buttons()\box\width
+                h = \buttons()\box\height
                 ; background for each item button
                 Box(x, y, w, h, $FFFFFFFF)
-                If *this\itemButtons()\callback
-                  If *this\itemButtons()\hover
-                    DrawImage(ImageID(*this\itemButtons()\imageHover), x, y, w, h)
+                If \buttons()\callback
+                  If \buttons()\hover
+                    DrawImage(ImageID(\buttons()\imageHover), x, y, w, h)
                   Else
-                    DrawImage(ImageID(*this\itemButtons()\image), x, y, w, h)
+                    DrawImage(ImageID(\buttons()\image), x, y, w, h)
                   EndIf
                 Else ; no callback exists
-                  DrawImage(ImageID(*this\itemButtons()\imageDisabled), x, y, w, h)
+                  DrawImage(ImageID(\buttons()\imageDisabled), x, y, w, h)
                 EndIf
               Next
             EndIf
@@ -839,13 +913,45 @@ Module CanvasList
         Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
       EndIf
       
+      
+      ; draw "x/N items visible" information in bottem right
+      Protected visibleItems, text$
+      If *this\hover
+        visibleItems = 0
+        ForEach *this\items()
+          If Not *this\items()\hidden
+            visibleItems + 1
+          EndIf
+        Next
+        ; TODO filter info in CanvasList WIP!
+        If visibleItems < ListSize(*this\items())
+          text$ = "Showing "+visibleItems+"/"+ListSize(*this\items())+" items"
+          DrawingMode(#PB_2DDrawing_AlphaBlend|#PB_2DDrawing_Transparent)
+          DrawingFont(GetGadgetFont(#PB_Default))
+          
+          FrontColor(RGBA($80, $80, $80, $40))
+          w = TextWidth(text$)
+          h = TextHeight(text$)
+          RoundBox(GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - margin - padding - w - padding,
+                   GadgetHeight(*this\gCanvas) - margin - padding - h - padding,
+                   w + 2*padding,
+                   2*h, ; go out of canvas
+                   h/2, h/2)
+          FrontColor(RGBA(0, 0, 0, $80))
+          DrawText(GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - margin - padding - w,
+                   GadgetHeight(*this\gCanvas) - margin - padding - h,
+                   text$)
+        EndIf
+      EndIf
+      
             
       ; draw scrollbar
       If *this\hover And Not *this\scrollbar\disabled
+        ; 2 px margin to outer gadget borders
         *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - 2
-        *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2
+        *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2 ; pagelength = gadgetheight!
         *this\scrollbar\box\width = *this\theme\scrollbarWidth
-        *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum
+        *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum ; pagelength = gadgetheight!
         If *this\scrollbar\box\height < *this\theme\scrollbarWidth*2
           *this\scrollbar\box\height = *this\theme\scrollbarWidth*2
         EndIf
@@ -910,6 +1016,8 @@ Module CanvasList
       Case #PB_EventType_LeftClick
         ; left click is same as down & up...
         
+      Case #PB_EventType_LeftDoubleClick
+        *this\selectbox\active = 0
         
       Case #PB_EventType_LeftButtonDown
         ; either drag the scrollbar or draw a selection box for items
@@ -936,6 +1044,7 @@ Module CanvasList
           
           If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Modifiers) & #PB_Canvas_Control = #PB_Canvas_Control
             ; CTRL click (toggle item selection under mouse)
+            MyEvent = #PB_EventType_Change
             
             LockMutex(*this\mItems)
             ForEach *this\items()
@@ -957,10 +1066,10 @@ Module CanvasList
             ; check if item button was clicked
             ForEach *this\items()
               If *this\items()\hover
-                ForEach *this\itemButtons()
-                  If *this\itemButtons()\hover
-                    If *this\itemButtons()\callback
-                      *this\itemButtons()\callback(*this\items())
+                ForEach *this\items()\buttons()
+                  If *this\items()\buttons()\hover
+                    If *this\items()\buttons()\callback
+                      *this\items()\buttons()\callback(*this\items())
                     EndIf
                     btnClick = #True
                     Break
@@ -1096,16 +1205,16 @@ Module CanvasList
               EndIf
               If PointInBox(@p, *item\canvasBox)
                 *item\hover = #True
-                ForEach *this\itemButtons()
+                ForEach *this\items()\buttons()
                   Protected box.box
-                  box\x = *item\canvasBox\x + *this\itemButtons()\box\x
-                  box\y = *item\canvasBox\y + *this\itemButtons()\box\y
-                  box\width = *this\itemButtons()\box\width
-                  box\height = *this\itemButtons()\box\height
+                  box\x = *item\canvasBox\x + *this\items()\buttons()\box\x
+                  box\y = *item\canvasBox\y + *this\items()\buttons()\box\y
+                  box\width = *this\items()\buttons()\box\width
+                  box\height = *this\items()\buttons()\box\height
                   If PointInBox(@p, @box)
-                    *this\itemButtons()\hover = #True
+                    *this\items()\buttons()\hover = #True
                   Else
-                    *this\itemButtons()\hover = #False
+                    *this\items()\buttons()\hover = #False
                   EndIf
                 Next
                 Break ; can only hover on one item!
@@ -1145,8 +1254,7 @@ Module CanvasList
            key = #PB_Shortcut_Down
           Protected selectedItems
           selectedItems = 0
-          ; TODO
-          ; instead of count selected, save "last selected item" in gadget data
+          ; TODO instead of count selected, save "last selected item" in gadget data
           LockMutex(*this\mItems)
           ForEach *this\items()
             If *this\items()\selected & #SelectionFinal
@@ -1209,6 +1317,34 @@ Module CanvasList
               draw(*this)
             EndIf
           EndIf
+          
+        ElseIf key = #PB_Shortcut_Home
+          LockMutex(*this\mItems)
+          ForEach *this\items()
+            *this\items()\selected = #SelectionNone
+          Next
+          *item = FirstElement(*this\items())
+          *item\selected | #SelectionFinal
+          UnlockMutex(*this\mItems)
+          *this\scrollbar\position = 0
+          updateScrollbar(*this)
+          updateItemPosition(*this)
+          draw(*this)
+          
+        ElseIf key = #PB_Shortcut_End
+          LockMutex(*this\mItems)
+          ForEach *this\items()
+            *this\items()\selected = #SelectionNone
+          Next
+          *item = LastElement(*this\items())
+          *item\selected | #SelectionFinal
+          UnlockMutex(*this\mItems)
+          *this\scrollbar\position = *this\scrollbar\maximum
+          updateScrollbar(*this)
+          updateItemPosition(*this)
+          draw(*this)
+          
+          
         EndIf
     EndSelect
     
@@ -1244,8 +1380,6 @@ Module CanvasList
   Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
     Protected *this.gadget
     *this = AllocateStructure(gadget)
-    
-    ; link interface to function addresses
     *this\vt = ?vt
     
     ; Mutex creation
@@ -1290,6 +1424,19 @@ Module CanvasList
   EndProcedure
   
   Procedure Free(*this.gadget)
+    LockMutex(*this\mItemAddRemove)
+    LockMutex(*this\mItems)
+    ForEach *this\items()
+      ; free items!
+      ; TODO free all item related memory
+      
+    Next
+    ClearList(*this\items())
+    UnlockMutex(*this\mItems)
+    FreeMutex(*this\mItems)
+    UnlockMutex(*this\mItemAddRemove)
+    FreeMutex(*this\mItemAddRemove)
+    
     FreeGadget(*this\gCanvas)
     FreeStructure(*this)
   EndProcedure
@@ -1297,7 +1444,7 @@ Module CanvasList
   Procedure Resize(*this.gadget, x, y, width, height)
     ResizeGadget(*this\gCanvas, x, y, width, height)
     
-    ; should cause resize callback / TODO: CHECK
+    ; TODO CHECK should cause resize callback
     ; not used in this project
 ;     updateScrollbar(*this)
 ;     updateItemPosition(*this)
@@ -1349,12 +1496,22 @@ Module CanvasList
   Procedure RemoveItem(*this.gadget, *item)
     LockMutex(*this\mItems)
     ChangeCurrentElement(*this\items(), *item) ; no error check, may cause IMA
-      DeleteElement(*this\items(), 1)
-      UnlockMutex(*this\mItems)
-      
-      updateItemPosition(*this)
-      updateScrollbar(*this)
-      draw(*this)
+    DeleteElement(*this\items(), 1)
+    UnlockMutex(*this\mItems)
+    
+    updateScrollbar(*this)
+    updateItemPosition(*this)
+    draw(*this)
+  EndProcedure
+  
+  Procedure ClearItems(*this.gadget)
+    LockMutex(*this\mItems)
+    ClearList(*this\items())
+    UnlockMutex(*this\mItems)
+    
+    updateScrollbar(*this)
+    updateItemPosition(*this)
+    draw(*this)
   EndProcedure
   
   Procedure SetAttribute(*this.gadget, attribute, value)
@@ -1377,7 +1534,6 @@ Module CanvasList
         *this\pauseDraw = value
         If Not *this\pauseDraw
           If *this\pendingSort\pending
-            Debug "## execute pending sort"
             SortItems(*this, *this\pendingSort\mode, *this\pendingSort\sortFun, *this\pendingSort\options, *this\pendingSort\persistent)
           EndIf
           updateItemPosition(*this)
@@ -1435,28 +1591,18 @@ Module CanvasList
     ProcedureReturn *item
   EndProcedure
   
-  Procedure GetAllSelectedItems(*this.gadget, Array *items.item(1))
+  Procedure GetAllSelectedItems(*this.gadget, List *items.item())
     Protected i
     LockMutex(*this\mItems)
     ; get number of selected items
-    i = 0
+    ClearList(*items())
     ForEach *this\items()
       If *this\items()\selected & #SelectionFinal
+        AddElement(*items())
+        *items() = *this\items()
         i + 1
       EndIf
     Next
-    
-    If i > 0
-      ReDim *items(i-1)
-      ; store items in array
-      i = 0
-      ForEach *this\items()
-        If *this\items()\selected & #SelectionFinal
-          *items(i) = *this\items()
-          i + 1
-        EndIf
-      Next
-    EndIf
     
     UnlockMutex(*this\mItems)
     If i > 0
@@ -1466,22 +1612,17 @@ Module CanvasList
     EndIf
   EndProcedure
   
-  Procedure GetAllItems(*this.gadget, Array *items.item(1))
+  Procedure GetAllItems(*this.gadget, List *items.item())
     Protected i
     LockMutex(*this\mItems)
-    ; get number of items
+    ClearList(*items())
     i = ListSize(*this\items())
-    
     If i > 0
-      ReDim *items(i-1)
-      ; store items in array
-      i = 0
       ForEach *this\items()
-        *items(i) = *this\items()
-        i + 1
+        AddElement(*items())
+        *items() = *this\items()
       Next
     EndIf
-    
     UnlockMutex(*this\mItems)
     If i > 0
       ProcedureReturn #True
@@ -1596,14 +1737,6 @@ Module CanvasList
     draw(*this)
   EndProcedure
   
-  Procedure AddItemButton(*this.gadget, image, *callback)
-    AddElement(*this\itemButtons())
-    *this\itemButtons()\image = image
-    *this\itemButtons()\imageHover = MakeHoverIcon(*this, image)
-    *this\itemButtons()\imageDisabled = MakeDisabledIcon(*this, image)
-    *this\itemButtons()\callback = *callback
-  EndProcedure
-  
   Procedure BindItemEvent(*this.gadget, event, *callback)
     Protected *el.itemEvent
     *el = AddElement(*this\itemEvents())
@@ -1654,6 +1787,48 @@ Module CanvasList
   Procedure ItemIsHidden(*this.item)
     ProcedureReturn *this\hidden
   EndProcedure
+  
+  Procedure ItemAddIcon(*this.item, image, align=#AlignRight)
+    ; todo use mutex just for item icons?
+    ; must adjust mutex lock in "add", "clear", "draw", init mutex on item creation, free mutex on item deletion
+    Protected *gadget.gadget
+    Protected *icon.itemIcon
+    If IsImage(image)
+      *gadget.gadget = *this\parent
+      LockMutex(*gadget\mItems)
+      LastElement(*this\icons())
+      *icon = AddElement(*this\icons())
+      *icon\image = image
+      *icon\align = align
+      UnlockMutex(*gadget\mItems)
+    EndIf
+  EndProcedure
+  
+  Procedure ItemClearIcons(*this.item)
+    Protected *gadget.gadget
+    Protected *icon.itemIcon
+    *gadget.gadget = *this\parent
+    LockMutex(*gadget\mItems)
+    ClearList(*this\icons())
+    UnlockMutex(*gadget\mItems)
+  EndProcedure
+  
+  Procedure ItemAddButton(*this.item, *callback, image, imageHover, imageDisabled)
+    ; TODO mutex lock!
+    If IsImage(image)
+      AddElement(*this\buttons())
+      *this\buttons()\image = image
+      *this\buttons()\imageHover = imageHover
+      *this\buttons()\imageDisabled = imageDisabled
+      *this\buttons()\callback = *callback
+    EndIf
+  EndProcedure
+  
+  Procedure ItemClearButtons(*this.item)
+    ClearList(*this\buttons())
+  EndProcedure
+  
+  
   
   
 EndModule

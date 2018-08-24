@@ -16,22 +16,19 @@ XIncludeFile "module_aes.pbi"
 
 
 Module windowSettings
+  UseModule debugger
   
   Global _parentW, _dialog
   
   Macro gadget(name)
     DialogGadget(_dialog, name)
   EndMacro
-    
+  
   Declare updateGadgets()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
-  
-  Procedure resize()
-    ; nothing to do
-  EndProcedure
   
   Procedure SetCanvasColor(gadget, color)
     If IsGadget(gadget) And GadgetType(gadget) = #PB_GadgetType_Canvas
@@ -66,15 +63,14 @@ Module windowSettings
     DisableWindow(_parentW, #False)
     SetActiveWindow(_parentW)
     
-    If misc::checkGameDirectory(main::gameDirectory$) <> 0
-      debugger::add("windowSettings() - gameDirectory not correct or not set - exit TPFMM now")
+    If misc::checkGameDirectory(settings::getString("", "path"), main::_TESTMODE) <> 0
+      deb("windowSettings() - gameDirectory not correct or not set - exit TPFMM now")
       main::exit()
     EndIf
     
   EndProcedure
   
   Procedure GadgetButtonAutodetect()
-    debugger::add("windowSettings::GadgetButtonAutodetect()")
     Protected path$
     
     CompilerSelect #PB_Compiler_OS
@@ -101,13 +97,13 @@ Module windowSettings
     CompilerEndSelect
     
     If path$ And FileSize(path$) = -2
-      debugger::add("windowSettings::GadgetButtonAutodetect() - found {"+path$+"}")
+      deb("windowSettings::GadgetButtonAutodetect() - found {"+path$+"}")
       SetGadgetText(gadget("installationPath"), path$)
       updateGadgets()
       ProcedureReturn #True
     EndIf
     
-    debugger::add("windowSettings::GadgetButtonAutodetect() - did not found any TF installation")
+    deb("windowSettings::GadgetButtonAutodetect() - did not found any TF installation")
     ProcedureReturn #False
   EndProcedure
   
@@ -126,7 +122,7 @@ Module windowSettings
   EndProcedure
   
   Procedure GadgetSaveSettings()
-    Protected Dir$, locale$, restart = #False
+    Protected Dir$, locale$, oldDir$, restart = #False
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     
@@ -135,6 +131,7 @@ Module windowSettings
       locale$ = "en"
     EndIf
     
+    oldDir$ = settings::getString("", "path")
     
     settings::setString("", "path", dir$)
     If locale$ <> settings::getString("", "locale")
@@ -176,14 +173,13 @@ Module windowSettings
 ;       ; 2   = path not okay
 ;     EndIf
     
-    If main::gameDirectory$ <> dir$
+    If oldDir$ <> dir$
       ; gameDir changed
-      main::gameDirectory$ = dir$
       mods::freeAll()
       mods::load()
     EndIf
     
-    repository::init()
+    repository::refreshRepositories()
     
     GadgetCloseSettings()
   EndProcedure
@@ -218,7 +214,7 @@ Module windowSettings
     Protected ret
     Static LastDir$ = "-"
     
-    If #True Or LastDir$ <> GetGadgetText(gadget("installationPath"))
+    If #True ; LastDir$ <> GetGadgetText(gadget("installationPath"))
       LastDir$ = GetGadgetText(gadget("installationPath"))
       
       If FileSize(LastDir$) = -2
@@ -227,7 +223,7 @@ Module windowSettings
         ; DisableGadget(, #True)
       EndIf
       
-      ret = misc::checkGameDirectory(LastDir$)
+      ret = misc::checkGameDirectory(LastDir$, main::_TESTMODE)
       ; 0   = path okay, executable found and writing possible
       ; 1   = path okay, executable found but cannot write
       ; 2   = path not okay
@@ -258,6 +254,45 @@ Module windowSettings
     
   EndProcedure
   
+  Procedure updateRepositoryList()
+    Protected NewList urls$()
+    repository::GetRepositories(urls$())
+    ClearGadgetItems(gadget("repositoryList"))
+    ForEach urls$()
+      AddGadgetItem(gadget("repositoryList"), -1, urls$()+#LF$+repository::GetRepositoryModCount(urls$()))
+    Next
+  EndProcedure
+  
+  Procedure repositoryAdd()
+    Protected url$
+    ; preset url to clipboard text if is an url
+    url$ = Trim(GetClipboardText())
+    If LCase(Left(url$, 7)) <> "http://" And LCase(Left(url$, 8)) <> "https://"
+      url$ = ""
+    EndIf
+    ; show requester
+    url$ = InputRequester("Add new Repository", "Please input the URL to the repository", url$)
+    
+    If url$
+      ; add repo
+      repository::AddRepository(url$)
+    EndIf
+    updateRepositoryList()
+  EndProcedure
+  
+  Procedure repositoryRemove()
+    Protected selected, url$
+    selected = GetGadgetState(gadget("repositoryList"))
+    If selected <> -1
+      url$ = GetGadgetItemText(gadget("repositoryList"), selected, 0)
+      If url$
+        repository::RemoveRepository(url$)
+      EndIf
+    EndIf
+    updateRepositoryList()
+  EndProcedure
+  
+  
   Procedure showWindow()
     HideWindow(window, #False, #PB_Window_WindowCentered)
   EndProcedure
@@ -271,19 +306,9 @@ Module windowSettings
     
     UseModule locale ; import namespace "locale" for shorthand "l()" access
     
-    DataSection
-      dataDialogXML:
-      IncludeBinary "dialogs/settings.xml"
-      dataDialogXMLend:
-    EndDataSection
-    
     ; open dialog
     Protected xml 
-    xml = CatchXML(#PB_Any, ?dataDialogXML, ?dataDialogXMLend - ?dataDialogXML)
-    If Not xml Or XMLStatus(xml) <> #PB_XML_Success
-      MessageRequester("Critical Error", "Could not read window definition!", #PB_MessageRequester_Error)
-      End
-    EndIf
+    misc::IncludeAndLoadXML(xml, "dialogs/settings.xml")
     
     _dialog = CreateDialog(#PB_Any)
      
@@ -345,11 +370,12 @@ Module windowSettings
     SetGadgetText(gadget("integrateRegisterProtocol"),    l("settings","integrate_register_protocol"))
     SetGadgetText(gadget("integrateRegisterContextMenu"), l("settings","integrate_register_context"))
     
-    
-;     SetGadgetText(gadget("repositoryList"),         "")
+    RemoveGadgetColumn(gadget("repositoryList"), 0)
+    AddGadgetColumn(gadget("repositoryList"), 0, "URL", 340)
+    AddGadgetColumn(gadget("repositoryList"), 1, "Mods", 40)
+    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
+    SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
 ;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-;     SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
 ;     SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
 ;     SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
 ;     SetGadgetText(gadget("repositoryDescriptionLabel"), l("settings", "repository_description"))
@@ -357,7 +383,6 @@ Module windowSettings
     
     ; bind events
     BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
-    BindEvent(#PB_Event_SizeWindow, @resize(), window)
     
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())
@@ -373,6 +398,8 @@ Module windowSettings
     BindGadgetEvent(gadget("colorModLuaError"), @GadgetColor(), #PB_EventType_LeftClick)
     BindGadgetEvent(gadget("colorModHidden"), @GadgetColor(), #PB_EventType_LeftClick)
     
+    BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
+    BindGadgetEvent(gadget("repositoryRemove"), @repositoryRemove())
     ; receive "unhide" event
     BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
     
@@ -384,10 +411,8 @@ Module windowSettings
   Procedure show()
     Protected locale$
     
-    debugger::add("windowSettings::show()")
-    
     ; main
-    SetGadgetText(gadget("installationPath"), ReadPreferenceString("path", main::gameDirectory$))
+    SetGadgetText(gadget("installationPath"), settings::getString("", "path"))
     locale$ = settings::getString("", "locale")
     SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
     
@@ -423,7 +448,8 @@ Module windowSettings
     ; locale
     locale::listAvailable(gadget("languageSelection"), locale$)
     
-;     repository::listRepositories(gadget())
+    ; repositories
+    updateRepositoryList()
     
     updateGadgets()
     

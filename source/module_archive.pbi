@@ -11,6 +11,8 @@ EndDeclareModule
 
 
 Module archive
+  UseModule debugger
+  
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
@@ -49,13 +51,13 @@ Module archive
     Protected program, exit
     
     If FileSize(archive$) <= 0
-      debugger::add("archive::extract() - Error: Cannot find archive {"+archive$+"}")
+      deb("archive:: cannot find archive {"+archive$+"}")
       ProcedureReturn #False
     EndIf
     
     misc::CreateDirectoryAll(directory$)
     If FileSize(directory$) <> -2
-      debugger::add("archive::extract() - Error: Cannot create target directory {"+directory$+"}")
+      deb("archive:: cannot create target directory {"+directory$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -93,25 +95,26 @@ Module archive
     CompilerEndSelect
     
     ; start program
-    debugger::add("archive::extract() - {"+program$+" "+parameter$+"}")
+    deb("archive:: {"+program$+" "+parameter$+"}")
     program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
     If Not program
-      debugger::add("archive::extract() - Error: could not start program")
+      deb("archive:: could not start program")
       ProcedureReturn #False
     EndIf
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        debugger::add("archive::extract() -| "+ReadProgramString(program))
+        Debug ReadProgramString(program)
+;         debugger::add("archive::extract() -| "+ReadProgramString(program))
       EndIf
       Delay(1)
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    debugger::add("archive::extract() - exit code "+exit)
     If exit = 0 Or (exit = 1 And program$ = "7z")
       ProcedureReturn #True
     Else
+      deb("archive:: exit code "+exit)
       ProcedureReturn #False
     EndIf
     
@@ -126,7 +129,7 @@ Module archive
     DeleteFile(archive$, #PB_FileSystem_Force)
     
     If FileSize(directory$) <> -2
-      debugger::add("archive::pack() - Error: Cannot find source directory {"+directory$+"}")
+      deb("archive::pack() - cannot find source directory {"+directory$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -148,16 +151,17 @@ Module archive
     CompilerEndSelect
     
     ; start program
-    debugger::add("archive::pack() - {"+program$+" "+parameter$+"}")
+    deb("archive:: {"+program$+" "+parameter$+"}")
     program = RunProgram(program$, parameter$, root$, #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
     If Not program
-      debugger::add("archive::pack() - Error: could not start program")
+      deb("archive:: could not start program")
       ProcedureReturn #False
     EndIf
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        debugger::add("archive::pack() -| "+ReadProgramString(program))
+        Debug ReadProgramString(program)
+;         debugger::add("archive::pack() -| "+ReadProgramString(program))
       EndIf
       Delay(1)
     Wend
@@ -166,6 +170,7 @@ Module archive
     If exit = 0
       ProcedureReturn #True
     Else
+      deb("archive:: exit code "+exit)
       ProcedureReturn #False
     EndIf
     

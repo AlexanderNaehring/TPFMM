@@ -3,7 +3,6 @@
   
   Global _DEBUG     = #True ; write debug messages to log file
   Global _TESTMODE  = #False
-  Global gameDirectory$
   Global VERSION$ = "TPFMM v1.1." + #PB_Editor_BuildCount
   Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   Global VERSION_FULL$ = VERSION$ + " b" + #PB_Editor_CompileCount
@@ -17,9 +16,9 @@
   CompilerEndSelect
   UseMD5Fingerprint()
   VERSION_FULL$ + " {" + StringFingerprint(CPUName() + "/" + ComputerName() + "/" + UserName(), #PB_Cipher_MD5) + "}"
-  Debug VERSION_FULL$
   
   #PORT = 14123
+  #LicenseVersion = 2
   
   #DRAG_MOD = 1
   
@@ -37,14 +36,16 @@ XIncludeFile "module_images.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_instance.pbi"
+XIncludeFile "module_windowLicense.pbi"
 
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
 
 Module main
+  UseModule debugger
   
   Procedure handleError()
-    Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss UTC", misc::time())
+    Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss", Date())
     Protected file, file$ = "crash/dump-"+date$+".txt"
     CreateDirectory("crash")
     
@@ -54,7 +55,7 @@ Module main
     ; Error and System Information
     WriteStringN(file, "Please provide the following information at")
     WriteStringN(file, main::WEBSITE$)
-    WriteStringN(file, "Just copy the whole file content in the text box, or attache the .txt file directly.")
+    WriteStringN(file, "Just copy the whole file content in the text box, or attach the .txt file directly.")
     WriteStringN(file, "")
     WriteStringN(file, "[code]")
     
@@ -82,19 +83,17 @@ Module main
     ; close file
     WriteStringN(file, "[/code]")
     CloseFile(file)
-
     
-    MessageRequester("ERROR", ErrorMessage(ErrorCode())+#CRLF$+#CRLF$+"created "+GetFilePart(file$), #PB_MessageRequester_Error)
+    MessageRequester("ERROR", "Error "+ErrorMessage()+" (#"+ErrorCode()+")at address "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+"File "+ErrorFile()+" line "+ErrorLine()+#CRLF$+#CRLF$+"created "+GetFilePart(file$), #PB_MessageRequester_Error)
     
     misc::openLink(GetCurrentDirectory()+"/"+file$)
     End
   EndProcedure
   
   Procedure handleParameter(parameter$)
-    debugger::add("main::handleParameter() - "+parameter$)
     Select LCase(parameter$)
       Case "-testmode"
-        debugger::add("main::handleParameter() - enable testing mode")
+        deb("main:: enable testing mode")
         _TESTMODE = #True
         
       Case "-show"
@@ -121,33 +120,34 @@ Module main
     EndSelect
   EndProcedure
   
-  Procedure init()
+  Procedure startUp()
     Protected i
     
-    If _DEBUG
-      debugger::SetLogFile("tpfmm.log")
+    settings::setInteger("", "eula", #LicenseVersion)
+    
+    ; read gameDirectory from preferences
+    deb("main:: - game directory: "+settings::getString("", "path"))
+    
+    If misc::checkGameDirectory(settings::getString("", "path"), main::_TESTMODE) <> 0
+      deb("main:: game directory not correct")
+      settings::setString("", "path", "")
     EndIf
-    debugger::DeleteLogFile()
     
-    CompilerIf Not #PB_Compiler_Debugger
-      OnErrorCall(@handleError())
-    CompilerEndIf
+    ; proxy (read from preferences)
+    initProxy()
     
-    settings::setFilename("TPFMM.ini")
     
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
       ; could not create instance. most likely, another instance is running
       ; try to send message to other instance
-      Debug "main::init() - could not create new instance. Try to send message to other instance..."
       If instance::sendString("-show")
         For i = 0 To CountProgramParameters() - 1
           instance::sendString(ProgramParameter(i))
         Next
-        Debug "main::init() - send all parameters. exit now"
         End
       Else
-        Debug "main::init() - could not send message to other instance... Continue with this instance!"
+        ; could not send message to other instance... continue in this instance
       EndIf
     EndIf
     
@@ -158,38 +158,18 @@ Module main
     Next
     
     
-    debugger::Add("init() - load plugins")
-    If Not InitNetwork()
-      debugger::Add("ERROR: InitNetwork()")
-    EndIf
-    
-    ; proxy (read from preferences
-    initProxy()
-    
     ; desktopIntegration
     updateDesktopIntegration()
-    
-    ; read gameDirectory from preferences
-    gameDirectory$ = settings::getString("", "path")
-    debugger::Add("init() - read gameDirectory: "+gameDirectory$)
-    If misc::checkGameDirectory(gameDirectory$) <> 0
-      debugger::add("init() - gameDirectory not correct!")
-      gameDirectory$ = ""
-    EndIf
-    
-    ; read language from preferences
-    locale::use(settings::getString("", "locale"))
     
     
     windowMain::create()
     windowSettings::create(windowMain::window)
     
     
-    ; Restore Window Location
-    ; (complicated version)
+    ;{ Restore window location (complicated version)
     Protected nDesktops, desktop, locationOK
     Protected windowX, windowY, windowWidth, windowHeight
-    debugger::add("main::init() - Set main window location")
+    deb("main:: reset main window location")
     
     If #True
       windowX = settings::getInteger("window", "x")
@@ -200,7 +180,7 @@ Module main
       ; get desktops
       nDesktops = ExamineDesktops()
       If Not nDesktops
-        debugger::add("main::init() - Error: Cannot find Desktop!")
+        deb("main:: cannot find Desktop!")
         End
       EndIf
       
@@ -213,52 +193,83 @@ Module main
            windowY                > DesktopY(desktop)                         And ; top
            windowY + windowHeight < DesktopY(desktop) + DesktopHeight(desktop)    ; bottom
           locationOK = #True
-          debugger::add("main::init() - window location valid on desktop #"+desktop)
+          deb("main:: window location valid on desktop #"+desktop)
           Break
         EndIf
       Next
       
       If locationOK 
-        debugger::add("main::init() - set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
+        deb("main:: set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
         ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
         PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
       Else
         
-        debugger::add("main::init() - window location not valid")
+        deb("main:: window location not valid")
         windowWidth = #PB_Ignore
         windowHeight = #PB_Ignore
         
-        debugger::add("main::init() - center main window on primary desktop")
+        deb("main:: center main window on primary desktop")
         windowX = (DesktopWidth(0)  - windowWidth ) /2
         windowY = (DesktopHeight(0) - windowHeight) /2
       EndIf
     EndIf
+    ;}
     
     
-    ; restore column sizes
-    Protected Dim widths(5)
-    For i = 0 To 5
-      widths(i) = settings::getInteger("columns", Str(i))
-    Next
-      
-    windowMain::setColumnWidths(widths())
-    
-    
+    ; show main window
     HideWindow(windowMain::window, #False)
     
-    If gameDirectory$
+    If settings::getString("", "path")
       mods::load()
     Else
       ; no path specified upon program start -> open settings dialog
-      debugger::add("init() - no gameDirectory defined - open settings dialog")
+      deb("main:: no game directory defined - open settings dialog")
       windowSettings::show()
     EndIf
     
+  EndProcedure
+  
+  Procedure licenseDeclined()
+    settings::setInteger("", "eula", 0)
+    End
+  EndProcedure
+  
+  Procedure init()
+    Protected i
     
-    ; finish
-    debugger::Add("init() -  complete")
+    If _DEBUG
+      debugger::SetLogFile("tpfmm.log")
+    EndIf
+    debugger::DeleteLogFile()
     
-    ; main loop...
+    CompilerIf Not #PB_Compiler_Debugger
+      OnErrorCall(@handleError())
+    CompilerEndIf
+    
+    InitNetwork()
+    
+    ; read language from preferences
+    settings::setFilename("TPFMM.ini")
+    locale::use(settings::getString("", "locale"))
+    
+    
+    ; user must accept end user license agreement
+    If settings::getInteger("", "eula") < #LicenseVersion
+      ; current license not accepted
+      DataSection
+        eula:
+        IncludeBinary "res/EULA.txt"
+        eulaEnd:
+      EndDataSection
+      
+      windowLicense::Show("End-User License Agreement (EULA)", PeekS(?eula, ?eulaEnd-?eula-1, #PB_UTF8), @startUp(), @licenseDeclined())
+    Else
+      ; license already accepted
+      startUp()
+    EndIf
+    
+    
+    ; enter main loop...
     loop()
   EndProcedure
   
@@ -272,7 +283,7 @@ Module main
     EndIf
     
     If server$
-      debugger::add("initProxy() - "+server$+" user:"+user$)
+      deb("main:: server: "+server$+", user:"+user$)
       HTTPProxy(server$, user$, password$)
     Else
       HTTPProxy("")
@@ -288,7 +299,7 @@ Module main
     EndIf
     
     If  settings::getInteger("integration", "register_context_menu")
-      ; TODO
+      ; TODO register context menu
     EndIf
     
     ClosePreferences()
@@ -297,23 +308,22 @@ Module main
   Procedure exit()
     Protected i.i
     
-    
     settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
     settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
     settings::setInteger("window", "width", WindowWidth(windowMain::window))
     settings::setInteger("window", "height", WindowHeight(windowMain::window))
-
+    
     For i = 0 To 5
       settings::setInteger("columns", Str(i), windowMain::getColumnWidth(i))
     Next
     
     mods::saveList()
     mods::freeAll()
+    repository::freeAll()
     
-    Debug "close main window"
     CloseWindow(windowMain::window)
     
-    debugger::add("Goodbye!")
+    deb("Goodbye!")
     End
   EndProcedure
   

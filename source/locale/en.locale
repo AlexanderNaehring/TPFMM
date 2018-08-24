@@ -75,12 +75,16 @@ backup_filter   = Search backups
 add_to_pack     = Add to mod pack
 update_all      = Update all mods
 update_all_tip  = Update all mods for which a new version is available
+save_open       = Open save file
+save_download   = Download all missing mods used in the open save game
+save_start      = Please open a save game to start ↴
 
 [info]
 title           = Mod Information
 description     = Mod Description
 info            = Mod Information
 uuid            = Universal Unique ID:
+id              = ID:
 folder          = Folder Name:
 tags            = Tags:
 dependencies    = Dependencies:
@@ -226,6 +230,21 @@ undefined   = —
 invalid     = link invalid
 pack_file   = TPFMM Package File
 tip         = Drag & Drop mods from the main window to add them to this pack.
+
+[save]
+open_title  = Open save game file
+save        = Savegame
+year        = Start year
+difficulty  = Difficulty
+mapsize     = Map size
+money       = Money
+filesize    = File size
+filesize_uncompressed = Uncompressed size
+no_mods     = No mods found in this save game
+error       = Error reading the save game
+difficulty0 = Easy
+difficulty1 = Medium
+difficulty2 = Hard
 
 [tags]
 all         = All

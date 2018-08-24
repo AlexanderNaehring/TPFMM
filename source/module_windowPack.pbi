@@ -16,6 +16,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_repository.pbi"
 
 Module windowPack
+  UseModule debugger
   
   Global window, dialog, parent
   Global *pack
@@ -51,7 +52,10 @@ Module windowPack
       installed$ = locale::l("pack","no")
     EndIf
     
-    download$ = repository::getLinkByFoldername(packItem\id$)
+    Protected *mod.repository::RepositoryMod
+    *mod = repository::getModByFoldername(packItem\id$)
+    download$ = *mod\getLink()
+    
     If download$ = ""
       download$ = packItem\download$
     EndIf
@@ -81,8 +85,6 @@ Module windowPack
   EndProcedure
   
   Procedure displayPackItems()
-    debugger::add("packWindow::updateItems()")
-    
     ClearGadgetItems(gadget("items"))
     ClearList(items())
     pack::getItems(*pack, items())
@@ -94,7 +96,6 @@ Module windowPack
   EndProcedure
   
   Procedure packOpen(file$ = "")
-    debugger::add("windowPack::packOpen()")
     Protected pattern$
     
     If file$ = ""
@@ -154,16 +155,18 @@ Module windowPack
     EndIf
   EndProcedure
   
-  Procedure addModToPack(*pack, *mod.mods::mod)
-    debugger::add("windowPack::addModToPack()")
-    
+  Procedure addModToPack(*pack, *mod.mods::LocalMod)
     Protected packItem.pack::packItem
     
-    packItem\name$ = *mod\name$
-    packItem\id$ = *mod\tpf_id$
-    packItem\download$ = repository::getLinkByFoldername(packItem\id$)
+    packItem\name$ = *mod\getName()
+    packItem\id$ = *mod\getID()
+    
+    Protected *modRepo.repository::RepositoryMod
+    *modRepo = repository::getModByFoldername(packItem\id$)
+    packItem\download$ = *modRepo\getLink()
+    
     If packItem\download$ = ""
-      packItem\download$ = mods::getDownloadLink(*mod)
+      packItem\download$ = *mod\getDownloadLink()
     EndIf
     
     If pack::addItem(*pack, packItem)
@@ -182,7 +185,6 @@ Module windowPack
   ; events
   
   Procedure close()
-    debugger::add("windowPack::close()")
     HideWindow(window, #True)
     
     If pack::isPack(*pack)
@@ -224,7 +226,6 @@ Module windowPack
   
   Procedure gadgetItems()
     If EventType() = #PB_EventType_LeftDoubleClick
-      debugger::add("windowPack::gadgetItems() - double click")
       ; download currently selected mod
       Protected *packItem.pack::packItem
       *packItem = GetGadgetItemData(gadget("items"), GetGadgetState(gadget("items")))
@@ -232,7 +233,6 @@ Module windowPack
         If Not mods::isInstalled(*packitem\id$)
           ; TODO: also set folder name -> used during install to apply identical folder name as during export...
           
-          debugger::add("windowPack::gadgetItems() - start download of mod "+*packitem\name$+": "+*packitem\download$)
           ;repository::downloadMod(source$, id, fileid)
           windowMain::repoFindModAndDownload(*packitem\download$) ; will display selection dialog if multiple files in mod
         EndIf
@@ -255,7 +255,7 @@ Module windowPack
       If GetGadgetItemState(gadget("items"), i)
         SelectElement(items(), i)
         If items() <> GetGadgetItemData(gadget("items"), i)
-          debugger::add("windowPack::remove() - address missmatch")
+          deb("windowPack:: address missmatch on remove")
         EndIf
         ChangeCurrentElement(items(), GetGadgetItemData(gadget("items"), i))
         *packItem = items()
@@ -268,23 +268,25 @@ Module windowPack
   EndProcedure
   
   Procedure download()
-    debugger::add("windowPack::dowload()")
     Protected link$
     
     ForEach items()
       If Not mods::isInstalled(items()\id$)
         ; TODO: also set folder name -> used during install to apply identical folder name as during export...
         
-        link$ = repository::getLinkByFoldername(items()\id$)
+        
+        Protected *modRepo.repository::RepositoryMod
+        *modRepo = repository::getModByFoldername(items()\id$)
+        link$ = *modRepo\getLink()
+        
         If link$ = ""
           link$ = items()\download$
         EndIf
         
         If link$
-          debugger::add("windowPack::dowload() - start download of mod "+items()\name$+": "+items()\download$)
           windowMain::repoFindModAndDownload(items()\download$) ; will display selection dialog if multiple files in mod
         Else
-          debugger::add("windowPack::dowload() - cannot download "+items()\name$)
+          deb("windowPack::dowload() - cannot download "+items()\name$)
         EndIf
       EndIf
     Next
@@ -294,10 +296,8 @@ Module windowPack
   ; public
   
   Procedure show(parentWindow)
-    debugger::add("packWindow::show()")
-    
     If IsWindow(window)
-      debugger::add("packWindow::show() - window already open - cancel")
+      deb("packWindow:: window already open, cancel")
       ProcedureReturn #False
     EndIf
     

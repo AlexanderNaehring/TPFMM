@@ -1,7 +1,4 @@
-﻿XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_main.pbi"
-
-DeclareModule misc
+﻿DeclareModule misc
   EnableExplicit
   
   Macro Min(a,b)
@@ -9,6 +6,29 @@ DeclareModule misc
   EndMacro
   Macro Max(a,b)
    (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  EndMacro
+  
+  Macro BinaryAsString(file, var)
+    DataSection
+      _str#MacroExpandedCount#Start:
+      IncludeBinary file
+      _str#MacroExpandedCount#End:
+    EndDataSection
+    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start-1, #PB_UTF8)
+  EndMacro
+  
+  
+  Macro IncludeAndLoadXML(xml, file)
+    DataSection
+      _xml#MacroExpandedCount#Start:
+      IncludeBinary file
+      _xml#MacroExpandedCount#End:
+    EndDataSection
+    
+    xml = CatchXML(#PB_Any, ?_xml#MacroExpandedCount#Start, ?_xml#MacroExpandedCount#End - ?_xml#MacroExpandedCount#Start)
+    If Not xml Or XMLStatus(xml) <> #PB_XML_Success
+      DebuggerError("Could not open XML "+file+": "+XMLError(xml))
+    EndIf
   EndMacro
   
   Macro openLink(link)
@@ -35,6 +55,16 @@ DeclareModule misc
     CompilerEndIf
   EndMacro
   
+  Macro useBinary(file)
+    DataSection
+      _bin#MacroExpandedCount#Start:
+      IncludeBinary file
+      _bin#MacroExpandedCount#End:
+    EndDataSection
+    
+    misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start)
+  EndMacro
+  
   Declare.s path(path$, delimiter$ = "")
   Declare.s getDirectoryName(path$)
   Declare VersionCheck(current$, required$)
@@ -47,7 +77,7 @@ DeclareModule misc
   Declare HexStrToFile(hex$, file$)
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
-  Declare checkGameDirectory(Dir$)
+  Declare checkGameDirectory(Dir$, testmode=#False)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare.s printSize(bytes.q)
   Declare.q getDirectorySize(path$)
@@ -57,7 +87,7 @@ DeclareModule misc
   Declare getDefaultFontSize()
   Declare clearXMLchildren(*node)
   Declare registerProtocolHandler(protocol$, program$, description$="")
-  Declare time(*tloc = #Null)
+;   Declare time(*tloc = #Null)
   Declare getRowHeight(gadget)
   Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
@@ -65,9 +95,9 @@ EndDeclareModule
 
 Module misc
   
-  ImportC ""
-    time(*tloc = #Null)
-  EndImport
+;   ImportC ""
+;     time(*tloc = #Null)
+;   EndImport
  
   Procedure.s path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
@@ -110,7 +140,6 @@ Module misc
     
     While dir_sub$ <> ""
       If Not FileSize(dir_total$) = -2
-        debugger::Add("misc::CreateDirectory("+dir_total$+")")
         CreateDirectory(dir_total$)
       EndIf
       count + 1
@@ -147,6 +176,7 @@ Module misc
     If Not overwrite And FileSize(filename$) >= 0
       ProcedureReturn #False
     EndIf
+    CreateDirectoryAll(GetPathPart(filename$))
     file = CreateFile(#PB_Any, filename$)
     If Not file
       ProcedureReturn #False
@@ -160,7 +190,7 @@ Module misc
   EndProcedure
   
   Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
-    If IsImage(im)
+    If im
       Protected image.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
       im_w = ImageWidth(im)
       im_h = ImageHeight(im)
@@ -184,7 +214,6 @@ Module misc
   EndProcedure
   
   Procedure HexStrToMem(hex$, *memlen = 0)
-    debugger::Add("misc::HexStrToMem()")
     Protected strlen.i, memlen.i, pos.i, *memory
     strlen = Len(hex$)
     If strlen % 2 = 1 Or strlen = 0
@@ -193,7 +222,7 @@ Module misc
     memlen = strlen / 2
     *memory = AllocateMemory(memlen, #PB_Memory_NoClear)
     If Not *memory
-      debugger::Add("misc::HexStrToMem() - Error allocating memory")
+      Debug "misc::HexStrToMem() - Error allocating memory"
       ProcedureReturn #False
     EndIf
     For pos = 0 To memlen-1
@@ -206,7 +235,6 @@ Module misc
   EndProcedure
   
   Procedure.s MemToHexStr(*mem, memlen.i)
-    debugger::Add("misc::MemToHexStr("+Str(*mem)+", "+Str(memlen)+")")
     Protected hex$ = ""
     Protected pos.i
     For pos = 0 To memlen-1
@@ -216,7 +244,6 @@ Module misc
   EndProcedure
   
   Procedure.s FileToHexStr(file$)
-    debugger::Add("misc::FileToHexStr()")
     Protected hex$ = ""
     Protected file.i, *memory, size.i
     
@@ -237,7 +264,6 @@ Module misc
   EndProcedure
   
   Procedure HexStrToFile(hex$, file$)
-    debugger::Add("misc::HexStrToFile()")
     Protected file.i, *memory, memlen.i
     *memory = HexStrToMem(hex$, @memlen)
     file = CreateFile(#PB_Any, file$)
@@ -259,18 +285,15 @@ Module misc
     Protected file.i, color.i, x.i, y.i
     
     If Not IsImage(image)
-      debugger::Add("misc::encodeTGA() - ERROR - image {"+Str(image)+"} is no valid image")
       ProcedureReturn #False
     EndIf
     
     If Not StartDrawing(ImageOutput(image))
-      debugger::Add("misc::encodeTGA() - ERROR - drawing on image failed")
       ProcedureReturn #False
     EndIf
     
     file = CreateFile(#PB_Any, file$)
     If Not file
-      debugger::Add("misc::encodeTGA() - ERROR - failed to create {"+file$+"}")
       StopDrawing()
       ProcedureReturn #False
     EndIf
@@ -322,14 +345,14 @@ Module misc
     ProcedureReturn #True
   EndProcedure
   
-  Procedure checkGameDirectory(Dir$)
+  Procedure checkGameDirectory(Dir$, testmode=#False)
     ; 0   = path okay, executable found and writing possible
     ; 1   = path okay, executable found but cannot write
     ; 2   = path not okay
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
-        If main::_TESTMODE
+        If testmode
           ; in testmode, do not check if directory is correct
           ProcedureReturn 0
         EndIf
@@ -386,7 +409,7 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn #True
     Else
-      debugger::Add("          ERROR: could not examine directory "+path(root$ + path$))
+      Debug "could not examine"
     EndIf
     ProcedureReturn #False
   EndProcedure
@@ -432,7 +455,7 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn size
     Else
-      debugger::Add("          ERROR: could not examine directory "+path(path$))
+      Debug "could not examine"
     EndIf
     ProcedureReturn #False
   EndProcedure
@@ -735,7 +758,6 @@ Module misc
   EndProcedure
   
   Procedure registerProtocolHandler(protocol$, program$, description$="")
-    debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         ; Windows: Protocol Handlers are registered in the registry under HKEY_CURRENT_USER\Software\Classes (not HKEY_CLASSES_ROOT)
@@ -791,14 +813,11 @@ Module misc
           DeleteFile(regFile$)
           
           If exitcode = 0
-            debugger::add("misc::registerProtocolHandler() - Successful")
             ProcedureReturn #True
           Else
-            debugger::add("misc::registerProtocolHandler() - Error: Could not handle registry keys")
             ProcedureReturn #False
           EndIf
         Else
-          debugger::add("misc::registerProtocolHandler() - Error: could not create file")
           ProcedureReturn #False
         EndIf
         
