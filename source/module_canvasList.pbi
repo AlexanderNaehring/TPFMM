@@ -65,6 +65,7 @@
     SortItems(mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
     FilterItems(filterFun.pFilter, options=0, persistent.b=#False)
     BindItemEvent(event, *callback)
+    SetEmptyScreen(textOnEmpty$, textOnFilter$)
   EndInterface
   
   ; declare public functions
@@ -90,6 +91,7 @@
   Declare SortItems(*gadget, mode, *sortFun=0, options=#PB_Sort_Ascending, persistent.b=#False)
   Declare FilterItems(*gadget, filterFun.pFilter, options=0, persistent.b=#False)
   Declare BindItemEvent(*gadget, event, *callback)
+  Declare SetEmptyScreen(*gadget, textOnEmpty$, textOnFilter$) ; set some welcome information that is shown when no item is visible
   
   ; item functions
   Declare ItemSetImage(*item, image)
@@ -107,6 +109,10 @@
   
   
 EndDeclareModule
+
+CompilerIf #PB_Compiler_IsIncludeFile
+  XIncludeFile "module_debugger.pbi"
+CompilerEndIf
 
 Module CanvasList
   
@@ -158,6 +164,13 @@ Module CanvasList
   ;}
   
   ;{ Structures
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    Structure Point
+      x.i
+      y.i
+    EndStructure
+  CompilerEndIf
+  
   Structure box Extends Point
     width.i
     height.i
@@ -308,12 +321,27 @@ Module CanvasList
     filter.filter
     mItems.i
     mItemAddRemove.i
+    winColor.i
+    textOnEmpty$
+    textOnFilter$
   EndStructure
   ;}
   
+  ;- debug output
+  
+  CompilerIf Defined(debugger, #PB_Module)
+    ; in bigger project, use custom module (writes debug messages to log file)
+    UseModule debugger
+  CompilerElse
+    ; if module not available, just print message
+    Macro deb(s)
+      Debug s
+    EndMacro
+  CompilerEndIf
+  
   ;- Private Functions
   
-  Procedure GetWindowBackgroundColor(hwnd=0)
+  Procedure GetWindowBackgroundColor(hwnd)
     ; found on https://www.purebasic.fr/english/viewtopic.php?f=12&t=66974
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows  
@@ -325,9 +353,16 @@ Module CanvasList
         
       CompilerCase #PB_OS_Linux   ;thanks to uwekel http://www.purebasic.fr/english/viewtopic.php?p=405822
         Protected *style.GtkStyle, *color.GdkColor
-        *style = gtk_widget_get_style_(hwnd) ;GadgetID(Gadget))
-        *color = *style\bg[0]                ;0=#GtkStateNormal
-        ProcedureReturn RGB(*color\red >> 8, *color\green >> 8, *color\blue >> 8)
+        If Not hwnd
+          DebuggerError("hwnd required")
+        EndIf
+        Static color
+        If Not color
+          *style = gtk_widget_get_style_(hwnd) ;GadgetID(Gadget))
+          *color = *style\bg[0]                ;0=#GtkStateNormal
+          color = RGB(*color\red >> 8, *color\green >> 8, *color\blue >> 8)
+        EndIf
+        ProcedureReturn color
         
       CompilerCase #PB_OS_MacOS   ;thanks to wilbert http://purebasic.fr/english/viewtopic.php?f=19&t=55719&p=497009
         Protected.i color, Rect.NSRect, Image, NSColor = CocoaMessage(#Null, #Null, "NSColor windowBackgroundColor")
@@ -346,6 +381,14 @@ Module CanvasList
         EndIf
     CompilerEndSelect
   EndProcedure  
+  
+  CompilerIf #PB_Compiler_OS = #PB_OS_Linux
+    #G_TYPE_STRING = 64
+    
+    ImportC ""
+      g_object_get_property(*widget.GtkWidget, property.p-utf8, *gval)
+    EndImport
+  CompilerEndIf
   
   Procedure.s getDefaultFontName()
     CompilerSelect #PB_Compiler_OS 
@@ -379,7 +422,7 @@ Module CanvasList
         Protected gVal.GValue
         Protected font$, size
         g_value_init_(@gval, #G_TYPE_STRING)
-        g_object_get_property( gtk_settings_get_default_(), "gtk-font-name", @gval)
+        g_object_get_property_( gtk_settings_get_default_(), "gtk-font-name", @gval)
         font$ = PeekS(g_value_get_string_(@gval), -1, #PB_UTF8)
         g_value_unset_(@gval)
         size = Val(StringField(font$, CountString(font$, " ")+1, " "))
@@ -767,7 +810,6 @@ Module CanvasList
   Procedure draw(*this.gadget)
     Protected margin, padding
     Protected i, line$
-    Static BackColor
     Protected x, y, w, h
     margin = *this\theme\Item\Margin
     padding = *this\theme\Item\Padding
@@ -778,14 +820,10 @@ Module CanvasList
     
     LockMutex(*this\mItems)
     
-    If Not BackColor
-      BackColor = GetWindowBackgroundColor()
-    EndIf
-    
     If StartDrawing(CanvasOutput(*this\gCanvas))
       ; blank the canvas
       DrawingMode(#PB_2DDrawing_Default)
-      Box(0, 0, GadgetWidth(*this\gCanvas), GadgetHeight(*this\gCanvas), BackColor)
+      Box(0, 0, GadgetWidth(*this\gCanvas), GadgetHeight(*this\gCanvas), *this\winColor)
       
       ; draw items
       DrawingFont(GetGadgetFont(#PB_Default))
@@ -904,25 +942,49 @@ Module CanvasList
         EndWith
       Next
       
+      
+      ; show text if no items is visible
+      Protected visibleItems, text$
+      visibleItems = 0
+      ForEach *this\items()
+        If Not *this\items()\hidden
+          visibleItems + 1
+        EndIf
+      Next
+      
+      If ListSize(*this\items()) = 0
+        ; list empty
+        text$ = *this\textOnEmpty$
+      ElseIf visibleItems = 0
+        ; no item matches filter
+        text$ = *this\textOnFilter$
+      Else
+        text$ = ""
+      EndIf
+      If text$
+        FrontColor(RGBA($0, $0, $0, $FF))
+        w = TextWidth(text$)
+        h = TextHeight(text$)
+        DrawingMode(#PB_2DDrawing_AlphaBlend|#PB_2DDrawing_Transparent)
+        DrawingFont(GetGadgetFont(#PB_Default))
+        DrawText((GadgetWidth(*this\gCanvas) - w)/2, (GadgetHeight(*this\gCanvas) - h)/2, text$)
+      EndIf
+      
+      
       ; draw selectbox
-      If *this\selectbox\active = 2 ; only draw the box when already moved some pixels
-        FrontColor(ColorFromHTML(*this\theme\color\SelectionBox$))
-        DrawingMode(#PB_2DDrawing_AlphaBlend)
-        Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
-        DrawingMode(#PB_2DDrawing_Outlined)
-        Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
+      If ListSize(*this\items()) > 0
+        If *this\selectbox\active = 2 ; only draw the box when already moved some pixels
+          FrontColor(ColorFromHTML(*this\theme\color\SelectionBox$))
+          DrawingMode(#PB_2DDrawing_AlphaBlend)
+          Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
+          DrawingMode(#PB_2DDrawing_Outlined)
+          Box(*this\selectbox\box\x, *this\selectbox\box\y - *this\scrollbar\position, *this\selectbox\box\width, *this\selectbox\box\height)
+        EndIf
       EndIf
       
       
       ; draw "x/N items visible" information in bottem right
-      Protected visibleItems, text$
       If *this\hover
-        visibleItems = 0
-        ForEach *this\items()
-          If Not *this\items()\hidden
-            visibleItems + 1
-          EndIf
-        Next
         ; TODO filter info in CanvasList WIP!
         If visibleItems < ListSize(*this\items())
           text$ = "Showing "+visibleItems+"/"+ListSize(*this\items())+" items"
@@ -1412,6 +1474,15 @@ Module CanvasList
     *this\scrollbar\pagelength = height
     *this\scrollbar\disabled = #True
     
+    *this\textOnEmpty$ = "The list is empty."
+    *this\textOnFilter$ = "No item matches the current filter."
+    
+    ; window color
+    Protected w
+    w = OpenWindow(#PB_Any, 0, 0, 10, 10, "", #PB_Window_Invisible)
+    *this\winColor = GetWindowBackgroundColor(WindowID(w))
+    CloseWindow(w)
+    
     ; set data pointer
     SetGadgetData(*this\gCanvas, *this)
     
@@ -1470,8 +1541,8 @@ Module CanvasList
     *item = AddElement(*this\items())
     UnlockMutex(*this\mItems)
     
-    *item\parent = *this
     *item\vt = ?vtItem
+    *item\parent = *this
     *item\text$ = text$
     *item\userdata = *userdata ; must store userdata before filter and sort
     
@@ -1613,22 +1684,16 @@ Module CanvasList
   EndProcedure
   
   Procedure GetAllItems(*this.gadget, List *items.item())
-    Protected i
     LockMutex(*this\mItems)
     ClearList(*items())
-    i = ListSize(*this\items())
-    If i > 0
+    If ListSize(*this\items())
       ForEach *this\items()
         AddElement(*items())
         *items() = *this\items()
       Next
     EndIf
     UnlockMutex(*this\mItems)
-    If i > 0
-      ProcedureReturn #True
-    Else
-      ProcedureReturn #False
-    EndIf
+    ProcedureReturn ListSize(*items())
   EndProcedure
   
   Procedure GetItemCount(*this.gadget)
@@ -1744,6 +1809,11 @@ Module CanvasList
     *el\callback = *callback
   EndProcedure
   
+  Procedure SetEmptyScreen(*this.gadget, textOnEmpty$, textOnFilter$)
+    *this\textOnEmpty$ = textOnEmpty$
+    *this\textOnFilter$ = textOnFilter$
+  EndProcedure
+  
   ;- Public Item Functions
   
   Procedure ItemSetImage(*this.item, image)
@@ -1801,6 +1871,8 @@ Module CanvasList
       *icon\image = image
       *icon\align = align
       UnlockMutex(*gadget\mItems)
+    Else
+      deb("CanvasList:: image not valid")
     EndIf
   EndProcedure
   

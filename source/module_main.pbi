@@ -18,7 +18,7 @@
   VERSION_FULL$ + " {" + StringFingerprint(CPUName() + "/" + ComputerName() + "/" + UserName(), #PB_Cipher_MD5) + "}"
   
   #PORT = 14123
-  #LicenseVersion = 2
+  #EULAVersion = 2
   
   #DRAG_MOD = 1
   
@@ -27,7 +27,14 @@
   Declare updateDesktopIntegration()
   Declare exit()
   Declare loop()
+  Declare handleParameter(parameter$)
   
+  Declare showProgressWindow(text$, PostEventOnClose=-1)
+  Declare setProgressPercent(percent.b)
+  Declare setProgressText(text$)
+  Declare closeProgressWindow()
+  
+  Declare isMainThread()
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
@@ -37,6 +44,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_instance.pbi"
 XIncludeFile "module_windowLicense.pbi"
+XIncludeFile "animation.pb"
 
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
@@ -44,7 +52,9 @@ XIncludeFile "module_repository.pbi"
 Module main
   UseModule debugger
   
-  Procedure handleError()
+  ;- Error Handling
+  
+  Procedure onError()
     Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss", Date())
     Protected file, file$ = "crash/dump-"+date$+".txt"
     CreateDirectory("crash")
@@ -55,16 +65,17 @@ Module main
     ; Error and System Information
     WriteStringN(file, "Please provide the following information at")
     WriteStringN(file, main::WEBSITE$)
-    WriteStringN(file, "Just copy the whole file content in the text box, or attach the .txt file directly.")
+    WriteStringN(file, "Copy the whole file content in the text box, or attach the .txt file directly.")
     WriteStringN(file, "")
     WriteStringN(file, "[code]")
     
     WriteStringN(file, "################################################################################")
     WriteStringN(file, "ERROR @ "+date$)
     WriteStringN(file, VERSION_FULL$)
-    WriteStringN(file, "Error #"+ErrorCode()+" at address "+ErrorAddress()+">"+ErrorTargetAddress()+" in <"+ErrorFile()+"> line "+ErrorLine())
-    WriteStringN(file, ErrorMessage(ErrorCode()))
-    WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" ("+CountCPUs()+" CPUs)")
+    WriteStringN(file, #DQUOTE$+ErrorMessage()+#DQUOTE$)
+    WriteStringN(file, Str(ErrorCode())+"@"+ErrorAddress()+">"+ErrorTargetAddress())
+    WriteStringN(file, ErrorFile()+" line "+ErrorLine())
+    WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" (x"+CountCPUs()+")")
     WriteStringN(file, "Available Physical Memory: "+Str(MemoryStatus(#PB_System_FreePhysical)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalPhysical)/1024/1024)+" MiB")
     If MemoryStatus(#PB_System_TotalVirtual) > 0
       WriteStringN(file, "Available Virtual Memory:  "+Str(MemoryStatus(#PB_System_FreeVirtual)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalVirtual)/1024/1024)+" MiB")
@@ -78,17 +89,20 @@ Module main
     
     ; copy log
     WriteStringN(file, "log:")
-    WriteString(file, debugger::getLog())
+    WriteStringN(file, debugger::getLog())
     
     ; close file
-    WriteStringN(file, "[/code]")
     CloseFile(file)
     
-    MessageRequester("ERROR", "Error "+ErrorMessage()+" (#"+ErrorCode()+")at address "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+"File "+ErrorFile()+" line "+ErrorLine()+#CRLF$+#CRLF$+"created "+GetFilePart(file$), #PB_MessageRequester_Error)
+    WriteStringN(file, "[/code]")
+    
+    MessageRequester("ERROR", ErrorMessage()+" (#"+ErrorCode()+") at address "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+""+ErrorFile()+" line "+ErrorLine(), #PB_MessageRequester_Error)
     
     misc::openLink(GetCurrentDirectory()+"/"+file$)
     End
   EndProcedure
+  
+  ;- Parameter Handling
   
   Procedure handleParameter(parameter$)
     Select LCase(parameter$)
@@ -108,8 +122,9 @@ Module main
         
       Default
         If Left(parameter$, 17) = "tpfmm://download/"
+          Deb(parameter$)
           ; handle link
-          parameter$ = Mid(parameter$, 18)
+          parameter$ = Mid(parameter$, 18) ; /source/modID/fileID
           windowMain::repoFindModAndDownload(parameter$)
           
         ElseIf FileSize(parameter$) > 0
@@ -120,22 +135,125 @@ Module main
     EndSelect
   EndProcedure
   
-  Procedure startUp()
-    Protected i
-    
-    settings::setInteger("", "eula", #LicenseVersion)
-    
-    ; read gameDirectory from preferences
-    deb("main:: - game directory: "+settings::getString("", "path"))
-    
-    If misc::checkGameDirectory(settings::getString("", "path"), main::_TESTMODE) <> 0
-      deb("main:: game directory not correct")
-      settings::setString("", "path", "")
+  ;- Progress Window
+  
+  Structure progress
+    dialog.i
+    window.i
+    gText.i
+    gBar.i
+    onClose.i
+    *ani.animation::animation
+  EndStructure
+  
+  Global progressDialog.progress
+  
+  Procedure setProgressText(text$)
+    If progressDialog\window
+      SetGadgetText(progressDialog\gText, text$)
+    EndIf
+  EndProcedure
+  
+  Procedure setProgressPercent(percent.b)
+    If progressDialog\window
+      SetGadgetState(progressDialog\gBar, percent)
+    EndIf
+  EndProcedure
+  
+  Procedure closeProgressWindowEvent()
+    ; cannot close a window from a thread, must be main thread
+    If Not isMainThread()
+      DebuggerError("main:: closeProgressWindowEvent() must always be called from main thread")
     EndIf
     
-    ; proxy (read from preferences)
-    initProxy()
+    If progressDialog\window
+      progressDialog\ani\free()
+      CloseWindow(progressDialog\window)
+      FreeDialog(progressDialog\dialog)
+      progressDialog\window = #Null
+      
+      If progressDialog\onClose <> -1
+        PostEvent(progressDialog\onClose)
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure closeProgressWindow()
+    If progressDialog\window
+      progressDialog\onClose = -1 ; decativate the "on close event" as close is triggered manually
+      progressDialog\ani\pause(); if garbage collector closes window before the animation is stopped/freed, animation update will cause IMA
+      
+      If isMainThread()
+        closeProgressWindowEvent()
+      Else
+        PostEvent(#PB_Event_CloseWindow, progressDialog\window, 0)
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure showProgressWindow(title$, PostEventOnClose=-1)
+    Protected xml, dialog
     
+    ; only single dialog allowed
+    If progressDialog\window
+      progressDialog\onClose = -1
+      closeProgressWindowEvent()
+    EndIf
+    
+    misc::IncludeAndLoadXML(xml, "dialogs/progress.xml")
+    dialog = CreateDialog(#PB_Any)
+    OpenXMLDialog(dialog, xml, "progress")
+    FreeXML(xml)
+    
+    progressDialog\dialog = dialog
+    progressDialog\window = DialogWindow(dialog)
+    progressDialog\gText  = DialogGadget(dialog, "text")
+    progressDialog\gBar   = DialogGadget(dialog, "percent")
+    progressDialog\onclose = PostEventOnClose
+    
+    SetWindowTitle(progressDialog\window, title$)
+;     SetGadgetState(DialogGadget(dialog, "logo"), ImageID(images::images("logo")))
+    
+    progressDialog\ani = animation::new()
+    progressDialog\ani\loadAni("images/logo/logo.ani")
+    progressDialog\ani\setInterval(1000/60)
+    progressDialog\ani\setCanvas(DialogGadget(dialog, "logo"))
+    progressDialog\ani\play()
+    
+    SetWindowColor(progressDialog\window, #White)
+    SetGadgetColor(progressDialog\gText, #PB_Gadget_BackColor, #White)
+    
+    RefreshDialog(dialog)
+    
+    BindEvent(#PB_Event_CloseWindow, @closeProgressWindowEvent(), progressDialog\window)
+    
+    AddKeyboardShortcut(progressDialog\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
+    BindEvent(#PB_Event_Menu, @closeProgressWindowEvent(), progressDialog\window, #PB_Event_CloseWindow)
+    
+    HideWindow(progressDialog\window, #False, #PB_Window_ScreenCentered)
+    ProcedureReturn #True
+  EndProcedure
+  
+  ;- Startup procedure
+  
+  Procedure startUp()
+    settings::setInteger("", "eula", #EULAVersion)
+    windowMain::start()
+  EndProcedure
+  
+  Procedure licenseDeclined()
+    settings::setInteger("", "eula", 0)
+    End
+  EndProcedure
+  
+  Procedure init() ; open settings, start log, check EULA, call main window start procedure
+    Protected i
+    
+    CompilerIf Not #PB_Compiler_Debugger
+      OnErrorCall(@onError())
+    CompilerEndIf
+    
+    InitNetwork()
     
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
@@ -145,108 +263,18 @@ Module main
         For i = 0 To CountProgramParameters() - 1
           instance::sendString(ProgramParameter(i))
         Next
+        Debug "other instance detected, end program"
         End
       Else
         ; could not send message to other instance... continue in this instance
       EndIf
     EndIf
     
-    
-    ; parameter handling
-    For i = 0 To CountProgramParameters() - 1
-      handleParameter(ProgramParameter(i))
-    Next
-    
-    
-    ; desktopIntegration
-    updateDesktopIntegration()
-    
-    
-    windowMain::create()
-    windowSettings::create(windowMain::window)
-    
-    
-    ;{ Restore window location (complicated version)
-    Protected nDesktops, desktop, locationOK
-    Protected windowX, windowY, windowWidth, windowHeight
-    deb("main:: reset main window location")
-    
-    If #True
-      windowX = settings::getInteger("window", "x")
-      windowY = settings::getInteger("window", "y")
-      windowWidth   = settings::getInteger("window", "width")
-      windowHeight  = settings::getInteger("window", "height")
-      
-      ; get desktops
-      nDesktops = ExamineDesktops()
-      If Not nDesktops
-        deb("main:: cannot find Desktop!")
-        End
-      EndIf
-      
-      ; check if location is valid
-      locationOK = #False
-      For desktop = 0 To nDesktops - 1
-        ; location is okay, if whole window is in desktop!
-        If windowX                > DesktopX(desktop)                         And ; left
-           windowX + windowHeight < DesktopX(desktop) + DesktopWidth(desktop) And ; right
-           windowY                > DesktopY(desktop)                         And ; top
-           windowY + windowHeight < DesktopY(desktop) + DesktopHeight(desktop)    ; bottom
-          locationOK = #True
-          deb("main:: window location valid on desktop #"+desktop)
-          Break
-        EndIf
-      Next
-      
-      If locationOK 
-        deb("main:: set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
-        ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
-        PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
-      Else
-        
-        deb("main:: window location not valid")
-        windowWidth = #PB_Ignore
-        windowHeight = #PB_Ignore
-        
-        deb("main:: center main window on primary desktop")
-        windowX = (DesktopWidth(0)  - windowWidth ) /2
-        windowY = (DesktopHeight(0) - windowHeight) /2
-      EndIf
-    EndIf
-    ;}
-    
-    
-    ; show main window
-    HideWindow(windowMain::window, #False)
-    
-    If settings::getString("", "path")
-      mods::load()
-    Else
-      ; no path specified upon program start -> open settings dialog
-      deb("main:: no game directory defined - open settings dialog")
-      windowSettings::show()
-    EndIf
-    
-  EndProcedure
-  
-  Procedure licenseDeclined()
-    settings::setInteger("", "eula", 0)
-    End
-  EndProcedure
-  
-  Procedure init()
-    Protected i
-    
     If _DEBUG
       debugger::SetLogFile("tpfmm.log")
     EndIf
     debugger::DeleteLogFile()
     
-    CompilerIf Not #PB_Compiler_Debugger
-      OnErrorCall(@handleError())
-    CompilerEndIf
-    
-    InitNetwork()
     
     ; read language from preferences
     settings::setFilename("TPFMM.ini")
@@ -254,7 +282,7 @@ Module main
     
     
     ; user must accept end user license agreement
-    If settings::getInteger("", "eula") < #LicenseVersion
+    If settings::getInteger("", "eula") < #EULAVersion
       ; current license not accepted
       DataSection
         eula:
@@ -268,11 +296,11 @@ Module main
       startUp()
     EndIf
     
-    
     ; enter main loop...
     loop()
   EndProcedure
   
+  ;- Proxy and Desktop Integration
   Procedure initProxy()
     Protected server$, user$, password$
     
@@ -305,28 +333,31 @@ Module main
     ClosePreferences()
   EndProcedure
   
+  Global mainThread
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      mainThread = GetCurrentThreadId_()
+    CompilerCase #PB_OS_Linux
+      mainThread = pthread_self_()
+  CompilerEndSelect
+  
+  Procedure isMainThread()
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        ProcedureReturn Bool(GetCurrentThreadId_() = mainThread)
+      CompilerCase #PB_OS_Linux
+        ProcedureReturn Bool(pthread_self_() = mainThread)
+    CompilerEndSelect
+    
+  EndProcedure
+  
+  ;- Exit
   Procedure exit()
-    Protected i.i
-    
-    settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
-    settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
-    settings::setInteger("window", "width", WindowWidth(windowMain::window))
-    settings::setInteger("window", "height", WindowHeight(windowMain::window))
-    
-    For i = 0 To 5
-      settings::setInteger("columns", Str(i), windowMain::getColumnWidth(i))
-    Next
-    
-    mods::saveList()
-    mods::freeAll()
-    repository::freeAll()
-    
-    CloseWindow(windowMain::window)
-    
     deb("Goodbye!")
     End
   EndProcedure
   
+  ;- Main loop
   Procedure loop()
     Repeat
       WaitWindowEvent()

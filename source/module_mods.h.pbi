@@ -6,11 +6,16 @@
   
   ; callbacks for mod events
   
-  Enumeration 0
+  Enumeration
     #EventNewMod
     #EventRemoveMod
     #EventStopDraw
+    #EventWorkerStarts
+    #EventWorkerStops
+    #EventProgress
   EndEnumeration
+  Global EventArraySize = #PB_Compiler_EnumerationValue -1
+  
   
   Prototype callbackNewMod(*mod)
   Prototype callbackRemoveMod(*mod)
@@ -143,12 +148,15 @@
   Declare saveList()  ; save list of current mods to json
   Declare generateID(*mod, id$ = "")
   Declare.s getModFolder(id$="") ; location on disc, depending on "workshop, staging area, manual mod"
+  Declare stopQueue(timeout = 5000)
+  
   ; actions - all actions will be handled by mod main thread
-  Declare load()                ; load mods.json and find installed mods
+  Declare load(async=#True)     ; load mods.json and find installed mods
   Declare install(file$)        ; check and extract archive to game folder
   Declare uninstall(folderID$)  ; remove mod folder from game, maybe create a security backup by zipping content
   Declare backup(folderID$)     ; backup installed mod
   Declare update(folderID$)     ; request update from repository and install
+  
   ; backup functions
   Declare getBackupList(List backups.backupInfoLocal(), filter$="")
   Declare backupDelete(file$)

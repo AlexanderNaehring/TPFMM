@@ -3,6 +3,21 @@
 DeclareModule repository
   EnableExplicit
   
+  ; Event Callbacks
+  
+  Enumeration
+    #EventAddMods
+    #EventClearMods
+    #EventRefreshFinished
+    #EventWorkerStarts
+    #EventWorkerStops
+    #EventProgress
+    #EventShowModFileSelection
+    #EventDownloadSuccess
+  EndEnumeration
+  Global EventArraySize = #PB_Compiler_EnumerationValue -1
+  
+  
   ; file interface
   Interface RepositoryFile
     getMod()
@@ -11,6 +26,7 @@ DeclareModule repository
     download()
     getLink.s()
     getFolderName.s()
+    getFileName.s()
   EndInterface
   
   ; mod interface
@@ -37,6 +53,8 @@ DeclareModule repository
   Declare refreshRepositories(async=#True)
   Declare freeAll()
   Declare clearCache()
+  Declare.b isloaded()
+  Declare stopQueue(timeout = 5000)
   
   ; source handling
   Declare AddRepository(url$)
@@ -75,17 +93,12 @@ DeclareModule repository
   Declare fileDownload(*file)
   Declare.s fileGetLink(*file)
   Declare.s fileGetFolderName(*file)
+  Declare.s fileGetFilename(*file)
   
   ; callbacks to GUI
   Declare BindEventCallback(Event, *callback)
-  Declare BindEventPost(RepositoryEvent, WindowEvent)
+  Declare BindEventPost(RepoEvent, WindowEvent, *callback)
   
-  ; Event Callbacks
-  Enumeration 0 ; Event Callbacks
-    #CallbackAddMods    ; add a list of mods to the GUI    
-    #CallbackClearList  ; clear the mod list
-    #CallbackRefreshFinished ; information: repo refresh finish
-  EndEnumeration
   
   Prototype CallbackAddMods(List *mods.RepositoryMod())
   Prototype CallbackClearList()

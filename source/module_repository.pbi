@@ -1,7 +1,11 @@
 ﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
+XIncludeFile "module_settings.pbi"
 
 XIncludeFile "module_repository.h.pbi"
+
+
+;TODO use winapi for downloads? https://msdn.microsoft.com/en-us/ie/ms775123(v=vs.94)
 
 Module repository
   UseModule debugger
@@ -33,11 +37,24 @@ Module repository
     Data.i @fileDownload()
     Data.i @fileGetLink()
     Data.i @fileGetFolderName()
+    Data.i @fileGetFilename()
   EndDataSection
   
   ;}
   
   ;{ Structures
+  
+  Structure download ; download information
+    *file.file
+    *mod.mod
+    url$
+    file$
+    size.i
+    con.i
+    timeout.l
+  EndStructure
+  
+  ; file and mod structures
   
   Structure file
     *vt.RepositoryFile
@@ -73,9 +90,12 @@ Module repository
     thumbnailImage.i
   EndStructure
   
+  ; repository structures
+  
   Structure repo_info ; information about the mod repository
     name$
     source$
+    icon$
     description$
     maintainer$
     info_url$
@@ -116,19 +136,20 @@ Module repository
   Global CallbackClearList.CallbackClearList
   Global CallbackRefreshFinished.CallbackRefreshFinished
   
-  Global CallbackEventClearList
+  Global Dim events(EventArraySize)
   
   Global *queueThread, queueStop.b,
          mutexQueue = CreateMutex()
   Global NewList queue.queue()
   
+  Global _loaded.b
   ;}
   
   ;{ init
   #RepoDirectory$ = "repositories"
   #RepoCache$     = #RepoDirectory$ + "/cache"
   #RepoListFile$  = #RepoDirectory$ + "/repositories.txt"
-  #RepoDownloadTimeout = 1000 ; timeout for downloads in milliseconds
+  #RepoDownloadTimeout = 1500 ; timeout for downloads in milliseconds
     
   Procedure init()
     CreateDirectory(#RepoDirectory$)
@@ -156,6 +177,20 @@ Module repository
   ;----------------------------------------------------------------------------
   ;---------------------------- PRIVATE FUNCTIONS -----------------------------
   ;----------------------------------------------------------------------------
+  
+  Procedure postProgressEvent(percent, text$=Chr(1))
+    Protected *buffer
+    If events(#EventProgress)
+      If text$ = Chr(1)
+        *buffer = #Null
+      Else
+        *buffer = AllocateMemory(StringByteLength(text$+" "))
+;         Debug "########## poke "+text$+" @ "+*buffer
+        PokeS(*buffer, text$)
+      EndIf
+      PostEvent(events(#EventProgress), 0, 0, percent, *buffer)
+    EndIf
+  EndProcedure
   
   Procedure WriteSourcesFile(List sources$())
     Protected file
@@ -185,28 +220,22 @@ Module repository
     EndIf
   EndProcedure
   
+  
   Procedure downloadToMemory(url$, timeout=#RepoDownloadTimeout)
-    ; TODO timeout custom function with timeout causes IMA on Win7...
-    ; workaround use default download function
+    ; some bug in HTTP_Async causes IMA... do not use async (no timeout available...)
     ProcedureReturn ReceiveHTTPMemory(url$, 0, main::VERSION_FULL$)
     
-    Protected con, progress,
-              lastBytes, time,
-              *buffer
-    
+    Protected con, time, lastBytes, progress, *buffer
     con = ReceiveHTTPMemory(url$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
+    
     If con
       time = ElapsedMilliseconds()
       Repeat
         progress = HTTPProgress(con)
-        If progress < 0 ; #PB_Http_Success Or #PB_Http_Failed Or #PB_Http_Aborted
-          *buffer = FinishHTTP(con)
-          Break
-        EndIf
         
         If progress = lastBytes
-          If ElapsedMilliseconds() - time > #RepoDownloadTimeout
-            deb("repository:: timeout "+url$)
+          If ElapsedMilliseconds() - time > timeout
+            Debug "download timed out"
             AbortHTTP(con)
           EndIf
         Else
@@ -214,16 +243,16 @@ Module repository
           time = ElapsedMilliseconds()
         EndIf
         
-        Delay(50)
-      ForEver
-    Else
-      deb("repository:: error "+url$)
+        If progress < 0
+          *buffer = FinishHTTP(con)
+          Break
+        EndIf
+        
+      Until progress < 0
     EndIf
     
     If progress = #PB_Http_Success
       ProcedureReturn *buffer
-    Else
-      ProcedureReturn #Null
     EndIf
   EndProcedure
   
@@ -246,13 +275,15 @@ Module repository
     
     file$ = getRepoFileName(url$)
     
+    
     ; download
     *buffer = downloadToMemory(url$)
     If *buffer
       saveMemoryToFile(*buffer, file$)
       FreeMemory(*buffer)
+      deb("repository:: repository update successful: "+url$)
     Else
-      deb("repository:: download failed: "+url$)
+      deb("repository:: repository update failed: "+url$)
     EndIf
     
     ; check file
@@ -294,6 +325,10 @@ Module repository
     
     
     ; process
+    If *modRepository\repo_info\icon$
+      ; use a custom icon for mods from this repo
+      ; TODO download and store repo icon
+    EndIf
     If *modRepository\repo_info\source$
       ; TODO check if source name is already used, cannot have two sources with same name
     Else
@@ -343,7 +378,7 @@ Module repository
     Next
     UnlockMutex(mutexFilesMap)
     
-    Debug "#GUI UPDATE"
+    
     ; GUI update
     If ListSize(*modRepository\mods()) > 0 And CallbackAddMods
 ;       ReDim *mods(ListSize(*modRepository\mods()) - 1)
@@ -362,21 +397,36 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
-  ; QUEUE
+  ; QUEUE (worker)
   
   Procedure queueRefreshRepositories(*dummy)
     ; download repositories
-    
+    Protected N, i, loaded
     Protected NewList repositories$()
-    GetRepositories(repositories$())
+    _loaded = #False
     
+    N = GetRepositories(repositories$())
+    
+    postProgressEvent(0, locale::l("repository", "load"))
     ForEach repositories$()
-      openRepositoryFile(repositories$())
+      loaded + openRepositoryFile(repositories$())
+      i + 1
+      postProgressEvent(100*i/N)
     Next
     
+    If loaded > 0
+      postProgressEvent(-1, locale::l("repository", "loaded"))
+    Else
+      postProgressEvent(-1, locale::l("repository", "load_failed"))
+    EndIf
     If CallbackRefreshFinished
       CallbackRefreshFinished()
     EndIf
+    If events(#EventRefreshFinished)
+      PostEvent(events(#EventRefreshFinished))
+    EndIf
+    
+    _loaded = #True
   EndProcedure
   
   Procedure queueThumbnail(*thumbnailData.thumbnailAsync)
@@ -446,6 +496,11 @@ Module repository
         Continue
       EndIf
       
+      ; there is something to do
+      If events(#EventWorkerStarts)
+        PostEvent(events(#EventWorkerStarts))
+      EndIf
+      
       ; get top item from queue
       FirstElement(queue())
       callback = queue()\callback
@@ -454,8 +509,12 @@ Module repository
       UnlockMutex(mutexQueue)
       
       ; execute the task
-      Debug "repo queue: start next task"
       callback(*userdata)
+      
+      ; finished
+      If events(#EventWorkerStops)
+        PostEvent(events(#EventWorkerStops))
+      EndIf
       
       ; not hog CPU
       Delay(10)
@@ -476,17 +535,20 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure stopQueue(timeout = 500)
+  Procedure stopQueue(timeout = 5000)
     Protected time
     If *queueThread And IsThread(*queueThread)
       queueStop = #True
       time = ElapsedMilliseconds()
-      While IsThread(*queueThread)
-        If ElapsedMilliseconds() - time > timeout
-          KillThread(*queueThread)
-          Break
-        EndIf
-      Wend
+      
+      WaitThread(*queueThread, timeout)
+      
+      If IsThread(*queueThread)
+        deb("repository:: kill worker")
+        KillThread(*queueThread)
+        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
+      EndIf
+        
       queueStop = #False
     EndIf
     *queueThread = #Null
@@ -516,30 +578,23 @@ Module repository
   Procedure freeAll()
     deb("repository:: free all")
     
-    Debug "stop queue"
     stopQueue()
     
-    Debug "lock mutex"
     LockMutex(mutexMods)
     LockMutex(mutexFilesMap)
     
-    Debug "call callback"
     If CallbackClearList
       CallbackClearList()
     EndIf
-    If CallbackEventClearList
-      PostEvent(CallbackEventClearList)
+    If events(#EventClearMods)
+      PostEvent(events(#EventClearMods))
     EndIf
     
-    Debug "clear map"
     ClearMap(ModRepositories())
     ClearMap(*filesByFoldername())
     
-    Debug "unlock"
     UnlockMutex(mutexFilesMap)
     UnlockMutex(mutexMods)
-    
-    Debug "fin"
   EndProcedure
   
   Procedure clearCache()
@@ -549,6 +604,10 @@ Module repository
     CreateDirectory(#RepoCache$)
     
     ProcedureReturn #True
+  EndProcedure
+  
+  Procedure.b isLoaded()
+    ProcedureReturn _loaded
   EndProcedure
   
   ; source handling
@@ -628,11 +687,7 @@ Module repository
       deb("repository:: could not read repository file "+#RepoListFile$)
     EndIf
     
-    If ListSize(sources$()) > 0
-      ProcedureReturn #True
-    Else
-      ProcedureReturn #False
-    EndIf
+    ProcedureReturn ListSize(sources$())
   EndProcedure
   
   Procedure GetRepositoryModCount(url$)
@@ -660,8 +715,25 @@ Module repository
   EndProcedure
   
   Procedure getModByLink(link$)
-    ; TODO getModByLink()
-    ProcedureReturn 0
+    Protected source$, id.q
+    Protected *mod
+    
+    source$ =     StringField(link$, 1, "/")
+    id      = Val(StringField(link$, 2, "/"))
+    
+    ForEach ModRepositories()
+      If ModRepositories()\repo_info\source$ = source$
+        ForEach ModRepositories()\mods()
+          If ModRepositories()\mods()\id = id
+            *mod = ModRepositories()\mods()
+            Break
+          EndIf
+        Next
+        Break
+      EndIf
+    Next
+    
+    ProcedureReturn *mod
   EndProcedure
   
   Procedure getFileByFoldername(foldername$)
@@ -669,6 +741,16 @@ Module repository
     Static regexp
     If Not regexp
       regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
+    EndIf
+    
+    If Left(foldername$, 1) = "?"
+      deb("staging area mod")
+      ShowCallstack()
+      CallDebugger
+    ElseIf Left(foldername$, 1) = "*"
+      deb("workshop mod")
+      ShowCallstack()
+      CallDebugger
     EndIf
     
     LockMutex(mutexFilesMap)
@@ -711,7 +793,31 @@ Module repository
   EndProcedure
   
   Procedure getFileByLink(link$)
-    ; TODO getFileByLink()
+    Protected source$, id.q, fileID.q
+    Protected *file
+    
+    source$ =     StringField(link$, 1, "/")
+    id      = Val(StringField(link$, 2, "/"))
+    fileID  = Val(StringField(link$, 3, "/"))
+    
+    ForEach ModRepositories()
+      If ModRepositories()\repo_info\source$ = source$
+        ForEach ModRepositories()\mods()
+          If ModRepositories()\mods()\id = id
+            ForEach ModRepositories()\mods()\files()
+              If ModRepositories()\mods()\files()\fileid = fileID
+                *file = ModRepositories()\mods()\files()
+                Break
+              EndIf
+            Next
+            Break
+          EndIf
+        Next
+        Break
+      EndIf
+    Next
+    
+    ProcedureReturn *file
   EndProcedure
   
   ; work on mod object
@@ -773,8 +879,28 @@ Module repository
     ProcedureReturn nFiles
   EndProcedure
   
-  Procedure modDownload(*mod)
-    ; TODO modDownload()
+  Procedure modDownload(*mod.mod)
+    Protected NewList *files.RepositoryFile()
+    Protected nFiles
+    
+    nFiles = modGetFiles(*mod, *files())
+    If nFiles = 1
+      ; single file -> download
+      FirstElement(*files())
+      ProcedureReturn *files()\download()
+    ElseIf nFiles > 1
+      ; multiple files -> open file selection window
+      If events(#EventShowModFileSelection)
+        PostEvent(events(#EventShowModFileSelection), *mod, 0)
+        ProcedureReturn #True
+      Else
+        ; no event callback defined...
+        ProcedureReturn #False
+      EndIf
+    Else
+      ; no files found
+      ProcedureReturn #False
+    EndIf
   EndProcedure
   
   Procedure.s modGetLink(*mod)
@@ -843,8 +969,170 @@ Module repository
     EndIf
   EndProcedure
   
+  Procedure fileDownloadMonitor(*download.download)
+    ; monitor the download and send event on success/failure
+    Protected progress, lastBytes, bytes, finish, time
+    
+    time = ElapsedMilliseconds()
+    
+    Repeat
+      progress = HTTPProgress(*download\con)
+      
+      If lastBytes = progress
+        ; download stuck? no new bytes received
+        If ElapsedMilliseconds() - time > *download\timeout
+          deb("repository:: download timeout after "+Str(*download\timeout/1000)+" s")
+          AbortHTTP(*download\con)
+        EndIf
+      Else
+        ; download is active, new bytes received
+        lastBytes = progress
+      EndIf
+      
+      If progress < 0
+        bytes = FinishHTTP(*download\con)
+        finish = #True
+        Select progress
+          Case #PB_Http_Success
+            deb("repository:: download success "+*download\url$)
+          Case #PB_Http_Failed
+            deb("repository:: download failed "+*download\url$)
+          Case #PB_Http_Aborted
+            deb("repository:: download aborted "+*download\url$)
+        EndSelect
+      Else
+        If *download\size
+          postProgressEvent(100 * progress / *download\size)
+        EndIf
+      EndIf
+      
+      Delay(100)
+    Until finish
+    
+    ProcedureReturn bytes
+    
+  EndProcedure
+  
   Procedure fileDownload(*file.file)
-    ; TODO fileDownload()
+    Protected *download.download
+    Protected folder$, header$, HTTPstatus, bytes, failure.b
+    Protected NewMap strings$()
+    
+    ;{ regular expressions for HTTP header
+    Static regExpContentLength, regExpHTTPstatus
+    If Not regExpContentLength
+      regExpContentLength = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
+    EndIf
+    If Not regExpHTTPstatus
+      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/1.\d (\d\d\d)")
+    EndIf
+    ;}
+    
+    If main::isMainThread()
+      ; make sure this function is not in main thread
+      deb("repository:: fileDownload() fork")
+      CreateThread(@fileDownload(), *file)
+      ProcedureReturn #True
+    EndIf
+    
+    ; only one download at a time
+    Static mutexDownload
+    If Not mutexDownload
+      mutexDownload = CreateMutex()
+    EndIf
+    LockMutex(mutexDownload)
+    If events(#EventWorkerStarts)
+      PostEvent(events(#EventWorkerStarts))
+    EndIf
+    
+    
+    *download = AllocateStructure(download)
+    
+    ; get information from file and mod
+    *download\file  = *file
+    *download\mod   = *file\mod
+    *download\url$  = *file\url$
+    *download\file$ = *file\filename$
+    *download\size  = 0
+    *download\con   = 0
+    *download\timeout = #RepoDownloadTimeout
+    
+    strings$("modname") = *download\mod\name$
+    
+    ; start
+    deb("repository:: download file "+*file\url$)
+    postProgressEvent(0, locale::getEx("repository", "download_start", strings$()))
+    
+    ; pre-process
+    If *download\file$ = ""
+      *download\file$ = Str(*download\mod\id)+".zip"
+      deb("repository:: no filename specified for file #"+*file\fileid+" in mod "+*download\mod\name$+", use "+*download\file$)
+    EndIf
+    
+    ; download location
+    folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
+    misc::CreateDirectoryAll(folder$)
+    *download\file$ = folder$ + *download\file$
+    
+    
+    ; get header information
+    header$ = GetHTTPHeader(*download\url$, 0, main::VERSION_FULL$)
+    failure = #False
+    If header$
+      ; get HTTP status
+      ExamineRegularExpression(regExpHTTPstatus, header$)
+      If NextRegularExpressionMatch(regExpHTTPstatus)
+        HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
+        If HTTPstatus = 404
+          deb("repository:: 404 File Not Found")
+          postProgressEvent(-1, locale::getEx("repository", "download_fail", strings$()))
+          failure = #True
+        ElseIf HTTPstatus = 429
+          deb("repository:: 429 Too Many Requests")
+          postProgressEvent(-1, locale::getEx("repository", "download_429", strings$()))
+          failure = #True
+        EndIf
+      EndIf
+      
+      ; get content-length
+      ExamineRegularExpression(regExpContentLength, header$)
+      If NextRegularExpressionMatch(regExpContentLength)
+        *download\size = Val(RegularExpressionGroup(regExpContentLength, 1))
+      EndIf
+    EndIf
+    
+    If Not failure
+      ; download file
+      *download\con = ReceiveHTTPFile(*download\url$, *download\file$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
+      If *download\con
+        ; download active...
+        ; monitor download progress
+        bytes = fileDownloadMonitor(*download)
+        deb("repsitory:: download finished with "+bytes+" bytes")
+        If bytes
+          ; todo meta data file for install routine?
+          
+          If events(#EventDownloadSuccess)
+            PostEvent(events(#EventDownloadSuccess), *download\file, 0)
+          EndIf
+          
+          mods::install(*download\file$)
+          
+        Else
+          DeleteFile(*download\file$)
+        EndIf
+      Else
+        ; could not start download
+      EndIf
+    EndIf
+    
+    FreeStructure(*download)
+    postProgressEvent(-1, locale::getEx("repository", "download_finish", strings$()))
+    
+    UnlockMutex(mutexDownload)
+    If events(#EventWorkerStops)
+      PostEvent(events(#EventWorkerStops))
+    EndIf
   EndProcedure
   
   Procedure.s fileGetLink(*file.file)
@@ -853,6 +1141,10 @@ Module repository
   
   Procedure.s fileGetFolderName(*file.file)
     ProcedureReturn *file\foldername$
+  EndProcedure
+  
+  Procedure.s fileGetFilename(*file.file)
+    ProcedureReturn *file\filename$
   EndProcedure
   
   Procedure fileIsInstalled(*file.file)
@@ -866,22 +1158,26 @@ Module repository
   Procedure BindEventCallback(Event, *callback)
     ; function callbacks - will be called in sync as function
     Select event
-      Case #CallbackAddMods
+      Case #EventAddMods
         CallbackAddMods = *callback
-      Case #CallbackClearList
+      Case #EventClearMods
         CallbackClearList = *callback
-      Case #CallbackRefreshFinished
+      Case #EventRefreshFinished
         CallbackRefreshFinished = *callback
     EndSelect
   EndProcedure
   
-  Procedure BindEventPost(Event, Post)
-    ; event based callbacks, will trigger an event that must be handled by the event loop
-    Select event
-      Case #CallbackClearList
-        CallbackEventClearList = Post
-    EndSelect
-    
+  Procedure BindEventPost(RepoEvent, WindowEvent, *callback)
+    If RepoEvent >= 0 And RepoEvent <= ArraySize(events())
+      events(RepoEvent) = WindowEvent
+      If *callback
+        BindEvent(WindowEvent, *callback)
+      EndIf
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
   EndProcedure
+  
   
 EndModule

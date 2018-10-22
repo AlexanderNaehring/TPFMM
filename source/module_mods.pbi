@@ -146,8 +146,8 @@ Module mods
   
   ;{ Globals
   
-  Global mutexMods    = CreateMutex()
-  Global mutexQueue   = CreateMutex()
+  Global mutexMods    = CreateMutex() ; access to the mods() map
+  Global mutexQueue   = CreateMutex() ; access to the queue() list
   Global mutexModAuthors  = CreateMutex()
   Global mutexModTags     = CreateMutex()
   Global _backupActive = #False
@@ -155,14 +155,13 @@ Module mods
   Global NewMap mods.mod()
   Global NewList queue.queue()
   Global isLoaded.b
+  Global exit.b
   
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
   Global callbackStopDraw.callbackStopDraw
   
-  Global EventNewMod
-  Global EventRemoveMod
-  Global EventStopDraw
+  Global Dim events(EventArraySize)
   
   Declare doLoad()
   Declare doInstall(file$)
@@ -187,6 +186,20 @@ Module mods
     pWorkshop$    = misc::Path(gameDirectory$ + "/../../workshop/content/446800/")
     pStagingArea$ = misc::Path(gameDirectory$ + "/userdata/staging_area/")
   EndMacro
+  
+  Procedure postProgressEvent(percent, text$=Chr(1))
+    Protected *buffer
+    If events(#EventProgress)
+      If text$ = Chr(1)
+        *buffer = #Null
+      Else
+        *buffer = AllocateMemory(StringByteLength(text$+" "))
+;         Debug "########## poke "+text$+" @ "+*buffer
+        PokeS(*buffer, text$)
+      EndIf
+      PostEvent(events(#EventProgress), 0, 0, percent, *buffer)
+    EndIf
+  EndProcedure
   
   ; init mods
   
@@ -237,8 +250,8 @@ Module mods
     If callbackStopDraw
       callbackStopDraw(#True)
     EndIf
-    If EventStopDraw
-      PostEvent(EventStopDraw, #True, 0)
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #True, 0)
     EndIf
     
     LockMutex(mutexMods)
@@ -247,9 +260,9 @@ Module mods
         callbackRemoveMod(mods())
       Next
     EndIf
-    If EventRemoveMod
+    If events(#EventRemoveMod)
       ForEach mods()
-        PostEvent(EventRemoveMod, mods(), 0)
+        PostEvent(events(#EventRemoveMod), mods(), 0)
       Next
     EndIf
     UnlockMutex(mutexMods)
@@ -257,8 +270,8 @@ Module mods
     If callbackStopDraw
       callbackStopDraw(#False)
     EndIf
-    If EventStopDraw
-      PostEvent(EventStopDraw, #False, 0)
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #False, 0)
     EndIf
     
     ; clean map
@@ -282,6 +295,11 @@ Module mods
         UnlockMutex(mutexQueue)
         Delay(100)
         Continue
+      EndIf
+      
+      ; there is something to do
+      If events(#EventWorkerStarts)
+        PostEvent(events(#EventWorkerStarts))
       EndIf
       
       ; get top item from queue
@@ -308,8 +326,13 @@ Module mods
           doUpdate(string$)
           
       EndSelect
-      Delay(100)
-    ForEver
+      
+      ; finished
+      If events(#EventWorkerStops)
+        PostEvent(events(#EventWorkerStops))
+      EndIf
+      
+    Until exit
   EndProcedure
   
   Procedure addToQueue(action, string$="")
@@ -320,10 +343,34 @@ Module mods
     queue()\string$ = string$
     
     If Not threadQueue Or Not IsThread(threadQueue)
+      exit = #False
       threadQueue = CreateThread(@handleQueue(), 0)
     EndIf
     
     UnlockMutex(mutexQueue)
+  EndProcedure
+  
+  Procedure stopQueue(timeout = 5000)
+    
+    
+    ; wait for worker to finish or timeout
+    If threadQueue And IsThread(threadQueue)
+      ; set exit flag for worker
+      exit = #True
+      
+      WaitThread(threadQueue, timeout)
+      
+      If IsThread(threadQueue)
+        deb("mods:: kill worker")
+        KillThread(threadQueue)
+        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
+      EndIf
+      
+      exit = #False
+    EndIf
+    
+    
+    ProcedureReturn #True
   EndProcedure
   
   ; other procedures
@@ -785,9 +832,44 @@ Module mods
   ; functions working on individual mods
   
   Procedure getModByFoldername(foldername$)
-    Protected *mod.mod
+    Protected *mod.mod, regExpFolder, version
+    Static regexp
+    If Not regexp
+      regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
+    EndIf
+    
     LockMutex(mutexMods)
-    *mod = FindMapElement(mods(), foldername$)
+    ; check if "foldername" is version independend, e.g. "urbangames_vehicles_no_end_year" (no _1 at the end)
+    If Not MatchRegularExpression(regexp, foldername$)
+      ; "foldername" search string is NOT ending on _1 (or similar) ...
+      ; add the _1 part to the foldername in a regexp and search
+      regExpFolder = CreateRegularExpression(#PB_Any, "^"+foldername$+"_([0-9]+)$", #PB_RegularExpression_NoCase) ; no case only valid on Windows, but may be fixed by removing and adding mod in game
+      If regExpFolder
+        version = -1
+        ForEach mods()
+          If MatchRegularExpression(regExpFolder, MapKey(mods()))
+            ; found a match, keep on searching for a higher version number (e.g.: if version _1 and _2 are found, use _2)
+            ; try to extract version number
+            If ExamineRegularExpression(regExpFolder, MapKey(mods()))
+              If NextRegularExpressionMatch(regExpFolder)
+                If Val(RegularExpressionGroup(regExpFolder, 1)) > version
+                  ; if version is higher, save version and file link
+                  version = Val(RegularExpressionGroup(regExpFolder, 1))
+                  *mod = mods()
+                EndIf
+              EndIf
+            EndIf
+          EndIf
+        Next
+        FreeRegularExpression(regExpFolder)
+      Else
+        deb("repository:: could not create regexp "+#DQUOTE$+"^"+foldername$+"_([0-9]+)$"+#DQUOTE$+" "+RegularExpressionError())
+      EndIf
+    Else
+      If FindMapElement(mods(), foldername$)
+        *mod = mods()
+      EndIf
+    EndIf
     UnlockMutex(mutexMods)
     ProcedureReturn *mod
   EndProcedure
@@ -1288,7 +1370,9 @@ Module mods
     
     defineFolder()
     
-    windowMain::progressMod(0, locale::l("progress","load")) ; 0%
+    
+    postProgressEvent(0, locale::l("progress", "load"))
+;     windowMain::progressMod(0, locale::l("progress","load")) ; 0%
     
     ; load list from json file
     json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
@@ -1401,13 +1485,14 @@ Module mods
       If callbackStopDraw
         callbackStopDraw(#True)
       EndIf
-      If EventStopDraw
-        PostEvent(EventStopDraw, #True, 0)
+      If events(#EventStopDraw)
+        PostEvent(events(#EventStopDraw), #True, 0)
       EndIf
       
       ForEach scanner() ; for each mod found in any of the known mod folders:
         n + 1 ; update progress bar
-        windowMain::progressMod(100*n/count)
+;         windowMain::progressMod(100*n/count)
+        postProgressEvent(100*n/count)
         
         id$ = MapKey(scanner())
         
@@ -1429,16 +1514,16 @@ Module mods
         If callbackNewMod
           callbackNewMod(*mod)
         EndIf
-        If EventNewMod
-          PostEvent(EventNewMod, *mod, 0)
+        If events(#EventNewMod)
+          PostEvent(events(#EventNewMod), *mod, 0)
         EndIf
       Next
       
       If callbackStopDraw
         callbackStopDraw(#False)
       EndIf
-      If EventStopDraw
-        PostEvent(EventStopDraw, #False, 0)
+      If events(#EventStopDraw)
+        PostEvent(events(#EventStopDraw), #False, 0)
       EndIf
       
     EndIf
@@ -1458,7 +1543,8 @@ Module mods
       EndIf
     Next
     
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
+    postProgressEvent(-1, locale::l("progress", "loaded"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
     
     UnlockMutex(mutexMods)
     
@@ -1506,7 +1592,7 @@ Module mods
     Static RegExpNonAlphaNum
     If Not RegExpNonAlphaNum
       RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
-      ; regexp matches all non alphanum characters including spaces etc.
+      ; regexp matches all non alphanum characters, including spaces etc.
     EndIf
     
     With *mod
@@ -1590,7 +1676,8 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    windowMain::progressMod(20, locale::l("progress", "install"))
+    postProgressEvent(20, locale::l("progress", "install"))
+;     windowMain::progressMod(20, locale::l("progress", "install"))
     
     ; 1) extract to temp directory (in TPF folder: /Transport Fever/TPFMM/temp/)
     ; 2) check extracted files and format
@@ -1617,19 +1704,24 @@ Module mods
     If Not archive::extract(source$, target$)
         deb("mods:: failed to extract files from {"+source$+"} to {"+target$+"}")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+        
+        postProgressEvent(-1, locale::l("progress","install_fail"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
         ProcedureReturn #False
     EndIf
     
     ; archive is extracted to target$
     ; (2) try to find mod in target$ (may be in some sub-directory)...
-    windowMain::progressMod(40)
+    
+    postProgressEvent(40)
+;     windowMain::progressMod(40)
     modRoot$ = modGetRoot(target$)
     
     If modRoot$ = ""
       deb("mods:: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, locale::l("progress","install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1652,7 +1744,8 @@ Module mods
         ;TODO backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
         
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
+        postProgressEvent(-1, locale::l("progress","install_fail_id"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1680,8 +1773,8 @@ Module mods
       If callbackRemoveMod
         callbackRemoveMod(*installedMod) ; send pointe for removal, attention: pointer already invalid
       EndIf
-      If EventRemoveMod
-        PostEvent(EventRemoveMod, *installedMod, 0)
+      If events(#EventRemoveMod)
+        PostEvent(events(#EventRemoveMod), *installedMod, 0)
       EndIf
       
       ; remove mod from internal map.
@@ -1708,11 +1801,13 @@ Module mods
     
     
     ; (3) copy mod to game folder
-    windowMain::progressMod(60)
+    postProgressEvent(60)
+;     windowMain::progressMod(60)
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
       deb("mods:: could not move directory to {"+modFolder$+"}")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, locale::l("progress", "install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1728,7 +1823,8 @@ Module mods
     
     
     ; (4) create reference to mod and load info
-    windowMain::progressMod(80)
+    postProgressEvent(80)
+;     windowMain::progressMod(80)
     *mod = modAddtoMap(id$)
     modLoadInfo(*mod)
     *mod\aux\installDate = Date()
@@ -1766,7 +1862,8 @@ Module mods
     EndIf
     
     ; finish installation
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
+    postProgressEvent(-1, locale::l("progress", "installed"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
     deb("mods:: finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     
@@ -1775,8 +1872,8 @@ Module mods
     If callbackNewMod
       callbackNewMod(*mod)
     EndIf
-    If EventNewMod
-      PostEvent(EventNewMod, *mod, 0)
+    If events(#EventNewMod)
+      PostEvent(events(#EventNewMod), *mod, 0)
     EndIf
     
     ; start backup if required
@@ -1819,14 +1916,15 @@ Module mods
     
     DeleteMapElement(mods())
     
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
+    postProgressEvent(-1, locale::l("management", "uninstall_done"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
     
     ; callback remove mod
     If callbackRemoveMod
       callbackRemoveMod(*mod) ; send pointe for removal, attention: pointer already invalid
     EndIf
-    If EventRemoveMod
-      PostEvent(EventRemoveMod, *mod, 0)
+    If events(#EventRemoveMod)
+      PostEvent(events(#EventRemoveMod), *mod, 0)
     EndIf
     
     ProcedureReturn #True
@@ -1891,7 +1989,8 @@ Module mods
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
     strings$("mod") = *mod\name$
-    windowMain::progressMod(80, locale::getEx("progress", "backup_mod", strings$()))
+    postProgressEvent(90,  locale::getEx("progress", "backup_mod", strings$()))
+;     windowMain::progressMod(80, locale::getEx("progress", "backup_mod", strings$()))
     
     If archive::pack(backupFile$, modFolder$)
       deb("mods::doBackup() - success")
@@ -1924,12 +2023,14 @@ Module mods
       EndIf
       
       ; finished
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fin"))
+      postProgressEvent(-1, locale::l("progress", "backup_fin"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, )
       _backupActive = #False
       ProcedureReturn #True
     Else
       deb("mods:: backup failed")
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
+      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
       _backupActive = #False
       ProcedureReturn #False
     EndIf
@@ -1937,31 +2038,37 @@ Module mods
   EndProcedure
   
   Procedure doUpdate(id$)
-;     debugger::add("mods::doUpdate("+id$+")")
-;     Protected *mod.mod
-;     Protected link$
-;     
-;     link$ = repository::getLinkByFoldername(id$)
-;     
-;     If link$ = ""
-;       LockMutex(mutexMods)
-;       *mod = FindMapElement(mods(), id$)
-;       UnlockMutex(mutexMods)
-;       link$ = getDownloadLink(*mod)
-;     EndIf
-;     
-;     ; send back to windowMain, as there may be the need for a selection window (if mod has multiple files) 
-;     windowMain::repoFindModAndDownload(link$)
+    deb("mods::doUpdate("+id$+")")
+    
+    Protected *mod.mod
+    Protected *repoMod.repository::RepositoryMod
+    
+    LockMutex(mutexMods)
+    *mod = FindMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
+    
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    *repoMod = modGetRepoMod(*mod)
+    If *repoMod
+      *repoMod\download() ; will take care of dialog window and main thread itself
+    EndIf
+    
   EndProcedure
   
   ;- actions (public)
   
-  Procedure load()
-    Debug "load"
-    addToQueue(#QUEUE_LOAD)
+  Procedure load(async=#True)
+    If async
+      addToQueue(#QUEUE_LOAD)
+    Else
+      doLoad()
+    EndIf
   EndProcedure
   
-  Procedure install(file$)
+  Procedure install(file$) ; check and extract archive to game folder
     addToQueue(#QUEUE_INSTALL, file$)
   EndProcedure
   
@@ -2318,17 +2425,15 @@ Module mods
   EndProcedure
   
   Procedure BindEventPost(ModEvent, WindowEvent, *callback)
-    Select ModEvent
-      Case #EventNewMod
-        EventNewMod = WindowEvent
+    If ModEvent >= 0 And ModEvent <= ArraySize(events())
+      events(ModEvent) = WindowEvent
+      If *callback
         BindEvent(WindowEvent, *callback)
-      Case #EventRemoveMod
-        EventRemoveMod = WindowEvent
-        BindEvent(WindowEvent, *callback)
-      Case #EventStopDraw
-        EventStopDraw = WindowEvent
-        BindEvent(WindowEvent, *callback)
-    EndSelect
+      EndIf
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
   EndProcedure
   
 EndModule

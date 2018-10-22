@@ -1,11 +1,12 @@
 ﻿DeclareModule images
-  Global NewMap Images()  
+  Global NewMap Images()
   
   Declare ImageFilterGrayscale(x, y, SourceColor, TargetColor)
   Declare ImageFilterApplyColorToNonWhite(x, y, SourceColor, TargetColor)
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_misc.pbi"
 
 Module images
   EnableExplicit
@@ -104,6 +105,7 @@ Module images
     IncludeAndLoadImage("itemBtnSettings",  "images/item-btn/settings.png")
     IncludeAndLoadImage("itemBtnWebsite",   "images/item-btn/website.png")
     IncludeAndLoadImage("itemBtnDownload",  "images/item-btn/download.png")
+    IncludeAndLoadImage("itemBtnUpdate",    "images/item-btn/update.png")
     
     ; item icons
     IncludeAndLoadImage("itemIcon_blank",     "images/icon/blank.png")
@@ -114,7 +116,10 @@ Module images
     IncludeAndLoadImage("itemIcon_tpfnet",    "images/icon/tpfnet.png")
     IncludeAndLoadImage("itemIcon_updateAvailable",    "images/icon/updateAvailable.png")
     IncludeAndLoadImage("itemIcon_up2date",    "images/icon/up2date.png")
-    IncludeAndLoadImage("itemIcon_installed",  "images/icon/installed.png")
+    IncludeAndLoadImage("itemIcon_installed",           "images/icon/installed.png")
+    IncludeAndLoadImage("itemIcon_notInstalled",        "images/icon/notInstalled.png")
+    IncludeAndLoadImage("itemIcon_availableOnline",     "images/icon/availableOnline.png")
+    IncludeAndLoadImage("itemIcon_notAvailableOnline",  "images/icon/notAvailableOnline.png")
     
     
     ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
@@ -125,6 +130,12 @@ Module images
     makeIcons("itemBtnSettings")
     makeIcons("itemBtnWebsite")
     makeIcons("itemBtnDownload")
+    makeIcons("itemBtnUpdate")
+    
+    ; also extract animation file here
+    
+    misc::useBinary("images/logo/logo.ani")
+    
     
   EndProcedure
   

@@ -8,6 +8,9 @@
     name$
     unknown1.l
     unknown2.l
+    
+    *localmod
+    *repofile
   EndStructure
   
   Structure setting
@@ -33,13 +36,16 @@
 EndDeclareModule
 
 XIncludeFile "module_misc.pbi"
+XIncludeFile "module_debugger.pbi"
 
 Module tfsave
+  UseModule debugger
   
-  #lz4$ = "lz4\lz4_v1_8_2_win64\lz4.exe"
+  #lz4$ = "lz4/lz4_v1_8_2_win64/lz4.exe"
   misc::useBinary(#lz4$)
   
   Procedure readInfo(file$)
+    deb("tfsave:: readInfo("+file$+")")
     Protected p, file
     Protected pos, numMods, i, len, numSettings
     Protected *info.tfsave, *buffer
@@ -66,80 +72,79 @@ Module tfsave
           *info\fileSizeUncompressed = FileSize(tmpFile2$)
           
           *info\version     = ReadLong(file)
-          If *info\version <> 103
-            Debug "version missmatch..."
-            Debug "errors expected"
-          EndIf
-          *info\difficulty  = ReadLong(file)
-          *info\startYear   = ReadLong(file)
-          *info\numTilesX   = ReadLong(file)
-          *info\numTilesY   = ReadLong(file)
-          ReadLong(file) ; unknown
-          *info\money       = ReadLong(file) ; unknown
-          ReadLong(file) ; unknown
-          
-          ; num mods
-          numMods = ReadLong(file)
-          ClearList(*info\mods())
-          If numMods > 0
-;             ReDim *info\mods(numMods-1)
-            ; mod names
-            For i = 0 To numMods-1
-              AddElement(*info\mods())
-              len = ReadLong(file)
-              pos = Loc(file)
-              *buffer = AllocateMemory(len)
-              ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-              *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8)
-              FreeMemory(*buffer)
-              *info\mods()\unknown1 = ReadLong(file) ; (?)
-            Next
-          EndIf
-          
-          *info\achievements = ReadByte(file)
-          
-          ; mod folder names
-          
-          numMods = ReadLong(file)
-          If numMods > 0
-            If numMods <> ListSize(*info\mods())
-              Debug "error: "+numMods+" <> "+Str(ListSize(*info\mods()))
+          If *info\version = 103
+            *info\difficulty  = ReadLong(file)
+            *info\startYear   = ReadLong(file)
+            *info\numTilesX   = ReadLong(file)
+            *info\numTilesY   = ReadLong(file)
+            ReadLong(file) ; unknown
+            *info\money       = ReadLong(file) ; unknown
+            ReadLong(file) ; unknown
+            
+            ; num mods
+            numMods = ReadLong(file)
+            ClearList(*info\mods())
+            If numMods > 0
+  ;             ReDim *info\mods(numMods-1)
+              ; mod names
+              For i = 0 To numMods-1
+                AddElement(*info\mods())
+                len = ReadLong(file)
+                pos = Loc(file)
+                *buffer = AllocateMemory(len)
+                ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
+                *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8)
+                FreeMemory(*buffer)
+                *info\mods()\unknown1 = ReadLong(file) ; (?)
+              Next
             EndIf
             
-            ; mod names
-            For i = 0 To ListSize(*info\mods())-1
-              SelectElement(*info\mods(), i)
-              len = ReadLong(file)
-              *buffer = AllocateMemory(len)
-              ReadData(file, *buffer, len)
-              *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8)
-              FreeMemory(*buffer)
-              *info\mods()\unknown2 = ReadLong(file); mod location (workshop, staging, etc...?)
-            Next
+            *info\achievements = ReadByte(file)
+            
+            ; mod folder names
+            
+            numMods = ReadLong(file)
+            If numMods > 0
+              If numMods <> ListSize(*info\mods())
+                Debug "error: "+numMods+" <> "+Str(ListSize(*info\mods()))
+              EndIf
+              
+              ; mod names
+              For i = 0 To ListSize(*info\mods())-1
+                SelectElement(*info\mods(), i)
+                len = ReadLong(file)
+                *buffer = AllocateMemory(len)
+                ReadData(file, *buffer, len)
+                *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8)
+                FreeMemory(*buffer)
+                *info\mods()\unknown2 = ReadLong(file); mod location (workshop, staging, etc...?)
+              Next
+            EndIf
+            
+            ; game settings
+            numSettings = ReadLong(file)
+            ClearList(*info\settings())
+            If numSettings > 0
+  ;             ReDim *info\settings(numSettings-1)
+              For i = 0 To numSettings-1
+                AddElement(*info\settings())
+                len = ReadLong(file)
+                *buffer = AllocateMemory(len)
+                ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
+                *info\settings()\key$ = PeekS(*buffer, Len, #PB_UTF8)
+                FreeMemory(*buffer)
+                len = ReadLong(file)
+                *buffer = AllocateMemory(len)
+                ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
+                *info\settings()\value$ = PeekS(*buffer, Len, #PB_UTF8)
+                FreeMemory(*buffer)
+              Next
+            EndIf
+          Else
+            deb("tfsave:: TF save version "+*info\version+" unknown. Abort.")
           EndIf
-          
-          ; game settings
-          numSettings = ReadLong(file)
-          ClearList(*info\settings())
-          If numSettings > 0
-;             ReDim *info\settings(numSettings-1)
-            For i = 0 To numSettings-1
-              AddElement(*info\settings())
-              len = ReadLong(file)
-              *buffer = AllocateMemory(len)
-              ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-              *info\settings()\key$ = PeekS(*buffer, Len, #PB_UTF8)
-              FreeMemory(*buffer)
-              len = ReadLong(file)
-              *buffer = AllocateMemory(len)
-              ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-              *info\settings()\value$ = PeekS(*buffer, Len, #PB_UTF8)
-              FreeMemory(*buffer)
-            Next
-          EndIf
-          
         Else
-          Debug "no tf save game"
+          deb("tfsave:: no TF save recognized. Abort.")
         EndIf
         
         CloseFile(file)

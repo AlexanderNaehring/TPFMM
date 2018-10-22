@@ -29,18 +29,10 @@ DeclareModule windowMain
     #Progress_NoChange  = -2
   EndEnumeration
   
+  Declare start()
   
-  Declare create()
-  
-  Declare stopGUIupdate(stop = #True)
-  Declare getColumnWidth(column)
   Declare getSelectedMods(List *mods())
-  
-  Declare progressMod(percent, text$=Chr(1))
-  Declare progressRepo(percent, text$=Chr(1))
-  
   Declare repoFindModAndDownload(link$)
-  
 EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
@@ -53,13 +45,22 @@ XIncludeFile "module_pack.pbi"
 XIncludeFile "module_windowPack.pbi"
 XIncludeFile "module_canvasList.pbi"
 XIncludeFile "module_tfsave.pbi"
+XIncludeFile "animation.pb"
 
 Module windowMain
+  UseModule debugger
   
   Structure dialog
     dialog.i
     window.i
   EndStructure
+  
+  Structure fileSelectionDialog
+    dialog.i
+    window.i
+    Map repoSelectFilesGadget.i()
+  EndStructure
+  
   
   Macro gadget(name)
     DialogGadget(dialog, name)
@@ -81,14 +82,23 @@ Module windowMain
   Enumeration #PB_Event_FirstCustomValue ; custom events that are processed by the main thread
     #ShowDownloadSelection
     
+    #EventStartUpFinished
+    #EventCloseNow
+    
     #EventModNew
     #EventModRemove
     #EventModStopDraw
+    #EventModProgress
     
     #EventRepoAddMod
     #EventRepoClearList
     #EventRepoRefreshFinished
+    #EventRepoModFileSelection
     #EventRepoPauseDraw
+    #EventRepoProgress
+    
+    #EventWorkerStarts
+    #EventWorkerStops
   EndEnumeration
   
   Enumeration #PB_EventType_FirstCustomValue
@@ -116,25 +126,23 @@ Module windowMain
   Global TimerMain = 101
   
   ; other stuff
-  Global NewMap PreviewImages.i()
-  Global _noUpdate
-  
-  Declare repoDownload()
   Declare backupRefreshList()
   
   Global *modList.CanvasList::CanvasList
   Global *repoList.CanvasList::CanvasList
   Global *saveModList.CanvasList::CanvasList
   
+  Global *workerAnimation.animation::animation
+  
   
   ; required declares
+  Declare create()
   Declare saveOpenFile(file$)
   Declare navBtnSaves()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
-  
   
   Procedure resize()
     ResizeImage(images::Images("headermain"), WindowWidth(window), 8, #PB_Image_Raw)
@@ -143,12 +151,6 @@ Module windowMain
   
   Procedure updateModButtons()
     Protected text$, author$
-    
-    If _noUpdate
-      ProcedureReturn #False
-    EndIf
-    
-    
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected *mod.mods::LocalMod
     Protected numSelected, numCanUninstall, numCanBackup
@@ -166,62 +168,24 @@ Module windowMain
       Next
     EndIf
     
-  
-;     If numSelected = 1
-;       DisableGadget(gadget("modInfo"), #False)
-;     Else
-;       DisableGadget(gadget("modInfo"), #True)
-;     EndIf
-    
-    If numCanBackup = 0
-      DisableGadget(gadget("modBackup"),  #True)
-    Else
-      DisableGadget(gadget("modBackup"), #False)
-    EndIf
-    
-    If numCanUninstall = 0
-      DisableGadget(gadget("modUninstall"),  #True)
-    Else
-      DisableGadget(gadget("modUninstall"),  #False)
-      If numCanUninstall > 1
-      Else
-      EndIf
-    EndIf
-    
-    
-    
-    If numSelected = 1
-      
-      If *mod\getRepoMod()
-        DisableGadget(gadget("modUpdate"), #False)
-      Else
-        DisableGadget(gadget("modUpdate"), #True)
-      EndIf
-      
-      ; website 
-      If *mod\getWebsite() Or *mod\getTfnetID() Or *mod\getWorkshopID()
-      Else
-      EndIf
-      
-    Else
-      DisableGadget(gadget("modUpdate"), #True)
-      
-    EndIf
+    DisableGadget(gadget("modBackup"),    Bool(numCanBackup = 0))
+    DisableGadget(gadget("modUninstall"), Bool(numCanUninstall = 0))
     
     If numSelected = 0
+      DisableGadget(gadget("modUpdate"), #True)
+      
     Else
+      DisableGadget(gadget("modUpdate"), Bool(Not *mod\getRepoMod()))
+      
+      ; website 
+;       If *mod\getWebsite() Or *mod\getTfnetID() Or *mod\getWorkshopID()
+;       EndIf
     EndIf
     
   EndProcedure
   
   Procedure updateRepoButtons()
     Protected text$, author$
-    
-    If _noUpdate
-      ProcedureReturn #False
-    EndIf
-    
-    
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected *mod.repository::RepositoryMod
     Protected numSelected, numCanDownload
@@ -237,7 +201,7 @@ Module windowMain
     EndIf
     
     DisableGadget(gadget("repoWebsite"), Bool(numSelected <> 1))
-    DisableGadget(gadget("repoDownload"), Bool(numCanDownload <> 1))
+    DisableGadget(gadget("repoDownload"), Bool(numCanDownload = 0))
     
   EndProcedure
   
@@ -271,12 +235,192 @@ Module windowMain
     
   EndProcedure
   
-  Procedure close()
+  ;- exit procedure
+  
+  Procedure closeThread(Event)
+    Protected xmlClose
+    ; todo make sure that all resources are correctly freed
+    ; e.g. better check mods/repo memory
+    ; also close any windows (settings, mod info, dialogs, etc...)
+    
     HideWindow(window, #True)
     
-    main::exit()
+    main::setProgressPercent(15)
+    main::setProgressText(locale::l("progress", "close"))
+    
+    settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
+    settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
+    settings::setInteger("window", "width", WindowWidth(windowMain::window))
+    settings::setInteger("window", "height", WindowHeight(windowMain::window))
+    
+    main::setProgressPercent(30)
+    main::setProgressText(locale::l("progress", "stop_worker"))
+    deb("windowMain:: stop workers")
+    mods::stopQueue()
+    main::setProgressPercent(45)
+    repository::stopQueue()
+    
+    main::setProgressPercent(60)
+    main::setProgressText(locale::l("progress", "save_list"))
+    mods::saveList()
+    
+    main::setProgressPercent(75)
+    main::setProgressText(locale::l("progress", "cleanup"))
+    deb("windowMain:: cleanup")
+    mods::freeAll()
+    main::setProgressPercent(90)
+    repository::freeAll()
+    
+    main::setProgressPercent(99)
+    main::setProgressText(locale::l("progress", "goodbye"))
+    
+    main::closeProgressWindow()
+    PostEvent(event) ; inform main thread that closure procedure is finished
   EndProcedure
   
+  Procedure close()
+    deb("windowMain:: close window")
+    ; the exit procedure will run in a thread and wait for all workers to finish etc...
+    main::showProgressWindow(locale::l("progress", "close"), #EventCloseNow)
+    CreateThread(@closeThread(), #EventCloseNow)
+    ; todo also set up a timer event to close programm after (e.g.) 1 minute if cleanup procedure fails?
+  EndProcedure
+  
+  ;- start procedure
+  
+  Procedure startThread(EventOnFinish)
+    Protected i
+    
+    main::setProgressText(locale::l("progress", "init"))
+    main::setProgressPercent(0)
+    
+    ; read gameDirectory from preferences
+    deb("main:: - game directory: "+settings::getString("", "path"))
+    
+    If misc::checkGameDirectory(settings::getString("", "path"), main::_TESTMODE) <> 0
+      deb("main:: game directory not correct")
+      settings::setString("", "path", "")
+    EndIf
+    
+    main::setProgressPercent(10)
+    
+    ; proxy (read from preferences)
+    main::initProxy()
+    
+    ; desktopIntegration
+    main::updateDesktopIntegration()
+    
+    
+    ;{ Restore window location (complicated version)
+    Protected nDesktops, desktop, locationOK
+    Protected windowX, windowY, windowWidth, windowHeight
+    deb("main:: reset main window location")
+    
+    If #True
+      windowX = settings::getInteger("window", "x")
+      windowY = settings::getInteger("window", "y")
+      windowWidth   = settings::getInteger("window", "width")
+      windowHeight  = settings::getInteger("window", "height")
+      
+      ; get desktops
+      nDesktops = ExamineDesktops()
+      If Not nDesktops
+        deb("main:: cannot find Desktop!")
+        End
+      EndIf
+      
+      ; check if location is valid
+      locationOK = #False
+      For desktop = 0 To nDesktops - 1
+        ; location is okay, if whole window is in desktop!
+        If windowX                > DesktopX(desktop)                         And ; left
+           windowX + windowHeight < DesktopX(desktop) + DesktopWidth(desktop) And ; right
+           windowY                > DesktopY(desktop)                         And ; top
+           windowY + windowHeight < DesktopY(desktop) + DesktopHeight(desktop)    ; bottom
+          locationOK = #True
+          deb("main:: window location valid on desktop #"+desktop)
+          Break
+        EndIf
+      Next
+      
+      If locationOK 
+        deb("main:: set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
+        ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
+        PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
+      Else
+        
+        deb("main:: window location not valid")
+        windowWidth = #PB_Ignore
+        windowHeight = #PB_Ignore
+        
+        deb("main:: center main window on primary desktop")
+        windowX = (DesktopWidth(0)  - windowWidth ) /2
+        windowY = (DesktopHeight(0) - windowHeight) /2
+      EndIf
+    EndIf
+    ;}
+    
+    
+    main::setProgressPercent(20)
+    
+    ; load mods and repository
+    If settings::getString("", "path")
+      main::setProgressText(locale::l("progress", "load_mods"))
+      mods::load(#False)
+      main::setProgressPercent(50)
+      
+      
+      main::setProgressText(locale::l("progress", "load_repo"))
+      repository::refreshRepositories(#False)
+      main::setProgressPercent(80)
+    EndIf
+    
+    main::setProgressPercent(90)
+    
+    ; parameter handling
+    For i = 0 To CountProgramParameters() - 1
+      main::handleParameter(ProgramParameter(i))
+    Next
+    
+    main::setProgressPercent(99)
+    
+    ; show main window
+    main::closeProgressWindow()
+    HideWindow(windowMain::window, #False)
+    
+    
+    If settings::getString("", "path") = ""
+      ; no path specified upon program start -> open settings dialog
+      deb("main:: no game directory defined - open settings dialog")
+      ; post event to show settings
+      windowSettings::show()
+    EndIf
+    
+    
+  EndProcedure
+  
+  Procedure start()
+    Protected i
+    
+    If Not main::isMainThread()
+      deb("windowMain:: start() not in main thread!")
+      RaiseError(#PB_OnError_Breakpoint)
+    EndIf
+    
+    ; open main window and bind events
+    create() 
+    
+    ; open settings window
+    windowSettings::create(window)
+    
+    
+    ; startup procedure
+    main::showProgressWindow(locale::l("progress", "start"), #EventCloseNow)
+    CreateThread(@startThread(), #EventStartupFinished)
+    
+  EndProcedure
+  
+  ; ---
   
   Procedure handleFile(file$)
     Select LCase(GetExtensionPart(file$))
@@ -291,12 +435,39 @@ Module windowMain
     EndSelect
   EndProcedure
   
+  ; ---
+  
   Procedure websiteTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
   
   Procedure websiteTrainFeverNetDownloads()
     misc::openLink("http://goo.gl/Q75VIM") ; Downloads / Filebase (Train-Fever.net)
+  EndProcedure
+  
+  ;- Worker & progress
+  
+  Procedure workerChange(change)
+    ; multiple workers can be active at any given time, count # active workers
+    Static activeWorkers
+    activeWorkers + change
+    If activeWorkers > 0
+      If *workerAnimation\isPaused()
+        *workerAnimation\play()
+      EndIf
+    Else
+      If Not *workerAnimation\isPaused()
+        *workerAnimation\pause()
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure workerStart()
+    workerChange(1)
+  EndProcedure
+  
+  Procedure workerStop()
+    workerChange(-1)
   EndProcedure
   
   ;-------------------------------------------------
@@ -343,7 +514,7 @@ Module windowMain
   
   Procedure MenuItemEnter()
     If GetActiveGadget() = gadget("repoList")
-      repoDownload()
+      ;TODO enter hotkey
     EndIf
   EndProcedure
   
@@ -386,6 +557,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnMods()
+    deb("windowMain:: navBtnMods()")
     hideAllContainer()
     HideGadget(gadget("containerMods"), #False)
     SetGadgetState(gadget("btnMods"), 1)
@@ -394,6 +566,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnMaps()
+    deb("windowMain:: navBtnMods()")
     hideAllContainer()
     HideGadget(gadget("containerMaps"), #False)
     SetGadgetState(gadget("btnMaps"), 1)
@@ -401,6 +574,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnOnline()
+    deb("windowMain:: navBtnOnline()")
     hideAllContainer()
     HideGadget(gadget("containerOnline"), #False)
     SetGadgetState(gadget("btnOnline"), 1)
@@ -408,6 +582,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnBackups()
+    deb("windowMain:: navBtnBackups()")
     hideAllContainer()
     HideGadget(gadget("containerBackups"), #False)
     SetGadgetState(gadget("btnBackups"), 1)
@@ -415,6 +590,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnSaves()
+    deb("windowMain:: navBtnSaves()")
     hideAllContainer()
     HideGadget(gadget("containerSaves"), #False)
     SetGadgetState(gadget("btnSaves"), 1)
@@ -422,6 +598,7 @@ Module windowMain
   EndProcedure
   
   Procedure navBtnSettings()
+    deb("windowMain:: navBtnSaves()")
     MenuItemSettings()
     SetGadgetState(gadget("btnSettings"), 0)
   EndProcedure
@@ -430,6 +607,7 @@ Module windowMain
   ;- mod tab
   
   Procedure modAddNewMod()
+    deb("windowMain:: modAddNewMod()")
     Protected file$
     If FileSize(settings::getString("", "path")) <> -2
       ProcedureReturn #False
@@ -452,6 +630,7 @@ Module windowMain
   EndProcedure
   
   Procedure modUninstall() ; Uninstall selected mods (delete from HDD)
+    deb("windowMain:: modUninstall()")
     Protected *mod.mods::LocalMod
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected count, result
@@ -488,6 +667,7 @@ Module windowMain
   EndProcedure
   
   Procedure modUpdate()
+    deb("windowMain:: modUpdate()")
     Protected *mod.mods::LocalMod
     Protected NewList *items.CanvasList::CanvasListItem()
     
@@ -500,6 +680,7 @@ Module windowMain
   EndProcedure
   
   Procedure modUpdateAll()
+    deb("windowMain:: modUpdateAll()")
     Protected *mod.mods::LocalMod
     Protected NewList*items.CanvasList::CanvasListItem()
     
@@ -513,6 +694,7 @@ Module windowMain
   EndProcedure
   
   Procedure modBackup()
+    deb("windowMain:: modBackup()")
     Protected *mod.mods::LocalMod
     Protected NewList *items.CanvasList::CanvasListItem()
     
@@ -523,15 +705,6 @@ Module windowMain
           mods::backup(*mod\getID())
         EndIf
       Next
-    EndIf
-  EndProcedure
-  
-  Procedure modPreviewImage()
-    Protected event = EventType()
-    If event = #PB_EventType_LeftClick
-      If GetGadgetState(gadget("modPreviewImage")) = ImageID(images::Images("logo"))
-        websiteTrainFeverNet()
-      EndIf
     EndIf
   EndProcedure
   
@@ -594,11 +767,13 @@ Module windowMain
   ;- mod filter dialog
   
   Procedure modResetFilterMods()
+    deb("windowMain:: modResetFilterMods()")
     SetGadgetText(gadget("modFilterString"), "")
     SetActiveGadget(gadget("modFilterString"))
   EndProcedure
   
   Procedure modFilterClose()
+    deb("windowMain:: modFilterClose()")
     SetActiveWindow(window)
     HideWindow(modFilter\window, #True)
     PostEvent(#PB_Event_Repaint, window, 0)
@@ -665,6 +840,7 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterChange()
+    deb("windowMain:: modFilterChange()")
     ; save current filter to settings
     settings::setInteger("modFilter", "tf",       GetGadgetState(DialogGadget(modfilter\dialog, "modFilterTF")))
     settings::setInteger("modFilter", "vanilla",  GetGadgetState(DialogGadget(modfilter\dialog, "modFilterVanilla")))
@@ -679,6 +855,7 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterShow()
+    deb("windowMain:: modFilterShow()")
     ResizeWindow(modFilter\window, DesktopMouseX()-WindowWidth(modFilter\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
     HideWindow(modFilter\window, #False)
     SetActiveGadget(DialogGadget(modFilter\dialog, "modFilterString"))
@@ -690,6 +867,7 @@ Module windowMain
   ;- mod sort dialog
   
   Procedure modSortClose()
+    deb("windowMain:: modSortClose()")
 ;     SetActiveWindow(window)
     HideWindow(modSort\window, #True)
 ;     PostEvent(#PB_Event_Repaint, window, 0)
@@ -697,6 +875,7 @@ Module windowMain
   EndProcedure
   
   Procedure modSortChange()
+    deb("windowMain:: modSortChange()")
     ; apply sorting to CanvasList
     Protected *comp, mode, options
     
@@ -730,6 +909,7 @@ Module windowMain
   EndProcedure
   
   Procedure modSortShow()
+    deb("windowMain:: modSortShow()")
     ResizeWindow(modSort\window, DesktopMouseX()-WindowWidth(modSort\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
     HideWindow(modSort\window, #False)
     SetActiveGadget(DialogGadget(modFilter\dialog, "modSortBox"))
@@ -750,6 +930,11 @@ Module windowMain
     modSettings::show(*item\GetUserData(), WindowID(window))
   EndProcedure
   
+  Procedure modIconUpdate(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::LocalMod = *item\GetUserData()
+    mods::update(*mod\getID())
+  EndProcedure
+  
   Procedure modIconWebsite(*item.CanvasList::CanvasListItem)
     Protected *mod.mods::LocalMod = *item\GetUserData()
     Protected website$ = *mod\getWebsite()
@@ -762,11 +947,20 @@ Module windowMain
   ;- mod callbacks
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
     Protected icon
+    Protected.b repoMod, updateAvailable
     
     If *mod = #Null
       *mod = *item\GetUserData()
       If *mod = #Null
+        deb("windowMain:: no mod information for item "+*item)
         ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    If *mod\getRepoMod()
+      repoMod = #True
+      If *mod\isUpdateAvailable()
+        updateAvailable = #True
       EndIf
     EndIf
     
@@ -782,8 +976,14 @@ Module windowMain
     Else
       *item\AddButton(#Null, images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), images::images("itemBtnSettingsDisabled"))
     EndIf
+    If repoMod And updateAvailable
+      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), images::images("itemBtnUpdateDisabled"))
+    Else
+      *item\AddButton(#Null, images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), images::images("itemBtnUpdateDisabled"))
+    EndIf
     *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
     
+    ; icons
     *item\ClearIcons()
     ; folder icon
     If *mod\isVanilla()
@@ -804,15 +1004,13 @@ Module windowMain
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     ; update icon
-    If *mod\getRepoMod()
-      ; a mod with the foldername was found in the repository
-      If *mod\isUpdateAvailable()
+    If repoMod
+      If updateAvailable
         *item\AddIcon(images::images("itemIcon_updateAvailable"))
       Else
         *item\AddIcon(images::images("itemIcon_up2date"))
       EndIf
     Else
-      ; no online mod found or available
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     
@@ -822,7 +1020,7 @@ Module windowMain
   Procedure modCallbackNewMod(*mod.mods::LocalMod)
     Protected *item.CanvasList::CanvasListItem
     
-    *item = *modList\AddItem(*mod\getName()+#LF$+*mod\getAuthorsString()+#LF$+"ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+FormatDate("Installed on %yyyy/%mm/%dd",*mod\getInstallDate()), *mod)
+    *item = *modList\AddItem(*mod\getName()+#LF$+*mod\getAuthorsString()+#LF$+"ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+FormatDate("Installed on %yyyy/%mm/%dd", *mod\getInstallDate()), *mod)
     
     modItemSetup(*item, *mod)
   EndProcedure
@@ -843,6 +1041,27 @@ Module windowMain
   
   Procedure modCallbackStopDraw(stop)
     *modList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
+  EndProcedure
+  
+  Procedure modEventProgress()
+    Protected percent, *buffer
+    
+    percent = EventType()
+    If percent = -1
+      HideGadget(gadget("progressModBar"), #True)
+    Else
+      HideGadget(gadget("progressModBar"), #False)
+      SetGadgetState(gadget("progressModBar"), percent)
+    EndIf
+    
+    *buffer = EventData()
+    If *buffer
+;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
+      SetGadgetText(gadget("progressModText"), PeekS(*buffer))
+      FreeMemory(*buffer)
+      ; sometimes, this event is called twice and tries to free memory that is already freed!
+      ; only occurs when using EventWindow and EventGadget for data transfer...
+    EndIf
   EndProcedure
   
   ;- mod other
@@ -959,7 +1178,21 @@ Module windowMain
             If Not FindString(*mod\getAuthor(), s$, 1, #PB_String_NoCase)
               If Not FindString(*mod\getSource(), s$, 1, #PB_String_NoCase)
                 ; search string was NOT found in this mod
-                ProcedureReturn #False
+                
+                Protected NewList *files.repository::RepositoryFile()
+                Protected found
+                found = #False
+                If *mod\getFiles(*files())
+                  ForEach *files()
+                    If FindString(*files()\getFolderName(), s$, 1, #PB_String_NoCase)
+                      found = #True
+                      Break
+                    EndIf
+                  Next
+                  ClearList(*files())
+                EndIf
+                
+                ProcedureReturn found
               EndIf
             EndIf
           EndIf
@@ -1035,7 +1268,7 @@ Module windowMain
   
   ;- repo events
   
-  Procedure repoWebsite(*item.CanvasList::CanvasListItem)
+  Procedure repoItemWebsite(*item.CanvasList::CanvasListItem)
     Protected *mod.repository::RepositoryMod
     Protected url$
     If *item
@@ -1049,11 +1282,21 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure repoItemDownload(*item.CanvasList::CanvasListItem)
+    Protected *mod.repository::RepositoryMod
+    If *item
+      *mod = *item\GetUserData()
+      If *mod
+        *mod\download()
+      EndIf
+    EndIf
+  EndProcedure
+  
   Procedure repoListItemEvent(*item, event)
     Select event
       Case #PB_EventType_LeftDoubleClick
         If *item
-          repoWebsite(*item)
+          repoItemWebsite(*item)
         EndIf
         
       Case #PB_EventType_Change
@@ -1061,6 +1304,23 @@ Module windowMain
         updateRepoButtons()
     EndSelect
     
+  EndProcedure
+  
+  Procedure repoWebsite()
+    Protected *item.CanvasList::CanvasListItem
+    
+    *item = *repoList\GetSelectedItem()
+    repoItemWebsite(*item)
+  EndProcedure
+  
+  Procedure repoDownload()
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If *repoList\GetAllSelectedItems(*items())
+      ForEach *items()
+        repoItemDownload(*items())
+      Next
+    EndIf
   EndProcedure
   
   ;- repo callbacks
@@ -1076,7 +1336,7 @@ Module windowMain
       EndIf
     EndIf
     
-    ; preview image (takes some time)
+    ; load preview image (slow)
     file$ = *mod\getThumbnailFile()
     If file$
       If FileSize(file$) > 0
@@ -1111,9 +1371,8 @@ Module windowMain
     
     
     ; buttons
-    *item\AddButton(0, images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), images::images("itemBtnDownloadDisabled"))
-    *item\AddButton(@repoWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
-    
+    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), images::images("itemBtnDownloadDisabled"))
+    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
     
   EndProcedure
   
@@ -1133,7 +1392,7 @@ Module windowMain
     *repoList\SetAttribute(canvasList::#AttributePauseDraw, #False)
     
     modListRefreshStatus()
-    progressRepo(#Progress_Hide, "finished loading repo")
+;     progressRepo(#Progress_Hide, "finished loading repo")
   EndProcedure
   
   Procedure repoCallbackClearList()
@@ -1164,7 +1423,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure repoItemVisible(*item.CanvasList::CanvasListItem, event)
+  Procedure repoEventItemVisible(*item.CanvasList::CanvasListItem, event)
     ; callback triggered when item gets visible
     ; load image for this item now
     
@@ -1175,204 +1434,159 @@ Module windowMain
     EndIf
   EndProcedure
   
-  
-  ;-------------------
-  ;- save tab
-  
-  Procedure saveOpenFile(file$)
-    Protected *tfsave.tfsave::tfsave
-    Protected *item.CanvasList::CanvasListItem
+  Procedure repoEventProgress() ; progress bar
+    Protected percent, *buffer
     
-    ; free old data if available
-    *tfsave = *saveModList\GetUserData()
-    If *tfsave
-      FreeStructure(*tfsave)
-    EndIf
-    *saveModList\ClearItems()
-    *tfsave = tfsave::readInfo(file$)
-    
-    If *tfsave
-      *saveModList\SetUserData(*tfsave)
-      SetGadgetText(gadget("saveName"), locale::l("save", "save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
-      
-      SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
-      SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
-      SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
-      SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
-      SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
-      
-      If ListSize(*tfsave\mods())
-        ForEach *tfsave\mods()
-          *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$)
-          ; the "major version" (e.g. _1) is not saved in the "ID".
-          ; e.g. mod "urbangames_vehicles_no_end_year" may be version _0, _1, _2, ...
-          ; must check version independend
-          
-          If repository::getModByFoldername(*tfsave\mods()\id$)
-            *item\AddIcon(images::images("iconInstalled"))
-          EndIf
-        Next
-        DisableGadget(gadget("saveDownload"), #False)
-      Else
-        *saveModList\AddItem(locale::l("save", "no_mods"))
-        DisableGadget(gadget("saveDownload"), #True)
-      EndIf
+    percent = EventType()
+    If percent = -1
+      HideGadget(gadget("progressRepoBar"), #True)
     Else
-      DisableGadget(gadget("saveDownload"), #True)
-      
-      SetGadgetText(gadget("saveYear"), " ")
-      SetGadgetText(gadget("saveDifficulty"), " ")
-      SetGadgetText(gadget("saveMapSize"), " ")
-      SetGadgetText(gadget("saveMoney"), " ")
-      SetGadgetText(gadget("saveFileSize"), " ")
-      SetGadgetText(gadget("saveFileSizeUncompressed"), " ")
-      *saveModList\AddItem(locale::l("save", "error"))
+      HideGadget(gadget("progressRepoBar"), #False)
+      SetGadgetState(gadget("progressRepoBar"), percent)
     EndIf
-  EndProcedure
-  
-  Procedure saveOpen()
-    ; open a new savegame
-    Protected file$
     
-    file$ = OpenFileRequester(locale::l("save", "open_title"), settings::getString("save", "last"), "*.sav", 0)
-    If file$
-      settings::setString("save", "last", file$)
-      
-      saveOpenFile(file$)
+    *buffer = EventData()
+    If *buffer
+;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
+      SetGadgetText(gadget("progressRepoText"), PeekS(*buffer))
+      FreeMemory(*buffer)
+      ; sometimes, this event is called twice and tries to free memory that is already freed!
+      ; only occurs when using EventWindow and EventGadget for data transfer...
     EndIf
   EndProcedure
   
-  Procedure saveDownload()
-    ; for each mod not installed but available online, start download
-  EndProcedure
-  
-  
-  ;-------------------
-  Procedure repoList()
-;     updateRepoButtons()
-  EndProcedure
-  
-  ; repo download file selection window...
-  
-  Global dialogSelectFiles
-  Global mutexDialogSelectFiles = CreateMutex()
-  Global NewMap repoSelectFilesGadget()
+  ;- repo download file selection window...
   
   Procedure repoSelectFilesClose()
-    DisableWindow(window, #False)
-    SetActiveWindow(window)
-    If dialogSelectFiles And IsDialog(dialogSelectFiles)
-      CloseWindow(DialogWindow(dialogSelectFiles))
-      FreeDialog(dialogSelectFiles)
+    Protected *dialog.fileSelectionDialog
+    *dialog = GetWindowData(EventWindow())
+    If *dialog
+;       DisableWindow(window, #False)
+      SetActiveWindow(window)
+      CloseWindow(DialogWindow(*dialog\dialog))
+      FreeDialog(*dialog\dialog)
+      FreeStructure(*dialog)
     EndIf
-    UnlockMutex(mutexDialogSelectFiles)
   EndProcedure
   
   Procedure repoSelectFilesDownload()
-;     Protected *file.repository::file
-;     Protected *repo_mod.repository::mod
-;     If dialogSelectFiles And IsDialog(dialogSelectFiles)
-;       *repo_mod = GetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"))
-;       ; find selected 
-;       ForEach repoSelectFilesGadget()
-;         If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
-;           If GetGadgetState(repoSelectFilesGadget())
-;             ; init download if selected
-;             *file = GetGadgetData(repoSelectFilesGadget())
-;             
-;             repository::download(*repo_mod\source$, *repo_mod\id, *file\fileID)
-;           EndIf
-;         EndIf
-;       Next
-;     EndIf
-;     repoSelectFilesClose()
+    Protected *dialog.fileSelectionDialog
+    Protected *file.repository::RepositoryFile
+    Protected *mod.repository::RepositoryMod
+    *dialog = GetWindowData(EventWindow())
+    If *dialog
+      *mod = GetGadgetData(DialogGadget(*dialog\dialog, "selectDownload"))
+      ForEach *dialog\repoSelectFilesGadget()
+        If *dialog\repoSelectFilesGadget() And IsGadget(*dialog\repoSelectFilesGadget())
+          If GetGadgetState(*dialog\repoSelectFilesGadget())
+            ; selected
+            *file = GetGadgetData(*dialog\repoSelectFilesGadget())
+            *file\download()
+          EndIf
+        EndIf
+      Next
+      PostEvent(#PB_Event_CloseWindow, *dialog\window, 0)
+    EndIf
   EndProcedure
   
   Procedure repoSelectFilesUpdateButtons()
-    ForEach repoSelectFilesGadget()
-      If repoSelectFilesGadget() And IsGadget(repoSelectFilesGadget())
-        If GetGadgetState(repoSelectFilesGadget())
-          DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #False)
-          ProcedureReturn #True
+    Protected *dialog.fileSelectionDialog
+    *dialog = GetWindowData(EventWindow())
+    If *dialog
+      ForEach *dialog\repoSelectFilesGadget()
+        If *dialog\repoSelectFilesGadget() And IsGadget(*dialog\repoSelectFilesGadget())
+          If GetGadgetState(*dialog\repoSelectFilesGadget())
+            DisableGadget(DialogGadget(*dialog\dialog, "selectDownload"), #False)
+            ProcedureReturn #True
+          EndIf
         EndIf
-      EndIf
-    Next
-    DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #True)
+      Next
+      DisableGadget(DialogGadget(*dialog\dialog, "selectDownload"), #True)
+      ProcedureReturn #True
+    EndIf
     ProcedureReturn #False
   EndProcedure
   
-;   Procedure repoDownloadShowSelection(*repo_mod.repository::mod)
-;     Protected *nodeBase, *node
-;     Protected *file
-;     
-;     If IsDialog(dialogSelectFiles)
-;       If IsWindow(DialogWindow(dialogSelectFiles))
-;         CloseWindow(DialogWindow(dialogSelectFiles))
-;       EndIf
-;       FreeDialog(dialogSelectFiles)
-;     EndIf
-;     
-;     If IsXML(xml)
-;       *nodeBase = XMLNodeFromID(xml, "selectBox")
-;       If *nodeBase
-;         misc::clearXMLchildren(*nodeBase)
-;         ; add a checkbox for each file in mod
-;         ForEach *repo_mod\files()
-;           *node = CreateXMLNode(*nodeBase, "checkbox", -1)
-;           If *node
-;             SetXMLAttribute(*node, "name", Str(*repo_mod\files()))
-;             SetXMLAttribute(*node, "text", *repo_mod\files()\filename$)
-;           EndIf
-;         Next
-;         
-;         ; show window now
-;         dialogSelectFiles = CreateDialog(#PB_Any)
-;         If dialogSelectFiles And OpenXMLDialog(dialogSelectFiles, xml, "selectFiles", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
-;           
-;           ; get gadgets
-;           ClearMap(repoSelectFilesGadget())
-;           ForEach *repo_mod\files()
-;             *file = *repo_mod\files()
-;             If repository::canDownloadFile(*file)
-;               repoSelectFilesGadget(Str(*file)) = DialogGadget(dialogSelectFiles, Str(*file))
-;               SetGadgetData(repoSelectFilesGadget(Str(*file)), *file)
-;               BindGadgetEvent(repoSelectFilesGadget(Str(*file)), @repoSelectFilesUpdateButtons())
-;             EndIf
-;           Next
-;           
-;           SetWindowTitle(DialogWindow(dialogSelectFiles), locale::l("main","select_files"))
-;           SetGadgetText(DialogGadget(dialogSelectFiles, "selectText"), locale::l("main","select_files_text"))
-;           SetGadgetText(DialogGadget(dialogSelectFiles, "selectCancel"), locale::l("main","cancel"))
-;           SetGadgetText(DialogGadget(dialogSelectFiles, "selectDownload"), locale::l("main","download"))
-;           
-;           RefreshDialog(dialogSelectFiles)
-;           HideWindow(DialogWindow(dialogSelectFiles), #False, #PB_Window_WindowCentered)
-;           
-;           BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectCancel"), @repoSelectFilesClose())
-;           BindGadgetEvent(DialogGadget(dialogSelectFiles, "selectDownload"), @repoSelectFilesDownload())
-;           SetGadgetData(DialogGadget(dialogSelectFiles, "selectDownload"), *repo_mod)
-;           
-;           DisableGadget(DialogGadget(dialogSelectFiles, "selectDownload"), #True)
-;           
-;           BindEvent(#PB_Event_CloseWindow, @repoSelectFilesClose(), DialogWindow(dialogSelectFiles))
-;           
-;           DisableWindow(window, #True)
-;           ProcedureReturn #True
-;         EndIf
-;       EndIf
-;     EndIf
-;   EndProcedure
+  Procedure repoShowModFileSelection()
+    Protected *dialog.fileSelectionDialog
+    Protected *mod.repository::RepositoryMod
+    Protected NewList *files.repository::RepositoryFile()
+    Protected *nodeBase, *node
+    Protected *file
+    
+    *mod = EventWindow()
+    If *mod
+      deb("windowMain:: show repo mod file selection dialog")
+      
+      If IsXML(xml)
+        *nodeBase = XMLNodeFromID(xml, "selectBox")
+        If *nodeBase
+          misc::clearXMLchildren(*nodeBase)
+          ; add a checkbox for each file in mod
+          *mod\getFiles(*files())
+          ForEach *files()
+            *node = CreateXMLNode(*nodeBase, "checkbox", -1)
+            If *node
+              SetXMLAttribute(*node, "name", Str(*files()))
+              SetXMLAttribute(*node, "text", *files()\getFilename())
+            EndIf
+          Next
+          
+          *dialog = AllocateStructure(fileSelectionDialog)
+          *dialog\dialog = CreateDialog(#PB_Any)
+          
+          ; show window now
+          If *dialog\dialog And
+             OpenXMLDialog(*dialog\dialog, xml, "selectFiles", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+            
+            *dialog\window = DialogWindow(*dialog\dialog)
+            SetWindowData(*dialog\window, *dialog)
+            
+            ; get gadgets
+            ClearMap(*dialog\repoSelectFilesGadget())
+            ForEach *files()
+              If *files()\canDownload()
+                *dialog\repoSelectFilesGadget(Str(*files())) = DialogGadget(*dialog\dialog, Str(*files()))
+                SetGadgetData(*dialog\repoSelectFilesGadget(Str(*files())), *files())
+                BindGadgetEvent(*dialog\repoSelectFilesGadget(Str(*files())), @repoSelectFilesUpdateButtons())
+              EndIf
+            Next
+            
+            SetWindowTitle(DialogWindow(*dialog\dialog), locale::l("main","select_files"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectText"), locale::l("main","select_files_text"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectCancel"), locale::l("main","cancel"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectDownload"), locale::l("main","download"))
+            
+            
+            BindGadgetEvent(DialogGadget(*dialog\dialog, "selectCancel"), @repoSelectFilesClose())
+            BindGadgetEvent(DialogGadget(*dialog\dialog, "selectDownload"), @repoSelectFilesDownload())
+            SetGadgetData(DialogGadget(*dialog\dialog, "selectDownload"), *mod)
+            
+            DisableGadget(DialogGadget(*dialog\dialog, "selectDownload"), #True)
+            
+            BindEvent(#PB_Event_CloseWindow, @repoSelectFilesClose(), DialogWindow(*dialog\dialog))
+            
+            RefreshDialog(*dialog\dialog)
+            HideWindow(DialogWindow(*dialog\dialog), #False, #PB_Window_WindowCentered)
+            
+;             DisableWindow(window, #True)
+            ProcedureReturn #True
+          EndIf
+        EndIf
+      EndIf
+    EndIf
+  EndProcedure
   
+  ;- old repo stuff, not used
 ;   Procedure repoEventShowSelection()
 ;     Protected *repoMod
-;     *repoMod = EventData()
+;     *repoMod = EventData()b42
 ;     If *repoMod
 ;       repoDownloadShowSelection(*repoMod)
 ;     EndIf
 ;   EndProcedure
   
-  Procedure repoDownload()
+;   Procedure repoDownload()
 ;     ; download and install mod from source
 ;     Protected item, url$, nFiles
 ;     Protected *repo_mod.repository::mod, *file.repository::file
@@ -1415,7 +1629,7 @@ Module windowMain
 ;     repoDownloadShowSelection(*repo_mod)
 ;     
 ;     ProcedureReturn #False
-  EndProcedure
+;   EndProcedure
 ;   
 ;   Procedure repoRefresh()
 ;     repository::refresh()
@@ -1426,9 +1640,106 @@ Module windowMain
 ;     MessageRequester(locale::l("main","repo_clear_title"), locale::l("main","repo_clear_text"), #PB_MessageRequester_Info)
 ;   EndProcedure
 ;   
-  ;
   
   
+  ;-------------------
+  ;- save tab
+  
+  Procedure saveOpenFile(file$)
+    Protected *tfsave.tfsave::tfsave
+    Protected *item.CanvasList::CanvasListItem
+    Protected download.b
+    
+    ; free old data if available
+    *tfsave = *saveModList\GetUserData()
+    If *tfsave
+      FreeStructure(*tfsave)
+    EndIf
+    *saveModList\ClearItems()
+    *tfsave = tfsave::readInfo(file$)
+    
+    If *tfsave
+      *saveModList\SetUserData(*tfsave)
+      SetGadgetText(gadget("saveName"), locale::l("save", "save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
+      
+      SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
+      SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
+      SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
+      SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
+      
+      If ListSize(*tfsave\mods())
+        ForEach *tfsave\mods()
+          *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
+          ; the "major version" (e.g. _1) is not saved in the "ID".
+          ; e.g. mod "urbangames_vehicles_no_end_year" may be version _0, _1, _2, ...
+          ; must check version independend
+          
+          *tfsave\mods()\localmod = mods::getModByFoldername(*tfsave\mods()\id$)
+          *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
+          
+          If *tfsave\mods()\localmod
+            *item\AddIcon(images::images("itemIcon_installed"))
+          Else
+            *item\AddIcon(images::images("itemIcon_notInstalled"))
+          EndIf
+          If *tfsave\mods()\repofile
+            *item\AddIcon(images::images("itemIcon_availableOnline"))
+            download = #True
+          Else
+            *item\AddIcon(images::images("itemIcon_notAvailableOnline"))
+          EndIf
+        Next
+        If download
+          DisableGadget(gadget("saveDownload"), #False)
+        EndIf
+      Else
+        *saveModList\AddItem(locale::l("save", "no_mods"))
+        DisableGadget(gadget("saveDownload"), #True)
+      EndIf
+    Else
+      DisableGadget(gadget("saveDownload"), #True)
+      
+      SetGadgetText(gadget("saveYear"), " ")
+      SetGadgetText(gadget("saveDifficulty"), " ")
+      SetGadgetText(gadget("saveMapSize"), " ")
+      SetGadgetText(gadget("saveMoney"), " ")
+      SetGadgetText(gadget("saveFileSize"), " ")
+      SetGadgetText(gadget("saveFileSizeUncompressed"), " ")
+      *saveModList\AddItem(locale::l("save", "error"))
+    EndIf
+  EndProcedure
+  
+  Procedure saveOpen()
+    ; open a new savegame
+    Protected file$
+    
+    file$ = OpenFileRequester(locale::l("save", "open_title"), settings::getString("save", "last"), "*.sav", 0)
+    If file$
+      settings::setString("save", "last", file$)
+      
+      saveOpenFile(file$)
+    EndIf
+  EndProcedure
+  
+  Procedure saveDownload()
+    ; for each mod not installed but available online, start download
+    Protected NewList *items.CanvasList::CanvasListitem()
+    Protected *tfsaveMod.tfsave::mod
+    Protected *file.repository::RepositoryFile
+    deb("windowMain:: download all files from save")
+    If *saveModList\GetAllItems(*items())
+      ForEach *items()
+        ;TODO: save full info in userdata, also check if file is installed before downloading!
+        *tfsaveMod = *items()\GetUserData()
+        If *tfsaveMod\repofile And Not *tfsaveMod\localmod
+          deb("windowMain:: download missing mod '"+*tfsaveMod\id$+"'")
+          *file\download()
+        EndIf
+      Next
+    EndIf
+  EndProcedure
   
   
   ;- backup tab
@@ -1751,51 +2062,6 @@ Module windowMain
     ProcedureReturn height
   EndProcedure
   
-  Procedure progressMod(percent, text$=Chr(1))
-    Static max
-    If max <> 100
-      max = 100
-      SetGadgetAttribute(gadget("progressModBar"), #PB_ProgressBar_Maximum, max)
-    EndIf
-    
-    If percent = #Progress_Hide
-      HideGadget(gadget("progressModBar"), #True)
-    Else
-      HideGadget(gadget("progressModBar"), #False)
-      SetGadgetState(gadget("progressModBar"), percent)
-    EndIf
-    
-    If text$ <> Chr(1)
-      SetGadgetText(gadget("progressModText"), text$)
-    EndIf
-  EndProcedure
-  
-  Procedure progressRepo(percent, text$=Chr(1))
-    Static max
-    If max <> 100
-      max = 100
-      SetGadgetAttribute(gadget("progressRepoBar"), #PB_ProgressBar_Maximum, max)
-    EndIf
-    
-    If percent <> #Progress_NoChange
-      If percent = #Progress_Hide
-        HideGadget(gadget("progressRepoBar"), #True)
-      Else
-        HideGadget(gadget("progressRepoBar"), #False)
-        SetGadgetState(gadget("progressRepoBar"), percent)
-      EndIf
-    EndIf
-    
-    If text$ <> Chr(1)
-      SetGadgetText(gadget("progressRepoText"), text$)
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        RefreshDialog(dialog)
-        ; causes segmentation violation in Linux
-      CompilerEndIf
-    EndIf
-  EndProcedure
-  
-  
   ;- dialogs
   
   Procedure modFilterDialog()
@@ -2005,6 +2271,7 @@ Module windowMain
     BindEvent(#PB_Event_CloseWindow, @close(), window)
     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
+    BindEvent(#EventCloseNow, main::@exit())
 ;     BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
     
@@ -2015,15 +2282,24 @@ Module windowMain
     *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modListItemEvent())
     *modList\BindItemEvent(#PB_EventType_Change,            @modListItemEvent())
     
-    
     *repoList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("repoList"))
-    *repoList\BindItemEvent(CanvasList::#OnItemFirstVisible, @repoItemVisible()) ; dynamically load images when items get visible
+    *repoList\BindItemEvent(CanvasList::#OnItemFirstVisible, @repoEventItemVisible()) ; dynamically load images when items get visible
     *repoList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @repoListItemEvent())
     *repoList\BindItemEvent(#PB_EventType_Change,            @repoListItemEvent())
     
     *saveModList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("saveModList"))
     misc::BinaryAsString("theme/saveModList.json", theme$)
     *saveModList\SetTheme(theme$)
+    
+    ;- worker animation
+    *workerAnimation = animation::new()
+    *workerAnimation\setCanvas(gadget("workerCanvas"))
+    *workerAnimation\setBackgroundColor(misc::GetWindowBackgroundColor(WindowID(window)))
+    *workerAnimation\setInterval(1000/60)
+    *workerAnimation\loadAni("images/logo/logo.ani")
+    *workerAnimation\draw(0) ; draw first frame
+    BindEvent(#EventWorkerStarts, @workerStart())
+    BindEvent(#EventWorkerStops, @workerStop())
     
     
     ;- initialize gadget images
@@ -2091,8 +2367,8 @@ Module windowMain
     ; repo tab
     BindGadgetEvent(gadget("repoSort"),         @repoSortShow())
     BindGadgetEvent(gadget("repoFilter"),       @repoFilterShow())
-;     BindGadgetEvent(gadget("repoWebsite"),      @repoWebsite())
-;     BindGadgetEvent(gadget("repoDownload"),      @repoDownload())
+    BindGadgetEvent(gadget("repoWebsite"),      @repoWebsite())
+    BindGadgetEvent(gadget("repoDownload"),     @repoDownload())
     
     ; backup tab
     BindGadgetEvent(gadget("backupTree"),       @backupTree())
@@ -2136,8 +2412,9 @@ Module windowMain
 ;     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     MenuItem(#MenuItem_Log, l("menu","log"))
     
+    
     BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
-    BindMenuEvent(menu, #PB_Menu_Quit, main::@exit())
+    BindMenuEvent(menu, #PB_Menu_Quit, @close())
     BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
     BindMenuEvent(menu, #MenuItem_ExportList, @MenuItemExport())
     BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
@@ -2195,12 +2472,18 @@ Module windowMain
 ;     mods::BindEventPost(mods::#CallbackNewMod, #EventModNew, @modCallbackNewMod())
 ;     mods::BindEventPost(mods::#CallbackRemoveMod, #EventModRemove, @modCallbackRemoveMod())
 ;     mods::BindEventPost(mods::#CallbackStopDraw, #EventModStopDraw, @modCallbackStopDraw())
-    
+    mods::BindEventPost(mods::#EventProgress, #EventModProgress, @modEventProgress())
+    mods::BindEventPost(mods::#EventWorkerStarts, #EventWorkerStarts, #Null) ; worker events already linked
+    mods::BindEventPost(mods::#EventWorkerStops, #EventWorkerStops, #Null)
     
     ; repository module
-    repository::BindEventCallback(repository::#CallbackAddMods, @repoCallbackAddMods())
-    repository::BindEventCallback(repository::#CallbackClearList, @repoCallbackClearList())
-    repository::BindEventCallback(repository::#CallbackRefreshFinished, @repoCallbackRefreshFinished())
+    repository::BindEventCallback(repository::#EventAddMods, @repoCallbackAddMods())
+    repository::BindEventCallback(repository::#EventClearMods, @repoCallbackClearList())
+    repository::BindEventCallback(repository::#EventRefreshFinished, @repoCallbackRefreshFinished())
+    repository::BindEventPost(repository::#EventShowModFileSelection, #EventRepoModFileSelection, @repoShowModFileSelection())
+    repository::BindEventPost(repository::#EventProgress, #EventRepoProgress, @repoEventProgress())
+    repository::BindEventPost(repository::#EventWorkerStarts, #EventWorkerStarts, #Null) ; worker events already linked
+    repository::BindEventPost(repository::#EventWorkerStops, #EventWorkerStops, #Null)
     
     ; handle events in main thread: bind custom events
 ;     repository::BindEventPost(repository::#CallbackClearList, #EventRepoClearList)  ; tell repository to send this WindowEvent when the repository event occurs
@@ -2209,7 +2492,6 @@ Module windowMain
 ;     BindEvent(#EventRepoRefreshFinished, @repoCallbackRefreshFinishedEvent())
 ;     BindEvent(#EventRepoPauseDraw, @repoCallbackPauseDraw())
     
-    repository::refreshRepositories()
     
     ;------ open dialogs (sort / filter / ...)
     modFilterDialog()
@@ -2231,67 +2513,44 @@ Module windowMain
     UnuseModule locale
   EndProcedure
   
-  Procedure stopGUIupdate(stop = #True)
-    _noUpdate = stop
-  EndProcedure
-  
   Procedure getColumnWidth(column)
     ProcedureReturn GetGadgetItemAttribute(gadget("modList"), #PB_Any, #PB_Explorer_ColumnWidth, column)
   EndProcedure
   
-  Structure findModStruct
-    source$
-    id.q
-    fileID.q
-  EndStructure
-  
-  Procedure repoFindModAndDownloadThread(*buffer.findModStruct)
-;     Protected source$, id.q, fileID.q
-;     
-;     source$ = *buffer\source$
-;     id      = *buffer\id
-;     fileID  = *buffer\fileID
-;     FreeStructure(*buffer)
-;     
-;     While Not repository::_READY
-;       ; wait for repository to be loaded before starting download
-;       Delay(100)
-;     Wend
-;     
-;     If source$ And id
-;       ; if not fileID and canDownloadMod > 1  ==> show file selection window!
-;       ; else -> start download
-;       
-;       If Not fileID And repository::canDownloadModByID(source$, id) > 1
-;         Protected *repoMod.repository::mod
-;         *repoMod = repository::getModByID(source$, id)
-;         If *repoMod
-;           ; cannot directly call "repoDownloadShowSelection()" as this procedure is not called in the main thread!
-;           ; send event to main window to open the selection
-;           LockMutex(mutexDialogSelectFiles)
-;           PostEvent(#ShowDownloadSelection, window, 0, #ShowDownloadSelection, *repoMod)
-;         EndIf
-;       Else
-;         repository::download(source$, id, fileID)
-;       EndIf
-;     Else
-;       debugger::add("windowMain::repoFindModAndDownload("+source$+", "+id+", "+fileID+") - ERROR")
-;     EndIf
+  Procedure repoFindModAndDownloadThread(*link)
+    Protected link$
+    Protected *repoMod.repository::RepositoryMod
+    Protected *repoFile.repository::RepositoryFile
+    
+    link$ = PeekS(*link)
+    FreeMemory(*link)
+    
+    ; wait for repository for finish loading
+    While Not repository::isLoaded()
+      Delay(100)
+    Wend
+    
+    *repoFile = repository::getFileByLink(link$)
+    If *repoFile
+      *repoFile\download()
+    Else
+      *repoMod = repository::getModByLink(link$)
+      If *repoMod
+        *repoMod\download()
+      EndIf
+    EndIf
     
   EndProcedure
   
   Procedure repoFindModAndDownload(link$)
     ; search for a mod in repo and initiate download
     
-    Protected *buffer.findModStruct
-    *buffer = AllocateStructure(findModStruct)
-    
-    *buffer\source$ =     StringField(link$, 1, "/")
-    *buffer\id      = Val(StringField(link$, 2, "/"))
-    *buffer\fileID  = Val(StringField(link$, 3, "/"))
+    Protected *link
+    *link = AllocateMemory(StringByteLength(link$)+SizeOf(Character))
+    PokeS(*link, link$)
     
     ; start in thread in order to wait for repository to finish
-    CreateThread(@repoFindModAndDownloadThread(), *buffer)
+    CreateThread(@repoFindModAndDownloadThread(), *link)
   EndProcedure
   
   Procedure getSelectedMods(List *mods())

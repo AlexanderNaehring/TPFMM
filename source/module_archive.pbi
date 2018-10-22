@@ -47,7 +47,7 @@ Module archive
   
   Procedure extract(archive$, directory$)
     ;clean dir before extract?
-    Protected program$, parameter$
+    Protected program$, parameter$, str$
     Protected program, exit
     
     If FileSize(archive$) <= 0
@@ -80,8 +80,8 @@ Module archive
           program$ = "7z"
           parameter$ = "x -y "+#DQUOTE$+"-o"+directory$+#DQUOTE$+" "+#DQUOTE$+archive$+#DQUOTE$
         Else
-          debugger::add("archive::extract() - 7z not found, use unzip and unrar")
-          debugger::add("archive::extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
+          deb("archive:: extract() - 7z not found, use unzip and unrar")
+          deb("archive:: extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
           ; 7z not available - use unrar or unzip
           If LCase(GetExtensionPart(archive$)) = "rar"
             program$ = "unrar"
@@ -104,8 +104,8 @@ Module archive
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        Debug ReadProgramString(program)
-;         debugger::add("archive::extract() -| "+ReadProgramString(program))
+        str$ = ReadProgramString(program)
+        deb(str$)
       EndIf
       Delay(1)
     Wend

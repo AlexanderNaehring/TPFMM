@@ -91,6 +91,7 @@
   Declare getRowHeight(gadget)
   Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
+  Declare GetWindowBackgroundColor(hwnd=0)
 EndDeclareModule
 
 Module misc
@@ -841,5 +842,42 @@ Module misc
         CompilerError "No protocol handler registration defined for this OS"
     CompilerEndSelect
   EndProcedure
+  
+  Procedure GetWindowBackgroundColor(hwnd=0)
+    ; found on https://www.purebasic.fr/english/viewtopic.php?f=12&t=66974
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows  
+        Protected color = GetSysColor_(#COLOR_WINDOW)
+        If color = $FFFFFF Or color=0
+          color = GetSysColor_(#COLOR_BTNFACE)
+        EndIf
+        ProcedureReturn color
+        
+      CompilerCase #PB_OS_Linux   ;thanks to uwekel http://www.purebasic.fr/english/viewtopic.php?p=405822
+        If Not hwnd
+          DebuggerError("hwnd must be specified")
+        EndIf
+        Protected *style.GtkStyle, *color.GdkColor
+        *style = gtk_widget_get_style_(hwnd) ;GadgetID(Gadget))
+        *color = *style\bg[0]                ;0=#GtkStateNormal
+        ProcedureReturn RGB(*color\red >> 8, *color\green >> 8, *color\blue >> 8)
+        
+      CompilerCase #PB_OS_MacOS   ;thanks to wilbert http://purebasic.fr/english/viewtopic.php?f=19&t=55719&p=497009
+        Protected.i color, Rect.NSRect, Image, NSColor = CocoaMessage(#Null, #Null, "NSColor windowBackgroundColor")
+        If NSColor
+          Rect\size\width = 1
+          Rect\size\height = 1
+          Image = CreateImage(#PB_Any, 1, 1)
+          StartDrawing(ImageOutput(Image))
+          CocoaMessage(#Null, NSColor, "drawSwatchInRect:@", @Rect)
+          color = Point(0, 0)
+          StopDrawing()
+          FreeImage(Image)
+          ProcedureReturn color
+        Else
+          ProcedureReturn -1
+        EndIf
+    CompilerEndSelect
+  EndProcedure  
   
 EndModule
