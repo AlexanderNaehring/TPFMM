@@ -8,13 +8,13 @@
 
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
         <hbox expand='item:2'>
-          <vbox expand='no' comment='nav-bar on left side'>
-            <buttonimage name='btnMods' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnOnline' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnBackups' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnMaps' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnSaves' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnSettings' width='60' flags='#PB_Button_Toggle' />
+          <vbox expand='no' width='80' comment='nav-bar on left side'>
+            <buttonimage name='btnMods' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnOnline' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnBackups' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnMaps' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSaves' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSettings' flags='#PB_Button_Toggle' />
           </vbox>
           <multibox comment='main content area'>
             <container name='containerMods' invisible='yes' flags='' > <!--#PB_Container_Flat-->
@@ -126,12 +126,13 @@
         </hbox>
 
       </singlebox>
-      <hbox expand='item:1' spacing='10'>
+      <hbox expand='item:2' spacing='10'>
+        <canvas name='workerCanvas' width='80' height='45' />
         <gridbox columns='3' colexpand='equal' rowexpand='no'>
-        <text name='progressRepoText' text=' ' flags='#PB_Text_Right' />
           <progressbar name='progressRepoBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
-          <text name='progressModText' text=' ' flags='#PB_Text_Right' />
+          <text name='progressRepoText' text=' ' flags_='#PB_Text_Right' />
           <progressbar name='progressModBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
+          <text name='progressModText' text=' ' flags_='#PB_Text_Right' />
         </gridbox>
         <vbox expand='item:1'>
           <empty />
