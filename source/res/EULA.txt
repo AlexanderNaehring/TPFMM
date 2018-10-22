@@ -1,7 +1,7 @@
 End-User License Agreement (EULA) for Transport Fever Mod Manager (TPFMM)
 ===============================================================================
 Transport Fever Mod Manager (TPFMM) Copyright 2014-2018 Alexander Nähring
-Last updated on 2018-08-23
+Last updated on 2018-10-22
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -15,7 +15,7 @@ Please check https://www.transportfevermods.com/ or https://www.transportfever.n
 Privacy Notice
 ===============================================================================
 By default, the Software tries to establish a connection to https://www.transportfevermods.com to check for software updates and retrieve the latest online database from the server. The request will be logged on the server with the user's IP address and an anonymized software identification number. Please read the privacy policy at https://www.transportfevermods.com/privacy.html for further information about the privacy policy of TransportFeverMods.com.
-When adding 3rd online databases, the respective 3rd party is responsible for protecting the personal data of the user. Please check the privacy policy of any 3rd party repository before adding it to the Software.
+When adding 3rd-party online databases, a network connection to the specified server will be established. The respective 3rd party is responsible for protecting the personal data of the user. Please check the privacy policy of any 3rd party repository before adding it to the Software.
 
 
 LZ4 Library
