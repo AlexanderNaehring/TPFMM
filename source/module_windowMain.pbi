@@ -245,6 +245,11 @@ Module windowMain
     
     HideWindow(window, #True)
     
+    ; free the worker animation thread in the main windows (window hidden already)
+    ; otherwise, if worker is still animated during shutdown, might cause IMA
+    *workerAnimation\free()
+    *workerAnimation = #Null
+    
     main::setProgressPercent(15)
     main::setProgressText(locale::l("progress", "close"))
     
@@ -450,14 +455,16 @@ Module windowMain
   Procedure workerChange(change)
     ; multiple workers can be active at any given time, count # active workers
     Static activeWorkers
-    activeWorkers + change
-    If activeWorkers > 0
-      If *workerAnimation\isPaused()
-        *workerAnimation\play()
-      EndIf
-    Else
-      If Not *workerAnimation\isPaused()
-        *workerAnimation\pause()
+    If *workerAnimation
+      activeWorkers + change
+      If activeWorkers > 0
+        If *workerAnimation\isPaused()
+          *workerAnimation\play()
+        EndIf
+      Else
+        If Not *workerAnimation\isPaused()
+          *workerAnimation\pause()
+        EndIf
       EndIf
     EndIf
   EndProcedure
@@ -773,9 +780,9 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterClose()
-    deb("windowMain:: modFilterClose()")
-    SetActiveWindow(window)
+;     deb("windowMain:: modFilterClose()")
     HideWindow(modFilter\window, #True)
+    SetActiveWindow(window)
     PostEvent(#PB_Event_Repaint, window, 0)
     SetActiveGadget(gadget("modList"))
   EndProcedure
@@ -840,7 +847,7 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterChange()
-    deb("windowMain:: modFilterChange()")
+;     deb("windowMain:: modFilterChange()")
     ; save current filter to settings
     settings::setInteger("modFilter", "tf",       GetGadgetState(DialogGadget(modfilter\dialog, "modFilterTF")))
     settings::setInteger("modFilter", "vanilla",  GetGadgetState(DialogGadget(modfilter\dialog, "modFilterVanilla")))
@@ -855,7 +862,7 @@ Module windowMain
   EndProcedure
   
   Procedure modFilterShow()
-    deb("windowMain:: modFilterShow()")
+;     deb("windowMain:: modFilterShow()")
     ResizeWindow(modFilter\window, DesktopMouseX()-WindowWidth(modFilter\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
     HideWindow(modFilter\window, #False)
     SetActiveGadget(DialogGadget(modFilter\dialog, "modFilterString"))
@@ -867,15 +874,15 @@ Module windowMain
   ;- mod sort dialog
   
   Procedure modSortClose()
-    deb("windowMain:: modSortClose()")
-;     SetActiveWindow(window)
+;     deb("windowMain:: modSortClose()")
     HideWindow(modSort\window, #True)
+    SetActiveWindow(window)
 ;     PostEvent(#PB_Event_Repaint, window, 0)
     SetActiveGadget(gadget("modList"))
   EndProcedure
   
   Procedure modSortChange()
-    deb("windowMain:: modSortChange()")
+;     deb("windowMain:: modSortChange()")
     ; apply sorting to CanvasList
     Protected *comp, mode, options
     
@@ -909,7 +916,7 @@ Module windowMain
   EndProcedure
   
   Procedure modSortShow()
-    deb("windowMain:: modSortShow()")
+;     deb("windowMain:: modSortShow()")
     ResizeWindow(modSort\window, DesktopMouseX()-WindowWidth(modSort\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
     HideWindow(modSort\window, #False)
     SetActiveGadget(DialogGadget(modFilter\dialog, "modSortBox"))
@@ -1142,9 +1149,9 @@ Module windowMain
   ; repo filter dialog
   
   Procedure repoFilterClose()
-    SetActiveWindow(window)
     HideWindow(repoFilter\window, #True)
-    PostEvent(#PB_Event_Repaint, window, 0)
+    SetActiveWindow(window)
+;     PostEvent(#PB_Event_Repaint, window, 0)
     SetActiveGadget(gadget("repoList"))
   EndProcedure
   
@@ -1230,8 +1237,8 @@ Module windowMain
   ; repo sort dialog
   
   Procedure repoSortClose()
-    SetActiveWindow(window)
     HideWindow(repoSort\window, #True)
+    SetActiveWindow(window)
     PostEvent(#PB_Event_Repaint, window, 0)
     SetActiveGadget(gadget("repoList"))
   EndProcedure
@@ -2072,7 +2079,7 @@ Module windowMain
     EndIf
     modFilter\window = DialogWindow(modFilter\dialog)
     BindEvent(#PB_Event_CloseWindow, @modFilterClose(), modFilter\window)
-;     BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), modFilter\window)
+    BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), modFilter\window)
     AddKeyboardShortcut(modFilter\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
     AddKeyboardShortcut(modFilter\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
     BindEvent(#PB_Event_Menu, @modFilterClose(), modFilter\window, #PB_Event_CloseWindow)
@@ -2102,7 +2109,7 @@ Module windowMain
     modSort\window = DialogWindow(modSort\dialog)
     ; bind window events
     BindEvent(#PB_Event_CloseWindow, @modSortClose(), modSort\window)
-;     BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), modSort\window)
+    BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), modSort\window)
     ; use window menu for keyboard shortcuts
     AddKeyboardShortcut(modSort\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
     AddKeyboardShortcut(modSort\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
@@ -2130,7 +2137,7 @@ Module windowMain
     EndIf
     repoFilter\window = DialogWindow(repoFilter\dialog)
     BindEvent(#PB_Event_CloseWindow, @repoFilterClose(), repoFilter\window)
-;     BindEvent(#PB_Event_DeactivateWindow, @repoFilterClose(), repoFilter\window)
+    BindEvent(#PB_Event_DeactivateWindow, @repoFilterClose(), repoFilter\window)
     AddKeyboardShortcut(repoFilter\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
     AddKeyboardShortcut(repoFilter\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
     BindEvent(#PB_Event_Menu, @repoFilterClose(), repoFilter\window, #PB_Event_CloseWindow)
@@ -2154,7 +2161,7 @@ Module windowMain
     repoSort\window = DialogWindow(repoSort\dialog)
     ; bind window events
     BindEvent(#PB_Event_CloseWindow, @repoSortClose(), repoSort\window)
-;     BindEvent(#PB_Event_DeactivateWindow, @repoSortClose(), repoSort\window)
+    BindEvent(#PB_Event_DeactivateWindow, @repoSortClose(), repoSort\window)
     ; use window menu for keyboard shortcuts
     AddKeyboardShortcut(repoSort\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
     AddKeyboardShortcut(repoSort\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
