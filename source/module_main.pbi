@@ -313,8 +313,10 @@ Module main
     If server$
       deb("main:: server: "+server$+", user:"+user$)
       HTTPProxy(server$, user$, password$)
+      wget::setProxy(server$, user$, password$)
     Else
       HTTPProxy("")
+      wget::setProxy("")
     EndIf
     
   EndProcedure

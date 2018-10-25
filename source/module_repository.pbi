@@ -1,6 +1,7 @@
 ﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
+XIncludeFile "wget.pb"
 
 XIncludeFile "module_repository.h.pbi"
 
@@ -130,7 +131,8 @@ Module repository
   Global NewMap ModRepositories.modRepository() ; allow multiple repositories -> use map, with repository URL as key
   Global NewMap *filesByFoldername.mod()        ; pointer to original mods in ModRepositories\mods() with foldername as key
   Global mutexMods = CreateMutex(),
-         mutexFilesMap = CreateMutex()
+         mutexFilesMap = CreateMutex(),
+         _mutexDownload = CreateMutex()
          
   Global CallbackAddMods.CallbackAddMods
   Global CallbackClearList.CallbackClearList
@@ -149,7 +151,7 @@ Module repository
   #RepoDirectory$ = "repositories"
   #RepoCache$     = #RepoDirectory$ + "/cache"
   #RepoListFile$  = #RepoDirectory$ + "/repositories.txt"
-  #RepoDownloadTimeout = 1500 ; timeout for downloads in milliseconds
+  #RepoDownloadTimeout = 2000 ; timeout for downloads in milliseconds
     
   Procedure init()
     CreateDirectory(#RepoDirectory$)
@@ -220,8 +222,7 @@ Module repository
     EndIf
   EndProcedure
   
-  
-  Procedure downloadToMemory(url$, timeout=#RepoDownloadTimeout)
+  Procedure downloadToMemory_deprecated(url$, timeout=#RepoDownloadTimeout)
     ; some bug in HTTP_Async causes IMA... do not use async (no timeout available...)
     ProcedureReturn ReceiveHTTPMemory(url$, 0, main::VERSION_FULL$)
     
@@ -268,7 +269,8 @@ Module repository
   EndProcedure
   
   Procedure openRepositoryFile(url$)
-    Protected file$, *buffer,
+    Protected file$,
+              *wget.wget::wget,
               json, *value,
               *modRepository.modRepository,
               NewList *mods.RepositoryMod()
@@ -277,12 +279,15 @@ Module repository
     
     
     ; download
-    *buffer = downloadToMemory(url$)
-    If *buffer
-      saveMemoryToFile(*buffer, file$)
-      FreeMemory(*buffer)
+    *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000, #False)
+    If *wget\download() = 0
+      ; download successfull
+      DeleteFile(file$)
+      RenameFile(file$+".download", file$)
       deb("repository:: repository update successful: "+url$)
     Else
+      ; download failed
+      DeleteFile(file$+".download")
       deb("repository:: repository update failed: "+url$)
     EndIf
     
@@ -449,7 +454,7 @@ Module repository
         ; download image
         deb("Download Thumbnail "+*thumbnailData\mod\thumbnail$)
         CreateDirectory(GetPathPart(file$))
-        *buffer = downloadToMemory(url$)
+        *buffer = downloadToMemory_deprecated(url$)
         If *buffer
           If MemorySize(*buffer) > 1024 ; often rx 92 bytes when proxy error occurs
             image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
@@ -577,6 +582,8 @@ Module repository
   
   Procedure freeAll()
     deb("repository:: free all")
+    
+    ;TODO: if download is still active, and program is closed, download thread might try to access ressources that have been freed by END of program
     
     stopQueue()
     
@@ -1013,7 +1020,98 @@ Module repository
     
   EndProcedure
   
+  Procedure fileDownloadProgress(*wget.wget::wget)
+    postProgressEvent(*wget\getProgress())
+  EndProcedure
+  
+  Procedure fileDownloadError(*wget.wget::wget)
+    Protected *file.file, *mod.mod
+    Protected url$
+    Protected NewMap strings$()
+    *file = *wget\getUserData()
+    *mod = *file\mod
+    url$ = *wget\getRemote()
+    *wget\free()
+    *wget = #Null
+    
+    strings$("modname") = *mod\name$
+    
+    deb("repository:: download error: "+url$)
+    
+    postProgressEvent(-1, locale::getEx("repository", "download_fail", strings$()))
+    
+    UnlockMutex(_mutexDownload)
+    If events(#EventWorkerStops)
+      PostEvent(events(#EventWorkerStops))
+    EndIf
+  EndProcedure
+  
+  Procedure fileDownloadSuccess(*wget.wget::wget)
+    Protected *file.file, *mod.mod
+    Protected filename$
+    Protected NewMap strings$()
+    *file = *wget\getUserData()
+    *mod = *file\mod
+    filename$ = *wget\getFilename()
+    *wget\free()
+    *wget = #Null
+    
+    strings$("modname") = *mod\name$
+    
+    postProgressEvent(-1, locale::getEx("repository", "download_finish", strings$()))
+    
+    If events(#EventDownloadSuccess)
+      PostEvent(events(#EventDownloadSuccess), *file, 0)
+    EndIf
+    
+    mods::install(filename$)
+    
+    UnlockMutex(_mutexDownload)
+    If events(#EventWorkerStops)
+      PostEvent(events(#EventWorkerStops))
+    EndIf
+  EndProcedure
+  
   Procedure fileDownload(*file.file)
+    Protected *wget.wget::wget
+    Protected *mod.mod = *file\mod
+    Protected filename$, folder$
+    Protected NewMap strings$()
+    
+    
+    ; only one download at a time
+    LockMutex(_mutexDownload)
+    If events(#EventWorkerStarts)
+      PostEvent(events(#EventWorkerStarts))
+    EndIf
+    
+    ; start
+    deb("repository:: download file "+*file\url$)
+    strings$("modname") = *mod\name$
+    postProgressEvent(0, locale::getEx("repository", "download_start", strings$()))
+    
+    ; pre-process
+    filename$ = *file\filename$
+    If filename$ = ""
+      filename$ = Str(*mod\id)+".zip"
+      deb("repository:: no filename specified for file #"+*file\fileid+" in mod "+*mod\name$+", use "+filename$)
+    EndIf
+    
+    ; download location
+    folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
+    misc::CreateDirectoryAll(folder$)
+    filename$ = folder$ + filename$
+    
+    *wget = wget::NewDownload(*file\url$, filename$, #RepoDownloadTimeout/1000, #True)
+    *wget\setUserAgent(main::VERSION_FULL$)
+    *wget\setUserData(*file)
+    *wget\CallbackOnProgress(@fileDownloadProgress())
+    *wget\CallbackOnSuccess(@fileDownloadSuccess())
+    *wget\CallbackOnError(@fileDownloadError())
+    *wget\download()
+  EndProcedure
+  
+  Procedure fileDownload_old(*file.file)
     Protected *download.download
     Protected folder$, header$, HTTPstatus, bytes, failure.b
     Protected NewMap strings$()
@@ -1024,7 +1122,7 @@ Module repository
       regExpContentLength = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
     EndIf
     If Not regExpHTTPstatus
-      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/1.\d (\d\d\d)")
+      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/\d.\d (\d\d\d)")
     EndIf
     ;}
     
