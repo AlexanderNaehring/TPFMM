@@ -61,8 +61,7 @@
   Declare CallbackOnError(*wget.wget, *function.callbackFunction = #Null)
   
   Declare setProxy(host$, username$="", password$="")
-  
-  
+  Declare freeAll()
 EndDeclareModule
 
 Module wget
@@ -107,7 +106,7 @@ Module wget
   Structure _wget
     *vt.wget
     
-    programm.i
+    program.i
     thread.i
     mutex.i
     *userdata
@@ -133,7 +132,11 @@ Module wget
   
   ;{ globals
   Global _proxy$
+  Global _mutexList = CreateMutex()
+  Global NewList *objects._wget()
   ;}
+  
+  misc::useBinary("wget\wget.exe")
   
   CompilerIf Defined(debugger, #PB_Module)
     ; in bigger project, use custom module (writes debug messages to log file)
@@ -146,6 +149,7 @@ Module wget
   CompilerEndIf
   
   ;- Private
+  
   Procedure downloadThread(*this._wget)
     
     Protected program$, parameter$,
@@ -157,8 +161,7 @@ Module wget
       regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
     EndIf
     
-    misc::useBinary("wget/wget.exe")
-    program$ = "wget/wget.exe"
+    program$ = "wget\wget.exe"
     parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
     ; --proxy-user=user --proxy-password=password  or use environment variable
     ; -U user-agent
@@ -172,24 +175,25 @@ Module wget
     ; exit:
     ; 0 ok, 1 error, 2 parse error, 3 file error, 4 network error, 5 ssl error, 6 username/password error, 7 protocol error, 8 server error
     
-    deb("wget:: start download...")
     Debug program$+" "+parameter$
-    *this\programm = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Read|#PB_Program_Error|#PB_Program_Hide)
+    *this\program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Read|#PB_Program_Error|#PB_Program_Hide)
     
-    If *this\programm
-      While ProgramRunning(*this\programm)
+    If *this\program
+      deb("wget:: #"+*this+" downloading...")
+      While ProgramRunning(*this\program)
         If *this\cancel
-          KillProgram(*this\programm)
-          *this\programm = #Null
+          deb("wget:: #"+*this+" cancel download, kill wget.exe")
+          KillProgram(*this\program)
+          Debug "killed"
           *this\exitCode = -1
           Break
         EndIf
-        If AvailableProgramOutput(*this\programm)
-          str$ = ReadProgramString(*this\programm)
+        If AvailableProgramOutput(*this\program)
+          str$ = ReadProgramString(*this\program)
   ;         Debug str$
           STDOUT$ + str$ + #CRLF$
         EndIf
-        str$ = ReadProgramError(*this\programm)
+        str$ = ReadProgramError(*this\program)
         If str$
   ;         Debug str$
           STDERR$ + str$ + #CRLF$
@@ -207,12 +211,13 @@ Module wget
         EndIf
       Wend
       If Not *this\cancel
-        *this\exitCode = ProgramExitCode(*this\programm)
+        *this\exitCode = ProgramExitCode(*this\program)
       EndIf
-      CloseProgram(*this\programm)
+      CloseProgram(*this\program)
+      *this\program = #Null
       
       If *this\exitCode = 0
-        Deb("wget:: download ok")
+        Deb("wget:: #"+*this+" download ok")
       Else
         Select *this\exitCode
           Case 0 ; no error, cannot be reached
@@ -232,6 +237,8 @@ Module wget
             *this\lastError$ = "protocol error"
           Case 8
             *this\lastError$ = "server error"
+          Case -1
+            *this\lastError$ = "program error"
           Default
             *this\lastError$ = "unknown error"
         EndSelect
@@ -239,20 +246,18 @@ Module wget
         deb("wget:: "+*this\lastError$)
         
         If STDOUT$
-          deb("wget:: STDOUT output:"+#CRLF$+STDOUT$+#CRLF$)
+          deb("wget:: #"+*this+" STDOUT output:"+#CRLF$+STDOUT$+#CRLF$)
         EndIf
         If STDERR$
-          deb("wget:: STDERR output:"+#CRLF$+STDERR$+#CRLF$)
+          deb("wget:: #"+*this+" STDERR output:"+#CRLF$+STDERR$+#CRLF$)
         EndIf
       EndIf
       
     Else ; could not start program
-      deb("wget:: could not start wget.exe")
+      *this\lastError$ = "could not start wget"
+      deb("wget:: #"+*this+" "+*this\lastError$)
       *this\exitCode = -1
     EndIf
-    
-    
-    
     
     *this\cancel = #False
     *this\thread = #Null
@@ -286,7 +291,6 @@ Module wget
     ProcedureReturn ret
   EndProcedure
   
-  
   ;- Public
   
   Procedure NewDownload(remote$, local$, timeout.l=10, async.b=#True)
@@ -299,6 +303,11 @@ Module wget
     *this\timeout = timeout
     *this\async   = async
     *this\mutex   = CreateMutex()
+    
+    LockMutex(_mutexList)
+    AddElement(*objects())
+    *objects() = *this
+    UnlockMutex(_mutexList)
     
     ProcedureReturn *this
   EndProcedure
@@ -320,8 +329,27 @@ Module wget
   EndProcedure
   
   Procedure FreeDownload(*this._wget)
+    Protected found.b
+    LockMutex(_mutexList)
+    ForEach *objects()
+      If *objects() = *this
+        DeleteElement(*objects())
+        found = #True
+        Break
+      EndIf
+    Next
+    UnlockMutex(_mutexList)
+    
+    If Not found
+      deb("wget:: free() could not find download in local list, might be invalid/already freed!")
+      ProcedureReturn #False
+    EndIf
+    
     If *this\thread And IsThread(*this\thread)
       *this\cancel = #True
+      ; thread will trigger a error callback if defined. That callback might trigger a "FreeDownload()" call
+      ; therefore, each freedownload call checks if the object is still in the internal list
+      ; this is some overhead, but also used for the freeAll() method
       WaitThread(*this\thread)
     EndIf
     FreeMutex(*this\mutex)
@@ -376,7 +404,7 @@ Module wget
     ProcedureReturn *this\lastError$
   EndProcedure
   
-  Procedure waitFinished(*this._wget, timeout.l=0)
+  Procedure waitFinished(*this._wget, timeout.l=0) ; should not be called in a callback function, as the thread itself calls the callback
     Protected thread = *this\thread
     If thread And IsThread(thread)
       If timeout
@@ -394,8 +422,9 @@ Module wget
         WaitThread(thread)
         ProcedureReturn #True
       EndIf
+    Else ; no thread active
+      ProcedureReturn #True
     EndIf
-    
   EndProcedure
   
   Procedure EventOnProgress(*this._wget, event=0)
@@ -422,7 +451,6 @@ Module wget
     *this\onError\callback = *function
   EndProcedure
   
-  
   ;- Static
   
   Procedure setProxy(host$, username$="", password$="")
@@ -440,6 +468,22 @@ Module wget
     EndIf
   EndProcedure
   
+  Procedure freeAll()
+    Protected NewList *obj._wget()
+    deb("wget:: freeAll()")
+    
+    LockMutex(_mutexList)
+    If ListSize(*objects())
+      deb("wget:: "+ListSize(*objects())+" downloads active, kill all downloads")
+      CopyList(*objects(), *obj())
+    EndIf
+    UnlockMutex(_mutexList)
+    
+    ForEach *obj()
+      FreeDownload(*obj())
+    Next
+  EndProcedure
+  
 EndModule
 
 
@@ -454,8 +498,6 @@ CompilerIf #PB_Compiler_IsMainFile
   win = OpenWindow(#PB_Any, 0, 0, 600, 35, "Download...", #PB_Window_SystemMenu|#PB_Window_Tool|#PB_Window_ScreenCentered)
   progressbar = ProgressBarGadget(#PB_Any, 5, 5, 590, 25, 0, 100)
   
-  
-  
   Define *wget.wget::wget
 ;   wget::setProxy("http://proxy.net", "xxx", "xxx")
   *wget = wget::NewDownload("https://www.transportfevermods.com/repository/mods/workshop.json", GetTemporaryDirectory()+"workshop.json")
@@ -465,7 +507,6 @@ CompilerIf #PB_Compiler_IsMainFile
   *wget\EventOnError(#EventDownloadError)
   *wget\EventOnSuccess(#EventDownloadSuccess)
   *wget\start()
-  
   
   Repeat
     Select WaitWindowEvent()

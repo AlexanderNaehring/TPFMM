@@ -44,11 +44,30 @@ Module archive
       CompilerError "No unpacker defined for this OS"
   CompilerEndSelect
   
+  Procedure.s exitCodeError(code)
+    Select code
+      Case 0 ; ok
+        ProcedureReturn ""
+      Case 1 ; warning
+        ProcedureReturn "non-fatal error"
+      Case 2 ; error
+        ProcedureReturn "fatal error"
+      Case 7 ; command line error
+        ProcedureReturn "command line error"
+      Case 8 ; memory error
+        ProcedureReturn "not enough memory"
+      Case 255 ; user abort
+        ProcedureReturn "user stopped the process"
+      Default  ; unknown error
+        ProcedureReturn "unknown error"
+    EndSelect
+  EndProcedure
   
   Procedure extract(archive$, directory$)
     ;clean dir before extract?
     Protected program$, parameter$, str$
     Protected program, exit
+    Protected STDERR$, STDOUT$
     
     If FileSize(archive$) <= 0
       deb("archive:: cannot find archive {"+archive$+"}")
@@ -105,26 +124,40 @@ Module archive
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
         str$ = ReadProgramString(program)
-        deb(str$)
+        STDOUT$ + str$ + #CRLF$
+      EndIf
+      str$ = ReadProgramError(program)
+      If str$
+        STDERR$ + str$ + #CRLF$
       EndIf
       Delay(1)
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    If exit = 0 Or (exit = 1 And program$ = "7z")
+    
+    If exit <> 0
+      deb("archive:: exit code "+exit+", "+exitCodeError(exit)) ; exit code only valid for 7z!
+      If STDERR$
+        deb("archive:: stderr: "+#CRLF$+STDERR$)
+      EndIf
+      If STDOUT$
+        deb("archive:: stdout: "+#CRLF$+STDOUT$)
+      EndIf
+    EndIf
+    
+    If exit = 0 Or exit = 1
       ProcedureReturn #True
     Else
-      deb("archive:: exit code "+exit)
       ProcedureReturn #False
     EndIf
     
   EndProcedure
   
   Procedure pack(archive$, directory$)
-    
-    Protected root$
+    Protected root$, str$
     Protected program$, parameter$
     Protected program, exit
+    Protected STDERR$, STDOUT$
     
     DeleteFile(archive$, #PB_FileSystem_Force)
     
@@ -160,20 +193,33 @@ Module archive
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        Debug ReadProgramString(program)
-;         debugger::add("archive::pack() -| "+ReadProgramString(program))
+        str$ = ReadProgramString(program)
+        STDOUT$ + str$ + #CRLF$
+      EndIf
+      str$ = ReadProgramError(program)
+      If str$
+        STDERR$ + str$ + #CRLF$
       EndIf
       Delay(1)
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    If exit = 0
-      ProcedureReturn #True
-    Else
-      deb("archive:: exit code "+exit)
-      ProcedureReturn #False
+    
+    If exit <> 0
+      deb("archive:: exit code "+exit+", "+exitCodeError(exit)) ; exit code only valid for 7z!
+      If STDERR$
+        deb("archive:: stderr: "+#CRLF$+STDERR$)
+      EndIf
+      If STDOUT$
+        deb("archive:: stdout: "+#CRLF$+STDOUT$)
+      EndIf
     EndIf
     
+    If exit = 0 Or exit = 1
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
   EndProcedure
   
   

@@ -263,6 +263,7 @@ Module windowMain
     deb("windowMain:: stop workers")
     mods::stopQueue()
     main::setProgressPercent(45)
+    wget::freeAll()
     repository::stopQueue()
     
     main::setProgressPercent(60)

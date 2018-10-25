@@ -145,6 +145,7 @@ Module repository
   Global NewList queue.queue()
   
   Global _loaded.b
+  Global _activeRepoDownloads.i
   ;}
   
   ;{ init
@@ -268,28 +269,50 @@ Module repository
     ProcedureReturn #False
   EndProcedure
   
+  Procedure updateRepositoryFileSuccess(*wget.wget::wget)
+    Protected file$
+    file$ = *wget\getFilename() ; should end with .download
+    file$ = Left(file$, Len(file$)-9)
+    DeleteFile(file$, #PB_FileSystem_Force)
+    RenameFile(file$+".download", file$)
+    deb("repository:: repository update successful: "+*wget\getRemote())
+    *wget\free()
+    _activeRepoDownloads - 1
+  EndProcedure
+  
+  Procedure updateRepositoryFileError(*wget.wget::wget)
+    Protected file$
+    file$ = *wget\getFilename() ; should end with .download
+    file$ = Left(file$, Len(file$)-9)
+    
+    DeleteFile(file$+".download", #PB_FileSystem_Force)
+    deb("repository:: repository update failed: "+*wget\getRemote())
+    *wget\free()
+    _activeRepoDownloads - 1
+  EndProcedure
+  
+  Procedure updateRepositoryFile(url$)
+    Protected file$, ret,
+              *wget.wget::wget
+    
+    file$ = getRepoFileName(url$)
+    
+    ; start download
+    _activeRepoDownloads + 1
+    *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000, #True)
+    *wget\setUserAgent(main::VERSION_FULL$)
+    *wget\CallbackOnError(@updateRepositoryFileError())
+    *wget\CallbackOnSuccess(@updateRepositoryFileSuccess())
+    *wget\download()
+  EndProcedure
+  
   Procedure openRepositoryFile(url$)
     Protected file$,
-              *wget.wget::wget,
               json, *value,
               *modRepository.modRepository,
               NewList *mods.RepositoryMod()
     
     file$ = getRepoFileName(url$)
-    
-    
-    ; download
-    *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000, #False)
-    If *wget\download() = 0
-      ; download successfull
-      DeleteFile(file$)
-      RenameFile(file$+".download", file$)
-      deb("repository:: repository update successful: "+url$)
-    Else
-      ; download failed
-      DeleteFile(file$+".download")
-      deb("repository:: repository update failed: "+url$)
-    EndIf
     
     ; check file
     If FileSize(file$) <= 0
@@ -407,16 +430,37 @@ Module repository
   Procedure queueRefreshRepositories(*dummy)
     ; download repositories
     Protected N, i, loaded
+    Protected percent.b
     Protected NewList repositories$()
-    _loaded = #False
+    _loaded = 0
     
     N = GetRepositories(repositories$())
     
     postProgressEvent(0, locale::l("repository", "load"))
+    
+    ; download all repositories
+    _activeRepoDownloads = 0
+    loaded = 0
+    ForEach repositories$()
+      updateRepositoryFile(repositories$())
+    Next
+    While _activeRepoDownloads > 0
+      ; keep track of how many downloads are already finished
+      If N - _activeRepoDownloads <> loaded
+        loaded = N - _activeRepoDownloads
+        percent = 100*loaded/N
+        postProgressEvent(percent / 2)
+      EndIf
+      Delay(100)
+    Wend
+    
+    ; open local repository files
+    loaded = 0
     ForEach repositories$()
       loaded + openRepositoryFile(repositories$())
       i + 1
-      postProgressEvent(100*i/N)
+      percent = 100*i/N
+      postProgressEvent(50 + percent/2)
     Next
     
     If loaded > 0
@@ -583,7 +627,9 @@ Module repository
   Procedure freeAll()
     deb("repository:: free all")
     
-    ;TODO: if download is still active, and program is closed, download thread might try to access ressources that have been freed by END of program
+    ;TODO if download is still active, and program is closed, download thread might try to access ressources that have been freed by END of program
+    ; must also stop all download threads.
+    ; idea: use wget:: static method to keep track of all running downloads centrally in the wget module directly
     
     stopQueue()
     
@@ -1028,6 +1074,9 @@ Module repository
     Protected *file.file, *mod.mod
     Protected url$
     Protected NewMap strings$()
+    
+    deb("repository:: fileDownloadError()")
+    
     *file = *wget\getUserData()
     *mod = *file\mod
     url$ = *wget\getRemote()
@@ -1050,6 +1099,9 @@ Module repository
     Protected *file.file, *mod.mod
     Protected filename$
     Protected NewMap strings$()
+    
+    deb("repository:: fileDownloadSuccess()")
+    
     *file = *wget\getUserData()
     *mod = *file\mod
     filename$ = *wget\getFilename()
