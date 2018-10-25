@@ -13,32 +13,15 @@ EndDeclareModule
 Module archive
   UseModule debugger
   
-  
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       ; important: create 7z.exe and 7z.dll files
-      DataSection
-        data7zExe:
-          IncludeBinary "7z/7z.exe"
-        data7zExeEnd:
-        
-        data7zDll:
-          IncludeBinary "7z/7z.dll"
-        data7zDllEnd:
-        
-        data7zLic:
-          IncludeBinary "7z/7z License.txt"
-        data7zLicEnd:
-      EndDataSection
-      
       CreateDirectory("7z")
-      misc::extractBinary("7z/7z.exe",          ?data7zExe, ?data7zExeEnd - ?data7zExe, #False)
-      misc::extractBinary("7z/7z.dll",          ?data7zDll, ?data7zDllEnd - ?data7zDll, #False)
-      misc::extractBinary("7z/7z License.txt",  ?data7zLic, ?data7zLicEnd - ?data7zLic, #False)
-      
+      misc::useBinary("7z/7z.exe", #False)
+      misc::useBinary("7z/7z.dll", #False)
+      misc::useBinary("7z/7z License.txt", #False)
     CompilerCase #PB_OS_Linux
-      ; use "unzip"
-      
+      ; use packages
       
     CompilerDefault
       CompilerError "No unpacker defined for this OS"

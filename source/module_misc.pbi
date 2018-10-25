@@ -55,14 +55,14 @@
     CompilerEndIf
   EndMacro
   
-  Macro useBinary(file)
+  Macro useBinary(file, overwrite)
     DataSection
       _bin#MacroExpandedCount#Start:
       IncludeBinary file
       _bin#MacroExpandedCount#End:
     EndDataSection
     
-    misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start)
+    misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start, overwrite)
   EndMacro
   
   Declare.s path(path$, delimiter$ = "")

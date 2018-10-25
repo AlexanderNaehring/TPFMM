@@ -136,7 +136,7 @@ Module wget
   Global NewList *objects._wget()
   ;}
   
-  misc::useBinary("wget\wget.exe")
+  misc::useBinary("wget\wget.exe", #False)
   
   CompilerIf Defined(debugger, #PB_Module)
     ; in bigger project, use custom module (writes debug messages to log file)

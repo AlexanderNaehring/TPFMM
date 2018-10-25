@@ -134,8 +134,7 @@ Module images
     
     ; also extract animation file here
     
-    misc::useBinary("images/logo/logo.ani")
-    
+    misc::useBinary("images/logo/logo.ani", #False)
     
   EndProcedure
   

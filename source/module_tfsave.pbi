@@ -42,7 +42,7 @@ Module tfsave
   UseModule debugger
   
   #lz4$ = "lz4/lz4_v1_8_2_win64/lz4.exe"
-  misc::useBinary(#lz4$)
+  misc::useBinary(#lz4$, #False)
   
   Procedure readInfo(file$)
     deb("tfsave:: readInfo("+file$+")")
