@@ -87,9 +87,11 @@
         <tab text='Online Repositories'>
           <hbox expand='item:1'>
             <listicon name='repositoryList' flags='#PB_ListIcon_FullRowSelect|#PB_ListIcon_AlwaysShowSelection' />
-            <vbox expand='no'>
+            <vbox expand='item:3'>
               <button name='repositoryAdd' text='Add new' />
               <button name='repositoryRemove' text='Remove selected' />
+              <empty />
+              <checkbox name='repositoryUseCache' text='Use cache' />
             </vbox>
           </hbox>
         </tab>

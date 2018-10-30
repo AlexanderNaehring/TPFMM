@@ -297,6 +297,10 @@ Module repository
     
     file$ = getRepoFileName(url$)
     
+    If Not settings::getInteger("repository", "use_cache")
+      DeleteFile(file$, #PB_FileSystem_Force)
+    EndIf
+    
     ; start download
     _activeRepoDownloads + 1
     *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000, #True)
@@ -754,6 +758,58 @@ Module repository
     EndIf
 ;     UnlockMutex(mutexMods)
     ProcedureReturn count
+  EndProcedure
+  
+  Procedure CheckRepository(url$)
+    Protected file$
+    Protected *wget.wget::wget
+    Protected json, *value, *modRepository.modRepository
+    Protected ret
+    deb("repository:: CheckRepository("+url$+")")
+    
+    ; try to download repository
+    file$ = GetTemporaryDirectory()+"tpfmm-repository.tmp"
+    DeleteFile(file$, #PB_FileSystem_Force)
+    *wget = wget::NewDownload(url$, file$, #RepoDownloadTimeout/1000, #False)
+    *wget\setUserAgent(main::VERSION_FULL$)
+    If *wget\download() = 0 ; exit code 0
+      ; download okay
+      json = LoadJSON(#PB_Any, file$)
+      If json
+        ; check JSON
+        *value = JSONValue(json)
+        If JSONType(*value) = #PB_JSON_Object 
+          ; check if repo already loaded
+          LockMutex(mutexMods)
+          *modRepository = FindMapElement(ModRepositories(), url$)
+          UnlockMutex(mutexMods)
+          If Not *modRepository
+            *modRepository = AllocateStructure(modRepository)
+            ExtractJSONStructure(*value, *modRepository, modRepository)
+            ; TODO check if duplicate "source" id
+            deb("repository:: "+*modRepository\repo_info\name$+" by "+*modRepository\repo_info\maintainer$)
+            ret = #True
+          Else
+            deb("repository:: "+url$+" already loaded")
+            FreeJSON(json)
+            ret = #False
+          EndIf
+        Else
+          deb("repository:: invalid JSON type in "+url$)
+          ret = #False
+        EndIf
+        FreeJSON(json)
+      Else
+        deb("repository:: could not parse JSON from "+url$)
+        ret = #False
+      EndIf
+      DeleteFile(file$, #PB_FileSystem_Force)
+    Else
+      deb("repository:: download failed "+url$)
+      ret = #False
+    EndIf
+    
+    ProcedureReturn ret
   EndProcedure
   
   ; get mod object

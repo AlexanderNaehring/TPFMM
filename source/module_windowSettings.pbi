@@ -157,6 +157,8 @@ Module windowSettings
     settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
+    settings::setInteger("repository", "use_cache", GetGadgetState(gadget("repositoryUseCache")))
+    
     If restart
       MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
       misc::openLink(ProgramFilename())
@@ -271,11 +273,16 @@ Module windowSettings
       url$ = ""
     EndIf
     ; show requester
-    url$ = InputRequester("Add new Repository", "Please input the URL to the repository", url$)
+    url$ = InputRequester(locale::l("settings","repository_add"), locale::l("settings", "repository_input_url"), url$)
     
     If url$
       ; add repo
-      repository::AddRepository(url$)
+      If repository::CheckRepository(url$)
+        ; TODO display some info and ask if repo should be added.
+        repository::AddRepository(url$)
+      Else
+        MessageRequester(locale::l("settings","repository_add"),locale::l("settings","repository_invalid"), #PB_MessageRequester_Error)
+      EndIf
     EndIf
     updateRepositoryList()
   EndProcedure
@@ -375,6 +382,8 @@ Module windowSettings
     AddGadgetColumn(gadget("repositoryList"), 1, "Mods", 40)
     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
     SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
+    SetGadgetText(gadget("repositoryUseCache"),     l("settings", "repository_usecache"))
+    GadgetToolTip(gadget("repositoryUseCache"),     l("settings", "repository_usecache_tip"))
 ;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
 ;     SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
 ;     SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
@@ -450,6 +459,7 @@ Module windowSettings
     
     ; repositories
     updateRepositoryList()
+    SetGadgetState(gadget("repositoryUseCache"), settings::getInteger("repository", "use_cache"))
     
     updateGadgets()
     

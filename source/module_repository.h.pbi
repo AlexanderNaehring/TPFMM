@@ -62,6 +62,7 @@ DeclareModule repository
   Declare RemoveRepository(url$)
   Declare GetRepositories(List urls$())
   Declare GetRepositoryModCount(url$)
+  Declare CheckRepository(url$)
   
   ; get mod/file object
   Declare getModByFoldername(foldername$)

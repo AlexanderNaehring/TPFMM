@@ -110,6 +110,7 @@ Module windowMain
     #TabMaps
     #TabOnline
     #TabBackup
+    #TabSaves
     #TabSettings
   EndEnumeration
   
@@ -138,7 +139,12 @@ Module windowMain
   ; required declares
   Declare create()
   Declare saveOpenFile(file$)
+  
+  Declare navBtnMods()
+  Declare navBtnMaps()
+  Declare navBtnOnline()
   Declare navBtnSaves()
+  Declare navBtnBackups()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -258,6 +264,8 @@ Module windowMain
     settings::setInteger("window", "width", WindowWidth(windowMain::window))
     settings::setInteger("window", "height", WindowHeight(windowMain::window))
     
+    settings::setInteger("window", "tab", currentTab)
+    
     main::setProgressPercent(30)
     main::setProgressText(locale::l("progress", "stop_worker"))
     deb("windowMain:: stop workers")
@@ -316,7 +324,6 @@ Module windowMain
     ; desktopIntegration
     main::updateDesktopIntegration()
     
-    
     ;{ Restore window location (complicated version)
     Protected nDesktops, desktop, locationOK
     Protected windowX, windowY, windowWidth, windowHeight
@@ -365,6 +372,16 @@ Module windowMain
       EndIf
     EndIf
     ;}
+    
+    ; select tab
+    Select settings::getInteger("window", "tab")
+      Case #TabOnline
+        navBtnOnline()
+      Case #TabBackup
+        navBtnBackups()
+      Case #TabSaves
+        navBtnSaves()
+    EndSelect
     
     
     main::setProgressPercent(20)
@@ -602,7 +619,7 @@ Module windowMain
     hideAllContainer()
     HideGadget(gadget("containerSaves"), #False)
     SetGadgetState(gadget("btnSaves"), 1)
-    currentTab = #TabBackup
+    currentTab = #TabSaves
   EndProcedure
   
   Procedure navBtnSettings()
