@@ -2,10 +2,6 @@
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_misc.pbi"
 
-Macro l(g,s)
-  locale::get(g,s)
-EndMacro
-
 DeclareModule locale
   EnableExplicit
   
@@ -22,6 +18,8 @@ DeclareModule locale
 EndDeclareModule
 
 Module locale
+  UseModule debugger
+  
   Global init.i, RegExpAlpha.i
   Global path$, current_locale$
   Global NewMap locale$()
@@ -45,15 +43,13 @@ Module locale
   Procedure init()
     Protected file.i
     If Not init
-      debugger::Add("locale::init()")
+      deb("locale::init()")
       If path$ = ""
         path$ = misc::Path("locale")
-        debugger::add("locale::path$ = "+path$)
       EndIf
       If Not RegExpAlpha
 ;         CreateRegularExpression(0, "[^A-Za-z0-9]") ; match non-alphanumeric characters
         RegExpAlpha = CreateRegularExpression(#PB_Any, "^[A-Za-z]+$") ; only alpha in string!
-        debugger::add("locale::RegExpAlpha = "+Str(RegExpAlpha))
       EndIf
       
       ; create locale files
@@ -72,7 +68,6 @@ Module locale
   EndProcedure
   
   Procedure listAvailable(ComboBoxGadget, current_locale$)
-    debugger::Add("locale::listAvailable()")
     Protected dir.i, count.i
     Protected file$, locale$, name$
     
@@ -84,16 +79,13 @@ Module locale
       While NextDirectoryEntry(dir)
         file$ = DirectoryEntryName(dir)
         locale$ = GetFilePart(file$, #PB_FileSystem_NoExtension)
-        debugger::Add("locale:: found localisation file "+file$)
         If Not MatchRegularExpression(RegExpAlpha, locale$)
-          debugger::Add("locale:: {"+locale$+"} does Not match convention")
           Continue
         EndIf
         If OpenPreferences(misc::Path("locale")+file$)
           name$ = ReadPreferenceString("locale", "")
           ClosePreferences()
           If name$ <> ""
-            debugger::Add("locale:: add localisation to list: {"+locale$+"} = {"+name$+"}")
             AddGadgetItem(ComboBoxGadget, -1, "<"+locale$+">"+" "+name$, getFlag(locale$))
             If current_locale$ = locale$
               SetGadgetState(ComboBoxGadget, count)
@@ -104,14 +96,12 @@ Module locale
       Wend
       ProcedureReturn #True
     Else
-      debugger::Add("error examine directory 'localisation'")
+      deb("error examine directory 'localisation'")
       ProcedureReturn #False
     EndIf
   EndProcedure
     
   Procedure use(locale$)
-    debugger::Add("locale::use("+locale$+")")
-    
     current_locale$ = locale$
     ClearMap(locale$())
     
@@ -122,7 +112,6 @@ Module locale
     EndIf
     
     If OpenPreferences(path$ + locale$ + ".locale")
-      debugger::Add("locale:: use locale "+locale$+" ("+ReadPreferenceString("locale","")+")")
       
       ; load complete locale into map! otherwise: problems with multiple preference files :(
       ExaminePreferenceGroups()
@@ -135,7 +124,7 @@ Module locale
       ClosePreferences()
       ProcedureReturn #True
     Else
-      debugger::add("locale:: locale '" + locale$ + "' can not be opened! use fallback locale (en)")
+      deb("locale:: locale '" + locale$ + "' can not be opened! use fallback locale (en)")
       ProcedureReturn #False
     EndIf
   EndProcedure
@@ -158,16 +147,16 @@ Module locale
     out$ = locale$(key$)
     If out$ = ""
       If group$ <> "tags"
-        debugger::add("locale::getEx() - failed to load '"+key$+"' from '"+current_locale$+"'")
+        deb("locale:: failed to load '"+key$+"' from '"+current_locale$+"'")
       EndIf
       
       out$ = localeEN$(key$)
       If out$ = ""
         If group$ = "tags"
-          ; debugger::add("locale::getEx() - cannot find tag '"+string$+"'")
+          ; deb("locale::getEx() - cannot find tag '"+string$+"'")
           out$ = string$
         Else
-          debugger::add("locale::getEx() - failed to load fallback for '"+key$+"'")
+          deb("locale:: failed to load fallback for '"+key$+"'")
           out$ = "<"+key$+">"
         EndIf
       EndIf
@@ -199,17 +188,13 @@ Module locale
     
     OpenPreferences(path$ + locale$ + ".locale")
     flag$ = ReadPreferenceString("flag", "")
-    If flag$
-      debugger::Add("locale::getFlag() - load flag from hex string")
+    If flag$ ; TODO remove flag from locale file ?
       *image = misc::HexStrToMem(flag$)
       im = CatchImage(#PB_Any, *image, MemorySize(*image))
       FreeMemory(*image)
     Else
       If FileSize(path$ + locale$ + ".png") > 0
-        debugger::Add("locale::getFlag() - load flag from file")
         im = LoadImage(#PB_Any, path$ + locale$ + ".png")
-      Else
-        debugger::Add("locale::getFlag() - flag {"+path$ + locale$ + ".png"+"} not found")
       EndIf
     EndIf
     ClosePreferences()
@@ -218,7 +203,7 @@ Module locale
       flag(locale$) = misc::ResizeCenterImage(im, 20, 20)
       ProcedureReturn ImageID(flag(locale$))
     Else
-      debugger::add("locale::getFlag() - could not load image")
+      deb("locale::getFlag() - could not load image")
     EndIf
     ProcedureReturn 0
   EndProcedure

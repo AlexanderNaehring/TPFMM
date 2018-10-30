@@ -11,51 +11,55 @@ EndDeclareModule
 
 
 Module archive
+  UseModule debugger
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
       ; important: create 7z.exe and 7z.dll files
-      DataSection
-        data7zExe:
-          IncludeBinary "7z/7z.exe"
-        data7zExeEnd:
-        
-        data7zDll:
-          IncludeBinary "7z/7z.dll"
-        data7zDllEnd:
-        
-        data7zLic:
-          IncludeBinary "7z/7z License.txt"
-        data7zLicEnd:
-      EndDataSection
-      
       CreateDirectory("7z")
-      misc::extractBinary("7z/7z.exe",          ?data7zExe, ?data7zExeEnd - ?data7zExe, #False)
-      misc::extractBinary("7z/7z.dll",          ?data7zDll, ?data7zDllEnd - ?data7zDll, #False)
-      misc::extractBinary("7z/7z License.txt",  ?data7zLic, ?data7zLicEnd - ?data7zLic, #False)
-      
+      misc::useBinary("7z/7z.exe", #False)
+      misc::useBinary("7z/7z.dll", #False)
+      misc::useBinary("7z/7z License.txt", #False)
     CompilerCase #PB_OS_Linux
-      ; use "unzip"
-      
+      ; use packages
       
     CompilerDefault
       CompilerError "No unpacker defined for this OS"
   CompilerEndSelect
   
+  Procedure.s exitCodeError(code)
+    Select code
+      Case 0 ; ok
+        ProcedureReturn ""
+      Case 1 ; warning
+        ProcedureReturn "non-fatal error"
+      Case 2 ; error
+        ProcedureReturn "fatal error"
+      Case 7 ; command line error
+        ProcedureReturn "command line error"
+      Case 8 ; memory error
+        ProcedureReturn "not enough memory"
+      Case 255 ; user abort
+        ProcedureReturn "user stopped the process"
+      Default  ; unknown error
+        ProcedureReturn "unknown error"
+    EndSelect
+  EndProcedure
   
   Procedure extract(archive$, directory$)
     ;clean dir before extract?
-    Protected program$, parameter$
+    Protected program$, parameter$, str$
     Protected program, exit
+    Protected STDERR$, STDOUT$
     
     If FileSize(archive$) <= 0
-      debugger::add("archive::extract() - Error: Cannot find archive {"+archive$+"}")
+      deb("archive:: cannot find archive {"+archive$+"}")
       ProcedureReturn #False
     EndIf
     
     misc::CreateDirectoryAll(directory$)
     If FileSize(directory$) <> -2
-      debugger::add("archive::extract() - Error: Cannot create target directory {"+directory$+"}")
+      deb("archive:: cannot create target directory {"+directory$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -78,8 +82,8 @@ Module archive
           program$ = "7z"
           parameter$ = "x -y "+#DQUOTE$+"-o"+directory$+#DQUOTE$+" "+#DQUOTE$+archive$+#DQUOTE$
         Else
-          debugger::add("archive::extract() - 7z not found, use unzip and unrar")
-          debugger::add("archive::extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
+          deb("archive:: extract() - 7z not found, use unzip and unrar")
+          deb("archive:: extract() - to use 7z, install "+#DQUOTE$+"p7zip-full"+#DQUOTE$+" using your package manager")
           ; 7z not available - use unrar or unzip
           If LCase(GetExtensionPart(archive$)) = "rar"
             program$ = "unrar"
@@ -93,23 +97,38 @@ Module archive
     CompilerEndSelect
     
     ; start program
-    debugger::add("archive::extract() - {"+program$+" "+parameter$+"}")
+    deb("archive:: {"+program$+" "+parameter$+"}")
     program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
     If Not program
-      debugger::add("archive::extract() - Error: could not start program")
+      deb("archive:: could not start program")
       ProcedureReturn #False
     EndIf
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        debugger::add("archive::extract() -| "+ReadProgramString(program))
+        str$ = ReadProgramString(program)
+        STDOUT$ + str$ + #CRLF$
+      EndIf
+      str$ = ReadProgramError(program)
+      If str$
+        STDERR$ + str$ + #CRLF$
       EndIf
       Delay(1)
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    debugger::add("archive::extract() - exit code "+exit)
-    If exit = 0 Or (exit = 1 And program$ = "7z")
+    
+    If exit <> 0
+      deb("archive:: exit code "+exit+", "+exitCodeError(exit)) ; exit code only valid for 7z!
+      If STDERR$
+        deb("archive:: stderr: "+#CRLF$+STDERR$)
+      EndIf
+      If STDOUT$
+        deb("archive:: stdout: "+#CRLF$+STDOUT$)
+      EndIf
+    EndIf
+    
+    If exit = 0 Or exit = 1
       ProcedureReturn #True
     Else
       ProcedureReturn #False
@@ -118,15 +137,15 @@ Module archive
   EndProcedure
   
   Procedure pack(archive$, directory$)
-    
-    Protected root$
+    Protected root$, str$
     Protected program$, parameter$
     Protected program, exit
+    Protected STDERR$, STDOUT$
     
     DeleteFile(archive$, #PB_FileSystem_Force)
     
     If FileSize(directory$) <> -2
-      debugger::add("archive::pack() - Error: Cannot find source directory {"+directory$+"}")
+      deb("archive::pack() - cannot find source directory {"+directory$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -148,27 +167,42 @@ Module archive
     CompilerEndSelect
     
     ; start program
-    debugger::add("archive::pack() - {"+program$+" "+parameter$+"}")
+    deb("archive:: {"+program$+" "+parameter$+"}")
     program = RunProgram(program$, parameter$, root$, #PB_Program_Open|#PB_Program_Hide|#PB_Program_Read)
     If Not program
-      debugger::add("archive::pack() - Error: could not start program")
+      deb("archive:: could not start program")
       ProcedureReturn #False
     EndIf
     
     While ProgramRunning(program)
       If AvailableProgramOutput(program)
-        debugger::add("archive::pack() -| "+ReadProgramString(program))
+        str$ = ReadProgramString(program)
+        STDOUT$ + str$ + #CRLF$
+      EndIf
+      str$ = ReadProgramError(program)
+      If str$
+        STDERR$ + str$ + #CRLF$
       EndIf
       Delay(1)
     Wend
     exit = ProgramExitCode(program)
     CloseProgram(program)
-    If exit = 0
+    
+    If exit <> 0
+      deb("archive:: exit code "+exit+", "+exitCodeError(exit)) ; exit code only valid for 7z!
+      If STDERR$
+        deb("archive:: stderr: "+#CRLF$+STDERR$)
+      EndIf
+      If STDOUT$
+        deb("archive:: stdout: "+#CRLF$+STDOUT$)
+      EndIf
+    EndIf
+    
+    If exit = 0 Or exit = 1
       ProcedureReturn #True
     Else
       ProcedureReturn #False
     EndIf
-    
   EndProcedure
   
   

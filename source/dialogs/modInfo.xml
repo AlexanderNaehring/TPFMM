@@ -24,6 +24,8 @@
           <hbox expand='item:2'>
             <vbox expand='no'>
               <gridbox colexpand='item:2' rowexpand='no' columns='2'>
+                <text name='idLabel' text=' ' />
+                <text name='id' text=' ' />
                 <text name='folderLabel' text=' ' />
                 <hyperlink name='folder' text=' ' />
                 <text name='tagsLabel' text=' ' />

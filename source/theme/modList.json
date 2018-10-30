@@ -1,6 +1,6 @@
 {
   "item"      : {
-    "Width"  : 300,
+    "Width"  : 500,
     "Margin" : 2,
     "Padding": 4,
     "Lines"  : [
@@ -11,8 +11,13 @@
         "Italic" : false
       },
       {
-        "REM"    : 1,
+        "REM"    : 1.1,
         "Font"   : ""
+      },
+      {
+        "REM"    : 1,
+        "Font"   : "",
+        "italic" : false
       }
     ],
     "Image"  : {
@@ -36,7 +41,6 @@
     "Background"    : "",
     "Scrollbar"     : "#2F476340",
     "ScrollbarHover": "#2F4763C0",
-    "SelectionBox"  : "#007BEE80",
-    "ItemBtnHover"  : "#007BEE30"
+    "SelectionBox"  : "#007BEE80"
   }
 }

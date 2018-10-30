@@ -11,13 +11,14 @@ DeclareModule aes
 EndDeclareModule
 
 Module aes
+  UseModule debugger
+  
   DataSection
     key_aes:  ; 256 bit aes key
     IncludeBinary "key.aes"
   EndDataSection
   
   Procedure encrypt(*buffer, length) ; AES encrpyt memory
-    debugger::add("aes::encrypt()")
     If Not *buffer Or Not length
       ProcedureReturn #False
     EndIf
@@ -26,7 +27,7 @@ Module aes
     
     *out = AllocateMemory(length)
     If Not AESEncoder(*buffer, *out, length, ?key_aes, 256, #Null, #PB_Cipher_ECB)
-      debugger::add("          ERROR: failed to encode memory")
+      deb("aes:: failed to encode memory")
       FreeMemory(*out)
       ProcedureReturn #False
     EndIf
@@ -37,7 +38,6 @@ Module aes
   EndProcedure
   
   Procedure decrypt(*buffer, length) ; decrypt memory
-    debugger::add("aes::decrypt()")
     If Not *buffer Or Not length
       ProcedureReturn #False
     EndIf
@@ -46,7 +46,7 @@ Module aes
     
     *out = AllocateMemory(length)
     If Not AESDecoder(*buffer, *out, length, ?key_aes, 256, #Null, #PB_Cipher_ECB)
-      debugger::add("          ERROR: failed to decode memory")
+      deb("aes:: failed to decode memory")
       FreeMemory(*out)
       ProcedureReturn #False
     EndIf
@@ -58,7 +58,6 @@ Module aes
   
   
   Procedure.s encryptString(string$) ; convert plain text o AES (Base64 encoded)
-    debugger::add("aes::encryptString()")
     Protected *buffer, len, *out, out$
     
     len = StringByteLength(string$)
@@ -77,23 +76,22 @@ Module aes
             out$ = PeekS(*out, len*2, #PB_Ascii)
             FreeMemory(*out)
           Else
-            debugger::add("          ERROR: failed to allocate base64 encode memory")
+            deb("aes:: failed to allocate base64 encode memory")
           EndIf
         Else
-          debugger::add("          ERROR: failed to allocate output memory")
+          deb("aes:: failed to allocate output memory")
         EndIf
       Else
-        debugger::add("          ERROR: failed to encrypt string")
+        deb("aes:: failed to encrypt string")
       EndIf
       FreeMemory(*buffer)
     Else
-      debugger::add("          ERROR: failed to allocate input memory")
+      deb("aes:: failed to allocate input memory")
     EndIf
     ProcedureReturn out$
   EndProcedure
   
   Procedure.s decryptString(string$) ; convert an Base64 encoded AES string to plain text
-    debugger::add("aes::decryptString()")
     Protected *buffer, len, *out, out$
     
     len = StringByteLength(string$)
@@ -114,15 +112,15 @@ Module aes
         If decrypt(*out, len)
           out$ = PeekS(*out, len)
         Else
-          debugger::add("          ERROR: failed to decrypt string")
+          deb("aes:: failed to decrypt string")
         EndIf
         FreeMemory(*out)
       Else
-        debugger::add("          ERROR: failed to allocate memory")
+        deb("aes:: failed to allocate memory")
       EndIf
       FreeMemory(*buffer)
     Else
-      debugger::add("          ERROR: failed to allocate memory")
+      deb("aes:: failed to allocate memory")
     EndIf
     ProcedureReturn out$
   EndProcedure

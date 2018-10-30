@@ -6,10 +6,8 @@ Module registry
   Procedure.s Registry_GetString(hKey, subKey$, valueName$)
     CompilerIf #PB_Compiler_OS = #PB_OS_Windows
       Protected errorCode = #ERROR_SUCCESS, result$, hKey1, bufferSize, type, value.q
-      Debug "access "+subKey$
       errorCode = RegOpenKeyEx_(hKey, subKey$, 0, #KEY_READ|#KEY_WOW64_64KEY, @hKey1)
       If errorCode = #ERROR_SUCCESS
-        Debug "success"
         If hKey1
           errorCode = RegQueryValueEx_(hKey1, valueName$, 0, @type, 0, @bufferSize)
           If errorCode = #ERROR_SUCCESS 

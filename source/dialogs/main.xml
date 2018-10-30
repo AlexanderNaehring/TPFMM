@@ -5,18 +5,19 @@
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
         <image name='headerMain' height='8' />
       </singlebox>
-      
+
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
         <hbox expand='item:2'>
-          <vbox expand='no' comment='nav-bar on left side'>
-            <buttonimage name='btnMods' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnMaps' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnOnline' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnBackups' width='60' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnSettings' width='60' flags='#PB_Button_Toggle' />
+          <vbox expand='no' width='80' comment='nav-bar on left side'>
+            <buttonimage name='btnMods' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnOnline' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnBackups' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnMaps' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSaves' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSettings' flags='#PB_Button_Toggle' />
           </vbox>
           <multibox comment='main content area'>
-            <container name='containerMods' invisible='yes' flags=''> <!--#PB_Container_Flat-->
+            <container name='containerMods' invisible='yes' flags='' > <!--#PB_Container_Flat-->
               <hbox expand='item:1'>
                 <canvas name='modList' flags='#PB_Canvas_Keyboard' />
                 <vbox expand='item:3'>
@@ -37,38 +38,25 @@
                 </vbox>
               </hbox>
             </container>
-            
-            <container name='containerMaps' invisible='yes'>
-            </container>
-            
+
             <container name='containerOnline' invisible='yes'>
               <vbox expand='item:1'>
                 <hbox expand='item:1'>
-                  <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
+                  <canvas name='repoList' flags='#PB_Canvas_Keyboard' />
                   <vbox expand='no'>
-                    <frame name='repoFilterFrame' text=' '>
-                      <vbox expand='no'>
-                        <combobox name='repoFilterSources' />
-                        <combobox name='repoFilterTypes' />
-                        <combobox name='repoFilterInstalled' />
-                        <hbox expand='item:1'>
-                          <string name='repoFilterString' text=' '/>
-                          <button name='repoFilterReset' text='X' />
-                        </hbox>
-                      </vbox>
-                    </frame>
-                    <frame name='repoManagementFrame' text=' '>
-                      <vbox expand='no'>
-                        <button name='repoWebsite' text=' ' />
-                        <button name='repoInstall' text=' ' />
-                      </vbox>
-                    </frame>
-                    <image name='repoPreviewImage' width='210' height='118' />
+                    <hbox expand='no' align='center'>
+                      <buttonimage name='repoSort' />
+                      <buttonimage name='repoFilter' />
+                    </hbox>
+                    <vbox expand='no' comment='action for selected mods'>
+                      <buttonimage name='repoDownload' />
+                      <buttonimage name='repoWebsite' />
+                    </vbox>
                   </vbox>
                 </hbox>
               </vbox>
             </container>
-            
+
             <container name='containerBackups' invisible='yes'>
               <hbox expand='item:1'>
                 <vbox expand='item:1'>
@@ -101,17 +89,50 @@
                 </vbox>
               </hbox>
             </container>
-            
+
+            <container name='containerMaps' invisible='yes'>
+            </container>
+
+            <container name='containerSaves' invisible='yes'>
+              <vbox expand='item: 2'>
+                <text name='saveName' text=' ' flags='#PB_Text_Center' />
+                <hbox expand='item: 1'>
+                  <vbox expand='item:1'>
+                    <canvas name='saveModList' flags='#PB_Canvas_Keyboard' />
+                    <gridbox columns='6'>
+                      <text name='saveLabelYear' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveYear' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelDifficulty' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveDifficulty' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelFileSize' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveFileSize' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelMapSize' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveMapSize' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelMoney' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveMoney' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelFileSizeUncompressed' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveFileSizeUncompressed' text=' ' flags='#PB_String_ReadOnly' />
+                    </gridbox>
+                  </vbox>
+                  <vbox expand='no'>
+                    <buttonimage name='saveOpen' text='Open Save' />
+                    <buttonimage name='saveDownload' />
+                  </vbox>
+                </hbox>
+              </vbox>
+            </container>
+
           </multibox>
         </hbox>
-        
+
       </singlebox>
-      <hbox expand='item:1' spacing='10'>
+      <hbox expand='item:2' spacing='10'>
+        <canvas name='workerCanvas' width='80' height='45' />
         <gridbox columns='3' colexpand='equal' rowexpand='no'>
-        <text name='progressRepoText' text=' ' flags='#PB_Text_Right' />
           <progressbar name='progressRepoBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
-          <text name='progressModText' text=' ' flags='#PB_Text_Right' />
+          <text name='progressRepoText' text=' ' flags_='#PB_Text_Right' />
           <progressbar name='progressModBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
+          <text name='progressModText' text=' ' flags_='#PB_Text_Right' />
         </gridbox>
         <vbox expand='item:1'>
           <empty />
@@ -137,7 +158,7 @@
       </hbox>
     </vbox>
   </window>
-  
+
   <window id='#PB_Any' name='modFilter' text='Filter Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
     <vbox expand='no'>
       <hbox expand='item:1'>
@@ -151,11 +172,36 @@
       <checkbox name='modFilterStaging'  text='Staging Area Mods' />
     </vbox>
   </window>
-  
+
   <window id='#PB_Any' name='modSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
     <hbox expand='no'>
-      <text name='modSortBy' text='Sort by' />
-      <combobox name='modSortBox' width='100' />
+      <text name='sortBy' text='Sort by' />
+      <combobox name='sortBox' width='100' />
+    </hbox>
+  </window>
+
+  <window id='#PB_Any' name='repoFilter' text='Filter Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='filterString' text=' ' width='100' />
+        <button name='filterReset' text='X' />
+      </hbox>
+      <hbox expand='item:1'>
+        <text name='filterDateLabel' text='Updated not before' />
+        <date name='filterDate' flags='#PB_Date_Checkbox' />
+      </hbox>
+      <!--<frame name='repositoryFrame'>
+        <vbox id='repositories' comment='dynamically add checkboxed for the online sources here'>
+
+        </vbox>
+      </frame>-->
+    </vbox>
+  </window>
+
+  <window id='#PB_Any' name='repoSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='sortBy' text='Sort by' />
+      <combobox name='sortBox' width='100' />
     </hbox>
   </window>
 

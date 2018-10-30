@@ -1,7 +1,7 @@
 ﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
-version     = 1740
+
 
 [menu]
 file              = Datei
@@ -32,6 +32,7 @@ dlcs            = Herunterladbare Inhalte (DLC)
 repository      = Online Datenbank
 backups         = Sicherheitskopien
 maps            = Karten
+saves           = Spielstände
 name            = Name
 author          = Ersteller
 category        = Kategorie
@@ -51,9 +52,11 @@ settings        = Mod Einstellungen
 search_online   = Suche Mod in Repository
 update          = Lade aktuelle Version herunter
 update_tip      = Installiere aktuelle Version für alle markierten Mods
+sort            = Sortiere Modifikationen
 filter          = Filter Modifikationen
 filter_hidden   = Zeige Versteckte
 filter_vanilla  = Zeige Vanilla
+website         = Website
 mod_website     = Öffne Website
 open_folder     = Öffne Mod Ordner
 select_files    = Wähle Dateien aus
@@ -77,12 +80,16 @@ backup_filter   = Durchsuche Sicherungen
 add_to_pack     = Zu Mod-Paket hinzufügen
 update_all      = Aktualisiere alle Modifikationen
 update_all_tip  = Aktualisiere alle Mods, für die eine neue Version vorliegt.
+save_open       = Einen Spielstand öffnen
+save_download   = Alle fehlenden Mods im aktuellen Spielstand herunterladen
+save_start      = Bitte zuerst einen Spielstand öffnen ↴
 
 [info]
 title           = Mod Informationen
 description     = Mod Beschreibung
 info            = Mod Informationen
 uuid            = Universell einzigartige ID:
+id              = ID:
 folder          = Ordnername:
 tags            = Tags:
 dependencies    = Abhängigkeiten:
@@ -142,9 +149,13 @@ integrate_register_protocol = Registriere tpfmm:// Protokoll
 integrate_register_context  = Füge Kontext-Menü zu Archiv-Dateien hinzu
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
+repository_input_url    = Bitte gebe die URL für das Repository ein
+repository_invalid      = Konnte das Repository nicht hinzufügen. Stellen Sie bitte sicher, dass die URL korrekt ist und TPFMM Zugriff auf das Internet habt.
 repository_name         = Name:
 repository_curator      = Verwalter:
 repository_description  = Beschreibung:
+repository_usecache     = Nutze lokalen Cache
+repository_usecache_tip = Zeige die letzte lokale Version der Online-Datenbank, wenn keine Internetverbindung besteht.
 color                       = Farbeinstellungen
 color_mod_up_to_date        = Mod aktuell
 color_mod_update_available  = Mod Update verfügbar
@@ -228,6 +239,35 @@ undefined   = —
 invalid     = ungültig
 pack_file   = TPFMM Paketdatei
 tip         = Ziehe Mods vom Hauptfenter nach hier, um sie dem Paket hinzuzufügen.
+
+[save]
+open_title  = Spielstand öffnen
+save        = Spielstand
+year        = Startjahr
+difficulty  = Schwierigkeitsgrad
+mapsize     = Kartengröße
+money       = Geld
+filesize    = Dateigröße
+filesize_uncompressed = Dateigröße (unkomprimiert)
+no_mods     = In diesem Spielstand wurden keine Mods gefunden
+error       = Fehler beim Lesen des Spielstandes
+difficulty0 = Einfach
+difficulty1 = Mittel
+difficulty2 = Schwer
+
+[progress]
+please_wait = Bitte warten...
+start       = Starte TPFMM...
+init        = Initialisiere...
+load_mods   = Modifikationen werden geladen...
+load_repo   = Repositories werden geladen...
+open_window = Fenster wird geöffnet...
+close       = Schließe TPFMM...
+stop_worker = Stoppe Hintergrundaufgaben...
+save_list   = Speichere Mod Liste...
+cleanup     = Aufräumen...
+goodbye     = Auf Wiedersehen!
+force_close = Schließen erzwingen
 
 [tags]
 mod         = Modifikation

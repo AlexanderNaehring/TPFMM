@@ -9,9 +9,10 @@
   
 EndDeclareModule
 
- 
+XIncludeFile "module_debugger.pbi"
 
 Module instance
+  UseModule debugger
   #BufferSize = 1024
   
   CompilerIf Not  #PB_Compiler_Thread 
@@ -38,7 +39,7 @@ Module instance
           received$ + PeekS(*buffer, len, #PB_UTF8)
         Until len < #BufferSize
         
-        Debug "instance::listener() - received: "+received$
+        deb("instance:: received: "+received$)
         ; send received text to callback
         If callback
           callback(received$)
@@ -120,7 +121,6 @@ CompilerIf #PB_Compiler_IsMainFile
   EndProcedure
   
   Procedure receiveCallback(text$)
-    Debug "callback: "+text$
     SetGadgetText(0, "Got a message: "+text$)
   EndProcedure
   
@@ -137,7 +137,6 @@ CompilerIf #PB_Compiler_IsMainFile
     ForEver
   Else
     ; Either another instance is running or port is blocked by another program...
-    Debug "send message"
     instance::sendString("This is a test!")
   EndIf
 

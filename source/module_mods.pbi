@@ -7,11 +7,76 @@ XIncludeFile "module_archive.pbi"
 XIncludeFile "module_mods.h.pbi"
 
 Module mods
+  UseModule debugger
   
-  Structure scanner
-    type$ ; mod, dlc, map
-  EndStructure
+  ;{ VT
+  DataSection
+    vtMod:
+    ; get
+    Data.i @modGetID()
+    Data.i @modGetFoldername()
+    Data.i @modGetName()
+    Data.i @modGetVersion()
+    Data.i @modGetDescription()
+    Data.i @modGetAuthorsString()
+    Data.i @modGetTags()
+    Data.i @modGetDownloadLink()
+    Data.i @modGetRepoMod()
+    Data.i @modGetSize()
+    Data.i @modGetWebsite()
+    Data.i @modGetTfnetID()
+    Data.i @modGetWorkshopID()
+    Data.i @modGetSettings()
+    Data.i @modGetInstallDate()
+    Data.i @modGetPreviewImage()
+    
+    ; set
+    Data.i @modSetName()
+    Data.i @modSetDescription()
+    Data.i @modSetMinorVersion()
+    Data.i @modSetHidden()
+    Data.i @modSetTFNET()
+    Data.i @modSetWorkshop()
+    Data.i @modSetLuaDate()
+    Data.i @modSetLuaLanguage()
+    
+    ; add to / clear / sort lists
+    Data.i @modAddAuthor()
+    Data.i @modClearAuthors()
+    Data.i @modAddTag()
+    Data.i @modClearTags()
+    Data.i @modAddDependency()
+    Data.i @modClearDependencies()
+    Data.i @modAddSetting()
+    Data.i @modClearSettings()
+    Data.i @modSortSettings()
+    
+    ; check
+    Data.i @modIsVanilla()
+    Data.i @modIsWorkshop()
+    Data.i @modIsStagingArea()
+    Data.i @modIsHidden()
+    Data.i @modIsUpdateAvailable()
+    Data.i @modCanBackup()
+    Data.i @modCanUninstall()
+    Data.i @modHasSettings()
+    
+    ; other
+    Data.i @modCountAuthors()
+    Data.i @modGetAuthor()
+    Data.i @modCountTags()
+    Data.i @modGetTag()
+    
+    vtModEnd:
+  EndDataSection
   
+  If (?vtModEnd - ?vtMod) <> SizeOf(LocalMod)
+    DebuggerError("virtual table does not fit interface")
+  EndIf
+  
+  ;}
+  
+  ;{ Enumerations
   Enumeration
     #FILTER_FOLDER_ALL = 0
     #FILTER_FOLDER_MANUAL
@@ -26,24 +91,77 @@ Module mods
     #QUEUE_BACKUP
     #QUEUE_UPDATE
   EndEnumeration
+  ;}
+  
+  ;{ Structures
+  
+  Structure backup  ;-- information about last backup if available
+    time.i
+    filename$
+  EndStructure
+  
+  Structure aux     ;-- additional information about mod
+    isVanilla.b       ; pre-installed mods should not be uninstalled
+    luaDate.i         ; date of info.lua (reload info when newer version available)
+    luaLanguage$      ; language of currently loaded info from mod.lua -> reload mod.lua when language changes
+    installDate.i     ; date of first encounter of this file (added to TPFMM)
+    repoTimeChanged.i ; timechanged value from repository if installed from repo (if timechanged in repo > timechanged in mod: update available
+    tfnetID.i         ; entry ID in transportfever.net download section
+    workshopID.q      ; fileID in Steam Workshop
+    installSource$    ; name of install source (workshop, tpfnet)
+    sv.i              ; scanner version, rescan if newer scanner version is used
+    hidden.b          ; hidden from overview ("visible" in mod.lua)
+    backup.backup     ; backup information (local)
+    luaParseError.b   ; set true if parsing of mod.lua failed
+    size.i
+  EndStructure
+  
+  Structure mod           ;-- information about mod/dlc
+    vt.LocalMod
+    tpf_id$              ; folder name in game: author_name_version or steam workshop ID
+    name$                   ; name of mod
+    majorVersion.i          ; first part of version number, identical to version in ID string
+    minorVersion.i          ; latter part of version number
+    version$                ; version string: major.minor(.build)
+    severityAdd$            ; potential impact to game when adding mod
+    severityRemove$         ; potential impact to game when removeing mod
+    description$            ; optional description
+    List authors.author()   ; information about author(s)
+    List tags$()            ; list of tags
+    minGameVersion.i        ; minimum required build number of game
+    List dependencies$()    ; list of required mods (folder name of required mod)
+    url$                    ; website with further information
+    
+    List settings.modLuaSetting() ; mod settings (optional)
+    aux.aux                 ; auxiliary information
+  EndStructure
+  
+  
   Structure queue
     action.i
     string$
   EndStructure
   
-  Global mutexMods    = CreateMutex()
-  Global mutexQueue   = CreateMutex()
+  ;}
+  
+  ;{ Globals
+  
+  Global mutexMods    = CreateMutex() ; access to the mods() map
+  Global mutexQueue   = CreateMutex() ; access to the queue() list
+  Global mutexModAuthors  = CreateMutex()
+  Global mutexModTags     = CreateMutex()
   Global _backupActive = #False
   Global threadQueue
   Global NewMap mods.mod()
   Global NewList queue.queue()
+  Global isLoaded.b
+  Global exit.b
   
-  Prototype callbackNewMod(*mod.mod)
-  Prototype callbackRemoveMod(*mod.mod)
-  Prototype callbackStopDraw(stop)
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
   Global callbackStopDraw.callbackStopDraw
+  
+  Global Dim events(EventArraySize)
   
   Declare doLoad()
   Declare doInstall(file$)
@@ -51,26 +169,216 @@ Module mods
   Declare doUninstall(id$)
   Declare doUpdate(id$)
   
+  ;}
+  
   UseMD5Fingerprint()
   
-  ;----------------------------------------------------------------------------
-  ;--------------------------------- PRIVATE ----------------------------------
-  ;----------------------------------------------------------------------------
+  ;- ####################
+  ;-        PRIVATE 
+  ;- ####################
   
   Macro defineFolder()
     Protected pTPFMM$, pMods$, pWorkshop$, pStagingArea$, pMaps$, pDLCs$
-    pTPFMM$       = misc::Path(main::gameDirectory$ + "/TPFMM/") ; only used for json file
-    pMods$        = misc::Path(main::gameDirectory$ + "/mods/")
-    pDLCs$        = misc::Path(main::gameDirectory$ + "/dlcs/")
-    pWorkshop$    = misc::Path(main::gameDirectory$ + "/../../workshop/content/446800/")
-    pStagingArea$ = misc::Path(main::gameDirectory$ + "/userdata/staging_area/")
-    pMaps$        = misc::Path(main::gameDirectory$ + "/maps/")
+    Protected gameDirectory$
+    gameDirectory$ = settings::getString("", "path")
+    pTPFMM$       = misc::Path(gameDirectory$ + "/TPFMM/") ; only used for json file
+    pMods$        = misc::Path(gameDirectory$ + "/mods/")
+    pWorkshop$    = misc::Path(gameDirectory$ + "/../../workshop/content/446800/")
+    pStagingArea$ = misc::Path(gameDirectory$ + "/userdata/staging_area/")
   EndMacro
   
-  Procedure.s getModFolder(id$ = "", type$ = "mod")
+  Procedure postProgressEvent(percent, text$=Chr(1))
+    Protected *buffer
+    If events(#EventProgress)
+      If text$ = Chr(1)
+        *buffer = #Null
+      Else
+        *buffer = AllocateMemory(StringByteLength(text$+" "))
+;         Debug "########## poke "+text$+" @ "+*buffer
+        PokeS(*buffer, text$)
+      EndIf
+      PostEvent(events(#EventProgress), 0, 0, percent, *buffer)
+    EndIf
+  EndProcedure
+  
+  ; init mods
+  
+  Procedure modInit(*mod.mod)
+    *mod\vt       = ?vtMod
+    
+    CompilerIf #PB_Compiler_Debugger And #False
+      Protected i, mem, iMem
+      For i = 0 To SizeOf(LocalMod) Step SizeOf(integer)
+        mem = PeekI(?vtMod + i)
+        iMem = PeekI(*mod\vt + i)
+        
+        If mem = iMem
+          Debug Str(mem)+" ok"
+        Else
+          Debug "error: "+mem+" != "+iMem
+        EndIf
+      Next
+      
+      Debug "---"
+    CompilerEndIf
+    
+  EndProcedure
+  
+  Procedure modAddtoMap(id$) ; add new element to map
+    Protected *mod.mod
+    
+    LockMutex(mutexMods)
+    If FindMapElement(mods(), id$) 
+      deb("mods:: mod {"+id$+"} already in hash table -> delete old mod and overwrite with new")
+      DeleteMapElement(mods())
+    EndIf
+    
+    *mod          = AddMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
+    
+    *mod\tpf_id$  = id$
+    modInit(*mod)
+    
+    ProcedureReturn *mod
+  EndProcedure
+  
+  Procedure freeAll()
+    deb("mods:: free all mods")
+    
+    ; remove all items from mod list
+    
+    If callbackStopDraw
+      callbackStopDraw(#True)
+    EndIf
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #True, 0)
+    EndIf
+    
+    LockMutex(mutexMods)
+    If callbackRemoveMod
+      ForEach mods()
+        callbackRemoveMod(mods())
+      Next
+    EndIf
+    If events(#EventRemoveMod)
+      ForEach mods()
+        PostEvent(events(#EventRemoveMod), mods(), 0)
+      Next
+    EndIf
+    UnlockMutex(mutexMods)
+    
+    If callbackStopDraw
+      callbackStopDraw(#False)
+    EndIf
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #False, 0)
+    EndIf
+    
+    ; clean map
+    LockMutex(mutexMods)
+    ClearMap(mods())
+    UnlockMutex(mutexMods)
+    
+  EndProcedure
+  
+  ; Queue
+  
+  Procedure handleQueue(*dummy)
+    ; mod handling thread main loop
+    ; this thread takes care of all hard actions performed on mods (install, remove, backup, ...)
+    Protected action
+    Protected string$
+    
+    Repeat
+      LockMutex(mutexQueue)
+      If ListSize(queue()) = 0
+        UnlockMutex(mutexQueue)
+        Delay(100)
+        Continue
+      EndIf
+      
+      ; there is something to do
+      If events(#EventWorkerStarts)
+        PostEvent(events(#EventWorkerStarts))
+      EndIf
+      
+      ; get top item from queue
+      FirstElement(queue())
+      action = queue()\action
+      string$ = queue()\string$
+      DeleteElement(queue(), 1)
+      UnlockMutex(mutexQueue)
+      
+      Select action
+        Case #QUEUE_LOAD
+          doLoad()
+          
+        Case #QUEUE_INSTALL
+          doInstall(string$)
+          
+        Case #QUEUE_UNINSTALL
+          doUninstall(string$)
+          
+        Case #QUEUE_BACKUP
+          doBackup(string$)
+          
+        Case #QUEUE_UPDATE
+          doUpdate(string$)
+          
+      EndSelect
+      
+      ; finished
+      If events(#EventWorkerStops)
+        PostEvent(events(#EventWorkerStops))
+      EndIf
+      
+    Until exit
+  EndProcedure
+  
+  Procedure addToQueue(action, string$="")
+    LockMutex(mutexQueue)
+    LastElement(queue())
+    AddElement(queue())
+    queue()\action  = action
+    queue()\string$ = string$
+    
+    If Not threadQueue Or Not IsThread(threadQueue)
+      exit = #False
+      threadQueue = CreateThread(@handleQueue(), 0)
+    EndIf
+    
+    UnlockMutex(mutexQueue)
+  EndProcedure
+  
+  Procedure stopQueue(timeout = 5000)
+    
+    
+    ; wait for worker to finish or timeout
+    If threadQueue And IsThread(threadQueue)
+      ; set exit flag for worker
+      exit = #True
+      
+      WaitThread(threadQueue, timeout)
+      
+      If IsThread(threadQueue)
+        deb("mods:: kill worker")
+        KillThread(threadQueue)
+        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
+      EndIf
+      
+      exit = #False
+    EndIf
+    
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  ; other procedures
+  
+  Procedure.s getModFolder(id$="")
     defineFolder()
     
-    If id$ = "" And type$ = "mod"
+    If id$ = ""
       ProcedureReturn pMods$
     EndIf
     
@@ -78,16 +386,12 @@ Module mods
       ProcedureReturn misc::Path(pWorkshop$ + Mid(id$, 2, Len(id$)-3) + "/")
     ElseIf Left(id$, 1) = "?"
       ProcedureReturn misc::Path(pStagingArea$ + Mid(id$, 2) + "/")
-    ElseIf type$ = "dlc"
-      ProcedureReturn misc::path(pDLCs$ + id$ + "/")
-    ElseIf type$ = "map"
-      ProcedureReturn misc::path(pMaps$ + id$ + "/")
     Else
       ProcedureReturn misc::path(pMods$ + id$ + "/")
     EndIf
   EndProcedure
   
-  Procedure checkID(id$)
+  Procedure modCheckID(id$)
 ;     debugger::Add("mods::checkID("+id$+")")
     Static regexp
     If Not IsRegularExpression(regexp)
@@ -101,7 +405,7 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-  Procedure checkWorkshopID(id$)
+  Procedure modCheckWorkshopID(id$)
     ; workshop folder only have a number as 
     
     Static regexp
@@ -112,34 +416,7 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-  Procedure isVanillaMod(id$) ; check whether id$ belongs to official mod
-    ; do not uninstall vanilla mods!
-    Static NewMap vanillaMods()
-    ; for speed purposes: fill map only at first call to procedure (static map)
-    If MapSize(vanillaMods()) = 0
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_01_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_02_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_04_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_05_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_06_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_07_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_01_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_02_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_03_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_04_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_05_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_06_1")
-      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_07_1")
-      AddMapElement(vanillaMods(), "urbangames_no_costs_1")
-      AddMapElement(vanillaMods(), "urbangames_vehicles_no_end_year_1")
-    EndIf
-    
-    ProcedureReturn Bool(FindMapElement(vanillaMods(), id$))
-  EndProcedure
-  
-  Procedure checkMod(path$)
+  Procedure modCheckValidTPF(path$)
     path$ = misc::path(path$)
     ; check if mod at specified path is valid
     ; mods must have
@@ -153,7 +430,7 @@ Module mods
     ; - preview.png           (modmanager)
     
     If FileSize(path$) <> -2
-      debugger::add("mods::checkMod() - ERROR: {"+path$+"} does not exist")
+      deb("mods:: {"+path$+"} does not exist")
       ProcedureReturn #False
     EndIf
     
@@ -170,7 +447,7 @@ Module mods
     
   EndProcedure
   
-  Procedure.s getModRoot(path$) ; try to find mod.lua to determine the root location of the mod
+  Procedure.s modGetRoot(path$) ; try to find mod.lua to determine the root location of the mod
     Protected dir
     Protected entry$, result$
     path$ = misc::path(path$) ; makes sure that string ends on delimiter
@@ -188,7 +465,7 @@ Module mods
             FinishDirectory(dir)
             ProcedureReturn path$
           Else
-            result$ = getModRoot(path$ + entry$)
+            result$ = modGetRoot(path$ + entry$)
             If result$
               FinishDirectory(dir)
               ProcedureReturn result$
@@ -197,7 +474,6 @@ Module mods
           
         Else
           If entry$ = "mod.lua"
-            debugger::add("mods::getModRoot() - found mod.lua in: "+path$)
             FinishDirectory(dir)
             ProcedureReturn path$
           EndIf
@@ -210,7 +486,7 @@ Module mods
     
   EndProcedure
   
-  Procedure infoPP(*mod.mod)    ; post processing
+  Procedure modInfoProcessing(*mod.mod)    ; post processing
 ;     debugger::Add("mods::infoPP("+Str(*mod)+")")
     
     ; version
@@ -257,11 +533,10 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure loadInfo(*mod.mod) ; load all (missing) information for this mod
+  Procedure modLoadInfo(*mod.mod) ; load all (missing) information for this mod
                                ; first: read mod.lua if stored information is not up to date
                                ; second: update all volatile information (localized tags, etc...)
     If Not *mod
-      debugger::add("mods::loadInfo() - Error: passed null pointer")
       ProcedureReturn
     EndIf
     
@@ -274,7 +549,7 @@ Module mods
     
     ; for all mods found in folder: get location of folder and check mod.lua for changes
     ; folder may be workshop, mods/ or dlcs/
-    modFolder$ = getModFolder(id$, *mod\aux\type$)
+    modFolder$ = getModFolder(id$)
     luaFile$ = modFolder$ + "mod.lua"
     ;- TODO: mod.lua not used for maps!
     
@@ -295,20 +570,20 @@ Module mods
         EndIf
       Else
         ; no mod.lua present -> extract info from ID
-        debugger::add("mods::loadInfo() - ERROR: no mod.lua for mod {"+id$+"} found!")
+        deb("mods:: no mod.lua for mod {"+id$+"} found!")
       EndIf
       
-      infoPP(*mod) ; IMPORTANT
+      modInfoProcessing(*mod) ; IMPORTANT
       
       If *mod\name$ = ""
-        debugger::add("mods::loadInfo() - ERROR: mod {"+id$+"} has no name")
+        deb("mods:: mod {"+id$+"} has no name")
       EndIf
     EndIf
     
     
     ; do this always
 ;     localizeTags(*mod)
-    *mod\aux\isVanilla = isVanillaMod(id$)
+    *mod\aux\isVanilla = modIsVanilla(*mod)
     
     
     If Left(id$, 1) = "*"
@@ -333,48 +608,23 @@ Module mods
     EndIf
   EndProcedure
   
-  Procedure clearModInfo(*mod.mod)
+  Procedure modClearInfo(*mod.mod)
     ; clean info
     ClearStructure(*mod, mod)
     InitializeStructure(*mod, mod)
   EndProcedure
   
-  Procedure addToMap(id$, type$ = "mod")
-    Protected *mod.mod
-    
-    LockMutex(mutexMods)
-    If FindMapElement(mods(), id$) 
-      debugger::Add("mods::addToMap() - WARNING: mod {"+id$+"} already in hash table -> delete old mod and overwrite with new")
-      DeleteMapElement(mods())
-    EndIf
-    
-    debugger::add("mods::addToMap() - add new mod {"+id$+"} to internal hash table")
-    AddMapElement(mods(), id$)
-    
-    ; only basic information required here
-    ; later, a check tests if info in list is up to date with mod.lua file
-    ; only indicate type and location of mod here!
-    
-    mods()\tpf_id$    = id$
-    mods()\aux\type$  = type$
-    
-    *mod = mods()
-    
-    UnlockMutex(mutexMods)
-    
-    ProcedureReturn *mod
-  EndProcedure
+  ; export function
   
   Procedure exportListHTML(file$, all)
-    debugger::add("mods::exportListHTML("+file$+")")
     Protected file
     Protected *mod.mod
     Protected name$, author$, authors$
-    Protected count, i, author.author
+    Protected count, i, *author.author
     
     file = CreateFile(#PB_Any, file$)
     If Not file
-      debugger::add("mods::exportListHTML() - ERROR: cannot create file {"+file$+"}")
+      deb("mods:: cannot create file {"+file$+"}")
       ProcedureReturn #False
     EndIf
     
@@ -418,10 +668,11 @@ Module mods
           
           count = modCountAuthors(*mod)
           For i = 0 To count-1
-            If modGetAuthor(*mod, i, @author)
-              author$ = author\name$
-              If author\tfnetId
-                author$ = "<a href='https://www.transportfever.net/index.php/User/" + author\tfnetId + "'>" + author$ + "</a>"
+            *author = modGetAuthor(*mod, i)
+            If *author
+              author$ = *author\name$
+              If *author\tfnetId
+                author$ = "<a href='https://www.transportfever.net/index.php/User/" + *author\tfnetId + "'>" + author$ + "</a>"
               EndIf
               authors$ + author$ + ", "
             EndIf
@@ -445,46 +696,7 @@ Module mods
     misc::openLink(File$)
   EndProcedure
   
-  Procedure exportListTXT(File$, all)
-    debugger::add("mods::exportListTXT("+file$+")")
-    Protected file, i, authors$
-    Protected *mod.mod
-    Protected count, author.author
-    
-    file = CreateFile(#PB_Any, File$)
-    If Not file
-      debugger::add("mods::exportListTXT() - ERROR: cannot create file {"+file$+"}")
-      ProcedureReturn #False
-    EndIf
-    
-    LockMutex(mutexMods)
-    ForEach mods()
-      *mod = mods()
-      With *mod
-        authors$ = ""
-        count = modCountAuthors(*mod)
-        For i = 0 To count-1
-          If modGetAuthor(*mod, i, @author)
-            authors$ + author\name$ + ", "
-          EndIf
-        Next
-        If Len(authors$) >= 2 ; cut off ", " at the end of the string
-          authors$ = Mid(authors$, 1, Len(authors$) -2)
-        EndIf
-          
-        WriteStringN(file, \name$ + Chr(9) + "v" + \version$ + Chr(9) + authors$, #PB_UTF8)
-      EndWith
-    Next
-    UnlockMutex(mutexMods)
-    WriteStringN(file, "", #PB_UTF8)
-    WriteString(file, "Created with TPFMM "+main::VERSION$, #PB_UTF8)
-    CloseFile(file)
-    
-    misc::openLink(File$)
-  EndProcedure
-  
   Procedure convertToTGA(imageFile$)
-    debugger::add("mods::convertToTGA("+imageFile$+")")
     Protected im, i
     Protected dir$, image$
     dir$  = misc::Path(GetPathPart(imageFile$))
@@ -508,7 +720,6 @@ Module mods
   
   Procedure.s findArchive(path$)
     Protected dir, entry$
-    debugger::add("mods::findArchive("+path$+")")
     
     path$ = misc::path(path$)
     dir = ExamineDirectory(#PB_Any, path$, "")
@@ -530,32 +741,9 @@ Module mods
       Wend
       FinishDirectory(dir)
     Else
-      debugger::add("          ERROR: cannot examine "+path$)
-    EndIf
-    If entry$
-      debugger::add("          -> "+entry$)
+      deb("mods:: cannot examine "+path$)
     EndIf
     ProcedureReturn entry$
-  EndProcedure
-  
-  Procedure.s modGetTags(*mod.mod)
-    Protected str$, tag$
-    Protected count, i
-    
-    count = modCountTags(*mod)
-    If count
-      For i = 0 To count-1
-        tag$ = modGetTag(*mod, i)
-        If tag$
-          str$ + tag$ + ", "
-        EndIf
-      Next
-      If Len(str$) > 2
-        str$ = Left(str$, Len(str$)-2)
-      EndIf
-    EndIf
-    
-    ProcedureReturn str$
   EndProcedure
   
   ; Backups
@@ -563,13 +751,13 @@ Module mods
   Procedure.s getBackupFolder()
     Protected backupFolder$
     
-    If main::gameDirectory$ = ""
+    If settings::getString("","path") = ""
       ProcedureReturn ""
     EndIf
     
     backupFolder$ = settings::getString("backup", "folder")
     If backupFolder$ = ""
-      backupFolder$ = misc::path(main::gameDirectory$ + "TPFMM/backups/")
+      backupFolder$ = misc::path(settings::getString("","path") + "TPFMM/backups/")
     EndIf
     
     ProcedureReturn backupFolder$
@@ -596,12 +784,12 @@ Module mods
       Wend
       FinishDirectory(dir)
     Else
-      debugger::add("mods::moveBackupFolder() - ERROR: failed to examine directory "+newFolder$)
+      deb("mods:: failed to examine directory "+newFolder$)
       error = #True
     EndIf
     
     If count
-      debugger::add("mods::moveBackupFolder() - ERROR: target directory not empty")
+      deb("mods:: target directory not empty")
       ProcedureReturn #False  
     EndIf
     
@@ -614,7 +802,7 @@ Module mods
           If LCase(GetExtensionPart(entry$)) = "zip" Or
              LCase(GetExtensionPart(entry$)) = "backup"
             If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
-              debugger::add("mods::moveBackupFolder() - ERROR: failed to move file "+entry$)
+              deb("mods:: failed to move file "+entry$)
               error = #True
             EndIf
           EndIf
@@ -622,7 +810,7 @@ Module mods
       Wend
       FinishDirectory(dir)
     Else
-      debugger::add("mods::moveBackupFolder() - ERROR: failed to examine directory "+oldFolder$)
+      deb("mods:: failed to examine directory "+oldFolder$)
       error = #True
     EndIf
     
@@ -636,15 +824,494 @@ Module mods
   EndProcedure
   
   
-  ;----------------------------------------------------------------------------
-  ;---------------------------------- PUBLIC ----------------------------------
-  ;----------------------------------------------------------------------------
+  ;- ####################
+  ;-       PUBLIC 
+  ;- ####################
   
   
   ; functions working on individual mods
   
-  Global mutexModAuthors  = CreateMutex()
-  Global mutexModTags     = CreateMutex()
+  Procedure getModByFoldername(foldername$)
+    Protected *mod.mod, regExpFolder, version
+    Static regexp
+    If Not regexp
+      regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
+    EndIf
+    
+    LockMutex(mutexMods)
+    ; check if "foldername" is version independend, e.g. "urbangames_vehicles_no_end_year" (no _1 at the end)
+    If Not MatchRegularExpression(regexp, foldername$)
+      ; "foldername" search string is NOT ending on _1 (or similar) ...
+      ; add the _1 part to the foldername in a regexp and search
+      regExpFolder = CreateRegularExpression(#PB_Any, "^"+foldername$+"_([0-9]+)$", #PB_RegularExpression_NoCase) ; no case only valid on Windows, but may be fixed by removing and adding mod in game
+      If regExpFolder
+        version = -1
+        ForEach mods()
+          If MatchRegularExpression(regExpFolder, MapKey(mods()))
+            ; found a match, keep on searching for a higher version number (e.g.: if version _1 and _2 are found, use _2)
+            ; try to extract version number
+            If ExamineRegularExpression(regExpFolder, MapKey(mods()))
+              If NextRegularExpressionMatch(regExpFolder)
+                If Val(RegularExpressionGroup(regExpFolder, 1)) > version
+                  ; if version is higher, save version and file link
+                  version = Val(RegularExpressionGroup(regExpFolder, 1))
+                  *mod = mods()
+                EndIf
+              EndIf
+            EndIf
+          EndIf
+        Next
+        FreeRegularExpression(regExpFolder)
+      Else
+        deb("repository:: could not create regexp "+#DQUOTE$+"^"+foldername$+"_([0-9]+)$"+#DQUOTE$+" "+RegularExpressionError())
+      EndIf
+    Else
+      If FindMapElement(mods(), foldername$)
+        *mod = mods()
+      EndIf
+    EndIf
+    UnlockMutex(mutexMods)
+    ProcedureReturn *mod
+  EndProcedure
+  
+  Procedure isInstalled(foldername$)
+    ProcedureReturn Bool(getModByFoldername(foldername$))
+  EndProcedure
+  
+  ;- ####################
+  ;- get
+  
+  Procedure.s modGetID(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\tpf_id$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetFoldername(*mod.mod)
+    ; foldername = id without location information (e.g. workshop starts with *, folder name has no *
+    If *mod
+      If Left(*mod\tpf_id$, 1) = "*" Or Left(*mod\tpf_id$, 1) = "?"
+        ProcedureReturn Mid(*mod\tpf_id$, 2)
+      Else
+        ProcedureReturn *mod\tpf_id$
+      EndIf
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetName(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\name$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetVersion(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\version$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetDescription(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\description$
+    EndIf
+  EndProcedure
+  
+  Procedure.s modGetAuthorsString(*mod.mod)
+    Protected authors$
+    Protected count, i
+    Protected *author.author
+    count = modCountAuthors(*mod)
+    
+    If count
+      For i = 0 To count-1
+        *author = modGetAuthor(*mod, i)
+        If *author
+          authors$ + *author\name$ + ", "
+        EndIf
+      Next
+      If Len(authors$) > 2 ; remove last ", "
+        authors$ = Left(authors$, Len(authors$)-2)
+      EndIf
+    EndIf
+    ProcedureReturn authors$
+  EndProcedure
+  
+  Procedure.s modGetTags(*mod.mod)
+    Protected str$, tag$
+    Protected count, i
+    
+    count = modCountTags(*mod)
+    If count
+      For i = 0 To count-1
+        tag$ = modGetTag(*mod, i)
+        If tag$
+          str$ + tag$ + ", "
+        EndIf
+      Next
+      If Len(str$) > 2
+        str$ = Left(str$, Len(str$)-2)
+      EndIf
+    EndIf
+    
+    ProcedureReturn str$
+  EndProcedure
+  
+  Procedure.s modGetDownloadLink(*mod.mod)
+    ; try to get a download link in form of source/id[/fileID]
+    
+    Protected source$
+    Protected id.q, fileID.q
+    
+    If *mod\aux\installSource$
+      source$ = StringField(*mod\aux\installSource$, 1, "/")
+      id      = Val(StringField(*mod\aux\installSource$, 2, "/"))
+      fileID  = Val(StringField(*mod\aux\installSource$, 3, "/"))
+    EndIf
+    
+    If source$ And fileID
+      ProcedureReturn source$+"/"+id+"/"+fileID
+    EndIf
+    
+    If source$ And id
+      ProcedureReturn source$+"/"+id
+    EndIf
+    
+    If (source$ = "tpfnet" Or source$ = "tfnet") And *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf source$ = "workshop" And *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    If *mod\aux\tfnetID
+      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      ProcedureReturn "workshop/"+*mod\aux\workshopID
+    EndIf
+    
+    ProcedureReturn ""
+  EndProcedure
+  
+  Procedure modGetRepoMod(*mod.mod)
+    Protected *repoMod
+    
+    *repoMod = repository::getModByFoldername(modGetFoldername(*mod))
+    
+    If Not *repoMod
+      *repoMod  = repository::getModByLink(modGetDownloadLink(*mod))
+    EndIf
+    
+    ProcedureReturn *repoMod
+  EndProcedure
+  
+  Procedure modGetSize(*mod.mod, refresh=#False)
+    If Not *mod\aux\size Or refresh
+      *mod\aux\size = misc::getDirectorySize(getModFolder(*mod\tpf_id$))
+    EndIf
+    ProcedureReturn *mod\aux\size
+  EndProcedure
+  
+  Procedure.s modGetWebsite(*mod.mod)
+    Protected website$
+    If *mod\url$
+      website$ = *mod\url$
+    ElseIf *mod\aux\tfnetID
+      website$ = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID
+    ElseIf *mod\aux\workshopID
+      website$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
+    EndIf
+    ; TODO use repository and mod foldername to get website!
+    ProcedureReturn website$
+  EndProcedure
+  
+  Procedure modGetTfnetID(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\aux\tfnetID
+    EndIf
+  EndProcedure
+  
+  Procedure.q modGetWorkshopID(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\aux\workshopID
+    EndIf
+  EndProcedure
+  
+  Procedure modGetSettings(*mod.mod, List *settings.modLuaSetting())
+    If *mod
+      ClearList(*settings())
+      ForEach *mod\settings()
+        AddElement(*settings())
+        *settings() = *mod\settings()
+      Next
+      ProcedureReturn #True
+    EndIf
+  EndProcedure
+  
+  Procedure modGetInstallDate(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\aux\installDate
+    EndIf
+  EndProcedure
+  
+  Procedure modGetPreviewImage(*mod.mod)
+;     debugger::add("mods::getPreviewImage("+*mod+", "+original+")")
+    Static NewMap previewImages()
+    
+    If Not IsImage(previewImages(*mod\tpf_id$))
+      ; if image is not yet loaded
+      
+      Protected im.i, modFolder$
+      modFolder$ = getModFolder(*mod\tpf_id$)
+      Protected NewList possibeFiles$()
+      AddElement(possibeFiles$())
+      possibeFiles$() = modFolder$ + "image_00.tga"
+      AddElement(possibeFiles$())
+      possibeFiles$() = modFolder$ + "workshop_preview.jpg"
+      AddElement(possibeFiles$())
+      possibeFiles$() = modFolder$ + "preview.png"
+      
+      ForEach possibeFiles$()
+        If FileSize(possibeFiles$()) > 0
+          im = LoadImage(#PB_Any, possibeFiles$())
+          If IsImage(im)
+            Break
+          EndIf
+        EndIf
+      Next
+      
+      ClearList(possibeFiles$())
+      
+      If Not IsImage(im)
+        ProcedureReturn #False
+      EndIf
+      
+      
+      ; mod images: 210x118 / 240x135 / 320x180
+      ; dlc images: 120x80
+      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 320, 180)
+    EndIf
+    
+    ProcedureReturn previewImages(*mod\tpf_id$)
+  EndProcedure
+  
+  ;- ####################
+  ;- set
+  
+  Procedure modSetName(*mod.mod, name$)
+    If *mod
+      *mod\name$ = name$
+    EndIf
+  EndProcedure
+  
+  Procedure modSetDescription(*mod.mod, description$)
+    If *mod
+      *mod\description$ = description$
+    EndIf
+  EndProcedure
+  
+  Procedure modSetMinorVersion(*mod.mod, version)
+    If *mod
+      *mod\minorVersion = version
+    EndIf
+  EndProcedure
+  
+  Procedure modSetHidden(*mod.mod, hidden)
+    If *mod
+      *mod\aux\hidden = hidden
+    EndIf
+  EndProcedure
+  
+  Procedure modSetTFNET(*mod.mod, id)
+    If *mod
+      *mod\aux\tfnetID = id
+    EndIf
+  EndProcedure
+  
+  Procedure modSetWorkshop(*mod.mod, id.q)
+    If *mod
+      *mod\aux\workshopID = id
+    EndIf
+  EndProcedure
+  
+  Procedure modSetLuaDate(*mod.mod, date)
+    If *mod
+      *mod\aux\luaDate = date
+    EndIf
+  EndProcedure
+ 
+  Procedure modSetLuaLanguage(*mod.mod, language$)
+    If *mod
+      *mod\aux\luaLanguage$ = language$
+    EndIf
+  EndProcedure
+  
+  
+  ;- ####################
+  ;- add / clear / sort
+  
+  Procedure modAddAuthor(*mod.mod)
+    Protected *author.author
+    If *mod
+      *author = AddElement(*mod\authors())
+      ProcedureReturn *author
+    EndIf
+  EndProcedure
+  
+  Procedure modClearAuthors(*mod.mod)
+    If *mod
+      ClearList(*mod\authors())
+    EndIf
+  EndProcedure
+  
+  Procedure modAddTag(*mod.mod, tag$)
+    If *mod
+      AddElement(*mod\tags$())
+      *mod\tags$() = tag$
+    EndIf
+  EndProcedure
+  
+  Procedure modClearTags(*mod.mod)
+    If *mod
+      ClearList(*mod\tags$())
+    EndIf
+  EndProcedure
+  
+  Procedure modAddDependency(*mod.mod, dependency$)
+    If *mod
+      AddElement(*mod\dependencies$())
+      *mod\dependencies$() = dependency$
+    EndIf
+  EndProcedure
+  
+  Procedure modClearDependencies(*mod.mod)
+    If *mod
+      ClearList(*mod\dependencies$())
+    EndIf
+  EndProcedure
+  
+  Procedure modAddSetting(*mod.mod)
+    Protected *setting
+    If *mod
+      *setting = AddElement(*mod\settings())
+      ProcedureReturn *setting
+    EndIf
+  EndProcedure
+  
+  Procedure modClearSettings(*mod.mod)
+    If *mod
+      ClearList(*mod\settings())
+    EndIf
+  EndProcedure
+  
+  Procedure modSortSettings(*mod.mod)
+    If *mod
+      SortStructuredList(*mod\settings(), #PB_Sort_Ascending, OffsetOf(modLuaSetting\order), TypeOf(modLuaSetting\order))
+    EndIf
+  EndProcedure
+  
+  
+  ;- ####################
+  ;- check
+  
+  Procedure modIsVanilla(*mod.mod) ; check whether id$ belongs to official mod
+    Static NewMap vanillaMods()
+    If MapSize(vanillaMods()) = 0
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_01_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_02_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_03_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_04_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_05_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_06_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_eu_mission_07_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_01_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_02_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_03_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_04_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_05_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_06_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_campaign_usa_mission_07_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_no_costs_1", #PB_Map_NoElementCheck)
+      AddMapElement(vanillaMods(), "urbangames_vehicles_no_end_year_1", #PB_Map_NoElementCheck)
+    EndIf
+    *mod\aux\isVanilla = Bool(FindMapElement(vanillaMods(), *mod\tpf_id$))
+    ProcedureReturn *mod\aux\isVanilla
+  EndProcedure
+  
+  Procedure modIsWorkshop(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "*")
+  EndProcedure
+  
+  Procedure modIsStagingArea(*mod.mod)
+    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "?")
+  EndProcedure
+  
+  Procedure modIsHidden(*mod.mod)
+    If *mod
+      ProcedureReturn *mod\aux\hidden
+    EndIf
+  EndProcedure
+  
+  Procedure modIsUpdateAvailable(*mod.mod) 
+    ; TODO modIsUpateAvailable()
+    Protected compare, *repo_mod.repository::RepositoryMod
+    
+;     todo repo mods Not yet threadsafe... cannot access repo mods While repositories are loaded
+    
+    *repo_mod = modGetRepoMod(*mod)
+    
+    If Not *repo_mod
+      ; no online mod found -> no update available
+      ProcedureReturn #False
+    EndIf
+    
+    If settings::getInteger("", "compareVersion") And *repo_mod\getVersion()
+      ; use alternative comparison method: version check
+      compare = Bool(*repo_mod\getVersion() And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\getVersion()))
+    Else
+      ; default compare: date check
+      compare = Bool((*mod\aux\repoTimeChanged And *repo_mod\getTimeChanged() > *mod\aux\repoTimeChanged) Or
+                     (*mod\aux\installDate And *repo_mod\getTimeChanged() > *mod\aux\installDate))
+    EndIf
+    ProcedureReturn compare
+  EndProcedure
+  
+  Procedure modCanBackup(*mod.mod)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\isVanilla
+      ProcedureReturn #False
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modCanUninstall(*mod.mod)
+    If Not *mod
+      ProcedureReturn #False
+    EndIf
+    
+    If *mod\aux\isVanilla
+      ProcedureReturn #False
+    EndIf
+    If Left(*mod\tpf_id$, 1) = "*" Or Left(*mod\tpf_id$, 1) = "?"
+      ProcedureReturn #False
+    EndIf
+    
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure modHasSettings(*mod.mod)
+    If *mod
+      If ListSize(*mod\settings())
+        ProcedureReturn #True
+      EndIf
+    EndIf
+  EndProcedure
+  
+  ;- ####################
+  ;- other
   
   Procedure modCountAuthors(*mod.mod)
     Protected count.i
@@ -654,19 +1321,15 @@ Module mods
     ProcedureReturn count
   EndProcedure
   
-  Procedure modGetAuthor(*mod.mod, n.i, *author.author)
+  Procedure modGetAuthor(*mod.mod, n.i)
     ; extract author #n from the list and save in *author
-    Protected valid.i
+    Protected *author
     LockMutex(mutexModAuthors)
     If n <= ListSize(*mod\authors()) - 1
-      SelectElement(*mod\authors(), n)
-      CopyStructure(*mod\authors(), *author, author)
-      valid = #True
-    Else
-      valid = #False
+      *author= SelectElement(*mod\authors(), n)
     EndIf
     UnlockMutex(mutexModAuthors)
-    ProcedureReturn valid
+    ProcedureReturn *author
   EndProcedure
   
   Procedure modCountTags(*mod.mod)
@@ -689,87 +1352,31 @@ Module mods
     ProcedureReturn tag$
   EndProcedure
   
-  Procedure.s getAuthorsString(*mod.mod)
-    Protected authors$
-    Protected count, i
-    Protected author.author
-    count = modCountAuthors(*mod)
-    
-    If count
-      For i = 0 To count-1
-        If modGetAuthor(*mod, i, @author)
-          authors$ + author\name$ + ", "
-        EndIf
-      Next
-      If Len(authors$) > 2 ; remove last ", "
-        authors$ = Left(authors$, Len(authors$)-2)
-      EndIf
-    EndIf
-    ProcedureReturn authors$
-  EndProcedure
+  ;- ####################
+  ;- ####################
   
-  Procedure getModSize(*mod.mod, refresh=#False)
-    If Not *mod\aux\size Or refresh
-      *mod\aux\size = misc::getDirectorySize(getModFolder(*mod\tpf_id$, *mod\aux\type$))
-    EndIf
-    ProcedureReturn *mod\aux\size
-  EndProcedure
   
-  Procedure.s getModWebsite(*mod.mod)
-    Protected website$
-    If *mod\url$
-      website$ = *mod\url$
-    ElseIf *mod\aux\tfnetID
-      website$ = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID
-    ElseIf *mod\aux\workshopID
-      website$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
-    EndIf
-    ; TODO use repository and mod foldername to get website!
-    ProcedureReturn website$
-  EndProcedure
-  
-  ;### data structure handling
-  
-  Procedure init() ; allocate mod structure
-    Protected *mod.mod
-    *mod = AllocateStructure(mod)
-;     debugger::Add("mods::initMod() - new mod: {"+Str(*mod)+"}")
-    ProcedureReturn *mod
-  EndProcedure
-  
-  Procedure freeAll()
-    debugger::Add("mods::freeAll()")
-    
-    LockMutex(mutexMods)
-    ForEach mods()
-      DeleteMapElement(mods())
-    Next
-    UnlockMutex(mutexMods)
-    
-  EndProcedure
-  
-  ;### Load and Save
+  ;- Load and Save
   
   Procedure doLoad() ; load mod list from file and scan for installed mods
-    debugger::Add("mods::doLoad()")
-    
     isLoaded = #False
     
     Protected json, NewMap mods_json.mod(), *mod.mod
     Protected dir, entry$
-    Protected NewMap scanner.scanner()
+    Protected NewMap scanner()
     Protected count, n, id$, modFolder$, luaFile$
+    
+    LockMutex(mutexMods)
     
     defineFolder()
     
-    windowMain::progressMod(0, locale::l("progress","load")) ; 0%
     
-    LockMutex(mutexMods)
+    postProgressEvent(0, locale::l("progress", "load"))
+;     windowMain::progressMod(0, locale::l("progress","load")) ; 0%
     
     ; load list from json file
     json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
     If json
-      debugger::add("mods::doLoad() - load mods from json file")
       ExtractJSONMap(JSONValue(json), mods_json())
       FreeJSON(json)
       
@@ -778,13 +1385,11 @@ Module mods
         AddMapElement(mods(), id$)
         *mod = mods() ; work in pointer, manipulates also data in the map
         CopyStructure(mods_json(), *mod, mod)
-        If Not *mod\aux\installDate
-          *mod\aux\installDate = misc::time()
-        EndIf
+        modInit(*mod)
         ; debugger::add("mods::doLoad() - address {"+*mod+"} - id {"+*mod\tpf_id$+"} - name {"+*mod\name$+"}")
       Next
       
-      debugger::Add("mods::doLoad() - loaded "+MapSize(mods_json())+" mods from mods.json")
+      deb("mods:: loaded "+MapSize(mods_json())+" mods from mods.json")
       FreeMap(mods_json())
     EndIf
     
@@ -804,7 +1409,7 @@ Module mods
     ;   Internally, ? is used as prefix
     
     ; scan pMods
-    debugger::Add("mods::loadList() - scan mods folder {"+pMods$+"}")
+    deb("mods:: scan mods folder {"+pMods$+"}")
     dir = ExamineDirectory(#PB_Any, pMods$, "")
     If dir
       While NextDirectoryEntry(dir)
@@ -812,16 +1417,15 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        If checkID(entry$) And checkMod(pMods$ + entry$)
-          ; this folder is (most likely) a mod
-          scanner(entry$)\type$ = "mod"
+        If modCheckID(entry$) And modCheckValidTPF(pMods$ + entry$)
+          scanner(entry$) = #True
         EndIf
       Wend
       FinishDirectory(dir)
     EndIf
     
     ;scan pWorkshop
-    debugger::Add("mods::loadList() - scan workshop folder {"+pWorkshop$+"}")
+    deb("mods:: scan workshop folder {"+pWorkshop$+"}")
     dir = ExamineDirectory(#PB_Any, pWorkshop$, "")
     If dir
       While NextDirectoryEntry(dir)
@@ -829,11 +1433,11 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        If checkWorkshopID(entry$)
-          If checkMod(pWorkshop$ + entry$)
+        If modCheckWorkshopID(entry$)
+          If modCheckValidTPF(pWorkshop$ + entry$)
             ; workshop mod folders only have a number.
             ; Add * as prefix and _1 as postfix
-            scanner("*"+entry$+"_1")\type$ = "mod"
+            scanner("*"+entry$+"_1") = #True
           EndIf
         EndIf
       Wend
@@ -841,7 +1445,7 @@ Module mods
     EndIf
     
     ;scan pStagingArea
-    debugger::Add("mods::loadList() - scan staging area folder {"+pStagingArea$+"}")
+    deb("mods:: scan staging area folder {"+pStagingArea$+"}")
     dir = ExamineDirectory(#PB_Any, pStagingArea$, "")
     If dir
       While NextDirectoryEntry(dir)
@@ -849,31 +1453,10 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        If checkID(entry$)
+        If modCheckID(entry$)
           ; staging area mod have to comply to format (name_version)
           ; Add ? as prefix
-          scanner("?"+entry$)\type$ = "mod" 
-        EndIf
-      Wend
-      FinishDirectory(dir)
-    EndIf
-    
-    ; scan pDLC
-    debugger::Add("mods::loadList() - scan dlcs folder {"+pDLCs$+"}")
-    dir = ExamineDirectory(#PB_Any, pDLCs$, "")
-    If dir
-      While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          Continue
-        EndIf
-        entry$ = DirectoryEntryName(dir)
-        If checkID(entry$)
-          ; make sure to not overwrite any mods here!
-          If FindMapElement(scanner(), entry$) = #Null
-            scanner(entry$)\type$ = "dlc"
-          Else
-            debugger::add("mods::loadList() - WARNING: skipping DLC {"+entry$+"},  already found as mod!")
-          EndIf
+          scanner("?"+entry$) = #True
         EndIf
       Wend
       FinishDirectory(dir)
@@ -884,25 +1467,32 @@ Module mods
     
     
     ; first check:  deleted mods
-    debugger::add("mods::doLoad() - check for removed mods")
+    deb("mods:: check for removed mods")
     ForEach mods()
       If Not FindMapElement(scanner(), MapKey(mods()))
-        debugger::add("mods::doLoad() - remove {"+MapKey(mods())+"} from list (folder removed)")
+        deb("mods:: remove {"+MapKey(mods())+"} from list (folder removed)")
         DeleteMapElement(mods())
       EndIf
     Next
     
     
     ; second check: existing & added mods
-    debugger::add("mods::doLoad() - check for added mods")
     count = MapSize(scanner())
     n = 0
-    debugger::Add("mods::doLoad() - found "+MapSize(scanner())+" mods in folders")
+    deb("mods:: found "+MapSize(scanner())+" mods in folders")
     If count > 0
+      
+      If callbackStopDraw
+        callbackStopDraw(#True)
+      EndIf
+      If events(#EventStopDraw)
+        PostEvent(events(#EventStopDraw), #True, 0)
+      EndIf
       
       ForEach scanner() ; for each mod found in any of the known mod folders:
         n + 1 ; update progress bar
-        windowMain::progressMod(100*n/count)
+;         windowMain::progressMod(100*n/count)
+        postProgressEvent(100*n/count)
         
         id$ = MapKey(scanner())
         
@@ -911,50 +1501,50 @@ Module mods
           *mod = mods()
         Else
           ; create new element
-          *mod = addToMap(id$, scanner()\type$)
+          *mod = modAddtoMap(id$)
         EndIf
         
-        If Not *mod Or Not FindMapElement(mods(), id$)
-          ; this should never be reached
-          debugger::add("mods::doLoad() - ERROR: failed to add mod to map")
-          End
-        EndIf
-        
-        loadInfo(*mod)
-        
-        ; no need to load images now, is handled dynamically if mod is selected
+        modLoadInfo(*mod)
         
         If *mod\name$ = ""
-          debugger::add("mods::doLoad() - ERROR: no name for mod {"+id$+"}")
+          deb("mods:: no name for mod {"+id$+"}")
         EndIf
         
+        ; Display mods in list gadget
+        If callbackNewMod
+          callbackNewMod(*mod)
+        EndIf
+        If events(#EventNewMod)
+          PostEvent(events(#EventNewMod), *mod, 0)
+        EndIf
       Next
+      
+      If callbackStopDraw
+        callbackStopDraw(#False)
+      EndIf
+      If events(#EventStopDraw)
+        PostEvent(events(#EventStopDraw), #False, 0)
+      EndIf
+      
     EndIf
     
     
     
     ; Final Check
-    debugger::add("mods::doLoad() - final checkup")
     ForEach mods()
       *mod = mods()
       If *mod\tpf_id$ = "" Or MapKey(mods()) = ""
-        debugger::add("mods::doLoad() - CRITICAL ERROR: mod without ID in list: key={"+MapKey(mods())+"} tf_id$={"+*mod\tpf_id$+"}")
+        deb("mods:: mod without ID in list: key={"+MapKey(mods())+"} tf_id$={"+*mod\tpf_id$+"}")
         End
+      EndIf
+      
+      If Not *mod\aux\installDate
+        *mod\aux\installDate = Date()
       EndIf
     Next
     
-    debugger::add("mods::doLoad() - finished")
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
-    
-    
-    ; Display mods in list gadget
-    If callbackNewMod
-      callbackStopDraw(#True)
-      ForEach mods()
-        callbackNewMod(mods())
-      Next
-      callbackStopDraw(#False)
-    EndIf
+    postProgressEvent(-1, locale::l("progress", "loaded"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
     
     UnlockMutex(mutexMods)
     
@@ -962,15 +1552,15 @@ Module mods
   EndProcedure
   
   Procedure saveList()
-    Protected gameDirectory$ = main::gameDirectory$
+    deb("mods:: saveList")
     
     If Not isLoaded
       ; do not save list when it is not loaded
       ProcedureReturn #False
     EndIf
     
-    If gameDirectory$ = ""
-      debugger::add("mods::saveList() - gameDirectory$ not defined - do not save list")
+    If settings::getString("","path") = ""
+      deb("mods:: game dir not defined")
       ProcedureReturn #False
     EndIf
     
@@ -980,39 +1570,36 @@ Module mods
       misc::CreateDirectoryAll(pTPFMM$)
     EndIf
     
+    
     LockMutex(mutexMods)
     Protected json
     json = CreateJSON(#PB_Any)
     InsertJSONMap(JSONValue(json), mods())
     SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
-    
     UnlockMutex(mutexMods)
     
     ProcedureReturn #True
   EndProcedure
   
-  ;### mod handling
+  ;- mod handling
   
   Procedure.s generateNewID(*mod.mod) ; return new ID as string
     Protected author$, name$, version$
-    Protected author.author
+    Protected *author.author
     ; ID = author_mod_version
     
     Static RegExpNonAlphaNum
     If Not RegExpNonAlphaNum
       RegExpNonAlphaNum  = CreateRegularExpression(#PB_Any, "[^a-z0-9]") ; non-alphanumeric characters
-      ; regexp matches all non alphanum characters including spaces etc.
+      ; regexp matches all non alphanum characters, including spaces etc.
     EndIf
     
     With *mod
-      If modCountAuthors(*mod) > 0
-        modGetAuthor(*mod, 0, @author)
-        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(author\name$), "") ; remove all non alphanum + make lowercase
+      *author = modGetAuthor(*mod, 0)
+      If *author
+        author$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(*author\name$), "") ; remove all non alphanum + make lowercase
       Else
-        author$ = ""
-      EndIf
-      If author$ = ""
         author$ = "unknownauthor"
       EndIf
       name$ = ReplaceRegularExpression(RegExpNonAlphaNum, LCase(\name$), "") ; remove all non alphanum + make lowercase
@@ -1026,34 +1613,8 @@ Module mods
     
   EndProcedure
   
-  Procedure canUninstall(*mod.mod)
-    If Not *mod
-      ProcedureReturn #False
-    EndIf
-    
-    If *mod\aux\isVanilla
-      ProcedureReturn #False
-    EndIf
-    If Left(*mod\tpf_id$, 1) = "*" Or Left(*mod\tpf_id$, 1) = "?"
-      ProcedureReturn #False
-    EndIf
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure canBackup(*mod.mod)
-    If Not *mod
-      ProcedureReturn #False
-    EndIf
-    
-    If *mod\aux\isVanilla
-      ProcedureReturn #False
-    EndIf
-    
-    ProcedureReturn #True
-  EndProcedure
-  
   Procedure isInstalledByRemote(source$, id)
+    ; notice isInstalledByRemote() not used at the moment
     Protected installed = #False
     
     If Not id
@@ -1095,83 +1656,10 @@ Module mods
     
   EndProcedure
   
-  Procedure isInstalled(id$)
-    Protected installed = #False
-    
-    If id$ = ""
-      ProcedureReturn #False
-    EndIf
-    
-    LockMutex(mutexMods)
-    If FindMapElement(mods(), id$)
-      installed = #True
-    EndIf
-    UnlockMutex(mutexMods)
-    
-    ProcedureReturn installed
-  EndProcedure
-  
-  Procedure.s getDownloadLink(*mod.mod)
-    ; try to get a download link in form of source/id[/fileID]
-    
-    Protected source$
-    Protected id.q, fileID.q
-    
-    If *mod\aux\installSource$
-      source$ = StringField(*mod\aux\installSource$, 1, "/")
-      id      = Val(StringField(*mod\aux\installSource$, 2, "/"))
-      fileID  = Val(StringField(*mod\aux\installSource$, 3, "/"))
-    EndIf
-    
-    If source$ And fileID
-      ProcedureReturn source$+"/"+id+"/"+fileID
-    EndIf
-    
-    If source$ And id
-      ProcedureReturn source$+"/"+id
-    EndIf
-    
-    If (source$ = "tpfnet" Or source$ = "tfnet") And *mod\aux\tfnetID
-      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
-    ElseIf source$ = "workshop" And *mod\aux\workshopID
-      ProcedureReturn "workshop/"+*mod\aux\workshopID
-    EndIf
-    
-    If *mod\aux\tfnetID
-      ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
-    ElseIf *mod\aux\workshopID
-      ProcedureReturn "workshop/"+*mod\aux\workshopID
-    EndIf
-    
-    ProcedureReturn ""
-  EndProcedure
-  
-  Procedure getRepoMod(*mod.mod)
-    Protected *repoMod
-    *repoMod = repository::getModByFoldername(*mod\tpf_id$)
-    If Not *repoMod
-      *repoMod  = repository::getModByLink(getDownloadLink(*mod))
-    EndIf
-    
-    If Not *repoMod
-      ;debugger::add("mods::getRepoMod() Could not find a mod for "+*mod\name$+" in online repository")
-    EndIf
-    
-    ProcedureReturn *repoMod
-  EndProcedure
-  
-  Procedure isWorkshopMod(*mod.mod)
-    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "*")
-  EndProcedure
-  
-  Procedure isStagingAreaMod(*mod.mod)
-    ProcedureReturn Bool(Left(*mod\tpf_id$, 1) = "?")
-  EndProcedure
-  
-  ; actions
+  ;- actions
   
   Procedure doInstall(file$) ; install mod from file (archive)
-    debugger::Add("mods::doInstall("+file$+")")
+    deb("mods::doInstall("+file$+")")
     
     Protected source$, target$
     Protected id$
@@ -1184,11 +1672,12 @@ Module mods
     
     ; check if file exists
     If FileSize(file$) <= 0
-      debugger::Add("mods::install() - file {"+file$+"} does not exist or is empty")
+      deb("mods:: {"+file$+"} does not exist or is empty")
       ProcedureReturn #False
     EndIf
     
-    windowMain::progressMod(20, locale::l("progress", "install"))
+    postProgressEvent(20, locale::l("progress", "install"))
+;     windowMain::progressMod(20, locale::l("progress", "install"))
     
     ; 1) extract to temp directory (in TPF folder: /Transport Fever/TPFMM/temp/)
     ; 2) check extracted files and format
@@ -1199,7 +1688,7 @@ Module mods
     
     ; (1) extract files to temp
     source$ = file$
-    target$ = misc::Path(main::gameDirectory$+"/TPFMM/install/"+GetFilePart(file$, #PB_FileSystem_NoExtension)+"/")
+    target$ = misc::Path(settings::getString("","path")+"/TPFMM/install/"+GetFilePart(file$, #PB_FileSystem_NoExtension)+"/")
     
     ; make sure target is clean!
     DeleteDirectory(target$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
@@ -1213,21 +1702,26 @@ Module mods
     misc::CreateDirectoryAll(target$)
     
     If Not archive::extract(source$, target$)
-        debugger::Add("mods::doInstall() - ERROR - failed to extract files")
+        deb("mods:: failed to extract files from {"+source$+"} to {"+target$+"}")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+        
+        postProgressEvent(-1, locale::l("progress","install_fail"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
         ProcedureReturn #False
     EndIf
     
     ; archive is extracted to target$
     ; (2) try to find mod in target$ (may be in some sub-directory)...
-    windowMain::progressMod(40)
-    modRoot$ = getModRoot(target$)
+    
+    postProgressEvent(40)
+;     windowMain::progressMod(40)
+    modRoot$ = modGetRoot(target$)
     
     If modRoot$ = ""
-      debugger::add("mods::doInstall() - ERROR: getModRoot("+target$+") failed!")
+      deb("mods:: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, locale::l("progress","install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1235,28 +1729,29 @@ Module mods
     ; try to get ID from folder name
     id$ = misc::getDirectoryName(modRoot$)
     
-    If Not checkID(id$) And checkWorkshopID(id$)
+    If Not modCheckID(id$) And modCheckWorkshopID(id$)
       ; backuped mods from workshop only have number, add _1
       id$ = id$ + "_1"
     EndIf
     
-    If Not checkID(id$)
-      debugger::add("mods::doInstall() - folder name not valid id ("+id$+")")
+    If Not modCheckID(id$)
+      deb("mods:: folder name not valid id ("+id$+")")
       
       ; try to get ID from archive file name
       id$ = GetFilePart(source$, #PB_FileSystem_NoExtension)
-      If Not checkID(id$)
-        debugger::add("mods::doInstall() - archive name not valid id ("+id$+")")
-        ;TODO: backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
+      If Not modCheckID(id$)
+        deb("mods:: archive name not valid id ("+id$+")")
+        ;TODO backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
         
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
+        postProgressEvent(-1, locale::l("progress","install_fail_id"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
         ProcedureReturn #False
       EndIf
     EndIf
     
     
-    modFolder$ = getModFolder(id$, "mod") ;- TODO handle installation of maps and DLCs
+    modFolder$ = getModFolder(id$)
     
     ; check if mod already installed?
     LockMutex(mutexMods)
@@ -1264,20 +1759,22 @@ Module mods
     UnlockMutex(mutexMods)
     
     If *installedMod
-      debugger::add("mods::doInstall() - WARNING: mod {"+id$+"} is already installed, overwrite with new mod")
+      deb("mods:: mod {"+id$+"} is already installed, overwrite with new mod")
       
       ; backup before overwrite with new mod if activated in settings...
       If settings::getInteger("backup", "before_update")
         doBackup(id$)
       EndIf
       
-      If Not canUninstall(*installedMod)
-        debugger::add("mods::doInstall() - WARNING: existing mod must not be uninstalled...")
-        debugger::add("mods::doInstall() - continue with overwrite")
+      If Not modCanUninstall(*installedMod)
+        deb("mods:: existing mod MUST NOT be uninstalled, still continue with overwrite...")
       EndIf
       
       If callbackRemoveMod
         callbackRemoveMod(*installedMod) ; send pointe for removal, attention: pointer already invalid
+      EndIf
+      If events(#EventRemoveMod)
+        PostEvent(events(#EventRemoveMod), *installedMod, 0)
       EndIf
       
       ; remove mod from internal map.
@@ -1304,11 +1801,13 @@ Module mods
     
     
     ; (3) copy mod to game folder
-    windowMain::progressMod(60)
+    postProgressEvent(60)
+;     windowMain::progressMod(60)
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
-      debugger::add("mods::doInstall() - ERROR: MoveDirectory() failed!")
+      deb("mods:: could not move directory to {"+modFolder$+"}")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, locale::l("progress", "install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1324,45 +1823,48 @@ Module mods
     
     
     ; (4) create reference to mod and load info
-    windowMain::progressMod(80)
-    *mod = addToMap(id$, "mod")
-    loadInfo(*mod)
-    *mod\aux\installDate = misc::time()
+    postProgressEvent(80)
+;     windowMain::progressMod(80)
+    *mod = modAddtoMap(id$)
+    modLoadInfo(*mod)
+    *mod\aux\installDate = Date()
     
     ; is mod installed from a repository? -> read .meta file
     If FileSize(file$+".meta") > 0
       ;-WIP! (load repository meta data...)
-      ;TODO: change to direct passing of information via function parameter?
+      ;TODO change to direct passing of information via function parameter?
       ; pro of using file: information is also used when installing the file manually. (manually drag&drop from "download/" folder)
       ; read info from meta file and add information to file reference...
       ; IMPORTANT: tpfnetID / workshop id!
       json = LoadJSON(#PB_Any, file$+".meta")
       If json
-        Protected repo_mod.repository::mod
-        If JSONType(JSONValue(json)) = #PB_JSON_Object
-          ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
-          FreeJSON(json)
-          *mod\aux\repoTimeChanged = repo_mod\timechanged
-          *mod\aux\installSource$ = repo_mod\installSource$
-          Select repo_mod\source$
-            Case "tpfnet"
-              *mod\aux\tfnetID = repo_mod\id
-            Case "workshop"
-              *mod\aux\workshopID = repo_mod\id
-            Default
-              
-          EndSelect
-          ; other idea: mod\repositoryinformation = copy of repo info during time of installation/download
-          ; later: when checking for update: compare repositoryinformation stored in mod with current information in repository.
-        EndIf
+;         Protected repo_mod.repository::mod
+;         If JSONType(JSONValue(json)) = #PB_JSON_Object
+;           ExtractJSONStructure(JSONValue(json), repo_mod, repository::mod)
+;           FreeJSON(json)
+;           *mod\aux\repoTimeChanged = repo_mod\timechanged
+;           *mod\aux\installSource$ = repo_mod\installSource$
+;           Select repo_mod\source$
+;             Case "tpfnet"
+;               *mod\aux\tfnetID = repo_mod\id
+;             Case "workshop"
+;               *mod\aux\workshopID = repo_mod\id
+;             Default
+;               
+;           EndSelect
+;           ; other idea: mod\repositoryinformation = copy of repo info during time of installation/download
+;           ; later: when checking for update: compare repositoryinformation stored in mod with current information in repository.
+;         EndIf
+        FreeJSON(json)
       EndIf
       ; could read more information... (author, thumbnail, etc...)
       ; delete files from download directory? -> for now, keep as backup / archive
     EndIf
     
     ; finish installation
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
-    debugger::Add("mods::doInstall() - finish installation...")
+    postProgressEvent(-1, locale::l("progress", "installed"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
+    deb("mods:: finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     
     ; callback add mod
@@ -1370,9 +1872,9 @@ Module mods
     If callbackNewMod
       callbackNewMod(*mod)
     EndIf
-    
-    debugger::Add("mods::doInstall() - finished")
-    
+    If events(#EventNewMod)
+      PostEvent(events(#EventNewMod), *mod, 0)
+    EndIf
     
     ; start backup if required
     If settings::getInteger("backup", "after_install")
@@ -1383,7 +1885,7 @@ Module mods
   EndProcedure
   
   Procedure doUninstall(id$) ; remove from Train Fever Mod folder
-    debugger::Add("mods::doUninstall("+id$+")")
+    deb("mods::doUninstall("+id$+")")
     
     
     Protected *mod.mod
@@ -1392,45 +1894,44 @@ Module mods
     UnlockMutex(mutexMods)
     
     If Not *mod
-      debugger::add("mods::doUninstall() - ERROR: cannot find *mod in list")
+      deb("mods:: cannot find *mod in list")
       ProcedureReturn #False
     EndIf
     
-    If Not canUninstall(*mod)
-      debugger::add("mods::doUninstall() - ERROR: can not uninstall {"+id$+"}")
+    If Not modCanUninstall(*mod)
+      deb("mods:: can not uninstall {"+id$+"}")
       ProcedureReturn #False
     EndIf
     
-    If Left(id$, 1) = "*"
-      debugger::add("mods::doUninstall() - WARNING: uninstalling Steam Workshop mod - may be added automatically again by Steam client")
-    EndIf
-    
-
     If settings::getInteger("backup", "before_uninstall")
       doBackup(id$)
     EndIf
     
     
     Protected modFolder$
-    modFolder$ = getModFolder(id$, *mod\aux\type$)
+    modFolder$ = getModFolder(id$)
     
-    debugger::add("mods::doUninstall() - delete {"+modFolder$+"} and all subfolders")
+    deb("mods:: delete {"+modFolder$+"} and all subfolders")
     DeleteDirectory(modFolder$, "", #PB_FileSystem_Recursive|#PB_FileSystem_Force)
     
     DeleteMapElement(mods())
     
-    windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
+    postProgressEvent(-1, locale::l("management", "uninstall_done"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
     
     ; callback remove mod
     If callbackRemoveMod
       callbackRemoveMod(*mod) ; send pointe for removal, attention: pointer already invalid
+    EndIf
+    If events(#EventRemoveMod)
+      PostEvent(events(#EventRemoveMod), *mod, 0)
     EndIf
     
     ProcedureReturn #True
   EndProcedure
   
   Procedure doBackup(id$)
-    debugger::add("mods::doBackup("+id$+")")
+    deb("mods::doBackup("+id$+")")
     Protected backupFolder$, modFolder$, backupFile$, backupInfoFile$
     Protected *mod.mod
     Protected time
@@ -1453,22 +1954,22 @@ Module mods
       UnlockMutex(mutexMods)
     Else
       UnlockMutex(mutexMods)
-      debugger::add("mods::doBackup() - ERROR: cannot find mod {"+id$+"}")
+      deb("mods:: cannot find mod {"+id$+"}")
       _backupActive = #False
       ProcedureReturn #False
     EndIf
     
     
     If FileSize(backupFolder$) <> -2
-      debugger::add("mods::doBackup() - ERROR: target directory does not exist {"+backupFolder$+"}")
+      deb("mods:: target directory does not exist {"+backupFolder$+"}")
       _backupActive = #False
       ProcedureReturn #False
     EndIf
     
-    modFolder$ = getModFolder(id$, *mod\aux\type$)
+    modFolder$ = getModFolder(id$)
     
     If FileSize(modFolder$) <> -2
-      debugger::add("mods::doBackup() - ERROR: mod directory does not exist {"+modFolder$+"}")
+      deb("mods:: mod directory does not exist {"+modFolder$+"}")
       _backupActive = #False
       ProcedureReturn #False
     EndIf
@@ -1488,11 +1989,12 @@ Module mods
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
     strings$("mod") = *mod\name$
-    windowMain::progressMod(80, locale::getEx("progress", "backup_mod", strings$()))
+    postProgressEvent(90,  locale::getEx("progress", "backup_mod", strings$()))
+;     windowMain::progressMod(80, locale::getEx("progress", "backup_mod", strings$()))
     
     If archive::pack(backupFile$, modFolder$)
-      debugger::add("mods::doBackup() - success")
-      *mod\aux\backup\time = misc::time()
+      deb("mods::doBackup() - success")
+      *mod\aux\backup\time = Date()
       *mod\aux\backup\filename$ = GetFilePart(backupFile$)
       
       ;TODO check for older backups with identical checksum...
@@ -1504,7 +2006,7 @@ Module mods
       If json
         backupInfo\name$      = *mod\name$
         backupInfo\version$   = *mod\version$
-        backupInfo\author$    = getAuthorsString(*mod)
+        backupInfo\author$    = modGetAuthorsString(*mod)
         backupInfo\tpf_id$    = *mod\tpf_id$
         backupInfo\filename$  = GetFilePart(backupFile$)
         backupInfo\time       = time
@@ -1517,16 +2019,18 @@ Module mods
           SetFileAttributes(backupInfoFile$, #PB_FileSystem_Hidden)
         CompilerEndIf
       Else
-        debugger::add("mods::doBackup() - ERROR: failed to create backup meta data file: "+backupInfoFile$)
+        deb("mods:: failed to create backup meta data file: "+backupInfoFile$)
       EndIf
       
       ; finished
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fin"))
+      postProgressEvent(-1, locale::l("progress", "backup_fin"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, )
       _backupActive = #False
       ProcedureReturn #True
     Else
-      debugger::add("mods::doBackup() - failed")
-      windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
+      deb("mods:: backup failed")
+      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
       _backupActive = #False
       ProcedureReturn #False
     EndIf
@@ -1534,89 +2038,37 @@ Module mods
   EndProcedure
   
   Procedure doUpdate(id$)
-    debugger::add("mods::doUpdate("+id$+")")
+    deb("mods::doUpdate("+id$+")")
+    
     Protected *mod.mod
-    Protected link$
+    Protected *repoMod.repository::RepositoryMod
     
-    link$ = repository::getLinkByFoldername(id$)
+    LockMutex(mutexMods)
+    *mod = FindMapElement(mods(), id$)
+    UnlockMutex(mutexMods)
     
-    If link$ = ""
-      LockMutex(mutexMods)
-      *mod = FindMapElement(mods(), id$)
-      UnlockMutex(mutexMods)
-      link$ = getDownloadLink(*mod)
+    If Not *mod
+      ProcedureReturn #False
     EndIf
     
-    ; send back to windowMain, as there may be the need for a selection window (if mod has multiple files) 
-    windowMain::repoFindModAndDownload(link$)
-  EndProcedure
-  
-  Procedure handleQueue(*dummy)
-    Protected action
-    Protected string$
-    
-    debugger::add("mods::handleQueue()")
-    
-    Repeat
-      working = #True
-      LockMutex(mutexQueue)
-      If ListSize(queue()) = 0
-        working = #False
-        UnlockMutex(mutexQueue)
-        Delay(100)
-        Continue
-      EndIf
-      
-      ; get top item from queue
-      FirstElement(queue())
-      action = queue()\action
-      string$ = queue()\string$
-      DeleteElement(queue(), 1)
-      UnlockMutex(mutexQueue)
-      
-      Select action
-        Case #QUEUE_LOAD
-          doLoad()
-          
-        Case #QUEUE_INSTALL
-          doInstall(string$)
-          
-        Case #QUEUE_UNINSTALL
-          doUninstall(string$)
-          
-        Case #QUEUE_BACKUP
-          doBackup(string$)
-          
-        Case #QUEUE_UPDATE
-          doUpdate(string$)
-          
-      EndSelect
-      Delay(100)
-    ForEver
-  EndProcedure
-  
-  Procedure addToQueue(action, string$="")
-    LockMutex(mutexQueue)
-    LastElement(queue())
-    AddElement(queue())
-    queue()\action  = action
-    queue()\string$ = string$
-    
-    If Not threadQueue Or Not IsThread(threadQueue)
-      threadQueue = CreateThread(@handleQueue(), 0)
+    *repoMod = modGetRepoMod(*mod)
+    If *repoMod
+      *repoMod\download() ; will take care of dialog window and main thread itself
     EndIf
     
-    UnlockMutex(mutexQueue)
   EndProcedure
   
-  ; actions (public)
+  ;- actions (public)
   
-  Procedure load()
-    Debug "load"
-    addToQueue(#QUEUE_LOAD)
+  Procedure load(async=#True)
+    If async
+      addToQueue(#QUEUE_LOAD)
+    Else
+      doLoad()
+    EndIf
   EndProcedure
   
-  Procedure install(file$)
+  Procedure install(file$) ; check and extract archive to game folder
     addToQueue(#QUEUE_INSTALL, file$)
   EndProcedure
   
@@ -1634,30 +2086,8 @@ Module mods
     ProcedureReturn #True
   EndProcedure
   
-  Procedure isUpdateAvailable(*mod.mod, *repo_mod.repository::mod = 0)
-    Protected compare
-    
-    If Not *repo_mod
-      *repo_mod = getRepoMod(*mod)
-      If Not *repo_mod
-        ; no online mod found -> no update available
-        ProcedureReturn #False
-      EndIf
-    EndIf
-    
-    If settings::getInteger("", "compareVersion") And *repo_mod\version$
-      ; use alternative comparison method: version check
-      compare = Bool(*repo_mod\version$ And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\version$))
-    Else
-      ; default compare: date check
-      compare = Bool((*mod\aux\repoTimeChanged And *repo_mod\timechanged > *mod\aux\repoTimeChanged) Or
-                     (*mod\aux\installDate And *repo_mod\timechanged > *mod\aux\installDate))
-    EndIf
-    ProcedureReturn compare
-  EndProcedure
-  
   Procedure generateID(*mod.mod, id$ = "")
-    debugger::Add("mods::generateID("+Str(*mod)+", "+id$+")")
+    deb("mods::generateID("+Str(*mod)+", "+id$+")")
     Protected author$, name$, version$
     
     If Not *mod
@@ -1666,26 +2096,20 @@ Module mods
     
     With *mod
       If id$
-        debugger::Add("mods::generateID() - passed through id = {"+id$+"}")
         ; this id$ is passed through, extracted from subfolder name
         ; if it is present, check if it is well-defined
-        If checkID(id$)
-          debugger::Add("mods::generateID() - {"+id$+"} is a valid ID")
+        If modCheckID(id$)
           \tpf_id$ = id$
           ; id read from mod folder was valid, thus use it directly
           ProcedureReturn #True
-        Else
-          debugger::Add("mods::generateID() - {"+id$+"} is no valid ID - generate new ID")
         EndIf
-      Else
-        debugger::Add("mods::generateID() - no ID defined - generate new ID")
       EndIf
       
       \tpf_id$ = LCase(\tpf_id$)
       
       ; Check if ID already correct
-      If \tpf_id$ And checkID(\tpf_id$)
-        debugger::Add("mods::generateID() - ID {"+\tpf_id$+"} is well defined (from structure)")
+      If \tpf_id$ And modCheckID(\tpf_id$)
+        deb("mods::generateID() - ID {"+\tpf_id$+"} (from structure)")
         ProcedureReturn #True
       EndIf
       
@@ -1695,20 +2119,20 @@ Module mods
       version$  = Str(Abs(Val(StringField(\version$, 1, "."))))
       \tpf_id$ = author$ + "_" + name$ + "_" + version$
       
-      If \tpf_id$ And checkID(\tpf_id$)
-        debugger::Add("mods::generateID() - ID {"+\tpf_id$+"} is well defined (converted from old TFFMM-id)")
+      If \tpf_id$ And modCheckID(\tpf_id$)
+        deb("mods::generateID() - ID {"+\tpf_id$+"} (converted from old TFFMM-id)")
         ProcedureReturn #True
       EndIf
       
       \tpf_id$ = generateNewID(*mod)
       
-      If \tpf_id$ And checkID(\tpf_id$)
-        debugger::Add("mods::generateID() - ID {"+\tpf_id$+"} is well defined (generated by TPFMM)")
+      If \tpf_id$ And modCheckID(\tpf_id$)
+        deb("mods::generateID() - ID {"+\tpf_id$+"} (generated by TPFMM)")
         ProcedureReturn #True
       EndIf
     EndWith
     
-    debugger::Add("mods::generateID() - ERROR: No ID generated")
+    deb("mods:: no ID generated")
     ProcedureReturn #False
   EndProcedure
   
@@ -1717,7 +2141,6 @@ Module mods
   EndProcedure
   
   Procedure exportList(all=#False)
-    debugger::Add("Export Mod List")
     Protected file$, selectedExt$, ext$
     Protected ok = #False
     
@@ -1756,8 +2179,6 @@ Module mods
     Select LCase(GetExtensionPart(file$))
       Case "html"
         ExportListHTML(file$, all)
-      Case "txt"
-        ExportListTXT(file$, all)
       Default
         ProcedureReturn #False
     EndSelect
@@ -1778,64 +2199,15 @@ Module mods
     
     ProcedureReturn count
   EndProcedure
-  
-  Procedure getPreviewImage(*mod.mod, original=#False)
-;     debugger::add("mods::getPreviewImage("+*mod+", "+original+")")
-    Static NewMap previewImages()
-    Static NewMap previewImagesOriginal()
-    
-    If Not IsImage(previewImages(*mod\tpf_id$))
-      ; if image is not yet loaded
-      
-      Protected im.i, modFolder$
-      modFolder$ = getModFolder(*mod\tpf_id$, *mod\aux\type$)
-      Protected NewList possibeFiles$()
-      AddElement(possibeFiles$())
-      possibeFiles$() = modFolder$ + "image_00.tga"
-      AddElement(possibeFiles$())
-      possibeFiles$() = modFolder$ + "workshop_preview.jpg"
-      AddElement(possibeFiles$())
-      possibeFiles$() = modFolder$ + "preview.png"
-      
-      ForEach possibeFiles$()
-        If FileSize(possibeFiles$()) > 0
-          im = LoadImage(#PB_Any, possibeFiles$())
-          If IsImage(im)
-            Break
-          EndIf
-        EndIf
-      Next
-      
-      ClearList(possibeFiles$())
-      
-      If Not IsImage(im)
-        ProcedureReturn #False
-      EndIf
-      
-      
-      ; mod images: 210x118 / 240x135 / 320x180
-      ; dlc images: 120x80
-      previewImagesOriginal(*mod\tpf_id$) = im
-      previewImages(*mod\tpf_id$) = misc::ResizeCenterImage(im, 320, 180)
-    EndIf
-    
-    If original
-      ProcedureReturn previewImagesOriginal(*mod\tpf_id$)
-    Else
-      ProcedureReturn previewImages(*mod\tpf_id$)
-    EndIf
-  EndProcedure
-  
-  ; backup stuff
+
+  ;- backup stuff
   
   Procedure backupCleanFolder()
     Protected backupFolder$, infoFile$, zipFile$, entry$
     Protected dir, json, writeInfo
     Protected NewList backups.backupInfo()
     
-    debugger::add("mods::backupCleanFolder()")
-    
-    If main::gameDirectory$ = ""
+    If settings::getString("","path") = ""
       ProcedureReturn #False
     EndIf
     
@@ -1957,11 +2329,9 @@ Module mods
     Protected zipFile$, infoFile$
     Protected dir, json, writeInfo
     
-    debugger::add("mods::getBackupList()")
-    
     ClearList(backups())
     
-    If main::gameDirectory$ = ""
+    If settings::getString("","path") = ""
       ProcedureReturn #False
     EndIf
     
@@ -2041,17 +2411,29 @@ Module mods
     ProcedureReturn val
   EndProcedure
   
-  ; Callback
+  ;- Callback
   
   Procedure BindEventCallback(Event, *callback)
     Select event
-      Case #CallbackNewMod
+      Case #EventNewMod
         callbackNewMod = *callback
-      Case #CallbackRemoveMod
+      Case #EventRemoveMod
         callbackRemoveMod = *callback
-      Case #CallbackStopDraw
+      Case #EventStopDraw
         callbackStopDraw = *callback
     EndSelect
+  EndProcedure
+  
+  Procedure BindEventPost(ModEvent, WindowEvent, *callback)
+    If ModEvent >= 0 And ModEvent <= ArraySize(events())
+      events(ModEvent) = WindowEvent
+      If *callback
+        BindEvent(WindowEvent, *callback)
+      EndIf
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
   EndProcedure
   
 EndModule
