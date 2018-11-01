@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_misc.pbi"
+XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -1481,14 +1481,6 @@ Module mods
     n = 0
     deb("mods:: found "+MapSize(scanner())+" mods in folders")
     If count > 0
-      
-      If callbackStopDraw
-        callbackStopDraw(#True)
-      EndIf
-      If events(#EventStopDraw)
-        PostEvent(events(#EventStopDraw), #True, 0)
-      EndIf
-      
       ForEach scanner() ; for each mod found in any of the known mod folders:
         n + 1 ; update progress bar
 ;         windowMain::progressMod(100*n/count)
@@ -1509,28 +1501,19 @@ Module mods
         If *mod\name$ = ""
           deb("mods:: no name for mod {"+id$+"}")
         EndIf
-        
-        ; Display mods in list gadget
-        If callbackNewMod
-          callbackNewMod(*mod)
-        EndIf
-        If events(#EventNewMod)
-          PostEvent(events(#EventNewMod), *mod, 0)
-        EndIf
       Next
-      
-      If callbackStopDraw
-        callbackStopDraw(#False)
-      EndIf
-      If events(#EventStopDraw)
-        PostEvent(events(#EventStopDraw), #False, 0)
-      EndIf
-      
     EndIf
     
     
+    ; Final Check and display
+    If callbackStopDraw
+      callbackStopDraw(#True)
+    EndIf
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #True, 0)
+    EndIf
     
-    ; Final Check
+    ; loop all mods
     ForEach mods()
       *mod = mods()
       If *mod\tpf_id$ = "" Or MapKey(mods()) = ""
@@ -1541,7 +1524,22 @@ Module mods
       If Not *mod\aux\installDate
         *mod\aux\installDate = Date()
       EndIf
+      
+      ; Display mods in list gadget
+      If callbackNewMod
+        callbackNewMod(*mod)
+      EndIf
+      If events(#EventNewMod)
+        PostEvent(events(#EventNewMod), *mod, 0)
+      EndIf
     Next
+      
+    If callbackStopDraw
+      callbackStopDraw(#False)
+    EndIf
+    If events(#EventStopDraw)
+      PostEvent(events(#EventStopDraw), #False, 0)
+    EndIf
     
     postProgressEvent(-1, locale::l("progress", "loaded"))
 ;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
@@ -1569,7 +1567,6 @@ Module mods
     If FileSize(pTPFMM$) <> -2
       misc::CreateDirectoryAll(pTPFMM$)
     EndIf
-    
     
     LockMutex(mutexMods)
     Protected json
