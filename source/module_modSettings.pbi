@@ -1,4 +1,4 @@
-﻿
+
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_mods.h.pbi"
@@ -284,14 +284,20 @@ Module modSettings
             
             If \image$ And FileSize(modFolder$ + \image$) > 0
               \im = LoadImage(#PB_Any, modFolder$ + \image$)
-              factor = 1
-              ; If ImageWidth(\im) > #WIDTH
-                factor = #WIDTH / ImageWidth(\im)
-              ; EndIf
-              If ImageHeight(\im) * factor > #HEIGHT
-                factor = #HEIGHT / ImageHeight(\im)
+              If \im
+                factor = 1
+                ; If ImageWidth(\im) > #WIDTH
+                  factor = #WIDTH / ImageWidth(\im)
+                ; EndIf
+                If ImageHeight(\im) * factor > #HEIGHT
+                  factor = #HEIGHT / ImageHeight(\im)
+                EndIf
+                ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
+              Else ; not \im
+                deb("modSettings:: could not load image "+modFolder$+\image$)
               EndIf
-              ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
+            ElseIf \image$ ; and not filesize(...)
+              deb("modSettings:: could not find image file "+modFolder$+\image$)
             EndIf
             
             If \im
