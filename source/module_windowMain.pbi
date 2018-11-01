@@ -1039,6 +1039,7 @@ Module windowMain
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     
+    *modList\redraw() ; after all icons and buttons are added, redraw the gadget
     ProcedureReturn #True
   EndProcedure
   
@@ -1046,7 +1047,6 @@ Module windowMain
     Protected *item.CanvasList::CanvasListItem
     
     *item = *modList\AddItem(*mod\getName()+#LF$+*mod\getAuthorsString()+#LF$+"ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+FormatDate("Installed on %yyyy/%mm/%dd", *mod\getInstallDate()), *mod)
-    
     modItemSetup(*item, *mod)
   EndProcedure
   

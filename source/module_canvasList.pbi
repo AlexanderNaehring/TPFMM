@@ -48,6 +48,7 @@
   Interface CanvasList
     Free()
     Resize(x, y, width, height)
+    Redraw()
     AddItem(text$, *userdata=#Null, position = -1)
     RemoveItem(*item)
     ClearItems()
@@ -73,6 +74,7 @@
   Declare Free(*gadget)
   
   ; gadget functions
+  Declare Redraw(*gadget)
   Declare Resize(*gadget, x, y, width, height)
   Declare AddItem(*gadget, text$, *userdata=#Null, position = -1)
   Declare RemoveItem(*gadget, *item)
@@ -121,6 +123,7 @@ Module CanvasList
     vt:
     Data.i @Free()
     Data.i @Resize()
+    Data.i @Redraw()
     Data.i @AddItem()
     Data.i @RemoveItem()
     Data.i @ClearItems()
@@ -1521,7 +1524,13 @@ Module CanvasList
 ;     updateItemPosition(*this)
 ;     draw(*this)
   EndProcedure
-    
+  
+  Procedure Redraw(*this.gadget)
+    updateScrollbar(*this)
+    updateItemPosition(*this)
+    draw(*this)
+  EndProcedure
+  
   Procedure AddItem(*this.gadget, text$, *userdata=#Null, position = -1)
     Protected *item.item
     LockMutex(*this\mItemAddRemove) ; do not create / destroy items in parallel to keep thread safe!
@@ -1603,13 +1612,11 @@ Module CanvasList
         draw(*this)
       Case #AttributePauseDraw
         *this\pauseDraw = value
-        If Not *this\pauseDraw
+        If Not *this\pauseDraw ; when drawing is "unpaused", execute pending sort, calculate positions and scrollbar and redraw
           If *this\pendingSort\pending
             SortItems(*this, *this\pendingSort\mode, *this\pendingSort\sortFun, *this\pendingSort\options, *this\pendingSort\persistent)
           EndIf
-          updateItemPosition(*this)
-          updateScrollbar(*this)
-          draw(*this)
+          redraw(*this)
         EndIf
     EndSelect
   EndProcedure
