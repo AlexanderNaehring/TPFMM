@@ -1,4 +1,4 @@
-XIncludeFile "module_misc.pbi"
+﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -1607,49 +1607,6 @@ Module mods
       
       ProcedureReturn author$ + "_" + name$ + "_" + version$ ; concatenate id parts
     EndWith
-    
-  EndProcedure
-  
-  Procedure isInstalledByRemote(source$, id)
-    ; notice isInstalledByRemote() not used at the moment
-    Protected installed = #False
-    
-    If Not id
-      ProcedureReturn #False
-    EndIf
-    If source$ <> "tfnet" And
-       source$ <> "tpfnet" And
-       source$ <> "workshop"
-      ProcedureReturn #False
-    EndIf
-    
-    
-    ; search for mod in list of installed mods
-    LockMutex(mutexMods)
-    ForEach mods()
-      If StringField(mods()\aux\installSource$, 1, "/") = source$ And 
-         Val(StringField(mods()\aux\installSource$, 2, "/")) = id
-        installed = #True
-        Break
-      EndIf
-      
-      If source$ = "tfnet" Or source$ = "tpfnet"
-        If mods()\aux\tfnetID = id
-          installed = #True
-          Break
-        EndIf
-        
-      ElseIf source$ = "workshop"
-        If mods()\aux\workshopID = id
-          installed = #True
-          Break
-        EndIf
-      EndIf
-      
-    Next
-    UnlockMutex(mutexMods)
-    
-    ProcedureReturn installed
     
   EndProcedure
   
