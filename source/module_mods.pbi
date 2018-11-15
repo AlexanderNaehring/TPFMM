@@ -614,87 +614,7 @@ Module mods
     InitializeStructure(*mod, mod)
   EndProcedure
   
-  ; export function
   
-  Procedure exportListHTML(file$, all)
-    Protected file
-    Protected *mod.mod
-    Protected name$, author$, authors$
-    Protected count, i, *author.author
-    
-    file = CreateFile(#PB_Any, file$)
-    If Not file
-      deb("mods:: cannot create file {"+file$+"}")
-      ProcedureReturn #False
-    EndIf
-    
-    WriteStringN(file, "<!DOCTYPE html>", #PB_UTF8)
-    WriteString(file, "<html>", #PB_UTF8)
-    WriteString(file, "<head><meta charset='utf-8' /><meta name='Author' content='TPFMM' /><title>TPFMM Modification List Export</title><style>", #PB_UTF8)
-    WriteString(file, "h1 {color: #fff; text-align: center; width: 100%; margin: 5px 0px; padding: 10px; background: #831555} "+
-                      "table {width: 60%; min-width: 640px; background: #fff; padding: 0px; margin: 5px auto; border-collapse: collapse; border-spacing: 0px; border: 1px solid; border-color: RGBA(0, 0, 0, .2); box-shadow: 3px 3px 3px RGBA(0, 0, 0, .2); } "+
-                      "td { padding: 5px; text-align: left; vertical-align: middle; border: none; } "+
-                      "th { padding: 5px; text-align: center; vertical-align: moddle; border: none; font-weight: bold; font-size: 1.1em; border: none;background: #413e39; color: #fff } "+
-                      "tr {border: none;} "+
-                      "table tr:Not(:last-child) { border-style: solid; border-width: 0px 0px 1px 0px; border-color: RGBA(0, 0, 0, .2); } "+
-                      "table > tr:first-child > th { } "+
-                      "table tr:nth-child(even) td, table tr:nth-child(even) th { background: RGBA(0, 0, 0, .04); } "+
-                      "table tr:hover td { background: RGBA(0, 0, 0, .06) !important; } "+
-                      "footer { width: 100%; margin: 20px 0px; padding: 5px; border-top: 1px solid #413e39; text-align: right; font-size: small; color: rgba(65,62,57,.5); transition: color .5s ease-in-out } "+
-                      "footer:hover { color: #413e39; } "+
-                      "footer article { width: 60%; min-width: 640px; margin: 0px auto; padding: 0px; } "+
-                      "a { color: inherit; } "+
-                      "a:hover { color: #831555; } "+
-                      "", #PB_UTF8)
-    WriteString(file, "</style></head>", #PB_UTF8)
-    WriteString(file, "<body><h1>", #PB_UTF8)
-    WriteString(file, "List of Modifications", #PB_UTF8)
-    WriteString(file, "</h1><table><tr><th>Modification</th><th>Version</th><th>Author</th></tr>", #PB_UTF8)
-    
-    LockMutex(mutexMods)
-    ForEach mods()
-      *mod = mods()
-      With *mod
-          name$ = \name$
-          authors$ = ""
-          
-          If \url$
-            name$ = "<a href='"+ \url$ + "'>" + name$ + "</a>"
-          ElseIf \aux\tfnetID
-            name$ = "<a href='https://www.transportfever.net/filebase/index.php/Entry/" + \aux\tfnetID + "'>" + name$ + "</a>"
-          ElseIf \aux\workshopID
-            name$ = "<a href='http://steamcommunity.com/sharedfiles/filedetails/?id=" + \aux\workshopID + "'>" + name$ + "</a>"
-          EndIf
-          
-          count = modCountAuthors(*mod)
-          For i = 0 To count-1
-            *author = modGetAuthor(*mod, i)
-            If *author
-              author$ = *author\name$
-              If *author\tfnetId
-                author$ = "<a href='https://www.transportfever.net/index.php/User/" + *author\tfnetId + "'>" + author$ + "</a>"
-              EndIf
-              authors$ + author$ + ", "
-            EndIf
-          Next
-          If Len(authors$) >= 2 ; cut off ", " at the end of the string
-            authors$ = Mid(authors$, 1, Len(authors$) -2)
-          EndIf
-          
-          
-          WriteString(file, "<tr><td>" + name$ + "</td><td>" + \version$ + "</td><td>" + authors$ + "</td></tr>", #PB_UTF8)
-      EndWith
-    Next
-    UnlockMutex(mutexMods)
-    
-    WriteString(file, "</table>", #PB_UTF8)
-    WriteString(file, "<footer><article>Created with <a href='http://goo.gl/utB3xn'>TPFMM</a> "+main::VERSION$+" &copy; 2014-"+FormatDate("%yyyy",Date())+" <a href='https://www.transportfevermods.com/'>Alexander Nähring</a></article></footer>", #PB_UTF8)
-    
-    WriteString(file, "</body></html>", #PB_UTF8)
-    CloseFile(file)
-    
-    misc::openLink(File$)
-  EndProcedure
   
   Procedure convertToTGA(imageFile$)
     Protected im, i
@@ -1053,7 +973,7 @@ Module mods
   EndProcedure
   
   Procedure modGetPreviewImage(*mod.mod)
-;     debugger::add("mods::getPreviewImage("+*mod+", "+original+")")
+    ; the previewImages() map stores resized and centered (320x180, 16:9) versions of the original image in the mod folder (tga, jpg or png)
     Static NewMap previewImages()
     
     If Not IsImage(previewImages(*mod\tpf_id$))
@@ -1083,7 +1003,6 @@ Module mods
       If Not IsImage(im)
         ProcedureReturn #False
       EndIf
-      
       
       ; mod images: 210x118 / 240x135 / 320x180
       ; dlc images: 120x80
@@ -2092,51 +2011,6 @@ Module mods
   
   Procedure.s getLUA(*mod.mod)
     
-  EndProcedure
-  
-  Procedure exportList(all=#False)
-    Protected file$, selectedExt$, ext$
-    Protected ok = #False
-    
-    file$ = SaveFileRequester(locale::l("management", "export_list"), "mods", "HTML|*.html|Text|*.txt", 0)
-    If file$ = ""
-      ProcedureReturn #False
-    EndIf
-    
-    ; get selected file pattern (from dropdown in save file dialog)
-    Select SelectedFilePattern()
-      Case 1
-        selectedExt$ = "txt"
-      Default
-        selectedExt$ = "html"
-    EndSelect
-    
-    ext$ = LCase(GetExtensionPart(file$))
-    ; only if no extension is specified in filename, use extension that was selected
-    If ext$ <> "html" And ext$ <> "txt"
-      ext$ = selectedExt$
-      file$ = GetPathPart(file$) + GetFilePart(file$, #PB_FileSystem_NoExtension) + "." + ext$
-    EndIf
-    
-    If FileSize(file$) > 0
-      If MessageRequester(locale::l("management", "export_list"), locale::l("management", "overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        ok = #True
-      EndIf
-    Else
-      ok = #True
-    EndIf
-    
-    If Not ok
-      ProcedureReturn #False
-    EndIf
-    
-    Select LCase(GetExtensionPart(file$))
-      Case "html"
-        ExportListHTML(file$, all)
-      Default
-        ProcedureReturn #False
-    EndSelect
-    ProcedureReturn #True
   EndProcedure
   
   Procedure getMods(List *mods.mod())

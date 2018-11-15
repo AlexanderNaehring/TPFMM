@@ -224,9 +224,6 @@
   Declare modCountTags(*mod)
   Declare.s modGetTag(*mod, n.i)
   
-  ; export
-  Declare exportList(all=#False)
-  
   ; Bind Callback Events
   Declare BindEventCallback(Event, *callback)
   Declare BindEventPost(ModEvent, WindowEvent, *callback)
