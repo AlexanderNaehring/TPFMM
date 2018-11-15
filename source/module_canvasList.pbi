@@ -59,6 +59,7 @@
     SetSelectedItem(*item)
     GetSelectedItem()
     GetAllSelectedItems(List *items.CanvasListItem())
+    GetAllVisibleItems(List *items.CanvasListItem())
     GetAllItems(List *items.CanvasListItem())
     GetItemCount()
     SetTheme(theme$)
@@ -86,6 +87,7 @@
   Declare SetSelectedItem(*gadget, *item)
   Declare GetSelectedItem(*gadget)
   Declare GetAllSelectedItems(*gadget, List *items.CanvasListItem())
+  Declare GetAllVisibleItems(*gadget, List *items.CanvasListItem())
   Declare GetAllItems(*gadget, List *item.CanvasListItem())
   Declare GetItemCount(*gadget)
   Declare SetTheme(*gadget, theme$)
@@ -134,6 +136,7 @@ Module CanvasList
     Data.i @SetSelectedItem()
     Data.i @GetSelectedItem()
     Data.i @GetAllSelectedItems()
+    Data.i @GetAllVisibleItems()
     Data.i @GetAllItems()
     Data.i @GetItemCount()
     Data.i @SetTheme()
@@ -1688,6 +1691,21 @@ Module CanvasList
     Else
       ProcedureReturn #False
     EndIf
+  EndProcedure
+  
+  Procedure GetAllVisibleItems(*this.gadget, List *items.item())
+    Protected i
+    LockMutex(*this\mItems)
+    ClearList(*items())
+    ForEach *this\items()
+      If Not *this\items()\hidden
+        AddElement(*items())
+        *items() = *this\items()
+        i + 1
+      EndIf
+    Next
+    UnlockMutex(*this\mItems)
+    ProcedureReturn Bool(i > 0)
   EndProcedure
   
   Procedure GetAllItems(*this.gadget, List *items.item())
