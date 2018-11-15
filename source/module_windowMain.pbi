@@ -4,26 +4,6 @@ DeclareModule windowMain
   
   Global window
   
-  Enumeration FormMenu
-    CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
-      #PB_Menu_Quit
-      #PB_Menu_Preferences
-      #PB_Menu_About
-    CompilerEndIf
-    #MenuItem_AddMod
-    #MenuItem_ExportList
-    #MenuItem_ShowBackups
-    #MenuItem_ShowDownloads
-    #MenuItem_Homepage
-    #MenuItem_Log
-    #MenuItem_Enter
-    #MenuItem_CtrlA
-    #MenuItem_CtrlF
-    #MenuItem_PackNew
-    #MenuItem_PackOpen
-  EndEnumeration
-  
-  
   Enumeration progress
     #Progress_Hide      = -1
     #Progress_NoChange  = -2
@@ -50,6 +30,7 @@ XIncludeFile "animation.pb"
 Module windowMain
   UseModule debugger
   
+  ;{ Structures
   Structure dialog
     dialog.i
     window.i
@@ -60,15 +41,34 @@ Module windowMain
     window.i
     Map repoSelectFilesGadget.i()
   EndStructure
-  
+  ;}
   
   Macro gadget(name)
     DialogGadget(dialog, name)
   EndMacro
   
-  ; rightclick menu on library gadget
-;   Global MenuLibrary
-  Enumeration 
+  ;{ Enumeration
+  Enumeration
+    CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
+      #PB_Menu_Quit
+      #PB_Menu_Preferences
+      #PB_Menu_About
+    CompilerEndIf
+    #MenuItem_AddMod
+    #MenuItem_ShowBackups
+    #MenuItem_ShowDownloads
+    #MenuItem_Homepage
+    #MenuItem_Log
+    #MenuItem_Enter
+    #MenuItem_CtrlA
+    #MenuItem_CtrlF
+    #MenuItem_PackNew
+    #MenuItem_PackOpen
+    
+    #MenuItem_ShareSelected
+    #MenuItem_ShareFiltered
+    #MenuItem_ShareAll
+    
     #MenuItem_Information
     #MenuItem_Backup
     #MenuItem_Uninstall
@@ -113,14 +113,15 @@ Module windowMain
     #TabSaves
     #TabSettings
   EndEnumeration
+  ;}
   
-  
+  ;{ Gobals
   Global xml ; keep xml dialog in order to manipulate for "selectFiles" dialog
   
   Global dialog
   Global modFilter.dialog, modSort.dialog,
          repoFilter.dialog, repoSort.dialog
-  Global menu
+  Global menu, menuShare
   Global currentTab
   
   ;- Timer
@@ -134,8 +135,9 @@ Module windowMain
   Global *saveModList.CanvasList::CanvasList
   
   Global *workerAnimation.animation::animation
+  ;}
   
-  
+  ;{ Declares
   ; required declares
   Declare create()
   Declare saveOpenFile(file$)
@@ -145,6 +147,9 @@ Module windowMain
   Declare navBtnOnline()
   Declare navBtnSaves()
   Declare navBtnBackups()
+  ;}
+  
+  UseJPEGImageEncoder()
   
   ;----------------------------------------------------------------------------
   ;--------------------------------- PRIVATE ----------------------------------
@@ -531,10 +536,6 @@ Module windowMain
   
   Procedure MenuItemSettings() ; open settings window
     windowSettings::show()
-  EndProcedure
-  
-  Procedure MenuItemExport()
-    mods::exportList()
   EndProcedure
   
   Procedure MenuItemEnter()
@@ -1128,6 +1129,156 @@ Module windowMain
   Procedure modAddToPack()
     windowPack::show(window)
     windowPack::addSelectedMods()
+  EndProcedure
+  
+  Structure shareMods
+    foldername$
+    name$
+    author$
+    version$
+    imageB64$
+    url$
+  EndStructure
+  Global modShareHTML$
+  misc::BinaryAsString("html/mods.html", modShareHTML$)
+  
+  Procedure modShareList(List *mods.mods::LocalMod())
+    deb("mainWindow:: modShareList")
+    Protected file$, file
+    Protected i, im, *buffer
+    Protected json, json$
+    Protected html$
+    
+    If Not ListSize(*mods())
+      deb("mainWindow:: no mods in share list")
+      ProcedureReturn #False
+    EndIf
+    
+    Protected Dim shareMods.shareMods(ListSize(*mods())-1)
+    
+    Debug "export "+ListSize(*mods())+" mods"
+    
+    ; get filename
+    file$ = SaveFileRequester(locale::l("management", "export_list"), settings::getString("export", "last"), "HTML|*.html", 0)
+    If file$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    If LCase(GetExtensionPart(file$)) <> "html"
+      file$ = file$ + ".html"
+    EndIf
+    settings::setString("export", "last", file$)
+    
+    If FileSize(file$) > 0
+      If Not MessageRequester(locale::l("management", "export_list"), locale::l("management", "overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    ; prepare export
+    i = 0
+    ForEach *mods()
+      shareMods(i)\foldername$  = *mods()\getFoldername()
+      shareMods(i)\name$        = *mods()\getName()
+      shareMods(i)\author$      = *mods()\getAuthorsString()
+      shareMods(i)\version$     = *mods()\getVersion()
+      
+      im = *mods()\getPreviewImage() ; resized and centered image of size 320x180
+      If im
+;         im = CopyImage(im, #PB_Any) : ResizeImage(im, 240, 135) ; create copy and resize
+        *buffer = EncodeImage(im, #PB_ImagePlugin_JPEG, 8, 24)
+        If *buffer
+          Debug "encoded preview image ("+ImageWidth(im)+"x"+ImageHeight(im)+") as JPEG with "+StrD(MemorySize(*buffer)/1024, 2)+" kiB"
+          shareMods(i)\imageB64$ = "data:image/jpeg;base64,"+Base64Encoder(*buffer, MemorySize(*buffer))
+          FreeMemory(*buffer)
+        Else
+          Debug "could not encode image"
+        EndIf
+;         FreeImage(im)
+      Else
+        Debug "no preview image number"
+      EndIf
+      
+      i + 1
+    Next
+    
+    json = CreateJSON(#PB_Any)
+    InsertJSONArray(JSONValue(json), shareMods())
+    json$ = ComposeJSON(json, #PB_JSON_PrettyPrint)
+    FreeJSON(json)
+    
+    html$ = modShareHTML$
+    html$ = ReplaceString(html$, "{title}", locale::l("share", "title"), #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{copyright}", locale::l("share", "copyright"), #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{date}", FormatDate("%yyyy-%mm-%dd", Date()), #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{TPFMM-version}", main::VERSION$, #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{mod-list}", json$, #PB_String_CaseSensitive, 1, 1)
+    
+    ; write file
+    file = CreateFile(#PB_Any, file$)
+    If file
+      WriteString(file, html$, #PB_UTF8)
+      CloseFile(file)
+      deb("windowMain:: finished exporting mod list")
+      misc::openLink(file$)
+      ProcedureReturn #True
+    Else
+      deb("windowMain:: could not create file "+file$)
+      ProcedureReturn #False
+    EndIf
+  EndProcedure
+  
+  Procedure modShareSelected()
+    Protected NewList *mods.mods::LocalMod()
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If *modList\GetAllSelectedItems(*items())
+      ForEach *items()
+        AddElement(*mods())
+        *mods() = *items()\GetUserData()
+      Next
+    EndIf
+    
+    modShareList(*mods())
+  EndProcedure
+  
+  Procedure modShareFiltered()
+    Protected NewList *mods.mods::LocalMod()
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If *modList\GetAllVisibleItems(*items())
+      ForEach *items()
+        AddElement(*mods())
+        *mods() = *items()\GetUserData()
+      Next
+    EndIf
+    
+    modShareList(*mods())
+  EndProcedure
+  
+  Procedure modShareAll()
+    Protected NewList *mods.mods::LocalMod()
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If *modList\GetAllItems(*items())
+      ForEach *items()
+        AddElement(*mods())
+        *mods() = *items()\GetUserData()
+      Next
+    EndIf
+    
+    modShareList(*mods())
+  EndProcedure
+  
+  Procedure modShareShowPopup()
+    ;TODO activate/deactivate "selected" menu entry based on items being selected
+    Protected NewList *items.CanvasList::CanvasListItem()
+    If *modList\GetAllSelectedItems(*items())
+      DisableMenuItem(menuShare, #MenuItem_ShareSelected, #False)
+    Else
+      DisableMenuItem(menuShare, #MenuItem_ShareSelected, #True)
+    EndIf
+    DisplayPopupMenu(menuShare, WindowID(window))
   EndProcedure
   
   Procedure modShowDownloadFolder()
@@ -2050,7 +2201,7 @@ Module windowMain
   
   ;- shortcuts
   
-  Procedure shortCutCtrlF()
+  Procedure shortcutCtrlF()
     Select currentTab
       Case #TabMods
         modFilterShow()
@@ -2388,6 +2539,7 @@ Module windowMain
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
     BindGadgetEvent(gadget("modUninstall"),     @modUninstall())
     BindGadgetEvent(gadget("modList"),          @modListEvent())
+    BindGadgetEvent(gadget("modShare"),         @modShareShowPopup())
     
     ; repo tab
     BindGadgetEvent(gadget("repoSort"),         @repoSortShow())
@@ -2422,7 +2574,7 @@ Module windowMain
     MenuItem(#PB_Menu_Quit, l("menu","close") + Chr(9) + "Alt + F4")
     MenuTitle(l("menu","mods"))
     MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
-    MenuItem(#MenuItem_ExportList, l("menu","mod_export"))
+;     MenuItem(#MenuItem_, l("menu","mod_export"))
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
     MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
@@ -2441,7 +2593,7 @@ Module windowMain
     BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
     BindMenuEvent(menu, #PB_Menu_Quit, @close())
     BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
-    BindMenuEvent(menu, #MenuItem_ExportList, @MenuItemExport())
+;     BindMenuEvent(menu, #MenuItem_ExportList, )
     BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
     BindMenuEvent(menu, #MenuItem_ShowDownloads, @modShowDownloadFolder())
 ;     BindMenuEvent(menu, #MenuItem_RepositoryRefresh, @repoRefresh())
@@ -2469,6 +2621,19 @@ Module windowMain
     BindMenuEvent(menu, #MenuItem_Enter, @MenuItemEnter())
     BindMenuEvent(menu, #MenuItem_CtrlA, @MenuItemSelectAll())
     BindMenuEvent(menu, #MenuItem_CtrlF, @shortCutCtrlF())
+    
+    
+    ; popup menu
+    menuShare = CreatePopupMenu(#PB_Any)
+    If menuShare
+      MenuItem(#MenuItem_ShareSelected, l("menu", "share_selected"))
+      MenuItem(#MenuItem_ShareFiltered, l("menu", "share_filtered"))
+      MenuItem(#MenuItem_ShareAll,      l("menu", "share_all"))
+      
+      BindMenuEvent(menuShare, #MenuItem_ShareSelected, @modShareSelected())
+      BindMenuEvent(menuShare, #MenuItem_ShareFiltered, @modShareFiltered())
+      BindMenuEvent(menuShare, #MenuItem_ShareAll,      @modShareAll())
+    EndIf
     
     
     ; indicate testmode in window title

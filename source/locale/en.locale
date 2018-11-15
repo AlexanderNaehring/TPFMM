@@ -267,6 +267,10 @@ cleanup     = Cleanup...
 goodbye     = Goodbye!
 force_close = Force close
 
+[share]
+title       = List of Modifications
+copyright   = Created on {date} by <a href='https://transportfevermods.com/'>Transport Fever Mod Manager (TPFMM)</a>.<br />{TPFMM-version} &copy; Alexander Nähring, Munich, Germany
+
 [tags]
 all         = All
 mod         = Modification
