@@ -198,14 +198,15 @@ Module wget
   ;         Debug str$
           STDERR$ + str$ + #CRLF$
           
-          ExamineRegularExpression(regExpProgress, str$)
-          If NextRegularExpressionMatch(regExpProgress)
-            *this\progress = Val(RegularExpressionGroup(regExpProgress, 1))
-            If *this\onProgress\event
-              PostEvent(*this\onProgress\event, *this\progress, *this)
-            EndIf
-            If *this\onProgress\callback
-              *this\onProgress\callback(*this)
+          If ExamineRegularExpression(regExpProgress, str$)
+            If NextRegularExpressionMatch(regExpProgress)
+              *this\progress = Val(RegularExpressionGroup(regExpProgress, 1))
+              If *this\onProgress\event
+                PostEvent(*this\onProgress\event, *this\progress, *this)
+              EndIf
+              If *this\onProgress\callback
+                *this\onProgress\callback(*this)
+              EndIf
             EndIf
           EndIf
         EndIf
