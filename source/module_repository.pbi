@@ -1012,8 +1012,8 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure.s modGetLink(*mod)
-    ; TODO modGetLink()
+  Procedure.s modGetLink(*mod.mod)
+    ProcedureReturn *mod\source$+"/"+*mod\id
   EndProcedure
   
   Procedure.s modGetThumbnailUrl(*mod.mod)
@@ -1342,7 +1342,8 @@ Module repository
   EndProcedure
   
   Procedure.s fileGetLink(*file.file)
-    ; TODO fileGetLink()
+    Protected *mod.mod = *file\mod
+    ProcedureReturn *mod\source$+"/"+*mod\id+"/"+*file\fileid
   EndProcedure
   
   Procedure.s fileGetFolderName(*file.file)

@@ -881,33 +881,40 @@ Module mods
     
     Protected source$
     Protected id.q, fileID.q
+    Protected *repoFile.repository::RepositoryFile
     
+    ; source saved by TPFMM during installation
     If *mod\aux\installSource$
       source$ = StringField(*mod\aux\installSource$, 1, "/")
       id      = Val(StringField(*mod\aux\installSource$, 2, "/"))
       fileID  = Val(StringField(*mod\aux\installSource$, 3, "/"))
+      If source$ And id And fileID
+        ProcedureReturn source$+"/"+id+"/"+fileID
+      EndIf
+      If source$ And id
+        ProcedureReturn source$+"/"+id
+      EndIf
     EndIf
     
-    If source$ And fileID
-      ProcedureReturn source$+"/"+id+"/"+fileID
+    ; try to find a matching mod by foldername in current online sources
+    *repoFile = repository::getFileByFoldername(modGetFoldername(*mod))
+    If *repoFile
+      ProcedureReturn *repoFile\getLink()
     EndIf
     
-    If source$ And id
-      ProcedureReturn source$+"/"+id
-    EndIf
-    
+    ; try to build link using local information in mod.lua
     If (source$ = "tpfnet" Or source$ = "tfnet") And *mod\aux\tfnetID
       ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
     ElseIf source$ = "workshop" And *mod\aux\workshopID
       ProcedureReturn "workshop/"+*mod\aux\workshopID
     EndIf
-    
     If *mod\aux\tfnetID
       ProcedureReturn "tpfnet/"+*mod\aux\tfnetID
     ElseIf *mod\aux\workshopID
       ProcedureReturn "workshop/"+*mod\aux\workshopID
     EndIf
     
+    ; no link available
     ProcedureReturn ""
   EndProcedure
   
@@ -931,15 +938,20 @@ Module mods
   EndProcedure
   
   Procedure.s modGetWebsite(*mod.mod)
-    Protected website$
+    Protected website$, *repoMod.repository::RepositoryMod
     If *mod\url$
       website$ = *mod\url$
     ElseIf *mod\aux\tfnetID
       website$ = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID
     ElseIf *mod\aux\workshopID
       website$ = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
+    Else
+      *repoMod = modGetRepoMod(*mod)
+      If *repoMod
+        website$ = *repoMod\getWebsite()
+      EndIf
     EndIf
-    ; TODO use repository and mod foldername to get website!
+    
     ProcedureReturn website$
   EndProcedure
   
