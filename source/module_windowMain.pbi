@@ -1137,7 +1137,9 @@ Module windowMain
     author$
     version$
     imageB64$
-    url$
+    website$
+    download$
+    source$
   EndStructure
   Global modShareHTML$
   misc::BinaryAsString("html/mods.html", modShareHTML$)
@@ -1182,6 +1184,21 @@ Module windowMain
       shareMods(i)\name$        = *mods()\getName()
       shareMods(i)\author$      = *mods()\getAuthorsString()
       shareMods(i)\version$     = *mods()\getVersion()
+      shareMods(i)\website$     = *mods()\getWebsite()
+      shareMods(i)\download$    = *mods()\getDownloadLink()
+      If shareMods(i)\download$
+        shareMods(i)\download$  = "tpfmm://download/"+shareMods(i)\download$
+      EndIf
+      
+      If *mods()\isVanilla()
+        shareMods(i)\source$    = "vanilla"
+      ElseIf *mods()\isWorkshop()
+        shareMods(i)\source$    = "workshop"
+      ElseIf *mods()\isStagingArea()
+        shareMods(i)\source$    = ""
+      Else
+        shareMods(i)\source$    = "manual"
+      EndIf
       
       im = *mods()\getPreviewImage() ; resized and centered image of size 320x180
       If im
