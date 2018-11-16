@@ -8,13 +8,15 @@
 
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
         <hbox expand='item:2'>
-          <vbox expand='no' width='80' comment='nav-bar on left side'>
+          <vbox expand='item:6' width='80' comment='nav-bar on left side'>
             <buttonimage name='btnMods' flags='#PB_Button_Toggle' />
             <buttonimage name='btnOnline' flags='#PB_Button_Toggle' />
             <buttonimage name='btnBackups' flags='#PB_Button_Toggle' />
             <buttonimage name='btnMaps' flags='#PB_Button_Toggle' />
             <buttonimage name='btnSaves' flags='#PB_Button_Toggle' />
-            <buttonimage name='btnSettings' flags='#PB_Button_Toggle' />
+            <empty />
+            <buttonimage name='btnSettings' flags='' />
+            <buttonimage name='btnHelp' flags='' />
           </vbox>
           <multibox comment='main content area'>
             <container name='containerMods' invisible='yes' flags='' > <!--#PB_Container_Flat-->

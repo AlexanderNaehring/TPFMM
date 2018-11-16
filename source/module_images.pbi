@@ -83,6 +83,7 @@ Module images
     IncludeAndLoadImage("navSaves",      "images/nav-btn/saves.png")
     IncludeAndLoadImage("navBackups",   "images/nav-btn/backups.png")
     IncludeAndLoadImage("navSettings",  "images/nav-btn/settings.png")
+    IncludeAndLoadImage("navHelp",      "images/nav-btn/help.png")
     
     ; list sort / filter buttons
     IncludeAndLoadImage("btnSort",      "images/btn/16/sort.png")

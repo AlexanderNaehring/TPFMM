@@ -629,6 +629,12 @@ Module windowMain
     SetGadgetState(gadget("btnSettings"), 0)
   EndProcedure
   
+  Procedure navBtnHelp()
+    deb("windowMain:: navBtnHelp()")
+    misc::openLink("https://www.transportfevermods.com/tpfmm/help.html")
+    SetGadgetState(gadget("btnHelp"), 0)
+  EndProcedure
+  
   ;- --------------------
   ;- mod tab
   
@@ -2311,6 +2317,7 @@ Module windowMain
     GadgetToolTip(gadget("btnBackups"),   l("main","backups"))
     GadgetToolTip(gadget("btnSaves"),     l("main","saves"))
     GadgetToolTip(gadget("btnSettings"),  l("menu","settings"))
+    GadgetToolTip(gadget("btnHelp"),      l("main","help"))
     
     ; mod tab
     GadgetToolTip(gadget("modFilter"),          l("main","filter"))
@@ -2441,6 +2448,7 @@ Module windowMain
     SetGadgetAttribute(gadget("btnMaps"),     #PB_Button_Image,   ImageID(images::Images("navMaps")))
     SetGadgetAttribute(gadget("btnSaves"),    #PB_Button_Image,   ImageID(images::Images("navSaves")))
     SetGadgetAttribute(gadget("btnSettings"), #PB_Button_Image,   ImageID(images::Images("navSettings")))
+    SetGadgetAttribute(gadget("btnHelp"),     #PB_Button_Image,   ImageID(images::Images("navHelp")))
     DisableGadget(gadget("btnMaps"), #True)
     
     ; mod tab
@@ -2465,7 +2473,7 @@ Module windowMain
     SetGadgetAttribute(gadget("saveOpen"),      #PB_Button_Image, ImageID(images::images("btnOpen")))
     SetGadgetAttribute(gadget("saveDownload"),  #PB_Button_Image, ImageID(images::images("btnDownload")))
     SetGadgetFont(gadget("saveName"), FontID(fontBig))
-    SetGadgetColor(gadget("saveName"), #PB_Gadget_FrontColor, $63472F) ; #2F4763
+    SetGadgetColor(gadget("saveName"), #PB_Gadget_FrontColor, $42332a);$63472F) ; #2F4763
     DisableGadget(gadget("saveDownload"), #True)
 
     
@@ -2481,6 +2489,7 @@ Module windowMain
     BindGadgetEvent(gadget("btnBackups"),       @navBtnBackups())
     BindGadgetEvent(gadget("btnSaves"),         @navBtnSaves())
     BindGadgetEvent(gadget("btnSettings"),      @navBtnSettings())
+    BindGadgetEvent(gadget("btnHelp"),          @navBtnHelp())
     
     ; mod tab
     BindGadgetEvent(gadget("modFilter"),        @modFilterShow())
