@@ -1225,6 +1225,7 @@ Module windowMain
     FreeJSON(json)
     
     html$ = modShareHTML$
+    html$ = ReplaceString(html$, "{language}", locale::getCurrentLocale(), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{title}", locale::l("share", "title"), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{copyright}", locale::l("share", "copyright"), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{date}", FormatDate("%yyyy-%mm-%dd", Date()), #PB_String_CaseSensitive, 1, 1)
