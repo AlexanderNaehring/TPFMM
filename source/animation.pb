@@ -403,7 +403,8 @@ Module animation
     Protected time = ElapsedMilliseconds()
     
     pause(*this)
-    deb("animation:: load ani file "+#DQUOTE$+aniFile$+#DQUOTE$)
+    deb("animation:: load ani file "+#DQUOTE$+aniFile$+#DQUOTE$+" #"+*this)
+    
     
     pack = OpenPack(#PB_Any, aniFile$, #PB_PackerPlugin_Tar)
     If pack

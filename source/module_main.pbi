@@ -179,9 +179,11 @@ Module main
   EndProcedure
   
   Procedure closeProgressWindow()
+    Debug "closeProgressWindow()"
     If progressDialog\window
       progressDialog\onClose = -1 ; decativate the "on close event" as close is triggered manually
-      progressDialog\ani\pause(); if garbage collector closes window before the animation is stopped/freed, animation update will cause IMA
+      progressDialog\ani\pause()  ; if garbage collector closes window before the animation is stopped/freed, animation update will cause IMA
+      Delay(progressDialog\ani\getInterval()*2) ; wait for 2 intervals to make sure that no draw call is made after pause()
       
       If isMainThread()
         closeProgressWindowEvent()

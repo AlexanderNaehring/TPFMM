@@ -253,6 +253,7 @@ Module windowMain
     ; todo make sure that all resources are correctly freed
     ; e.g. better check mods/repo memory
     ; also close any windows (settings, mod info, dialogs, etc...)
+    deb("windowMain:: closeThread("+Event+")")
     
     HideWindow(window, #True)
     
@@ -292,6 +293,13 @@ Module windowMain
     
     main::setProgressPercent(99)
     main::setProgressText(locale::l("progress", "goodbye"))
+    
+    ; free all dialogs
+    FreeDialog(modFilter\dialog)
+    FreeDialog(modSort\dialog)
+    FreeDialog(repoFilter\dialog)
+    FreeDialog(repoSort\dialog)
+    windowSettings::close()
     
     main::closeProgressWindow()
     PostEvent(event) ; inform main thread that closure procedure is finished
@@ -1809,7 +1817,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))

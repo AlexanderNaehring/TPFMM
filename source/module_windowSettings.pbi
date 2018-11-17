@@ -5,6 +5,7 @@ DeclareModule windowSettings
   
   Declare create(parentWindow)
   Declare show()
+  Declare close()
   
 EndDeclareModule
 
@@ -469,6 +470,10 @@ Module windowSettings
     PostEvent(#PB_Event_RestoreWindow, window, window)
     DisableWindow(_parentW, #True)
     SetActiveWindow(window)
+  EndProcedure
+  
+  Procedure close()
+    FreeDialog(_dialog)
   EndProcedure
   
 EndModule
