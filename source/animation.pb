@@ -13,6 +13,7 @@
     loadAni(aniFile$)
     play()
     pause()
+    drawNextFrame() ; draw current frame and set internal frame id to next frame
     
     setCanvas(canvas)
     setInterval(interval)
@@ -40,6 +41,7 @@
   Declare loadAni(*ani.animation, aniFile$)
   Declare play(*ani.animation)
   Declare pause(*ani.animation)
+  Declare drawNextFrame(*ani.animation)
   
   Declare setCanvas(*ani.animation, canvas)
   Declare setInterval(*ani.animation, interval)
@@ -67,6 +69,7 @@ Module animation
     Data.i @loadAni()
     Data.i @play()
     Data.i @pause()
+    Data.i @drawNextFrame()
     
     Data.i @setCanvas()
     Data.i @setInterval()
@@ -136,31 +139,31 @@ Module animation
     FreeStructure(*this)
   EndProcedure
   
+  Procedure selectNextFrame(*this.ani)
+    If *this\reverse
+      *this\frame - 1
+      If *this\frame < 0
+        *this\frame = ArraySize(*this\frames())
+      EndIf
+    Else
+      *this\frame + 1
+      If *this\frame > ArraySize(*this\frames())
+        *this\frame = 0
+      EndIf
+    EndIf
+  EndProcedure
   
   Procedure aniThread(*this.ani)
+    Debug "animation:: start aniThread("+*this+")"
     Repeat
       If *this\playing
         draw(*this)
-        
-        ; select next frame
-        If *this\reverse
-          *this\frame - 1
-          If *this\frame < 0
-            *this\frame = ArraySize(*this\frames())
-          EndIf
-        Else
-          *this\frame + 1
-          If *this\frame > ArraySize(*this\frames())
-            *this\frame = 0
-          EndIf
-        EndIf
-    
+        selectNextFrame(*this)
         Delay(*this\interval)
       Else ; paused
         Delay(1)
       EndIf
     Until *this\exit
-    
   EndProcedure
   
   Procedure getImageSequenceFiles(filePattern$, List files$())
@@ -321,13 +324,14 @@ Module animation
   ;- public methods
   
   Procedure free(*this.ani, timeout=1000)
+    Debug "animation:: free("+*this+")"
     *this\playing = #False
     *this\exit = #True
     If *this\thread
       WaitThread(*this\thread, timeout)
       If IsThread(*this\thread)
         deb("animation:: WARNING: killing animation thread now!")
-        ; thread did not finish!
+        DebuggerWarning("animation:: thread could not finish")
         KillThread(*this\thread)
       EndIf
     EndIf
@@ -347,6 +351,10 @@ Module animation
     EndIf
     
     If *this\canvas
+      If Not IsGadget(*this\canvas)
+        DebuggerError("canvas not real")
+      EndIf
+      
       If StartDrawing(CanvasOutput(*this\canvas))
         If *this\frames(*this\frame)
           ; clear canvas
@@ -360,7 +368,7 @@ Module animation
           DrawImage(ImageID(*this\frames(*this\frame)), 0, 0, GadgetWidth(*this\canvas), GadgetHeight(*this\canvas))
         EndIf
         ; draw debug info
-        CompilerIf 0 And #PB_Compiler_Debugger
+        CompilerIf #PB_Compiler_Debugger
           DrawingMode(#PB_2DDrawing_AlphaBlend|#PB_2DDrawing_Transparent)
           DrawText(2, 2, "image "+*this\frame, $C0000080)
         CompilerEndIf
@@ -459,6 +467,11 @@ Module animation
     *this\playing = #False
   EndProcedure
   
+  Procedure drawNextFrame(*this.ani)
+    *this\playing = #False
+    draw(*this)
+    selectNextFrame(*this)
+  EndProcedure
   
   Procedure setCanvas(*this.ani, canvas)
     ; TODO also set coordinates (x,y,w,h) to only draw on certain region?

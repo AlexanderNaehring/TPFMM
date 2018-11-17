@@ -160,6 +160,12 @@ Module main
     EndIf
   EndProcedure
   
+  Procedure progressWindowTimer()
+    If EventTimer() = 0
+      progressDialog\ani\drawNextFrame()
+    EndIf
+  EndProcedure
+  
   Procedure closeProgressWindowEvent()
     ; cannot close a window from a thread, must be main thread
     If Not isMainThread()
@@ -167,6 +173,7 @@ Module main
     EndIf
     
     If progressDialog\window
+      Debug "close progress window routine starting..."
       progressDialog\ani\free()
       CloseWindow(progressDialog\window)
       FreeDialog(progressDialog\dialog)
@@ -188,6 +195,7 @@ Module main
       If isMainThread()
         closeProgressWindowEvent()
       Else
+        RemoveWindowTimer(progressDialog\window, 0)
         PostEvent(#PB_Event_CloseWindow, progressDialog\window, 0)
       EndIf
     EndIf
@@ -216,14 +224,18 @@ Module main
     SetWindowTitle(progressDialog\window, title$)
 ;     SetGadgetState(DialogGadget(dialog, "logo"), ImageID(images::images("logo")))
     
+    Debug "load progress window animation"
     progressDialog\ani = animation::new()
     progressDialog\ani\loadAni("images/logo/logo.ani")
     progressDialog\ani\setInterval(1000/60)
     progressDialog\ani\setCanvas(DialogGadget(dialog, "logo"))
-    progressDialog\ani\play()
+    
+    AddWindowTimer(progressDialog\window, 0, progressDialog\ani\getInterval())
+    BindEvent(#PB_Event_Timer, @progressWindowTimer(), progressDialog\window)
     
     SetWindowColor(progressDialog\window, #White)
     SetGadgetColor(progressDialog\gText, #PB_Gadget_BackColor, #White)
+    SetGadgetColor(progressDialog\gText, #PB_Gadget_FrontColor, #Black)
     
     RefreshDialog(dialog)
     
