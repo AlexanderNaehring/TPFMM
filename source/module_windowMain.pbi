@@ -719,7 +719,9 @@ Module windowMain
     If *modList\GetAllItems(*items())
       ForEach *items()
         *mod = *items()\GetUserData()
-        mods::update(*mod\getID())
+        If *mod\isUpdateAvailable()
+          mods::update(*mod\getID())
+        EndIf
       Next
     EndIf
     
@@ -850,6 +852,14 @@ Module windowMain
           ; special search strings
           If LCase(s$) = "!settings"
             If *mod\hasSettings()
+              Continue
+            Else
+              ProcedureReturn #False
+            EndIf
+          EndIf
+          
+          If LCase(s$) = "!update"
+            If *mod\isUpdateAvailable()
               Continue
             Else
               ProcedureReturn #False
@@ -1799,7 +1809,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))

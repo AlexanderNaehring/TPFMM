@@ -22,6 +22,7 @@ Module mods
     Data.i @modGetTags()
     Data.i @modGetDownloadLink()
     Data.i @modGetRepoMod()
+    Data.i @modGetRepoFile()
     Data.i @modGetSize()
     Data.i @modGetWebsite()
     Data.i @modGetTfnetID()
@@ -920,14 +921,20 @@ Module mods
   
   Procedure modGetRepoMod(*mod.mod)
     Protected *repoMod
-    
     *repoMod = repository::getModByFoldername(modGetFoldername(*mod))
-    
     If Not *repoMod
       *repoMod  = repository::getModByLink(modGetDownloadLink(*mod))
     EndIf
-    
     ProcedureReturn *repoMod
+  EndProcedure
+  
+  Procedure modGetRepoFile(*mod.mod)
+    Protected *repoFile
+    *repoFile = repository::getFileByFoldername(modGetFoldername(*mod))
+    If Not *repoFile
+      *repoFile = repository::getFileByLink(modGetDownloadLink(*mod))
+    EndIf
+    ProcedureReturn *repoFile
   EndProcedure
   
   Procedure modGetSize(*mod.mod, refresh=#False)
@@ -1927,6 +1934,7 @@ Module mods
     
     Protected *mod.mod
     Protected *repoMod.repository::RepositoryMod
+    Protected *repoFile.repository::RepositoryFile
     
     LockMutex(mutexMods)
     *mod = FindMapElement(mods(), id$)
@@ -1936,11 +1944,21 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    *repoMod = modGetRepoMod(*mod)
-    If *repoMod
-      *repoMod\download() ; will take care of dialog window and main thread itself
+    ; try to find direct repo file downlaod by file ID
+    ; attention: if multiple online files available for same foldername, only one is returned!
+    ; TODO change which file/mod is returned, e.g. by using the latest (by date)?
+    *repoFile = modGetRepoFile(*mod)
+    If *repoFile
+      ProcedureReturn *repoFile\download() ; starts download in new thread
     EndIf
     
+    ; if no direct file is found, try to find the mod (which may have multiple files as selction for the user)
+    *repoMod = modGetRepoMod(*mod)
+    If *repoMod
+      ProcedureReturn *repoMod\download() ; direct download or show user selection for file to download
+    EndIf
+    
+    ProcedureReturn #False
   EndProcedure
   
   ;- actions (public)
