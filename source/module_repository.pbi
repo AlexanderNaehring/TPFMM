@@ -131,8 +131,8 @@ Module repository
   Global NewMap ModRepositories.modRepository() ; allow multiple repositories -> use map, with repository URL as key
   Global NewMap *filesByFoldername.mod()        ; pointer to original mods in ModRepositories\mods() with foldername as key
   Global mutexMods = CreateMutex(),
-         mutexFilesMap = CreateMutex(),
-         _mutexDownload = CreateMutex()
+         mutexFilesMap = CreateMutex()
+  Global _semaphoreDownload = CreateSemaphore(1); max number of parallel downloads
          
   Global CallbackAddMods.CallbackAddMods
   Global CallbackClearList.CallbackClearList
@@ -1078,50 +1078,6 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure fileDownloadMonitor(*download.download)
-    ; monitor the download and send event on success/failure
-    Protected progress, lastBytes, bytes, finish, time
-    
-    time = ElapsedMilliseconds()
-    
-    Repeat
-      progress = HTTPProgress(*download\con)
-      
-      If lastBytes = progress
-        ; download stuck? no new bytes received
-        If ElapsedMilliseconds() - time > *download\timeout
-          deb("repository:: download timeout after "+Str(*download\timeout/1000)+" s")
-          AbortHTTP(*download\con)
-        EndIf
-      Else
-        ; download is active, new bytes received
-        lastBytes = progress
-      EndIf
-      
-      If progress < 0
-        bytes = FinishHTTP(*download\con)
-        finish = #True
-        Select progress
-          Case #PB_Http_Success
-            deb("repository:: download success "+*download\url$)
-          Case #PB_Http_Failed
-            deb("repository:: download failed "+*download\url$)
-          Case #PB_Http_Aborted
-            deb("repository:: download aborted "+*download\url$)
-        EndSelect
-      Else
-        If *download\size
-          postProgressEvent(100 * progress / *download\size)
-        EndIf
-      EndIf
-      
-      Delay(100)
-    Until finish
-    
-    ProcedureReturn bytes
-    
-  EndProcedure
-  
   Procedure fileDownloadProgress(*wget.wget::wget)
     postProgressEvent(*wget\getProgress())
   EndProcedure
@@ -1145,7 +1101,7 @@ Module repository
     
     postProgressEvent(-1, locale::getEx("repository", "download_fail", strings$()))
     
-    UnlockMutex(_mutexDownload)
+    SignalSemaphore(_semaphoreDownload)
     If events(#EventWorkerStops)
       PostEvent(events(#EventWorkerStops))
     EndIf
@@ -1174,7 +1130,7 @@ Module repository
     
     mods::install(filename$)
     
-    UnlockMutex(_mutexDownload)
+    SignalSemaphore(_semaphoreDownload)
     If events(#EventWorkerStops)
       PostEvent(events(#EventWorkerStops))
     EndIf
@@ -1186,9 +1142,17 @@ Module repository
     Protected filename$, folder$
     Protected NewMap strings$()
     
+    ;TODO make sure that not in main thread? -> semaphore may wait
+    ;TODO move download wait check (semaphore) to wget?
     
     ; only one download at a time
-    LockMutex(_mutexDownload)
+    ; simple: just "WaitSemaphore()", TrySemaphore() only for debug
+    If Not TrySemaphore(_semaphoreDownload)
+      deb("repository:: wait for free download slot...")
+      WaitSemaphore(_semaphoreDownload)
+      deb("repository:: download slot got available, start now")
+    EndIf
+    
     If events(#EventWorkerStarts)
       PostEvent(events(#EventWorkerStarts))
     EndIf
@@ -1217,128 +1181,6 @@ Module repository
     *wget\CallbackOnSuccess(@fileDownloadSuccess())
     *wget\CallbackOnError(@fileDownloadError())
     *wget\download()
-  EndProcedure
-  
-  Procedure fileDownload_old(*file.file)
-    Protected *download.download
-    Protected folder$, header$, HTTPstatus, bytes, failure.b
-    Protected NewMap strings$()
-    
-    ;{ regular expressions for HTTP header
-    Static regExpContentLength, regExpHTTPstatus
-    If Not regExpContentLength
-      regExpContentLength = CreateRegularExpression(#PB_Any, "Content-Length: ([0-9]+)")
-    EndIf
-    If Not regExpHTTPstatus
-      regExpHTTPstatus = CreateRegularExpression(#PB_Any, "HTTP/\d.\d (\d\d\d)")
-    EndIf
-    ;}
-    
-    If main::isMainThread()
-      ; make sure this function is not in main thread
-      deb("repository:: fileDownload() fork")
-      CreateThread(@fileDownload(), *file)
-      ProcedureReturn #True
-    EndIf
-    
-    ; only one download at a time
-    Static mutexDownload
-    If Not mutexDownload
-      mutexDownload = CreateMutex()
-    EndIf
-    LockMutex(mutexDownload)
-    If events(#EventWorkerStarts)
-      PostEvent(events(#EventWorkerStarts))
-    EndIf
-    
-    
-    *download = AllocateStructure(download)
-    
-    ; get information from file and mod
-    *download\file  = *file
-    *download\mod   = *file\mod
-    *download\url$  = *file\url$
-    *download\file$ = *file\filename$
-    *download\size  = 0
-    *download\con   = 0
-    *download\timeout = #RepoDownloadTimeout
-    
-    strings$("modname") = *download\mod\name$
-    
-    ; start
-    deb("repository:: download file "+*file\url$)
-    postProgressEvent(0, locale::getEx("repository", "download_start", strings$()))
-    
-    ; pre-process
-    If *download\file$ = ""
-      *download\file$ = Str(*download\mod\id)+".zip"
-      deb("repository:: no filename specified for file #"+*file\fileid+" in mod "+*download\mod\name$+", use "+*download\file$)
-    EndIf
-    
-    ; download location
-    folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
-    misc::CreateDirectoryAll(folder$)
-    *download\file$ = folder$ + *download\file$
-    
-    
-    ; get header information
-    header$ = GetHTTPHeader(*download\url$, 0, main::VERSION_FULL$)
-    failure = #False
-    If header$
-      ; get HTTP status
-      ExamineRegularExpression(regExpHTTPstatus, header$)
-      If NextRegularExpressionMatch(regExpHTTPstatus)
-        HTTPstatus = Val(RegularExpressionGroup(regExpHTTPstatus, 1))
-        If HTTPstatus = 404
-          deb("repository:: 404 File Not Found")
-          postProgressEvent(-1, locale::getEx("repository", "download_fail", strings$()))
-          failure = #True
-        ElseIf HTTPstatus = 429
-          deb("repository:: 429 Too Many Requests")
-          postProgressEvent(-1, locale::getEx("repository", "download_429", strings$()))
-          failure = #True
-        EndIf
-      EndIf
-      
-      ; get content-length
-      ExamineRegularExpression(regExpContentLength, header$)
-      If NextRegularExpressionMatch(regExpContentLength)
-        *download\size = Val(RegularExpressionGroup(regExpContentLength, 1))
-      EndIf
-    EndIf
-    
-    If Not failure
-      ; download file
-      *download\con = ReceiveHTTPFile(*download\url$, *download\file$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
-      If *download\con
-        ; download active...
-        ; monitor download progress
-        bytes = fileDownloadMonitor(*download)
-        deb("repsitory:: download finished with "+bytes+" bytes")
-        If bytes
-          ; todo meta data file for install routine?
-          
-          If events(#EventDownloadSuccess)
-            PostEvent(events(#EventDownloadSuccess), *download\file, 0)
-          EndIf
-          
-          mods::install(*download\file$)
-          
-        Else
-          DeleteFile(*download\file$)
-        EndIf
-      Else
-        ; could not start download
-      EndIf
-    EndIf
-    
-    FreeStructure(*download)
-    postProgressEvent(-1, locale::getEx("repository", "download_finish", strings$()))
-    
-    UnlockMutex(mutexDownload)
-    If events(#EventWorkerStops)
-      PostEvent(events(#EventWorkerStops))
-    EndIf
   EndProcedure
   
   Procedure.s fileGetLink(*file.file)
