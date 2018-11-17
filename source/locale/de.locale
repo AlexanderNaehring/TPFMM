@@ -25,6 +25,9 @@ log               = Zeige Log Datei
 pack              = Mod Pakete
 pack_new          = Erstelle neues Mod Paket
 pack_open         = Öffne ein Mod Paket
+share_selected    = Teile eine Liste aller ausgewählten Mods
+share_filtered    = Teile eine Liste aller aktuell in der Liste angezeigten Mods
+share_all         = Teile eine Liste aller Mods, inklusive der Versteckten
 
 [main]
 mods            = Modifikationen
@@ -83,6 +86,7 @@ update_all_tip  = Aktualisiere alle Mods, für die eine neue Version vorliegt.
 save_open       = Einen Spielstand öffnen
 save_download   = Alle fehlenden Mods im aktuellen Spielstand herunterladen
 save_start      = Bitte zuerst einen Spielstand öffnen ↴
+help            = Hilfe/Benutzerhandbuch
 
 [info]
 title           = Mod Informationen

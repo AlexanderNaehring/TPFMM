@@ -23,6 +23,9 @@ log               = Show debug log
 pack              = Mod Packs
 pack_new          = Create new mod pack
 pack_open         = Open a mod pack
+share_selected    = Share a list of selected mods
+share_filtered    = Share a list of all mods matching the current display filter
+share_all         = Share a list of all mods, including hidden
 
 [main]
 mods            = Modifications
@@ -81,6 +84,7 @@ update_all_tip  = Update all mods for which a new version is available
 save_open       = Open save file
 save_download   = Download all missing mods used in the open save game
 save_start      = Please open a save game to start ↴
+help            = Show help / user manual
 
 [info]
 title           = Mod Information
