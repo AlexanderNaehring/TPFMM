@@ -466,6 +466,9 @@ Module windowMain
       Case "sav"
         saveOpenFile(file$)
         navBtnSaves()
+      Case "html"
+        ;TODO handle import of HTML files (aka mod lists)
+        ; or only use links to mod packs?
       Default
         mods::install(file$)
     EndSelect
@@ -510,17 +513,6 @@ Module windowMain
   
   ;-------------------------------------------------
   ;- TIMER
-  
-  Procedure TimerMain()
-    Static LastDir$ = ""
-    If EventTimer() = TimerMain
-      
-      
-      
-      
-      
-    EndIf
-  EndProcedure
   
   ;- MENU
   
@@ -2423,7 +2415,7 @@ Module windowMain
     BindEvent(#PB_Event_MaximizeWindow, @resize(), window)
     BindEvent(#PB_Event_RestoreWindow, @resize(), window)
     BindEvent(#PB_Event_CloseWindow, @close(), window)
-    BindEvent(#PB_Event_Timer, @TimerMain(), window)
+;     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     BindEvent(#EventCloseNow, main::@exit())
 ;     BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
@@ -2628,9 +2620,6 @@ Module windowMain
 ;     SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
     
     
-    ;AddKeyboardShortcut(window, #PB_Shortcut_Delete, #MenuItem_Uninstall) ; should only work when gadget is active!
-    
-    
     ; Drag & Drop
     EnableWindowDrop(window, #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     
@@ -2639,12 +2628,10 @@ Module windowMain
     mods::BindEventCallback(mods::#EventNewMod, @modCallbackNewMod())
     mods::BindEventCallback(mods::#EventRemoveMod, @modCallbackRemoveMod())
     mods::BindEventCallback(mods::#EventStopDraw, @modCallbackStopDraw())
-;     mods::BindEventPost(mods::#CallbackNewMod, #EventModNew, @modCallbackNewMod())
-;     mods::BindEventPost(mods::#CallbackRemoveMod, #EventModRemove, @modCallbackRemoveMod())
-;     mods::BindEventPost(mods::#CallbackStopDraw, #EventModStopDraw, @modCallbackStopDraw())
     mods::BindEventPost(mods::#EventProgress, #EventModProgress, @modEventProgress())
     mods::BindEventPost(mods::#EventWorkerStarts, #EventWorkerStarts, #Null) ; worker events already linked
     mods::BindEventPost(mods::#EventWorkerStops, #EventWorkerStops, #Null)
+    
     
     ; repository module
     repository::BindEventCallback(repository::#EventAddMods, @repoCallbackAddMods())
@@ -2654,13 +2641,6 @@ Module windowMain
     repository::BindEventPost(repository::#EventProgress, #EventRepoProgress, @repoEventProgress())
     repository::BindEventPost(repository::#EventWorkerStarts, #EventWorkerStarts, #Null) ; worker events already linked
     repository::BindEventPost(repository::#EventWorkerStops, #EventWorkerStops, #Null)
-    
-    ; handle events in main thread: bind custom events
-;     repository::BindEventPost(repository::#CallbackClearList, #EventRepoClearList)  ; tell repository to send this WindowEvent when the repository event occurs
-;     BindEvent(#EventRepoClearList, @repoCallbackClearList())                        ; bind the window event to a local function
-;     BindEvent(#EventRepoAddMod, @repoCallbackAddModEvent())
-;     BindEvent(#EventRepoRefreshFinished, @repoCallbackRefreshFinishedEvent())
-;     BindEvent(#EventRepoPauseDraw, @repoCallbackPauseDraw())
     
     
     ;------ open dialogs (sort / filter / ...)
