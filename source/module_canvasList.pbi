@@ -1,4 +1,4 @@
-﻿DeclareModule CanvasList
+DeclareModule CanvasList
   EnableExplicit
   
   Enumeration 0
@@ -8,6 +8,7 @@
     #AttributeDisplayImages
   EndEnumeration
   
+  ; Custom Item Events on top of #PB_EventType_LeftClick etc...
   Enumeration -1 Step -1 ; use negative numbers for events as "EventType()" values are positive
     #OnItemVisible
     #OnItemInvisible
@@ -144,6 +145,7 @@ Module CanvasList
     Data.i @SortItems()
     Data.i @FilterItems()
     Data.i @BindItemEvent()
+    Data.i @SetEmptyScreen()
     
     vtItem:
     Data.i @ItemSetImage()

@@ -1886,6 +1886,14 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure saveModListEvent()
+    If EventType() = #PB_EventType_LeftClick
+      If Not *saveModList\GetItemCount()
+        saveOpen()
+      EndIf
+    EndIf
+  EndProcedure
+  
   
   ;- backup tab
   
@@ -2357,6 +2365,7 @@ Module windowMain
     SetGadgetText(gadget("backupFrameFilter"),  l("main","backup_filter"))
     
     ; saves tab
+    *saveModList\SetEmptyScreen(l("main", "save_click_open"), "")
     SetGadgetText(gadget("saveName"),           l("main","save_start")+":")
     GadgetToolTip(gadget("saveOpen"),           l("main","save_open")+":")
     GadgetToolTip(gadget("saveDownload"),       l("main","save_download")+":")
@@ -2533,6 +2542,7 @@ Module windowMain
     BindGadgetEvent(gadget("backupFilterReset"),  @backupFilterReset())
     
     ; saves tab
+    BindGadgetEvent(gadget("saveModList"), @saveModListEvent())
     BindGadgetEvent(gadget("saveOpen"), @saveOpen())
     BindGadgetEvent(gadget("saveDownload"), @saveDownload())
     

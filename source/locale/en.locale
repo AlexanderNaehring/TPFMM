@@ -82,6 +82,7 @@ add_to_pack     = Add to mod pack
 update_all      = Update all mods
 update_all_tip  = Update all mods for which a new version is available
 save_open       = Open save file
+save_click_open = Click here to open a save game
 save_download   = Download all missing mods used in the open save game
 save_start      = Please open a save game to start ↴
 help            = Show help / user manual
