@@ -41,6 +41,17 @@ Module windowMain
     window.i
     Map repoSelectFilesGadget.i()
   EndStructure
+  
+  Structure shareMods
+    foldername$
+    name$
+    author$
+    version$
+    imageB64$
+    website$
+    download$
+    source$
+  EndStructure
   ;}
   
   Macro gadget(name)
@@ -123,6 +134,9 @@ Module windowMain
          repoFilter.dialog, repoSort.dialog
   Global menu, menuShare
   Global currentTab
+  
+  Global modShareHTML$
+  misc::BinaryAsString("html/mods.html", modShareHTML$)
   
   ;- Timer
   Global TimerMain = 101
@@ -474,8 +488,6 @@ Module windowMain
     EndSelect
   EndProcedure
   
-  ; ---
-  
   Procedure websiteTrainFeverNet()
     misc::openLink("http://goo.gl/8Dsb40") ; Homepage (Train-Fever.net)
   EndProcedure
@@ -800,12 +812,6 @@ Module windowMain
   
   ;- mod filter dialog
   
-  Procedure modResetFilterMods()
-    deb("windowMain:: modResetFilterMods()")
-    SetGadgetText(gadget("modFilterString"), "")
-    SetActiveGadget(gadget("modFilterString"))
-  EndProcedure
-  
   Procedure modFilterClose()
 ;     deb("windowMain:: modFilterClose()")
     HideWindow(modFilter\window, #True)
@@ -896,6 +902,13 @@ Module windowMain
     *modList\FilterItems(@modFilterCallback(), 0, #True)
   EndProcedure
   
+  Procedure modFilterReset()
+    deb("windowMain:: modResetFilterMods()")
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), "")
+    SetActiveGadget(DialogGadget(modFilter\dialog, "modFilterString"))
+    modFilterChange()
+  EndProcedure
+  
   Procedure modFilterShow()
 ;     deb("windowMain:: modFilterShow()")
     ResizeWindow(modFilter\window, DesktopMouseX()-WindowWidth(modFilter\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
@@ -909,10 +922,8 @@ Module windowMain
   ;- mod sort dialog
   
   Procedure modSortClose()
-;     deb("windowMain:: modSortClose()")
     HideWindow(modSort\window, #True)
     SetActiveWindow(window)
-;     PostEvent(#PB_Event_Repaint, window, 0)
     SetActiveGadget(gadget("modList"))
   EndProcedure
   
@@ -985,8 +996,8 @@ Module windowMain
     EndIf
   EndProcedure
   
-  
   ;- mod callbacks
+  
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
     Protected icon
     Protected.b repoMod, updateAvailable
@@ -1146,19 +1157,6 @@ Module windowMain
     windowPack::show(window)
     windowPack::addSelectedMods()
   EndProcedure
-  
-  Structure shareMods
-    foldername$
-    name$
-    author$
-    version$
-    imageB64$
-    website$
-    download$
-    source$
-  EndStructure
-  Global modShareHTML$
-  misc::BinaryAsString("html/mods.html", modShareHTML$)
   
   Procedure modShareList(List *mods.mods::LocalMod())
     deb("mainWindow:: modShareList")
@@ -1325,8 +1323,6 @@ Module windowMain
   ;- --------------------
   ;- repo tab
   
-  ;tbd
-  
   ;- repo sort functions
   
   Procedure compRepoName(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
@@ -1349,7 +1345,7 @@ Module windowMain
     EndIf
   EndProcedure
   
-  ; repo filter dialog
+  ;- repo filter dialog
   
   Procedure repoFilterClose()
     HideWindow(repoFilter\window, #True)
@@ -1426,6 +1422,7 @@ Module windowMain
   Procedure repoFilterReset()
     SetGadgetText(DialogGadget(repofilter\dialog, "filterString"), "")
     SetActiveGadget(DialogGadget(repofilter\dialog, "filterString"))
+    repoFilterChange()
   EndProcedure
   
   Procedure repoFilterShow()
@@ -1437,7 +1434,7 @@ Module windowMain
     CompilerEndIf
   EndProcedure
   
-  ; repo sort dialog
+  ;- repo sort dialog
   
   Procedure repoSortClose()
     HideWindow(repoSort\window, #True)
@@ -1809,7 +1806,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -1893,7 +1890,6 @@ Module windowMain
       EndIf
     EndIf
   EndProcedure
-  
   
   ;- backup tab
   
@@ -2237,6 +2233,7 @@ Module windowMain
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterStaging"), settings::getInteger("modFilter", "staging"))
     ; bind events
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterString"), @modFilterChange(), #PB_EventType_Change)
+    BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterReset"), @modFilterReset())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterTF"), @modFilterChange())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterVanilla"), @modFilterChange())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterHidden"), @modFilterChange())
@@ -2291,6 +2288,7 @@ Module windowMain
     ; dynamically add available sources!
     ; bind events
     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterString"), @repoFilterChange(), #PB_EventType_Change)
+    BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterReset"), @repoFilterReset())
     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterDate"), @repoFilterChange(), #PB_EventType_Change)
 ;     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterReset"), @repoFilterReset())
     ; apply initial filtering
