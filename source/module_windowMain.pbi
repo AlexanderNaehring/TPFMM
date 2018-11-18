@@ -2340,21 +2340,19 @@ Module windowMain
     ; mod tab
     GadgetToolTip(gadget("modFilter"),          l("main","filter"))
     GadgetToolTip(gadget("modSort"),            l("main","sort"))
-;     GadgetToolTip(gadget("modInfo"),            l("main","information"))
     GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
     GadgetToolTip(gadget("modBackup"),          l("main","backup"))
     GadgetToolTip(gadget("modUninstall"),       l("main","uninstall"))
     GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
     
     ; repo tab
-    GadgetToolTip(gadget("repoFilter"),          l("main","filter"))
-    GadgetToolTip(gadget("repoSort"),            l("main","sort"))
+    GadgetToolTip(gadget("repoFilter"),         l("main","filter"))
+    GadgetToolTip(gadget("repoSort"),           l("main","sort"))
     GadgetToolTip(gadget("repoDownload"),       l("main","download"))
     GadgetToolTip(gadget("repoWebsite"),        l("main","website"))
     
     ; backup tab
     SetGadgetText(gadget("backupFrame"),        l("main","backup_manage"))
-;     SetGadgetText(gadget("backupRefresh"),      l("main","backup_refresh"))
     SetGadgetText(gadget("backupRestore"),      l("main","backup_restore"))
     SetGadgetText(gadget("backupDelete"),       l("main","backup_delete"))
     SetGadgetText(gadget("backupFolder"),       l("main","backup_folder"))
@@ -2370,7 +2368,7 @@ Module windowMain
     GadgetToolTip(gadget("saveOpen"),           l("main","save_open")+":")
     GadgetToolTip(gadget("saveDownload"),       l("main","save_download")+":")
     SetGadgetText(gadget("saveLabelYear"),      l("save", "year")+":")
-    SetGadgetText(gadget("saveLabelDifficulty"),  l("save", "difficulty")+":")
+    SetGadgetText(gadget("saveLabelDifficulty"),l("save", "difficulty")+":")
     SetGadgetText(gadget("saveLabelMapSize"),   l("save", "mapsize")+":")
     SetGadgetText(gadget("saveLabelMoney"),     l("save", "money")+":")
     SetGadgetText(gadget("saveLabelFileSize"),  l("save", "filesize")+":")
@@ -2424,10 +2422,8 @@ Module windowMain
     BindEvent(#PB_Event_MaximizeWindow, @resize(), window)
     BindEvent(#PB_Event_RestoreWindow, @resize(), window)
     BindEvent(#PB_Event_CloseWindow, @close(), window)
-;     BindEvent(#PB_Event_Timer, @TimerMain(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     BindEvent(#EventCloseNow, main::@exit())
-;     BindEvent(#ShowDownloadSelection, @repoEventShowSelection())
     
     
     ;- custom canvas gadgets
@@ -2474,7 +2470,6 @@ Module windowMain
     SetGadgetAttribute(gadget("modFilter"),     #PB_Button_Image, ImageID(images::images("btnFilter")))
     SetGadgetAttribute(gadget("modSort"),       #PB_Button_Image, ImageID(images::images("btnSort")))
     
-;     SetGadgetAttribute(gadget("modInfo"),       #PB_Button_Image, ImageID(images::images("btnInfo")))
     SetGadgetAttribute(gadget("modUpdate"),     #PB_Button_Image, ImageID(images::images("btnUpdate")))
     SetGadgetAttribute(gadget("modShare"),      #PB_Button_Image, ImageID(images::images("btnShare")))
     SetGadgetAttribute(gadget("modBackup"),     #PB_Button_Image, ImageID(images::images("btnBackup")))
@@ -2513,8 +2508,6 @@ Module windowMain
     ; mod tab
     BindGadgetEvent(gadget("modFilter"),        @modFilterShow())
     BindGadgetEvent(gadget("modSort"),          @modSortShow())
-;     BindGadgetEvent(gadget("modInfo"),          @modInformation())
-;     BindGadgetEvent(gadget("modSettings"),      @modSettings())
     BindGadgetEvent(gadget("modUpdate"),        @modUpdate())
     BindGadgetEvent(gadget("modUpdateAll"),     @modUpdateAll())
     BindGadgetEvent(gadget("modBackup"),        @modBackup())
@@ -2530,7 +2523,6 @@ Module windowMain
     
     ; backup tab
     BindGadgetEvent(gadget("backupTree"),       @backupTree())
-;     BindGadgetEvent(gadget("backupRefresh"),    @backupRefreshList())
     BindGadgetEvent(gadget("backupRestore"),    @backupRestore())
     BindGadgetEvent(gadget("backupDelete"),     @backupDelete())
     BindGadgetEvent(gadget("backupFolder"),     @backupFolder())
@@ -2575,13 +2567,9 @@ Module windowMain
     BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
     BindMenuEvent(menu, #PB_Menu_Quit, @close())
     BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
-;     BindMenuEvent(menu, #MenuItem_ExportList, )
     BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
     BindMenuEvent(menu, #MenuItem_ShowDownloads, @modShowDownloadFolder())
-;     BindMenuEvent(menu, #MenuItem_RepositoryRefresh, @repoRefresh())
-;     BindMenuEvent(menu, #MenuItem_RepositoryClearCache, @repoClearCache())
     BindMenuEvent(menu, #MenuItem_Homepage, @MenuItemHomepage())
-;     BindMenuEvent(menu, #PB_Menu_About, @MenuItemLicense())
     BindMenuEvent(menu, #MenuItem_Log, @MenuItemLog())
     BindMenuEvent(menu, #MenuItem_PackNew, @MenuItemPackNew())
     BindMenuEvent(menu, #MenuItem_PackOpen, @MenuItemPackOpen())
@@ -2627,7 +2615,6 @@ Module windowMain
     ; load images
     ResizeImage(images::Images("headermain"), GadgetWidth(gadget("headerMain")), GadgetHeight(gadget("headerMain")), #PB_Image_Raw)
     SetGadgetState(gadget("headerMain"), ImageID(images::Images("headermain")))
-;     SetGadgetState(gadget("modPreviewImage"), ImageID(images::Images("logo")))
     
     
     ; Drag & Drop
