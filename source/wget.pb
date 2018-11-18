@@ -151,15 +151,10 @@ Module wget
   ;- Private
   
   Procedure downloadThread(*this._wget)
-    
     Protected program$, parameter$,
               str$, STDOUT$, STDERR$,
               HTTPstatus
-    
-    Static regExpProgress
-    If Not regExpProgress
-      regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
-    EndIf
+    Protected regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
     
     program$ = "wget\wget.exe"
     parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
@@ -289,6 +284,7 @@ Module wget
       EndIf
     EndIf
     
+    FreeRegularExpression(regExpProgress)
     ProcedureReturn ret
   EndProcedure
   
@@ -486,7 +482,6 @@ Module wget
   EndProcedure
   
 EndModule
-
 
 CompilerIf #PB_Compiler_IsMainFile
   Enumeration #PB_Event_FirstCustomValue
