@@ -7,6 +7,11 @@ DeclareModule windowSettings
   Declare show()
   Declare close()
   
+  ; custom events that can be sent to "window"
+  Enumeration #PB_Event_FirstCustomValue
+    #EventRefreshRepoList
+  EndEnumeration
+  
 EndDeclareModule
 
 XIncludeFile "module_misc.pbi"
@@ -182,8 +187,6 @@ Module windowSettings
       mods::load()
     EndIf
     
-    repository::refreshRepositories()
-    
     GadgetCloseSettings()
   EndProcedure
   
@@ -258,34 +261,78 @@ Module windowSettings
   EndProcedure
   
   Procedure updateRepositoryList()
-    Protected NewList urls$()
-    repository::GetRepositories(urls$())
+    Protected NewList repos$()
+    Protected repoInfo.repository::RepositoryInformation
+    
     ClearGadgetItems(gadget("repositoryList"))
-    ForEach urls$()
-      AddGadgetItem(gadget("repositoryList"), -1, urls$()+#LF$+repository::GetRepositoryModCount(urls$()))
+    repository::ReadSourcesFromFile(repos$())
+    
+    ForEach repos$()
+      If repository::GetRepositoryInformation(repos$(), @repoInfo)
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\modCount)
+      Else
+        ; this repo is not loaded at the moment
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+locale::l("settings","repository_not_loaded"))
+      EndIf
     Next
   EndProcedure
   
   Procedure repositoryAdd()
     Protected url$
+    Protected repoInfo.repository::RepositoryInformation
+    Protected info$, error$
+    
     ; preset url to clipboard text if is an url
     url$ = Trim(GetClipboardText())
     If LCase(Left(url$, 7)) <> "http://" And LCase(Left(url$, 8)) <> "https://"
       url$ = ""
     EndIf
+    
     ; show requester
     url$ = InputRequester(locale::l("settings","repository_add"), locale::l("settings", "repository_input_url"), url$)
     
     If url$
       ; add repo
-      If repository::CheckRepository(url$)
-        ; TODO display some info and ask if repo should be added.
-        repository::AddRepository(url$)
+      If repository::CheckRepository(url$, @repoInfo)
+        info$ = repoInfo\url$+#CRLF$+
+                locale::l("repository","repository")+" "+#DQUOTE$+repoInfo\name$+#DQUOTE$+" "+locale::l("repository","maintained_by")+" "+repoInfo\maintainer$+#CRLF$+#CRLF$
+        If repoInfo\info_url$
+          info$ + locale::l("repository","info_url")+" "+repoInfo\info_url$+#CRLF$
+        EndIf
+        If repoInfo\terms$
+          info$ + locale::l("repository","terms")+" "+repoInfo\terms$+#CRLF$
+        EndIf
+        info$ + repoInfo\modCount+" "+locale::l("repository","mod_count")+#CRLF$+
+                #CRLF$+
+                locale::l("repository","confirm_add")
+        
+        If MessageRequester(locale::l("repository", "confirm_add"), info$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+          repository::AddRepository(url$)
+          updateRepositoryList()
+          repository::refreshRepositories() ; will trigger an event when update finished which updates the repo list again
+        EndIf
       Else
-        MessageRequester(locale::l("settings","repository_add"),locale::l("settings","repository_invalid"), #PB_MessageRequester_Error)
+        Select repoInfo\error
+          Case repository::#ErrorDownloadFailed
+            error$ = locale::l("repository", "error_download")
+          Case repository::#ErrorJSON
+            error$ = locale::l("repository", "error_json")
+          Case repository::#ErrorNoSource
+            error$ = locale::l("repository", "error_no_source")
+          Case repository::#ErrorDuplicateURL
+            error$ = locale::l("repository", "error_dup_url")
+          Case repository::#ErrorNoSource
+            error$ = locale::l("repository", "error_no_source")
+          Case repository::#ErrorDuplicateSource
+            error$ = locale::l("repository", "error_dup_source")
+          Case repository::#ErrorNoMods
+            error$ = locale::l("repository", "error_no_mods")
+          Default
+            error$ = locale::l("repository", "error_unknown")
+        EndSelect
+        MessageRequester(locale::l("repository","error"), error$, #PB_MessageRequester_Error)
       EndIf
     EndIf
-    updateRepositoryList()
   EndProcedure
   
   Procedure repositoryRemove()
@@ -295,11 +342,11 @@ Module windowSettings
       url$ = GetGadgetItemText(gadget("repositoryList"), selected, 0)
       If url$
         repository::RemoveRepository(url$)
+        updateRepositoryList()
+        repository::refreshRepositories()
       EndIf
     EndIf
-    updateRepositoryList()
   EndProcedure
-  
   
   Procedure showWindow()
     HideWindow(window, #False, #PB_Window_WindowCentered)
@@ -393,6 +440,7 @@ Module windowSettings
     
     ; bind events
     BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
+    BindEvent(#EventRefreshRepoList, @updateRepositoryList(), window)
     
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())

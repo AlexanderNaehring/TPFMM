@@ -17,6 +17,28 @@ DeclareModule repository
   EndEnumeration
   Global EventArraySize = #PB_Compiler_EnumerationValue -1
   
+  Enumeration
+    #ErrorNoError = 0
+    #ErrorDownloadFailed
+    #ErrorJSON
+    #ErrorDuplicateURL
+    #ErrorNoSource
+    #ErrorDuplicateSource
+    #ErrorNoMods
+  EndEnumeration
+  
+  
+  Structure RepositoryInformation ; information about the mod repository
+    url$
+    name$
+    maintainer$
+    source$
+    description$
+    info_url$
+    terms$
+    modCount.i
+    error.b
+  EndStructure
   
   ; file interface
   Interface RepositoryFile
@@ -60,9 +82,9 @@ DeclareModule repository
   Declare AddRepository(url$)
   Declare CanRemoveRepository(url$) ; default repositories cannot be removed
   Declare RemoveRepository(url$)
-  Declare GetRepositories(List urls$())
-  Declare GetRepositoryModCount(url$)
-  Declare CheckRepository(url$)
+  Declare ReadSourcesFromFile(List urls$())
+  Declare GetRepositoryInformation(url$, *repoInfo.RepositoryInformation)
+  Declare CheckRepository(url$, *repositoryInformation.RepositoryInformation)
   
   ; get mod/file object
   Declare getModByFoldername(foldername$)

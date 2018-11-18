@@ -92,7 +92,6 @@ Module repository
   EndStructure
   
   ; repository structures
-  
   Structure repo_info ; information about the mod repository
     name$
     source$
@@ -101,7 +100,6 @@ Module repository
     maintainer$
     info_url$
     terms$
-    changed.i
   EndStructure
   
   Structure modRepository ; the repository.json file
@@ -195,7 +193,7 @@ Module repository
     EndIf
   EndProcedure
   
-  Procedure WriteSourcesFile(List sources$())
+  Procedure WriteSourcesToFile(List sources$())
     Protected file
     file = CreateFile(#PB_Any, #RepoListFile$)
     If file
@@ -207,6 +205,26 @@ Module repository
       deb("repository:: could not access file "+#RepoListFile$)
     EndIf
     ProcedureReturn Bool(file)
+  EndProcedure
+  
+  Procedure ReadSourcesFromFile(List sources$())
+    Protected file, url$
+    ClearList(sources$())
+    file = OpenFile(#PB_Any, #RepoListFile$)
+    If file
+      While Not Eof(file)
+        url$ = Trim(ReadString(file, #PB_UTF8))
+        If url$
+          AddElement(sources$())
+          sources$() = url$
+        EndIf
+      Wend
+      CloseFile(file)
+    Else
+      deb("repository:: could not read repository file "+#RepoListFile$)
+    EndIf
+    
+    ProcedureReturn ListSize(sources$())
   EndProcedure
   
   Procedure.s getRepoFileName(url$)
@@ -312,7 +330,7 @@ Module repository
   
   Procedure openRepositoryFile(url$)
     Protected file$,
-              json, *value,
+              json,
               *modRepository.modRepository,
               NewList *mods.RepositoryMod()
     
@@ -333,15 +351,13 @@ Module repository
     EndIf
     
     ; check JSON
-    *value = JSONValue(json)
-    If JSONType(*value) <> #PB_JSON_Object 
+    If JSONType(JSONValue(json)) <> #PB_JSON_Object 
       deb("repository:: invalid JSON type in "+url$)
       FreeJSON(json)
       ProcedureReturn #False
     EndIf
     
     LockMutex(mutexMods)
-    
     ; check if repo already loaded
     *modRepository = FindMapElement(ModRepositories(), url$)
     If *modRepository
@@ -353,8 +369,8 @@ Module repository
     
     ; load repository
     *modRepository = AddMapElement(ModRepositories(), url$)
-    ExtractJSONStructure(*value, *modRepository, ModRepository)
-    
+    ExtractJSONStructure(JSONValue(json), *modRepository, ModRepository)
+    FreeJSON(json)
     
     ; process
     If *modRepository\repo_info\icon$
@@ -362,11 +378,21 @@ Module repository
       ; TODO download and store repo icon
     EndIf
     If *modRepository\repo_info\source$
-      ; TODO check if source name is already used, cannot have two sources with same name
+      LockMutex(mutexMods)
+      ForEach ModRepositories()
+        If ModRepositories() <> *modRepository
+          If ModRepositories()\repo_info\source$ = *modRepository\repo_info\source$
+            DebuggerWarning("repository:: duplicate repository source ID")
+            deb("repository:: duplicate repository source ID encountered!")
+            ;TODO do something about duplicate ID?
+            Break
+          EndIf
+        EndIf
+      Next
+      UnlockMutex(mutexMods)
     Else
       deb("repository:: "+url$+" has no source information")
     EndIf
-    
     
     ForEach *modRepository\mods()
       With *modRepository\mods()
@@ -437,8 +463,9 @@ Module repository
     Protected percent.b
     Protected NewList repositories$()
     _loaded = 0
+    deb("repository:: refreshRepositories()")
     
-    N = GetRepositories(repositories$())
+    N = ReadSourcesFromFile(repositories$())
     
     postProgressEvent(0, locale::l("repository", "load"))
     
@@ -518,6 +545,7 @@ Module repository
         
       If FileSize(file$) > 0
         ; file exists, load image
+        ;TODO: repository may download image, but move image load() to windowMain:: ?
         image = LoadImage(#PB_Any, file$)
         If image And IsImage(image)
           ; cache image
@@ -629,7 +657,7 @@ Module repository
   EndProcedure
   
   Procedure freeAll()
-    deb("repository:: free all")
+    deb("repository:: freeAll()")
     
     ;TODO if download is still active, and program is closed, download thread might try to access ressources that have been freed by END of program
     ; must also stop all download threads.
@@ -647,6 +675,7 @@ Module repository
       PostEvent(events(#EventClearMods))
     EndIf
     
+    ; clear maps, should also clear mod list in the map
     ClearMap(ModRepositories())
     ClearMap(*filesByFoldername())
     
@@ -675,7 +704,7 @@ Module repository
     Debug "add repository "+url$
     
     url$ = Trim(url$)
-    GetRepositories(sources$())
+    ReadSourcesFromFile(sources$())
     
     ForEach sources$()
       If url$ = sources$()
@@ -691,7 +720,7 @@ Module repository
       LastElement(sources$())
       AddElement(sources$())
       sources$() = url$
-      WriteSourcesFile(sources$())
+      WriteSourcesToFile(sources$())
     EndIf
   EndProcedure
   
@@ -709,8 +738,9 @@ Module repository
   Procedure RemoveRepository(url$)
     Protected deleted.b
     Protected NewList sources$()
+    deb("repository:: remove source "+url$)
     
-    GetRepositories(sources$())
+    ReadSourcesFromFile(sources$())
     
     ForEach sources$()
       If url$ = sources$()
@@ -723,47 +753,34 @@ Module repository
     Next
     
     If deleted
-      WriteSourcesFile(sources$())
+      WriteSourcesToFile(sources$())
     EndIf
   EndProcedure
   
-  Procedure GetRepositories(List sources$())
-    Protected file, url$
-    ClearList(sources$())
-    file = OpenFile(#PB_Any, #RepoListFile$)
-    If file
-      While Not Eof(file)
-        url$ = Trim(ReadString(file, #PB_UTF8))
-        If url$
-          AddElement(sources$())
-          sources$() = url$
-        EndIf
-      Wend
-      CloseFile(file)
-    Else
-      deb("repository:: could not read repository file "+#RepoListFile$)
+  Procedure GetRepositoryInformation(url$, *repoInfo.RepositoryInformation)
+    Protected ret = #False
+    LockMutex(mutexMods)
+    If FindMapElement(ModRepositories(), url$)
+      *repoInfo\error         = #ErrorNoError
+      *repoInfo\url$          = MapKey(ModRepositories())
+      *repoInfo\source$       = ModRepositories()\repo_info\source$
+      *repoInfo\name$         = ModRepositories()\repo_info\name$
+      *repoInfo\maintainer$   = ModRepositories()\repo_info\maintainer$
+      *repoInfo\description$  = ModRepositories()\repo_info\description$
+      *repoInfo\terms$        = ModRepositories()\repo_info\terms$
+      *repoInfo\info_url$     = ModRepositories()\repo_info\info_url$
+      *repoInfo\modCount      = ListSize(ModRepositories()\mods())
+      ret = #True
     EndIf
-    
-    ProcedureReturn ListSize(sources$())
+    UnlockMutex(mutexMods)
+    ProcedureReturn ret
   EndProcedure
   
-  Procedure GetRepositoryModCount(url$)
-    Protected count, *ModRepository.ModRepository
-;     LockMutex(mutexMods)
-    *ModRepository = FindMapElement(ModRepositories(), url$)
-    If *ModRepository
-      count = ListSize(*ModRepository\mods())
-    Else
-      count = -1 ; not loaded
-    EndIf
-;     UnlockMutex(mutexMods)
-    ProcedureReturn count
-  EndProcedure
-  
-  Procedure CheckRepository(url$)
+  Procedure CheckRepository(url$, *RepoInfo.RepositoryInformation)
     Protected file$
     Protected *wget.wget::wget
     Protected json, *value, *modRepository.modRepository
+    Protected duplicate
     Protected ret
     deb("repository:: CheckRepository("+url$+")")
     
@@ -784,28 +801,71 @@ Module repository
           *modRepository = FindMapElement(ModRepositories(), url$)
           UnlockMutex(mutexMods)
           If Not *modRepository
+            ; extract repository information
             *modRepository = AllocateStructure(modRepository)
             ExtractJSONStructure(*value, *modRepository, modRepository)
-            ; TODO check if duplicate "source" id
-            deb("repository:: "+*modRepository\repo_info\name$+" by "+*modRepository\repo_info\maintainer$)
-            ret = #True
+            deb("repository:: identified repo at "+url$+": "+*modRepository\repo_info\name$+" by "+*modRepository\repo_info\maintainer$)
+            *RepoInfo\url$         = url$
+            *RepoInfo\source$      = *modRepository\repo_info\source$
+            *RepoInfo\name$        = *modRepository\repo_info\name$
+            *RepoInfo\maintainer$  = *modRepository\repo_info\maintainer$
+            *RepoInfo\description$ = *modRepository\repo_info\description$
+            *RepoInfo\terms$       = *modRepository\repo_info\terms$
+            *RepoInfo\info_url$    = *modRepository\repo_info\info_url$
+            *RepoInfo\modCount     = ListSize(*modRepository\mods())
+            ; check if source not empty
+            If Trim(*RepoInfo\source$) <> ""
+              ; check if source duplicate
+              duplicate = #False
+              LockMutex(mutexMods)
+              ForEach ModRepositories()
+                If LCase(ModRepositories()\repo_info\source$) = LCase(*RepoInfo\source$)
+                  duplicate = #True
+                  Break
+                EndIf
+              Next
+              UnlockMutex(mutexMods)
+              If Not duplicate
+                ; check if mod count is zero
+                If *RepoInfo\modCount > 0
+                  ; everything looks good, return true (repo can be added!)
+                  *RepoInfo\error = #ErrorNoError
+                  ret = #True
+                Else
+                  deb("repository:: "+url$+" has no mods")
+                  *RepoInfo\error = #ErrorNoMods
+                  ret = #False
+                EndIf
+              Else
+                deb("repository:: "+url$+" has same source as another loaded repository")
+                *RepoInfo\error = #ErrorDuplicateSource
+                ret = #False
+              EndIf
+            Else
+              deb("repository:: "+url$+" has no source information or could not extract modRepository Information from JSON")
+              *RepoInfo\error = #ErrorNoSource
+              ret = #False
+            EndIf
           Else
             deb("repository:: "+url$+" already loaded")
-            FreeJSON(json)
+            *RepoInfo\error = #ErrorDuplicateURL
             ret = #False
           EndIf
         Else
           deb("repository:: invalid JSON type in "+url$)
+          *RepoInfo\error = #ErrorJSON
           ret = #False
         EndIf
         FreeJSON(json)
       Else
         deb("repository:: could not parse JSON from "+url$)
+        *RepoInfo\error = #ErrorJSON
         ret = #False
       EndIf
       DeleteFile(file$, #PB_FileSystem_Force)
     Else
       deb("repository:: download failed "+url$)
+      *RepoInfo\error = #ErrorDownloadFailed
       ret = #False
     EndIf
     

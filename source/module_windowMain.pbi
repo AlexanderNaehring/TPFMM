@@ -1543,7 +1543,7 @@ Module windowMain
       EndIf
     EndIf
     
-    ; load preview image (slow)
+    ; load cached thumbnail images (must free images in windowMain:: manually when list is cleared)
     file$ = *mod\getThumbnailFile()
     If file$
       If FileSize(file$) > 0
@@ -1604,8 +1604,25 @@ Module windowMain
   
   Procedure repoCallbackClearList()
     ; called when repos are cleared
+    Protected NewList *items.canvasList::CanvasListItem()
+    Protected im
+    
+    ; free images, they are loaded by windowMain:: and not controlled by either the canvasList or the repository module
+    *repoList\SetAttribute(canvasList::#AttributePauseDraw, #True)
+    *repoList\GetAllItems(*items())
+    ForEach *items()
+      im = *items()\GetImage()
+      *items()\SetImage(#Null)
+      If im And IsImage(im)
+        FreeImage(im)
+      EndIf
+    Next
+    *repoList\SetAttribute(canvasList::#AttributePauseDraw, #False)
+    
+    ; free all items in list
     *repoList\ClearItems()
-    ; TODO repoCallbackClearList() - update mod list (remove all update information from mods)
+    
+    ; refresh mod list
     modListRefreshStatus()
   EndProcedure
   
@@ -1618,11 +1635,15 @@ Module windowMain
     ; called when all repositories are loaded
     ; TODO repoCallbackRefreshFinished() - update mod list (add update information to mods)
     ; send event to main thread
-    PostEvent(#EventRepoRefreshFinished)
+    PostEvent(#EventRepoRefreshFinished, window, #Null) ; not doing anything at the moment
+    
+    ; inform settings window to refresh repo list
+    PostEvent(windowSettings::#EventRefreshRepoList, windowSettings::window, #Null)
   EndProcedure
   
   Procedure repoCallbackThumbnail(image, *userdata)
     Debug "repoCallbackThumbnail("+image+", "+*userdata+")"
+    ;TODO: repository may download image, but move image load() to windowMain:: ?
     Protected *item.CanvasList::CanvasListItem
     If image And *userdata
       *item = *userdata
