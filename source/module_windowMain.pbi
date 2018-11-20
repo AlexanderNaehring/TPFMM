@@ -80,13 +80,6 @@ Module windowMain
     #MenuItem_ShareFiltered
     #MenuItem_ShareAll
     
-    #MenuItem_Information
-    #MenuItem_Backup
-    #MenuItem_Uninstall
-    #MenuItem_ModWebsite
-    #MenuItem_ModFolder
-    #MenuItem_RepositoryRefresh
-    #MenuItem_RepositoryClearCache
     #MenuItem_AddToPack
   EndEnumeration
   
@@ -2574,14 +2567,10 @@ Module windowMain
     MenuTitle(l("menu","pack"))
     MenuItem(#MenuItem_PackNew, l("menu","pack_new"))
     MenuItem(#MenuItem_PackOpen, l("menu","pack_open"))
-    MenuTitle(l("menu","repository"))
-    MenuItem(#MenuItem_RepositoryRefresh, l("menu","repo_refresh"))
-    MenuItem(#MenuItem_RepositoryClearCache, l("menu","repo_clear"))
     MenuTitle(l("menu","about"))
     MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
 ;     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
     MenuItem(#MenuItem_Log, l("menu","log"))
-    
     
     BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
     BindMenuEvent(menu, #PB_Menu_Quit, @close())

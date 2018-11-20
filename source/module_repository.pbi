@@ -147,14 +147,14 @@ Module repository
   ;}
   
   ;{ init
-  #RepoDirectory$ = "repositories"
-  #RepoCache$     = #RepoDirectory$ + "/cache"
-  #RepoListFile$  = #RepoDirectory$ + "/repositories.txt"
+  #RepoDirectory$   = "repositories"
+  #RepoThumbCache$  = #RepoDirectory$ + "/cache"
+  #RepoListFile$    = #RepoDirectory$ + "/repositories.txt"
   #RepoDownloadTimeout = 2000 ; timeout for downloads in milliseconds
     
   Procedure init()
     CreateDirectory(#RepoDirectory$)
-    CreateDirectory(#RepoCache$)
+    CreateDirectory(#RepoThumbCache$)
     
     If FileSize(#RepoListFile$) <= 0
       Define file
@@ -235,7 +235,7 @@ Module repository
     Protected name$
     If url$
       name$ = Fingerprint(@url$, StringByteLength(url$), #PB_Cipher_MD5)
-      ProcedureReturn #RepoCache$ + "/" + Left(name$, 2) + "/" + name$ + ".jpg"
+      ProcedureReturn #RepoThumbCache$ + "/" + Left(name$, 2) + "/" + name$ + ".jpg"
     Else
       ProcedureReturn ""
     EndIf
@@ -683,11 +683,11 @@ Module repository
     UnlockMutex(mutexMods)
   EndProcedure
   
-  Procedure clearCache()
+  Procedure clearThumbCache()
     Protected dir$
     
-    DeleteDirectory(#RepoCache$, "", #PB_FileSystem_Recursive)
-    CreateDirectory(#RepoCache$)
+    DeleteDirectory(#RepoThumbCache$, "", #PB_FileSystem_Recursive)
+    CreateDirectory(#RepoThumbCache$)
     
     ProcedureReturn #True
   EndProcedure

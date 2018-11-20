@@ -74,7 +74,7 @@ DeclareModule repository
   ; base methods
   Declare refreshRepositories(async=#True)
   Declare freeAll()
-  Declare clearCache()
+  Declare clearThumbCache()
   Declare.b isloaded()
   Declare stopQueue(timeout = 5000)
   

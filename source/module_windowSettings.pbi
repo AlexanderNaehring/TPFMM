@@ -236,12 +236,20 @@ Module windowSettings
     
     ForEach repos$()
       If repository::GetRepositoryInformation(repos$(), @repoInfo)
-        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\modCount)
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount)
       Else
         ; this repo is not loaded at the moment
         AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+locale::l("settings","repository_not_loaded"))
       EndIf
     Next
+  EndProcedure
+  
+  Procedure repositoryListEvent()
+    If GetGadgetState(gadget("repositoryList")) <> -1
+      DisableGadget(gadget("repositoryRemove"), #False)
+    Else
+      DisableGadget(gadget("repositoryRemove"), #True)
+    EndIf
   EndProcedure
   
   Procedure repositoryAdd()
@@ -315,6 +323,15 @@ Module windowSettings
     EndIf
   EndProcedure
   
+  Procedure repositoryRefresh()
+    repository::refreshRepositories()
+  EndProcedure
+  
+  Procedure repositoryClearThumb()
+    repository::clearThumbCache()
+    MessageRequester(locale::l("generic", "success"), locale::l("settings", "repository_thumb_cleared"), #PB_MessageRequester_Info)
+  EndProcedure
+  
   Procedure showWindow()
     HideWindow(window, #False, #PB_Window_WindowCentered)
   EndProcedure
@@ -349,7 +366,7 @@ Module windowSettings
     SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
     SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "proxy"))
     SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "integrate"))
-;     SetGadgetItemText(gadget("panelSettings"), ,   l("settings", "repository"))
+    SetGadgetItemText(gadget("panelSettings"), 3,   l("settings", "repository"))
     
     SetGadgetText(gadget("save"),                   l("settings","save"))
     GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
@@ -386,17 +403,22 @@ Module windowSettings
     SetGadgetText(gadget("integrateRegisterProtocol"),    l("settings","integrate_register_protocol"))
     SetGadgetText(gadget("integrateRegisterContextMenu"), l("settings","integrate_register_context"))
     
-    RemoveGadgetColumn(gadget("repositoryList"), 0)
-    AddGadgetColumn(gadget("repositoryList"), 0, "URL", 340)
-    AddGadgetColumn(gadget("repositoryList"), 1, "Mods", 40)
+    RemoveGadgetColumn(gadget("repositoryList"), #PB_All)
+    AddGadgetColumn(gadget("repositoryList"), 0, l("settings","repository_url"), 100)
+    AddGadgetColumn(gadget("repositoryList"), 1, l("settings","repository_name"), 120)
+    AddGadgetColumn(gadget("repositoryList"), 2, l("settings","repository_maintainer"), 70)
+    AddGadgetColumn(gadget("repositoryList"), 3, l("settings","repository_source"), 60)
+    AddGadgetColumn(gadget("repositoryList"), 4, l("settings","repository_mods"), 50)
     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
     SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
+    SetGadgetText(gadget("repositoryRefresh"),      l("settings", "repository_refresh"))
+    SetGadgetText(gadget("repositoryClearThumb"),   l("settings", "repository_clear_thumb"))
     SetGadgetText(gadget("repositoryUseCache"),     l("settings", "repository_usecache"))
     GadgetToolTip(gadget("repositoryUseCache"),     l("settings", "repository_usecache_tip"))
-;     SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-;     SetGadgetText(gadget("repositoryNameLabel"),        l("settings", "repository_name"))
-;     SetGadgetText(gadget("repositoryCuratorLabel"),     l("settings", "repository_curator"))
-;     SetGadgetText(gadget("repositoryDescriptionLabel"), l("settings", "repository_description"))
+    
+    UnuseModule locale
+  EndProcedure
+  
     
     
     ; bind events
@@ -416,6 +438,8 @@ Module windowSettings
     BindGadgetEvent(gadget("repositoryList"), @repositoryListEvent(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
     BindGadgetEvent(gadget("repositoryRemove"), @repositoryRemove())
+    BindGadgetEvent(gadget("repositoryRefresh"), @repositoryRefresh())
+    BindGadgetEvent(gadget("repositoryClearThumb"), @repositoryClearThumb())
     ; receive "unhide" event
     BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
     

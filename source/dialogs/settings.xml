@@ -77,6 +77,8 @@
               <button name='repositoryRemove' text='Remove selected' />
               <empty />
               <checkbox name='repositoryUseCache' text='Use cache' />
+              <button name='repositoryRefresh' text='Refresh repositories' />
+              <button name='repositoryClearThumb' text='Clear Thumb Cache' />
             </vbox>
           </hbox>
         </tab>

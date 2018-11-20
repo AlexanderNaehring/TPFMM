@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -18,9 +18,6 @@ update            = Aktualisiere TPFMM
 license           = Lizenz
 show_backups      = Öffne Ordner mit Sicherheitskopien
 show_downloads    = Öffne Download-Ordner
-repository        = Repository
-repo_refresh      = Aktualisiere Repository
-repo_clear        = Repository Cache für Vorschaubilder leeren
 log               = Zeige Log Datei
 pack              = Mod Pakete
 pack_new          = Erstelle neues Mod Paket
@@ -150,9 +147,17 @@ integrate                   = Desktop Integration
 integrate_text              = Die Desktop Integration kann dabei helfen, die Installation von Mods aus dem Datei-Explorer sowie von Webseiten zu vereinfachen.
 integrate_register_protocol = Registriere tpfmm:// Protokoll
 integrate_register_context  = Füge Kontext-Menü zu Archiv-Dateien hinzu
+repository_url          = URL
+repository_name         = Name
+repository_maintainer   = Verwalter
+repository_mods         = Mods
+repository_source       = Quell-ID
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
 repository_input_url    = Bitte gebe die URL für das Repository ein
+repository_refresh      = Repositories aktualisieren
+repository_clear_thumb  = Vorschaubilder löschen
+repository_thumb_cleared  = Zwischenspeicher für Vorschaubilder erfolgreich gelöscht.
 repository_usecache     = Nutze lokalen Cache
 repository_usecache_tip = Zeige die letzte lokale Version der Online-Datenbank, wenn keine Internetverbindung besteht.
 repository_not_loaded   = Nicht geladen
