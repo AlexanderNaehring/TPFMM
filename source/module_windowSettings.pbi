@@ -36,34 +36,6 @@ Module windowSettings
   ;--------------------------------- PRIVATE ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure SetCanvasColor(gadget, color)
-    If IsGadget(gadget) And GadgetType(gadget) = #PB_GadgetType_Canvas
-      SetGadgetData(gadget, color)
-      If StartDrawing(CanvasOutput(gadget))
-        Box(0, 0, GadgetWidth(gadget), GadgetHeight(gadget), color)
-        StopDrawing()
-      EndIf
-    EndIf
-  EndProcedure
-  
-  Procedure GetCanvasColor(gadget)
-    If IsGadget(gadget) And GadgetType(gadget) = #PB_GadgetType_Canvas
-      ProcedureReturn GetGadgetData(gadget)
-    EndIf
-  EndProcedure
-  
-  Procedure GadgetColor()
-    Protected gadget = EventGadget()
-    Protected color
-    If GadgetType(gadget) = #PB_GadgetType_Canvas
-      color = GetCanvasColor(gadget)
-      color = ColorRequester(color)
-      If color <> -1
-        SetCanvasColor(gadget, color)
-      EndIf
-    EndIf
-  EndProcedure
-  
   Procedure GadgetCloseSettings() ; close settings window and apply settings
     HideWindow(window, #True)
     DisableWindow(_parentW, #False)
@@ -149,11 +121,6 @@ Module windowSettings
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("miscBackupAfterInstall")))
     settings::setInteger("backup", "before_update", GetGadgetState(gadget("miscBackupBeforeUpdate")))
     settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("miscBackupBeforeUninstall")))
-    
-    settings::setInteger("color", "mod_up_to_date", GetCanvasColor(gadget("colorModUpToDate")))
-    settings::setInteger("color", "mod_update_available", GetCanvasColor(gadget("colorModUpdateAvailable")))
-    settings::setInteger("color", "mod_lua_error", GetCanvasColor(gadget("colorModLuaError")))
-    settings::setInteger("color", "mod_hidden", GetCanvasColor(gadget("colorModHidden")))
     
     settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
     settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
@@ -409,12 +376,6 @@ Module windowSettings
     SetGadgetText(gadget("languageFrame"),          l("settings","locale"))
     SetGadgetText(gadget("languageSelection"),      "")
     
-    SetGadgetText(gadget("colorFrame"),                   l("settings","color"))
-    SetGadgetText(gadget("colorModUpToDateText"),         l("settings","color_mod_up_to_date"))
-    SetGadgetText(gadget("colorModUpdateAvailableText"),  l("settings","color_mod_update_available"))
-    SetGadgetText(gadget("colorModLuaErrorText"),         l("settings","color_mod_lua_error"))
-    SetGadgetText(gadget("colorModHiddenText"),           l("settings","color_mod_hidden"))
-    
     SetGadgetText(gadget("proxyEnabled"),           l("settings","proxy_enabled"))
     SetGadgetText(gadget("proxyFrame"),             l("settings","proxy_frame"))
     SetGadgetText(gadget("proxyServerLabel"),       l("settings","proxy_server"))
@@ -451,11 +412,8 @@ Module windowSettings
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
     BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
     BindGadgetEvent(gadget("miscBackupFolderChange"), @backupFolderMove())
-    BindGadgetEvent(gadget("colorModUpToDate"), @GadgetColor(), #PB_EventType_LeftClick)
-    BindGadgetEvent(gadget("colorModUpdateAvailable"), @GadgetColor(), #PB_EventType_LeftClick)
-    BindGadgetEvent(gadget("colorModLuaError"), @GadgetColor(), #PB_EventType_LeftClick)
-    BindGadgetEvent(gadget("colorModHidden"), @GadgetColor(), #PB_EventType_LeftClick)
-    
+;     BindGadgetEvent(gadget("languageSelection"), @languageSelection(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("repositoryList"), @repositoryListEvent(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
     BindGadgetEvent(gadget("repositoryRemove"), @repositoryRemove())
     ; receive "unhide" event
@@ -477,11 +435,6 @@ Module windowSettings
     SetGadgetState(gadget("miscBackupAfterInstall"),    settings::getInteger("backup", "after_install"))
     SetGadgetState(gadget("miscBackupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
     SetGadgetState(gadget("miscBackupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
-    
-    SetCanvasColor(gadget("colorModUpToDate"), settings::getInteger("color", "mod_up_to_date"))
-    SetCanvasColor(gadget("colorModUpdateAvailable"), settings::getInteger("color", "mod_update_available"))
-    SetCanvasColor(gadget("colorModLuaError"), settings::getInteger("color", "mod_lua_error"))
-    SetCanvasColor(gadget("colorModHidden"), settings::getInteger("color", "mod_hidden"))
     
     ; proxy
     SetGadgetState(gadget("proxyEnabled"), settings::getInteger("proxy", "enabled"))

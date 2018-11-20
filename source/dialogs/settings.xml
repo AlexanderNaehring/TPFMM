@@ -39,21 +39,6 @@
                 <frame name='languageFrame' text='Language'>
                   <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
                 </frame>
-                <frame name='colorFrame' text='Color Settings'>
-                  <gridbox columns='2' colexpand='item:1' rowexpand='no'>
-                    <text name='colorModUpToDateText' text=' ' />
-                    <canvas name='colorModUpToDate' width='50' />
-
-                    <text name='colorModUpdateAvailableText' text=' ' />
-                    <canvas name='colorModUpdateAvailable' width='50' />
-
-                    <text name='colorModHiddenText' text=' ' />
-                    <canvas name='colorModHidden' width='50' />
-
-                    <text name='colorModLuaErrorText' text=' ' />
-                    <canvas name='colorModLuaError' width='50' />
-                  </gridbox>
-                </frame>
               </vbox>
             </hbox>
 

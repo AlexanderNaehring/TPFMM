@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -154,11 +154,6 @@ repository_input_url    = Please input the URL to the repository
 repository_usecache     = Use local cache
 repository_usecache_tip = Show the last local version of the online database if internet connection cannot be established.
 repository_not_loaded   = Not loaded
-color                       = Color Settings
-color_mod_up_to_date        = Mod up to date
-color_mod_update_available  = Mod update available
-color_mod_lua_error         = LUA error while reading mod
-color_mod_hidden            = Mod hidden
 
 [management]
 install       = Add '{name}' to Transport Fever
