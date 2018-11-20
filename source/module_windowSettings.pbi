@@ -5,6 +5,7 @@ DeclareModule windowSettings
   
   Declare create(parentWindow)
   Declare show()
+  Declare updateStrings()
   Declare close()
   
   ; custom events that can be sent to "window"
@@ -100,7 +101,7 @@ Module windowSettings
   EndProcedure
   
   Procedure GadgetSaveSettings()
-    Protected Dir$, locale$, oldDir$, restart = #False
+    Protected Dir$, locale$, oldDir$
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     
@@ -113,7 +114,10 @@ Module windowSettings
     
     settings::setString("", "path", dir$)
     If locale$ <> settings::getString("", "locale")
-      restart = #True
+      locale::use(locale$)
+      windowMain::updateStrings()
+      ; no need to update strings in this window, as they will be updated on next window show()
+      ; TODO update all strings, e.g. in filter/sort dialogs
     EndIf
     settings::setString("", "locale", locale$)
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
@@ -131,12 +135,6 @@ Module windowSettings
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
     settings::setInteger("repository", "use_cache", GetGadgetState(gadget("repositoryUseCache")))
-    
-    If restart
-      MessageRequester("Restart TPFMM", "TPFMM will now restart to display the selected locale")
-      misc::openLink(ProgramFilename())
-      End
-    EndIf
     
     main::initProxy()
     main::updateDesktopIntegration()
@@ -340,25 +338,8 @@ Module windowSettings
   ;---------------------------------- PUBLIC ----------------------------------
   ;----------------------------------------------------------------------------
   
-  Procedure create(parentWindow)
-    _parentW = parentWindow
-    
-    UseModule locale ; import namespace "locale" for shorthand "l()" access
-    
-    ; open dialog
-    Protected xml 
-    misc::IncludeAndLoadXML(xml, "dialogs/settings.xml")
-    
-    _dialog = CreateDialog(#PB_Any)
-     
-    If Not OpenXMLDialog(_dialog, xml, "settings", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(parentWindow))
-      MessageRequester("Critical Error", "Could not open settings window!", #PB_MessageRequester_Error)
-      End
-    EndIf
-    FreeXML(xml)
-    
-    window = DialogWindow(_dialog)
-    
+  Procedure updateStrings()
+    UseModule locale
     
     ; set texts
     SetWindowTitle(window, l("settings","title"))
@@ -419,7 +400,22 @@ Module windowSettings
     UnuseModule locale
   EndProcedure
   
+  Procedure create(parentWindow)
+    _parentW = parentWindow
     
+    ; open dialog
+    Protected xml 
+    misc::IncludeAndLoadXML(xml, "dialogs/settings.xml")
+    
+    _dialog = CreateDialog(#PB_Any)
+     
+    If Not OpenXMLDialog(_dialog, xml, "settings", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(parentWindow))
+      MessageRequester("Critical Error", "Could not open settings window!", #PB_MessageRequester_Error)
+      End
+    EndIf
+    FreeXML(xml)
+    
+    window = DialogWindow(_dialog)
     
     ; bind events
     BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
@@ -443,13 +439,15 @@ Module windowSettings
     ; receive "unhide" event
     BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
     
-    RefreshDialog(_dialog)
+    updateStrings()
     
     ProcedureReturn #True
   EndProcedure
   
   Procedure show()
     Protected locale$
+    
+    updateStrings()
     
     ; main
     SetGadgetText(gadget("installationPath"), settings::getString("", "path"))
