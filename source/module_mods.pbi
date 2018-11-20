@@ -1190,23 +1190,17 @@ Module mods
   EndProcedure
   
   Procedure modIsUpdateAvailable(*mod.mod) 
-    ; TODO modIsUpateAvailable()
     Protected compare, *repo_mod.repository::RepositoryMod
-    
-;     todo repo mods Not yet threadsafe... cannot access repo mods While repositories are loaded
+    ; todo modIsUpdateAvailable() not yet threadsafe... cannot access repo mods while repositories are loaded
     
     *repo_mod = modGetRepoMod(*mod)
-    
     If Not *repo_mod
-      ; no online mod found -> no update available
       ProcedureReturn #False
     EndIf
     
-    If settings::getInteger("", "compareVersion") And *repo_mod\getVersion()
-      ; use alternative comparison method: version check
+    If settings::getInteger("", "compareVersion") And *repo_mod\getSource() <> "workshop" And *repo_mod\getVersion()
       compare = Bool(*repo_mod\getVersion() And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\getVersion()))
     Else
-      ; default compare: date check
       compare = Bool((*mod\aux\repoTimeChanged And *repo_mod\getTimeChanged() > *mod\aux\repoTimeChanged) Or
                      (*mod\aux\installDate And *repo_mod\getTimeChanged() > *mod\aux\installDate))
     EndIf
@@ -1944,17 +1938,20 @@ Module mods
       ProcedureReturn #False
     EndIf
     
+    
     ; try to find direct repo file downlaod by file ID
     ; attention: if multiple online files available for same foldername, only one is returned!
     ; TODO change which file/mod is returned, e.g. by using the latest (by date)?
     *repoFile = modGetRepoFile(*mod)
     If *repoFile
+      deb("mods:: doUpdate() found online file "+*repoFile\getFileName()+" at "+*repoFile\getLink())
       ProcedureReturn *repoFile\download() ; starts download in new thread
     EndIf
     
     ; if no direct file is found, try to find the mod (which may have multiple files as selction for the user)
     *repoMod = modGetRepoMod(*mod)
     If *repoMod
+      deb("mods:: doUpdate() found online mod in source "+*repoMod\getSource()+": "+*repoMod\getName()+" at "+*repoMod\getLink())
       ProcedureReturn *repoMod\download() ; direct download or show user selection for file to download
     EndIf
     
