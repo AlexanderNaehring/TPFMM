@@ -29,15 +29,15 @@
                     </hbox>
                   </vbox>
                 </frame>
-                <frame name='miscFrame' text='Miscellaneous'>
-                  <vbox expand='no'>
-                    <checkbox name='miscVersionCheck' text=' '/>
-                  </vbox>
-                </frame>
               </vbox>
               <vbox expand='no'>
                 <frame name='languageFrame' text='Language'>
                   <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+                </frame>
+                <frame name='miscFrame' text='Miscellaneous'>
+                  <vbox expand='no'>
+                    <checkbox name='miscVersionCheck' text=' '/>
+                  </vbox>
                 </frame>
               </vbox>
             </hbox>
