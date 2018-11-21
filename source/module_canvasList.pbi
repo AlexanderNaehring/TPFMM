@@ -209,8 +209,10 @@ Module CanvasList
     Italic.b  ; italic  true/false
     REM.d     ; scaling factor relative to default font size of OS GUI
     
-    FontID.i  ; store font ID after loading the font
+    ; internal information, not supplied by json:
+    FontID.i
     yOffset.i
+    Array tabX.w(10)
   EndStructure
   
   Structure themeItemImage
@@ -226,6 +228,7 @@ Module CanvasList
     Padding.w
     Image.themeItemImage
     Array Lines.themeItemLine(0) ; one font definition per line!
+    TabAlign$
   EndStructure
   
   Structure theme
@@ -781,8 +784,8 @@ Module CanvasList
   
   Procedure updateItemLineFonts(*this.gadget) ; required after setting the font information for theme\item\Lines()
     ; load fonts and calculate item height
-    *this\theme\item\Height = *this\theme\item\Padding ; top padding
     Protected i, style
+    *this\theme\item\Height = *this\theme\item\Padding ; top padding
     For i = 0 To ArraySize(*this\theme\item\Lines())
       If *this\theme\item\Lines(i)\font$ = ""
         *this\theme\item\Lines(i)\font$ = getDefaultFontName()
@@ -818,7 +821,9 @@ Module CanvasList
   Procedure draw(*this.gadget)
     Protected margin, padding
     Protected i, line$
+    Protected k, nextX, str$
     Protected x, y, w, h
+    Protected redraw.b
     margin = *this\theme\Item\Margin
     padding = *this\theme\Item\Padding
     
@@ -894,15 +899,48 @@ Module CanvasList
             For i = 0 To ArraySize(*this\theme\item\Lines())
               line$ = StringField(\text$, i+1, #LF$)
               DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
-              ; icon offset only in first line:
               x = \canvasBox\x + padding + iOffset
               y = \canvasBox\y + *this\theme\item\Lines(i)\yOffset
               w = \canvasBox\width - 2*padding - iOffset
-              If i = 0
+              If i = 0 ; icon offset only in first line
                 x + iconOffsetL
                 w - iconOffsetL - iconOffsetR
               EndIf
-              DrawText(x, y, TextMaxWidth(line$, w), ColorFromHTML(*this\theme\color\ItemText$))
+              
+              If Not CountString(line$, Chr(9))
+                DrawText(x, y, TextMaxWidth(line$, w), ColorFromHTML(*this\theme\color\ItemText$))
+              Else ; if using tab, split string and draw multiple text boxes
+                For k = 1 To CountString(line$, Chr(9))+1
+                  str$ = StringField(line$, k, Chr(9))
+                  
+                  If k > 1 ; check if tab align is active and if saved tab location is further right tha current tab location
+                    If *this\theme\item\TabAlign$ = "line" And x < *this\theme\item\lines(i)\tabX(k-1)
+                      ; TODO if tabAlign causes other text to move out of visible area, move back?
+                      w - (*this\theme\item\lines(i)\tabX(k-1) - x)
+                      x = *this\theme\item\lines(i)\tabX(k-1)
+                    ElseIf *this\theme\item\TabAlign$ = "list" And x < *this\theme\item\lines(0)\tabX(k-1)
+                      w - (*this\theme\item\lines(0)\tabX(k-1) - x)
+                      x = *this\theme\item\lines(0)\tabX(k-1)
+                    EndIf
+                  EndIf
+                  
+                  ; draw text, result is cursor position
+                  nextX = DrawText(x, y, TextMaxWidth(str$, w), ColorFromHTML(*this\theme\color\ItemText$))
+                  ; align nextX to defined steps
+                  #TabPx = 25
+                  nextX = (Round((nextX+8)/#TabPx, #PB_Round_Up))*#TabPx
+                  w - (nextX - x)
+                  x = nextX
+                  
+                  If *this\theme\item\TabAlign$ = "line" And *this\theme\item\lines(i)\tabX(k) < x
+                    *this\theme\item\lines(i)\tabX(k) = x
+                    redraw = #True
+                  ElseIf *this\theme\item\TabAlign$ = "list" And *this\theme\item\lines(0)\tabX(k) < x
+                    *this\theme\item\lines(0)\tabX(k) = x
+                    redraw = #True
+                  EndIf
+                Next
+              EndIf
             Next
             
             
@@ -993,7 +1031,7 @@ Module CanvasList
       
       ; draw "x/N items visible" information in bottem right
       If *this\hover
-        ; TODO filter info in CanvasList WIP!
+        ; TODO only english, add more options here
         If visibleItems < ListSize(*this\items())
           text$ = "Showing "+visibleItems+"/"+ListSize(*this\items())+" items"
           DrawingMode(#PB_2DDrawing_AlphaBlend|#PB_2DDrawing_Transparent)
@@ -1041,6 +1079,12 @@ Module CanvasList
       ; finished drawing
       StopDrawing()
       UnlockMutex(*this\mItems)
+      
+      
+      If Redraw
+        draw(*this)
+      EndIf
+      
       ProcedureReturn #False
     Else
       UnlockMutex(*this\mItems)
@@ -1584,6 +1628,13 @@ Module CanvasList
     DeleteElement(*this\items(), 1)
     UnlockMutex(*this\mItems)
     
+    Protected i, k ; each item removal potentially resets "tabAlign"
+    For i = 0 To ArraySize(*this\theme\item\Lines())
+      For k = 0 To ArraySize(*this\theme\item\Lines(i)\tabX())
+        *this\theme\item\Lines(i)\tabX(k) = 0
+      Next
+    Next
+    
     updateScrollbar(*this)
     updateItemPosition(*this)
     draw(*this)
@@ -1593,6 +1644,13 @@ Module CanvasList
     LockMutex(*this\mItems)
     ClearList(*this\items())
     UnlockMutex(*this\mItems)
+    
+    Protected i, k ; reset "tabAlign"
+    For i = 0 To ArraySize(*this\theme\item\Lines())
+      For k = 0 To ArraySize(*this\theme\item\Lines(i)\tabX())
+        *this\theme\item\Lines(i)\tabX(k) = 0
+      Next
+    Next
     
     updateScrollbar(*this)
     updateItemPosition(*this)
@@ -1736,8 +1794,7 @@ Module CanvasList
     json = ParseJSON(#PB_Any, theme$, #PB_JSON_NoCase)
     If json
       For i = 0 To ArraySize(*this\theme\item\Lines())
-        If *this\theme\item\Lines(i)\FontID And 
-          IsFont(*this\theme\item\Lines(i)\FontID)
+        If *this\theme\item\Lines(i)\FontID And IsFont(*this\theme\item\Lines(i)\FontID)
           FreeFont(*this\theme\item\Lines(i)\FontID)
           *this\theme\item\Lines(i)\FontID = 0
         EndIf
