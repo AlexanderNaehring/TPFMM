@@ -527,9 +527,9 @@ Module repository
       
       If FileSize(file$) <= 0
         ; download image
-        deb("Download Thumbnail "+*thumbnailData\mod\thumbnail$)
+        Debug "Download Thumbnail '"+*thumbnailData\mod\thumbnail$+"'"
         CreateDirectory(GetPathPart(file$))
-        *buffer = downloadToMemory_deprecated(url$)
+        *buffer = ReceiveHTTPMemory(url$, #Null, main::VERSION_FULL$)
         If *buffer
           If MemorySize(*buffer) > 1024 ; often rx 92 bytes when proxy error occurs
             image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
@@ -537,9 +537,15 @@ Module repository
               image = misc::ResizeCenterImage(image, 160, 90)
               SaveImage(image, file$, #PB_ImagePlugin_JPEG, 7, 24)
               FreeImage(image)
+            Else
+              Debug "cold not load image"
             EndIf
+          Else
+            Debug "mem buffer too small?"
           EndIf
           FreeMemory(*buffer)
+        Else
+          Debug "donload failed"
         EndIf
       EndIf
         
