@@ -11,6 +11,7 @@ DeclareModule windowSettings
   ; custom events that can be sent to "window"
   Enumeration #PB_Event_FirstCustomValue
     #EventRefreshRepoList
+    #EventBackupFolderMoved
   EndEnumeration
   
 EndDeclareModule
@@ -20,7 +21,6 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_aes.pbi"
-
 
 Module windowSettings
   UseModule debugger
@@ -122,9 +122,10 @@ Module windowSettings
     settings::setString("", "locale", locale$)
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     
-    settings::setInteger("backup", "after_install", GetGadgetState(gadget("miscBackupAfterInstall")))
-    settings::setInteger("backup", "before_update", GetGadgetState(gadget("miscBackupBeforeUpdate")))
-    settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("miscBackupBeforeUninstall")))
+    settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
+    settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
+    settings::setInteger("backup", "before_update", GetGadgetState(gadget("backupBeforeUpdate")))
+    settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("backupBeforeUninstall")))
     
     settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
     settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
@@ -155,30 +156,49 @@ Module windowSettings
     GadgetCloseSettings()
   EndProcedure
   
+  
+  Procedure backupFolderMoved()
+    DisableWindow(window, #False)
+    main::closeProgressWindow()
+    If EventGadget()
+      MessageRequester(locale::l("generic","success"), locale::l("settings", "backup_move_success"), #PB_MessageRequester_Info)
+    Else
+      MessageRequester(locale::l("generic","error"), locale::l("settings", "backup_move_error"), #PB_MessageRequester_Error)
+    EndIf
+    SetGadgetText(gadget("backupFolder"), mods::backupsGetFolder())
+  EndProcedure
+  
   Procedure backupFolderMoveThread(*folder)
     Protected folder$
     folder$ = PeekS(*folder)
     FreeMemory(*folder)
     
-    DisableGadget(gadget("miscBackupFolderChange"), #True)
-    SetGadgetText(gadget("miscBackupFolderChange"), locale::l("settings", "backup_change_folder_wait"))
-    mods::moveBackupFolder(folder$)
-    DisableGadget(gadget("miscBackupFolderChange"), #False)
-    SetGadgetText(gadget("miscBackupFolderChange"), locale::l("settings", "backup_change_folder"))
+    If mods::backupsMoveFolder(folder$)
+      PostEvent(#EventBackupFolderMoved, window, #True)
+    Else
+      PostEvent(#EventBackupFolderMoved, window, #False)
+    EndIf
   EndProcedure
   
   Procedure backupFolderMove()
     Protected folder$
     Protected *folder
     
-    folder$ = PathRequester(locale::get("settings", "backup_change_folder"), mods::getBackupFolder())
+    folder$ = PathRequester(locale::get("settings", "backup_change_folder"), mods::backupsGetFolder())
+    If folder$ = ""
+      ProcedureReturn #False
+    EndIf
+    
+    main::showProgressWindow(locale::l("settings", "backup_change_folder_wait"))
+    main::setProgressText(locale::l("settings", "backup_change_folder_wait"))
+    DisableWindow(window, #True)
     
     *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
     PokeS(*folder, folder$)
-    
     CreateThread(@backupFolderMoveThread(), *folder)
     
   EndProcedure
+  
   
   Procedure updateGadgets()
     ; check gadgets etc
@@ -345,9 +365,10 @@ Module windowSettings
     SetWindowTitle(window, l("settings","title"))
     
     SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
-    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "proxy"))
-    SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "integrate"))
-    SetGadgetItemText(gadget("panelSettings"), 3,   l("settings", "repository"))
+    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "backup"))
+    SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "proxy"))
+    SetGadgetItemText(gadget("panelSettings"), 3,   l("settings", "integrate"))
+    SetGadgetItemText(gadget("panelSettings"), 4,   l("settings", "repository"))
     
     SetGadgetText(gadget("save"),                   l("settings","save"))
     GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
@@ -363,11 +384,28 @@ Module windowSettings
     GadgetToolTip(gadget("installationBrowse"),     l("settings","browse_tip"))
     SetGadgetText(gadget("installationTextStatus"), "")
                
+    SetGadgetText(gadget("backupAutoDeleteLabel"),  l("settings","backup_auto_delete"))
+    ClearGadgetItems(gadget("backupAutoDeleteTime"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 0, l("settings","backup_auto_delete_never"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 0, 0)
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 1, l("settings","backup_auto_delete_1week"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 1, 7)
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 2, l("settings","backup_auto_delete_1month"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 2, 31)
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 3, l("settings","backup_auto_delete_3months"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 3, 91)
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 4, l("settings","backup_auto_delete_6months"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 4, 182)
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 5, l("settings","backup_auto_delete_1year"))
+    SetGadgetItemData(gadget("backupAutoDeleteTime"), 5, 365)
+    
+    SetGadgetText(gadget("backupAutoCreateLabel"),  l("settings","backup_auto_create_label"))
+    SetGadgetText(gadget("backupAfterInstall"),     l("settings","backup_after_install"))
+    SetGadgetText(gadget("backupBeforeUpdate"),     l("settings","backup_before_update"))
+    SetGadgetText(gadget("backupBeforeUninstall"),  l("settings","backup_before_uninstall"))
+    SetGadgetText(gadget("backupFolderChange"),     l("settings","backup_change_folder"))
+    
     SetGadgetText(gadget("miscFrame"),              l("settings","other"))
-    SetGadgetText(gadget("miscBackupAfterInstall"),     l("settings","backup_after_install"))
-    SetGadgetText(gadget("miscBackupBeforeUpdate"),     l("settings","backup_before_update"))
-    SetGadgetText(gadget("miscBackupBeforeUninstall"),  l("settings","backup_before_uninstall"))
-    SetGadgetText(gadget("miscBackupFolderChange"),     l("settings","backup_change_folder"))
     SetGadgetText(gadget("miscVersionCheck"),       l("settings","versioncheck"))
     GadgetToolTip(gadget("miscVersionCheck"),       l("settings","versioncheck_tip"))
     
@@ -420,6 +458,7 @@ Module windowSettings
     ; bind events
     BindEvent(#PB_Event_CloseWindow, @GadgetCloseSettings(), window)
     BindEvent(#EventRefreshRepoList, @updateRepositoryList(), window)
+    BindEvent(#EventBackupFolderMoved, @backupFolderMoved(), window)
     
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())
@@ -429,7 +468,7 @@ Module windowSettings
     BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
     BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
-    BindGadgetEvent(gadget("miscBackupFolderChange"), @backupFolderMove())
+    BindGadgetEvent(gadget("backupFolderChange"), @backupFolderMove())
 ;     BindGadgetEvent(gadget("languageSelection"), @languageSelection(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryList"), @repositoryListEvent(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
@@ -446,6 +485,7 @@ Module windowSettings
   
   Procedure show()
     Protected locale$
+    Protected days, i
     
     updateStrings()
     
@@ -454,9 +494,26 @@ Module windowSettings
     locale$ = settings::getString("", "locale")
     SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
     
-    SetGadgetState(gadget("miscBackupAfterInstall"),    settings::getInteger("backup", "after_install"))
-    SetGadgetState(gadget("miscBackupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
-    SetGadgetState(gadget("miscBackupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
+    ; backup
+    days = settings::getInteger("backup", "auto_delete_days")
+    SetGadgetState(gadget("backupAutoDeleteTime"), 0)
+    For i = 0 To CountGadgetItems(gadget("backupAutoDeleteTime"))-1
+      If GetGadgetItemData(gadget("backupAutoDeleteTime"), i) = days
+        SetGadgetState(gadget("backupAutoDeleteTime"), i)
+        Break
+      EndIf
+    Next
+    If GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))) <> days
+      deb("windowSettings:: auto_delete_days value in settings does not fit to available selection. Reset to 0.")
+      settings::setInteger("backup", "auto_delete_days", 0)
+      SetGadgetState(gadget("backupAutoDeleteTime"), 0)
+    EndIf
+      
+    
+    SetGadgetState(gadget("backupAfterInstall"),    settings::getInteger("backup", "after_install"))
+    SetGadgetState(gadget("backupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
+    SetGadgetState(gadget("backupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
+    SetGadgetText(gadget("backupFolder"),           mods::backupsGetFolder())
     
     ; proxy
     SetGadgetState(gadget("proxyEnabled"), settings::getInteger("proxy", "enabled"))
@@ -468,7 +525,6 @@ Module windowSettings
     SetGadgetState(gadget("integrateRegisterProtocol"), settings::getInteger("integration", "register_protocol"))
     SetGadgetState(gadget("integrateRegisterContextMenu"), settings::getInteger("integration", "register_context_menu"))
     DisableGadget(gadget("integrateRegisterContextMenu"), #True)
-    
     
     CompilerIf #PB_Compiler_OS = #PB_OS_Linux
       DisableGadget(gadget("integrateRegisterProtocol"), #True)
@@ -489,7 +545,6 @@ Module windowSettings
     
     ; show window
     RefreshDialog(_dialog)
-    ;HideWindow(window, #False) ; linux: cannot unhide from other process  (?)
     PostEvent(#PB_Event_RestoreWindow, window, window)
     DisableWindow(_parentW, #True)
     SetActiveWindow(window)

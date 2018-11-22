@@ -127,7 +127,8 @@ Module windowMain
   
   Global dialog
   Global modFilter.dialog, modSort.dialog,
-         repoFilter.dialog, repoSort.dialog
+         repoFilter.dialog, repoSort.dialog,
+         backupFilter.dialog, backupSort.dialog
   Global menu, menuShare
   Global currentTab
   
@@ -142,6 +143,7 @@ Module windowMain
   
   Global *modList.CanvasList::CanvasList
   Global *repoList.CanvasList::CanvasList
+  Global *backupList.CanvasList::CanvasList
   Global *saveModList.CanvasList::CanvasList
   
   Global *workerAnimation.animation::animation
@@ -227,33 +229,14 @@ Module windowMain
   EndProcedure
   
   Procedure updateBackupButtons()
-    Protected item, checked
-    Protected gadgetTree
-    
-    If settings::getString("", "path")
-      gadgetTree = gadget("backupTree")
-      For item = 0 To CountGadgetItems(gadgetTree) - 1
-        If GetGadgetItemAttribute(gadgetTree, item, #PB_Tree_SubLevel) = 1
-          If GetGadgetItemState(gadgetTree, item) & #PB_Tree_Checked
-            checked + 1
-          EndIf
-        EndIf
-      Next
-      
-      DisableGadget(gadget("backupTree"), #False)
-      DisableGadget(gadget("backupFolder"), #False)
-      
-      DisableGadget(gadget("backupRestore"), Bool(Not checked))
-      DisableGadget(gadget("backupDelete"), Bool(Not checked))
-      
+    Protected NewList *items.CanvasList::CanvasListItem()
+    If *backupList\GetAllSelectedItems(*items())
+      DisableGadget(gadget("backupRestore"), #False)
+      DisableGadget(gadget("backupDelete"), #False)
     Else
-      
-      DisableGadget(gadget("backupTree"), #True)
       DisableGadget(gadget("backupRestore"), #True)
       DisableGadget(gadget("backupDelete"), #True)
-      DisableGadget(gadget("backupFolder"), #True)
     EndIf
-    
   EndProcedure
   
   ;- exit procedure
@@ -1776,7 +1759,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -1863,294 +1846,173 @@ Module windowMain
   
   ;- backup tab
   
-  Procedure backupTree()
-    Protected item, level, i, gadget, checked, state, state2
-    
-    ; update checked items...
-    If EventType() = #PB_EventType_LeftClick
-      ; the _current_ item was changed!
-      gadget = EventGadget()
-      ; get current item:
-      item = GetGadgetState(gadget)
-      If item <> -1
-        state = GetGadgetItemState(gadget, item)
-        state & #PB_Tree_Checked
-        
-        level = GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel)
-        If level = 0
-          ; top level item -> apply state to all lower level items
-          ; iterate to next items until an item with same level is found
-          For i = item + 1 To CountGadgetItems(gadget) - 1
-            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) = level
-              Break
-            EndIf
-            ; apply parent "state" to all child items:
-            SetGadgetItemState(gadget, i, state) ; checked or 0
-          Next
-        ElseIf level = 1
-          ; lower level -> check state of sibling items and apply corresponding state to parent item
-          ; iterate down to end of this level
-          For i = item To CountGadgetItems(gadget) - 1
-            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) < level ; found another high level item
-              i - 1
-              Break
-            EndIf
-          Next
-          If i > (CountGadgetItems(gadget) - 1)
-            i = CountGadgetItems(gadget) - 1
-          EndIf
-          
-          ; i is now the last item of this sublevel
-          ; iterate "up" to parent and check the states while 
-          For i = i To 0 Step -1
-            If GetGadgetItemAttribute(gadget, i, #PB_Tree_SubLevel) < level
-              Break
-            EndIf
-            
-            state2 = GetGadgetItemState(gadget, i)
-            If (state & #PB_Tree_Checked And Not state2 & #PB_Tree_Checked) Or
-               (state2 & #PB_Tree_Checked And Not state & #PB_Tree_Checked)
-              state = #PB_Tree_Inbetween
-;             ElseIf state & #PB_Tree_Checked And state2 & #PB_Tree_Checked And i <> item
-;               ; set all other sublevel items that are checked to inbetween
-;               SetGadgetItemState(gadget, i , #PB_Tree_Inbetween)
-            EndIf
-          Next
-          SetGadgetItemState(gadget, i, state)
-        EndIf
-      EndIf
-    EndIf
-    
-    updateBackupButtons()
-    
-  EndProcedure
-  
   Procedure backupRestore()
-    Protected gadget, item
-    Protected *buffer.mods::backupInfoLocal
-    Protected backupFolder$
-    
-    If settings::getString("", "path") = ""
-      ProcedureReturn #False
-    EndIf
-    
-    backupFolder$ = mods::getBackupFolder()
-    
-    gadget = gadget("backupTree")
-    ; iterate all items, only use the first checked item of sublevel 1,
-    ; then wait For the Next level 0 item befor accepting new items form level 1
-    For item = 0 To CountGadgetItems(gadget) - 1
-      If GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel) = 1
-        If GetGadgetItemState(gadget, item) & #PB_Tree_Checked
-          ; use this item!
-          *buffer = GetGadgetItemData(gadget, item)
-          If *buffer
-            mods::install(backupFolder$ + PeekS(*buffer))
-          EndIf
-          
-          
-          ; skip following level 1 items and skip to next level 0 item
-          For item = item To CountGadgetItems(gadget) - 1
-            If GetGadgetItemAttribute(gadget, item, #PB_Tree_SubLevel) = 0
-              Break
-            EndIf
-          Next
-        EndIf
-      EndIf
-    Next
-    
+    ; todo implement backup restore
+    DebuggerWarning("not implemented yet")
   EndProcedure
   
   Procedure backupDelete()
-    Protected gadget, item
-    Protected *buffer, file$
-    
-    gadget = gadget("backupTree")
-    For item = 0 To CountGadgetItems(gadget) - 1
-      If GetGadgetItemState(gadget, item) & #PB_Tree_Checked
-        *buffer = GetGadgetItemData(gadget, item)
-        If *buffer
-          file$ = PeekS(*buffer)
-          mods::backupDelete(file$)
+    Protected NewList *items.CanvasList::CanvasListItem()
+    Protected *backup.mods::BackupMod
+    If *backupList\GetAllSelectedItems(*items())
+      ForEach *items()
+        *backup = *items()\GetUserData()
+        If *backup
+          ; not in thread, wait for deletion, should be fast
+          *backup\delete()
         EndIf
-      EndIf
-    Next
-    
-    backupRefreshList()
+      Next
+    EndIf
   EndProcedure
   
   Procedure backupFolder()
-    misc::openLink(mods::getBackupFolder())
-  EndProcedure
-  
-  Procedure backupExpand()
-    Protected gadget, item, state
-    
-    gadget = gadget("backupTree")
-    For item = 0 To CountGadgetItems(gadget)
-      state = GetGadgetItemState(gadget, item)
-      If state & #PB_Tree_Collapsed
-        state ! #PB_Tree_Collapsed
-        state | #PB_Tree_Expanded
-        SetGadgetItemState(gadget, item, state)
-      EndIf
-    Next
-  EndProcedure
-  
-  Procedure backupCollapse()
-    Protected gadget, item, state
-    gadget = gadget("backupTree")
-    For item = 0 To CountGadgetItems(gadget)
-      state = GetGadgetItemState(gadget, item)
-      If state & #PB_Tree_Expanded
-        state ! #PB_Tree_Expanded
-        state | #PB_Tree_Collapsed
-        SetGadgetItemState(gadget, item, state)
-      EndIf
-    Next
-  EndProcedure
-  
-  Procedure backupCheck()
-    Protected gadget, item
-    gadget = gadget("backupTree")
-    For item = 0 To CountGadgetItems(gadget)
-      SetGadgetItemState(gadget, item, #PB_Tree_Checked)
-    Next
-    updateBackupButtons()
-  EndProcedure
-  
-  Procedure backupClear()
-    Protected gadget, item
-    gadget = gadget("backupTree")
-    For item = 0 To CountGadgetItems(gadget)
-      SetGadgetItemState(gadget, item, 0)
-    Next
-    updateBackupButtons()
+    misc::openLink(mods::backupsGetFolder())
   EndProcedure
   
   Procedure backupRefreshList()
-    Protected NewList allBackups.mods::backupInfoLocal()
-    Protected NewList tpf_id$()
-    Protected NewList someBackups.mods::backupInfoLocal()
-    Protected found, item
-    Protected text$, filter$
-    Protected *buffer
+    mods::backupsScan()
+  EndProcedure
+  
+  Procedure backupListItemEvent(*item, event)
+    Select event
+      Case #PB_EventType_LeftDoubleClick
+        If *item
+          ; item action
+        EndIf
+      Case #PB_EventType_Change
+        updateBackupButtons()
+    EndSelect
+  EndProcedure
+  
+  Procedure backupCallbackNewBackup(*backup.mods::BackupMod)
+    ; a new backup file was created at "filename"
+    Protected *item.CanvasList::CanvasListItem
     
-    Debug "windowMain::backupRefreshList()"
+    *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+Chr(9)+
+                                locale::l("generic","folder")+": "+*backup\getFoldername()+#LF$+
+                                locale::l("generic","by")+" "+*backup\getAuthors()+Chr(9)+
+                                FormatDate(locale::l("main","backup_date"), *backup\getDate()), *backup)
     
-    For item = 0 To CountGadgetItems(gadget("backupTree")) - 1
-      *buffer = GetGadgetItemData(gadget("backupTree"), item)
-      If *buffer
-        FreeMemory(*buffer)
-      EndIf
-    Next
+    ; potentially, there already was a backup with this filename
+    ; TODO check if backup is duplicate?
+  EndProcedure
+  
+  Procedure backupCallbackRemoveBackup(*backup.mods::BackupMod)
+    Protected NewList *items.CanvasList::CanvasListItem()
     
-    ClearGadgetItems(gadget("backupTree"))
-    item = 0
-    
-    filter$ = GetGadgetText(gadget("backupFilter"))
-    
-    If mods::getBackupList(allBackups(), filter$)
-      ; create individual lists for each tpf_id, sorted by date.
-      
-      ; first: extract the tpf_ids
-      ForEach allBackups()
-        ; check if the tpf_id of this backup is already in list...
-        found = #False
-        ForEach tpf_id$()
-          If tpf_id$() = allBackups()\tpf_id$
-            ; already in list
-            found = #True
-            Break
-          EndIf
-        Next
-        ; if not: add to list
-        If Not found
-          AddElement(tpf_id$())
-          tpf_id$() = allBackups()\tpf_id$
+    If *backupList\GetAllItems(*items())
+      ForEach *items()
+        If *backup = *items()\GetUserData()
+          *backupList\RemoveItem(*items())
+          Break
         EndIf
       Next
-      
-      ; second: order all tpf_id by name
-      SortList(tpf_id$(), #PB_Sort_Ascending|#PB_Sort_NoCase)
-      
-      ; third: iterate all tpf_id and display all backups with this ID sorted by date
-      ForEach tpf_id$()
-        ; find all backups with this tpf_id
-        ClearList(someBackups())
-        ForEach allBackups()
-          If allBackups()\tpf_id$ = tpf_id$()
-            AddElement(someBackups())
-            ; copy values to temporary list
-            someBackups() = allBackups()
+    EndIf
+  EndProcedure
+  
+  Procedure backupCallbackClearBackups()
+    *backupList\ClearItems()
+  EndProcedure
+  
+  
+  ;- backup filter dialog
+  
+  Procedure backupFilterCallback(*item.CanvasList::CanvasListItem, options)
+    ; return true if this mod shall be displayed, false if hidden
+    Protected *backup.mods::BackupMod = *item\GetUserData()
+    Protected string$, s$, i, n
+    Protected date
+    
+    date = GetGadgetState(DialogGadget(backupFilter\dialog, "filterDate"))
+    If date ; match exact date
+      date = Date(Year(date), Month(date), Day(date), 0, 0, 0)
+      If *backup\getDate() < date Or *backup\getDate() > date + 86400
+        ProcedureReturn #False
+      EndIf
+    EndIf
+    
+    ; check for search string
+    string$ = GetGadgetText(DialogGadget(backupFilter\dialog, "filterString"))
+    If string$
+      ; split string in parts
+      n = CountString(string$, " ")
+      For i = 1 To n+1
+        s$ = StringField(string$, i, " ")
+        If s$
+          ; check if s$ is found in any of the information of the mod
+          If Not FindString(*backup\getName(), s$, 1, #PB_String_NoCase)
+            If Not FindString(*backup\getAuthors(), s$, 1, #PB_String_NoCase)
+              If Not FindString(*backup\getFoldername(), s$, 1, #PB_String_NoCase)
+                ProcedureReturn #False
+              EndIf
+            EndIf
           EndIf
-        Next
-        
-        ; sort someBackups by date (newest first)
-        SortStructuredList(someBackups(), #PB_Sort_Descending, OffsetOf(mods::backupInfoLocal\time), TypeOf(mods::backupInfoLocal\time))
-        
-        ; add top level entry to tree gadget
-        If ListSize(someBackups()) = 1
-          text$ = someBackups()\name$ 
-          If someBackups()\version$
-            text$ + " v" + someBackups()\version$
-          EndIf
-          text$ + Space(4) + "(" +  misc::printSize(someBackups()\size) + ")"
-        Else
-          text$ = "" + ListSize(someBackups()) + " " + locale::l("main","backup_files")
         EndIf
-        AddGadgetItem(gadget("backupTree"), item, text$, 0, 0)
-;         If someBackups()\installed
-;           SetGadgetItemColor(gadget("backupTree"), item, #PB_Gadget_FrontColor, RGB($00, $66, $00))
-;         Else
-;           SetGadgetItemColor(gadget("backupTree"), item, #PB_Gadget_FrontColor, RGB($66, $00, $00))
-;         EndIf
-        item + 1
-        
-        ; add entry for each backup
-        ForEach someBackups()
-          With someBackups()
-            text$ = \name$
-            If \version$
-              text$ + " v" + \version$
-            EndIf
-            text$ + " (" +  misc::printSize(\size) + ")"
-            If \time
-              text$ = "[" + FormatDate("%dd.%mm. %hh:%ii", \time) + "] " + text$
-            EndIf
-            
-            ; remember the filename for later actions (restore, delete)
-            ; memory must be freed manually!!!
-            *buffer = AllocateMemory(StringByteLength(\filename$) + SizeOf(character))
-            PokeS(*buffer, \filename$)
-            
-            AddGadgetItem(gadget("backupTree"), item, text$, 0, 1)
-            SetGadgetItemData(gadget("backupTree"), item, *buffer)
-            If ListSize(someBackups()) > 1 And ListIndex(someBackups()) = 0
-              SetGadgetItemState(gadget("backupTree"), item-1, #PB_Tree_Expanded)
-            EndIf
-            item + 1
-          EndWith
-        Next
       Next
     EndIf
     
+    ProcedureReturn #True
+  EndProcedure
+  
+  Procedure backupFilterChange()
+    ; save current filter to settings
+    settings::setString("backupFilter", "filter", GetGadgetText(DialogGadget(backupFilter\dialog, "filterString")))
+    settings::setInteger("backupFilter", "date", GetGadgetState(DialogGadget(backupFilter\dialog, "filterDate")))
+    *backupList\FilterItems(@backupFilterCallback(), 0, #True)
   EndProcedure
   
   Procedure backupFilterReset()
-    SetGadgetText(gadget("backupFilter"), "")
-    backupRefreshList()
+    SetGadgetText(DialogGadget(backupFilter\dialog, "filterString"), "")
+    SetActiveGadget(DialogGadget(backupFilter\dialog, "filterString"))
+    backupFilterChange()
   EndProcedure
   
-  ;- shortcuts
+  ;- repo sort dialog
   
-  Procedure shortcutCtrlF()
-    Select currentTab
-      Case #TabMods
-        modFilterShow()
-      Case #TabOnline
-        repoFilterShow()
+  ;- repo sort functions
+  
+  Procedure compBackupName(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *backup1.mods::BackupMod = *item1\GetUserData()
+    Protected *backup2.mods::BackupMod = *item2\GetUserData()
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(LCase(*backup1\getName()) <= LCase(*backup2\getName()))
+    Else
+      ProcedureReturn Bool(LCase(*backup1\getName()) > LCase(*backup2\getName()))
+    EndIf
+  EndProcedure
+  
+  Procedure compBackupDate(*item1.CanvasList::CanvasListItem, *item2.CanvasList::CanvasListItem, options)
+    Protected *backup1.mods::BackupMod = *item1\GetUserData()
+    Protected *backup2.mods::BackupMod = *item2\GetUserData()
+    If options & #PB_Sort_Descending
+      ProcedureReturn Bool(*backup1\getDate() <= *backup2\getDate())
+    Else
+      ProcedureReturn Bool(*backup1\getDate() > *backup2\getDate())
+    EndIf
+  EndProcedure
+  
+  Procedure backupSortChange()
+    ; apply sorting to CanvasList
+    Protected *comp, mode, options
+    
+    mode = GetGadgetState(DialogGadget(backupSort\dialog, "sortBox"))
+    settings::setInteger("backupSort", "mode", mode)
+    
+    ; get corresponding sorting function
+    Select mode
+      Case 1
+        *comp = @compBackupName()
+        options = #PB_Sort_Ascending
+      Default
+        *comp = @compBackupDate()
+        options = #PB_Sort_Descending
     EndSelect
+    
+    ; Sort CanvasList and make persistent sort (gadget will be keept sorted automatically)
+    *backupList\SortItems(CanvasList::#SortByUser, *comp, options, #True)
+    
+    ; close the mod sort tool window
+    PostEvent(#PB_Event_CloseWindow, backupSort\window, #Null)
   EndProcedure
   
   ;- DRAG & DROP
@@ -2236,6 +2098,26 @@ Module windowMain
     dialogShow(@repoFilter)
   EndProcedure
   
+  Procedure backupSortShow()
+    dialogShow(@backupSort)
+  EndProcedure
+  
+  Procedure backupFilterShow()
+    dialogShow(@backupFilter)
+  EndProcedure
+  
+  ; specific functions
+  
+  Procedure shortcutCtrlF()
+    Select currentTab
+      Case #TabMods
+        modFilterShow()
+      Case #TabOnline
+        repoFilterShow()
+      Case #TabBackup
+        backupFilterShow()
+    EndSelect
+  EndProcedure
   
   ; create dialogs:
   
@@ -2324,6 +2206,43 @@ Module windowMain
     repoSortChange()
   EndProcedure
   
+  Procedure backupFilterDialog()
+    BuildDialogWindow(backupFilter)
+    backupFilter\listGadget = gadget("backupList")
+    backupFilter\activeGadget = DialogGadget(backupFilter\dialog, "filterString")
+    SetGadgetText(DialogGadget(backupFilter\dialog, "filterDateLabel"), locale::l("dialog", "backup_on"))
+    RefreshDialog(backupFilter\dialog)
+    ; load settings
+    SetGadgetAttribute(DialogGadget(backupFilter\dialog, "filterDate"), #PB_Calendar_Maximum, Date())
+    SetGadgetAttribute(DialogGadget(backupFilter\dialog, "filterDate"), #PB_Calendar_Minimum, Date(2018, 1, 1, 0, 0, 0))
+    SetGadgetText(DialogGadget(backupFilter\dialog, "filterString"), "")
+    SetGadgetText(DialogGadget(backupFilter\dialog, "filterString"), settings::getString("backupFilter", "filter"))
+    SetGadgetState(DialogGadget(backupFilter\dialog, "filterDate"), settings::getInteger("backupFilter", "date"))
+    ; dynamically add available sources!
+    ; bind events
+    BindGadgetEvent(DialogGadget(backupFilter\dialog, "filterString"), @backupFilterChange(), #PB_EventType_Change)
+    BindGadgetEvent(DialogGadget(backupFilter\dialog, "filterReset"), @backupFilterReset())
+    BindGadgetEvent(DialogGadget(backupFilter\dialog, "filterDate"), @backupFilterChange(), #PB_EventType_Change)
+    ; apply initial filtering
+    backupFilterChange()
+  EndProcedure
+  
+  Procedure backupSortDialog()
+    BuildDialogWindow(backupSort)
+    backupSort\listGadget = gadget("backupList")
+    SetGadgetText(DialogGadget(backupSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
+    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, locale::l("dialog", "backup_date"))
+    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
+    SetGadgetState(DialogGadget(backupSort\dialog, "sortBox"), 0)
+    RefreshDialog(backupSort\dialog)
+    BindGadgetEvent(DialogGadget(backupSort\dialog, "sortBox"), @backupSortChange())
+    ; load settings
+    SetGadgetState(DialogGadget(backupSort\dialog, "sortBox"), settings::getInteger("backupSort", "mode"))
+    ; apply initial sorting
+    backupSortChange()
+  EndProcedure
+  
+  ;--------------
   ; - strings
   
   Procedure updateStrings()
@@ -2352,15 +2271,9 @@ Module windowMain
     GadgetToolTip(gadget("repoWebsite"),        l("main","website"))
     
     ; backup tab
-    SetGadgetText(gadget("backupFrame"),        l("main","backup_manage"))
-    SetGadgetText(gadget("backupRestore"),      l("main","backup_restore"))
-    SetGadgetText(gadget("backupDelete"),       l("main","backup_delete"))
-    SetGadgetText(gadget("backupFolder"),       l("main","backup_folder"))
-    SetGadgetText(gadget("backupExpand"),       l("main","backup_expand"))
-    SetGadgetText(gadget("backupCollapse"),     l("main","backup_collapse"))
-    SetGadgetText(gadget("backupCheck"),        l("main","backup_check"))
-    SetGadgetText(gadget("backupClear"),        l("main","backup_clear"))
-    SetGadgetText(gadget("backupFrameFilter"),  l("main","backup_filter"))
+    GadgetToolTip(gadget("backupRestore"),      l("main","backup_restore"))
+    GadgetToolTip(gadget("backupDelete"),       l("main","backup_delete"))
+    GadgetToolTip(gadget("backupFolder"),       l("main","backup_folder"))
     
     ; saves tab
     *saveModList\SetEmptyScreen(l("main", "save_click_open"), "")
@@ -2438,6 +2351,12 @@ Module windowMain
     *repoList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @repoListItemEvent())
     *repoList\BindItemEvent(#PB_EventType_Change,            @repoListItemEvent())
     
+    *backupList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("backupList"))
+    *backupList\BindItemEvent(#PB_EventType_LeftDoubleClick, @backupListItemEvent())
+    *backupList\BindItemEvent(#PB_EventType_Change,          @backupListItemEvent())
+    misc::BinaryAsString("theme/backupList.json", theme$)
+    *backupList\SetTheme(theme$)
+    
     *saveModList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("saveModList"))
     misc::BinaryAsString("theme/saveModList.json", theme$)
     *saveModList\SetTheme(theme$)
@@ -2453,7 +2372,8 @@ Module windowMain
     BindEvent(#EventWorkerStops, @workerStop())
     
     
-    ;- initialize gadget images
+    ;-------------------
+    ;-initialize gadget images
     SetGadgetText(gadget("version"), main::VERSION$)
     
     ; nav
@@ -2489,7 +2409,13 @@ Module windowMain
     SetGadgetFont(gadget("saveName"), FontID(fontBig))
     SetGadgetColor(gadget("saveName"), #PB_Gadget_FrontColor, $42332a);$63472F) ; #2F4763
     DisableGadget(gadget("saveDownload"), #True)
-
+    
+    ; backup tab
+    SetGadgetAttribute(gadget("backupFilter"),  #PB_Button_Image, ImageID(images::images("btnFilter")))
+    SetGadgetAttribute(gadget("backupSort"),    #PB_Button_Image, ImageID(images::images("btnSort")))
+    SetGadgetAttribute(gadget("backupRestore"), #PB_Button_Image, ImageID(images::images("btnRestore")))
+    SetGadgetAttribute(gadget("backupDelete"),  #PB_Button_Image, ImageID(images::images("btnUninstall")))
+    
     
     ;- update gadget texts
     updateStrings()
@@ -2522,16 +2448,12 @@ Module windowMain
     BindGadgetEvent(gadget("repoDownload"),     @repoDownload())
     
     ; backup tab
-    BindGadgetEvent(gadget("backupTree"),       @backupTree())
+    BindGadgetEvent(gadget("backupSort"),       @backupSortShow())
+    BindGadgetEvent(gadget("backupFilter"),     @backupFilterShow())
     BindGadgetEvent(gadget("backupRestore"),    @backupRestore())
     BindGadgetEvent(gadget("backupDelete"),     @backupDelete())
     BindGadgetEvent(gadget("backupFolder"),     @backupFolder())
-    BindGadgetEvent(gadget("backupExpand"),     @backupExpand())
-    BindGadgetEvent(gadget("backupCollapse"),   @backupCollapse())
-    BindGadgetEvent(gadget("backupCheck"),      @backupCheck())
-    BindGadgetEvent(gadget("backupClear"),      @backupClear())
-    BindGadgetEvent(gadget("backupFilter"),     @backupRefreshList())
-    BindGadgetEvent(gadget("backupFilterReset"),  @backupFilterReset())
+    BindGadgetEvent(gadget("backupRefresh"),    @backupRefreshList())
     
     ; saves tab
     BindGadgetEvent(gadget("saveModList"), @saveModListEvent())
@@ -2624,7 +2546,9 @@ Module windowMain
     mods::BindEventPost(mods::#EventProgress, #EventModProgress, @modEventProgress())
     mods::BindEventPost(mods::#EventWorkerStarts, #EventWorkerStarts, #Null) ; worker events already linked
     mods::BindEventPost(mods::#EventWorkerStops, #EventWorkerStops, #Null)
-    
+    mods::BindEventCallback(mods::#EventNewBackup, @backupCallbackNewBackup())
+    mods::BindEventCallback(mods::#EventRemoveBackup, @backupCallbackRemoveBackup())
+    mods::BindEventCallback(mods::#EventClearBackups, @backupCallbackClearBackups())
     
     ; repository module
     repository::BindEventCallback(repository::#EventAddMods, @repoCallbackAddMods())
@@ -2636,19 +2560,23 @@ Module windowMain
     repository::BindEventPost(repository::#EventWorkerStops, #EventWorkerStops, #Null)
     
     
-    ;------ open dialogs (sort / filter / ...)
+    ;-------------------
+    ;- open dialogs (sort / filter / ...)
     modFilterDialog()
     modSortDialog()
     repoFilterDialog()
     repoSortDialog()
+    backupFilterDialog()
+    backupSortDialog()
     
-    ;---
-    ;- init gui texts and button states
+    ;-------------------
+    ;-init gui texts and button states
     updateModButtons()
     updateRepoButtons()
     updateBackupButtons()
     
-    ; apply sizes
+    ;-------------------
+    ;-apply sizes
     RefreshDialog(dialog)
     resize()
     navBtnMods()

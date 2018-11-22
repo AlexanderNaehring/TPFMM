@@ -16,32 +16,43 @@
               </gridbox>
             </frame>
             <hbox expand='equal'>
-              <vbox expand='no'>
-                <frame name='backupFrame' text='Backup'>
-                  <vbox expand='no'>
-                    <checkbox name='miscBackupAfterInstall' text=' ' />
-                    <checkbox name='miscBackupBeforeUpdate' text=' ' />
-                    <checkbox name='miscBackupBeforeUninstall' text=' ' />
-                    <hbox>
-                      <empty />
-                      <button name='miscBackupFolderChange' text=' ' />
-                      <empty />
-                    </hbox>
-                  </vbox>
-                </frame>
-              </vbox>
-              <vbox expand='no'>
-                <frame name='languageFrame' text='Language'>
-                  <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
-                </frame>
-                <frame name='miscFrame' text='Miscellaneous'>
-                  <vbox expand='no'>
-                    <checkbox name='miscVersionCheck' text=' '/>
-                  </vbox>
-                </frame>
-              </vbox>
+              <frame name='miscFrame' text='Miscellaneous'>
+                <checkbox name='miscVersionCheck' text=' '/>
+              </frame>
+              <frame name='languageFrame' text='Language'>
+                <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+              </frame>
             </hbox>
 
+          </vbox>
+        </tab>
+        
+        <tab text='Backup Settings'>
+          <vbox expand='no'>
+            <hbox expand='equal'>
+              <vbox expand='no'>
+                <frame>
+                  <hbox>
+                    <text name='backupAutoDeleteLabel' />
+                    <combobox name='backupAutoDeleteTime' width='120' />
+                  </hbox>
+                </frame>
+                <frame>
+                  <vbox>
+                    <string name='backupFolder' flags='#PB_String_ReadOnly' />
+                    <button name='backupFolderChange' />
+                  </vbox>
+                </frame>
+              </vbox>
+              <frame>
+                <vbox expand='no'>
+                  <text name='backupAutoCreateLabel' />
+                  <checkbox name='backupAfterInstall' />
+                  <checkbox name='backupBeforeUpdate' />
+                  <checkbox name='backupBeforeUninstall' />
+                </vbox>
+              </frame>
+            </hbox>
           </vbox>
         </tab>
 

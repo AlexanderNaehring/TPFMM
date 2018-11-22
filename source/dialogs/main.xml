@@ -61,33 +61,21 @@
 
             <container name='containerBackups' invisible='yes'>
               <hbox expand='item:1'>
-                <vbox expand='item:1'>
-                  <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
-                  <hbox expand='item:2'>
-                    <hbox expand='equal'>
-                      <button name='backupExpand' text=' ' />
-                      <button name='backupCollapse' text=' ' />
-                      <button name='backupCheck' text=' ' />
-                      <button name='backupClear' text=' ' />
-                    </hbox>
-                    <empty />
+                <canvas name='backupList' flags='#PB_Canvas_Keyboard' />
+                <vbox expand='item:3'>
+                  <hbox expand='no' align='center'>
+                    <buttonimage name='backupSort' />
+                    <buttonimage name='backupFilter' />
                   </hbox>
-                </vbox>
-                <vbox expand='no'>
-                  <frame name='backupFrameFilter'>
-                    <hbox expand='item:1'>
-                      <string name='backupFilter' text=' ' />
-                      <button name='backupFilterReset' text='X' />
-                    </hbox>
-                  </frame>
-                  <frame name='backupFrame' text=' ' width='210'>
-                    <vbox expand='no'>
-                      <!--<button name='backupRefresh' text=' ' />-->
-                      <button name='backupRestore' text=' ' />
-                      <button name='backupDelete' text=' ' />
-                      <button name='backupFolder' text=' ' />
-                    </vbox>
-                  </frame>
+                  <vbox expand='no' comment='action for selected item'>
+                    <buttonimage name='backupRestore' />
+                    <buttonimage name='backupDelete' />
+                  </vbox>
+                  <empty />
+                  <vbox expand='no' comment='generic actions'>
+                    <buttonimage name='backupRefresh' />
+                    <buttonimage name='backupFolder' />
+                  </vbox>
                 </vbox>
               </hbox>
             </container>
@@ -189,22 +177,36 @@
         <button name='filterReset' text='X' />
       </hbox>
       <hbox expand='item:1'>
-        <text name='filterDateLabel' text='Updated not before' />
+        <text name='filterDateLabel' text='-' />
         <date name='filterDate' flags='#PB_Date_Checkbox' />
       </hbox>
-      <!--<frame name='repositoryFrame'>
-        <vbox id='repositories' comment='dynamically add checkboxed for the online sources here'>
-
-        </vbox>
-      </frame>-->
     </vbox>
   </window>
 
   <window id='#PB_Any' name='repoSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
     <hbox expand='no'>
-      <text name='sortBy' text='Sort by' />
+      <text name='sortBy' text='-' />
       <combobox name='sortBox' width='100' />
     </hbox>
   </window>
+  
+  <window id='#PB_Any' name='backupFilter' text='Filter Backups' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='filterString' text='' width='100' />
+        <button name='filterReset' text='X' />
+      </hbox>
+      <hbox expand='item:1'>
+        <text name='filterDateLabel' text='-' />
+        <date name='filterDate' flags='#PB_Date_Checkbox' />
+      </hbox>
+    </vbox>
+  </window>
 
+  <window id='#PB_Any' name='backupSort' text='Sort Backups' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='sortBy' text='-' />
+      <combobox name='sortBox' width='100' />
+    </hbox>
+  </window>
 </dialogs>

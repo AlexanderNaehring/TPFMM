@@ -1,7 +1,14 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
+[generic]
+yes     = Ja
+no      = Nein
+error   = Fehler
+success = Erfolgreich
+folder  = Ordnername
+by      = von
 
 [menu]
 file              = Datei
@@ -64,6 +71,7 @@ cancel          = Abbrechen
 download        = Herunterladen
 repo_clear_title= Repository Cache
 repo_clear_text = Der Reposiotory Cache für Vorschaubilder wurde geleert.
+install_date    = Installiert am %dd.%mm.%yyyy
 backup_manage   = Verwalte Sicherheitskopien
 backup_restore  = Sicherung wiederherstellen
 backup_delete   = Sicherung entfernen
@@ -75,6 +83,7 @@ backup_collapse = Alle einklappen
 backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
 backup_filter   = Durchsuche Sicherungen
+backup_date     = Sicherheitskopie vom %dd.%mm.%yyyy
 add_to_pack     = Zu Mod-Paket hinzufügen
 update_all      = Aktualisiere alle Modifikationen
 update_all_tip  = Aktualisiere alle Mods, für die eine neue Version vorliegt.
@@ -125,11 +134,19 @@ restore         = Merke Fensterposition
 restore_tip     = TPFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TPFMM
 update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.transportfevermods.com eigenständig auf neue Versionen überprüft werden.
-backup_after_install    = Automatische Sicherheitskopie von Mods nach Installation
-backup_before_update    = Automatische Sicherheitskopie von Mods vor Update
-backup_before_uninstall = Automatische Sicherheitskopie von Mods vor Löschen
+backup_auto_create_label = Erstelle automatische Sicherung von Mods
+backup_after_install    = nach der Installation
+backup_before_update    = vor einem Update
+backup_before_uninstall = vorm Löschen
 backup_change_folder    = Ordner für Sicherheitskopien ändern
-backup_change_folder_wait = Ordner wird verschoben...
+backup_change_folder_wait = Ordner wird verschoben ...
+backup_auto_delete          = Automatisches Löschen von Sicherungen
+backup_auto_delete_never    = niemals
+backup_auto_delete_1week    = nach einer Woche
+backup_auto_delete_1month   = nach einem Monat
+backup_auto_delete_3months  = nach drei Monaten
+backup_auto_delete_6months  = nach sechs Monaten
+backup_auto_delete_1year    =  nach einem Jahr 
 versioncheck    = Nutze Versionsvergleich für Update
 versioncheck_tip = When aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
 locale          = Lokalisierung (Sprache)

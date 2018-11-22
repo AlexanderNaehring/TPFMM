@@ -67,8 +67,18 @@ Module mods
     Data.i @modGetAuthor()
     Data.i @modCountTags()
     Data.i @modGetTag()
-    
     vtModEnd:
+    
+    vtBackup:
+    Data.i @backupGetFilename()
+    Data.i @backupGetFoldername()
+    Data.i @backupGetName()
+    Data.i @backupGetVersion()
+    Data.i @backupGetAuthors()
+    Data.i @backupGetDate()
+    Data.i @backupIsInstalled()
+    Data.i @backupInstall()
+    Data.i @backupDelete()
   EndDataSection
   
   If (?vtModEnd - ?vtMod) <> SizeOf(LocalMod)
@@ -96,11 +106,6 @@ Module mods
   
   ;{ Structures
   
-  Structure backup  ;-- information about last backup if available
-    time.i
-    filename$
-  EndStructure
-  
   Structure aux     ;-- additional information about mod
     isVanilla.b       ; pre-installed mods should not be uninstalled
     luaDate.i         ; date of info.lua (reload info when newer version available)
@@ -112,7 +117,7 @@ Module mods
     installSource$    ; name of install source (workshop, tpfnet)
     sv.i              ; scanner version, rescan if newer scanner version is used
     hidden.b          ; hidden from overview ("visible" in mod.lua)
-    backup.backup     ; backup information (local)
+;     backup.backup     ; backup information (local)
     luaParseError.b   ; set true if parsing of mod.lua failed
     size.i
   EndStructure
@@ -137,6 +142,22 @@ Module mods
     aux.aux                 ; auxiliary information
   EndStructure
   
+  Structure backupInfo
+    filename$
+    tpf_id$
+    name$
+    version$
+    author$
+    time.i
+    size.q
+    checksum$
+  EndStructure
+  
+  Structure backup
+    vt.BackupMod
+    info.backupInfo
+  EndStructure
+  
   
   Structure queue
     action.i
@@ -151,9 +172,10 @@ Module mods
   Global mutexQueue   = CreateMutex() ; access to the queue() list
   Global mutexModAuthors  = CreateMutex()
   Global mutexModTags     = CreateMutex()
-  Global _backupActive = #False
+  Global semaphoreBackup  = CreateSemaphore(1) ; max number of concurrent backups
   Global threadQueue
   Global NewMap mods.mod()
+  Global NewMap backups.backup()
   Global NewList queue.queue()
   Global isLoaded.b
   Global exit.b
@@ -161,6 +183,9 @@ Module mods
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
   Global callbackStopDraw.callbackStopDraw
+  Global callbackNewBackup.callbackNewbackup
+  Global callbackRemoveBackup.callbackRemovebackup
+  Global callbackClearBackups.callbackClearBackups
   
   Global Dim events(EventArraySize)
   
@@ -178,15 +203,32 @@ Module mods
   ;-        PRIVATE 
   ;- ####################
   
-  Macro defineFolder()
-    Protected pTPFMM$, pMods$, pWorkshop$, pStagingArea$, pMaps$, pDLCs$
+  Enumeration
+    #FolderGame
+    #FolderTPFMM
+    #FolderMods
+    #FolderWorkshop
+    #FolderStagingArea
+  EndEnumeration
+    
+  Procedure.s getFolder(folder.b)
     Protected gameDirectory$
     gameDirectory$ = settings::getString("", "path")
-    pTPFMM$       = misc::Path(gameDirectory$ + "/TPFMM/") ; only used for json file
-    pMods$        = misc::Path(gameDirectory$ + "/mods/")
-    pWorkshop$    = misc::Path(gameDirectory$ + "/../../workshop/content/446800/")
-    pStagingArea$ = misc::Path(gameDirectory$ + "/userdata/staging_area/")
-  EndMacro
+    Select folder
+      Case #FolderGame
+        ProcedureReturn gameDirectory$
+      Case #FolderTPFMM
+        ProcedureReturn misc::Path(gameDirectory$ + "/TPFMM/")
+      Case #FolderMods
+        ProcedureReturn misc::Path(gameDirectory$ + "/mods/")
+      Case #FolderWorkshop
+        ProcedureReturn misc::Path(gameDirectory$ + "/../../workshop/content/446800/")
+      Case #FolderStagingArea
+        ProcedureReturn misc::Path(gameDirectory$ + "/userdata/staging_area/")
+      Default
+        deb("mods:: unkown folder id: getFolder("+folder+")")
+    EndSelect
+  EndProcedure
   
   Procedure postProgressEvent(percent, text$=Chr(1))
     Protected *buffer
@@ -377,18 +419,16 @@ Module mods
   ; other procedures
   
   Procedure.s getModFolder(id$="")
-    defineFolder()
-    
     If id$ = ""
-      ProcedureReturn pMods$
+      ProcedureReturn getFolder(#FolderMods)
     EndIf
     
     If Left(id$, 1) = "*"
-      ProcedureReturn misc::Path(pWorkshop$ + Mid(id$, 2, Len(id$)-3) + "/")
+      ProcedureReturn misc::Path(getFolder(#FolderWorkshop) + Mid(id$, 2, Len(id$)-3) + "/")
     ElseIf Left(id$, 1) = "?"
-      ProcedureReturn misc::Path(pStagingArea$ + Mid(id$, 2) + "/")
+      ProcedureReturn misc::Path(getFolder(#FolderStagingArea) + Mid(id$, 2) + "/")
     Else
-      ProcedureReturn misc::path(pMods$ + id$ + "/")
+      ProcedureReturn misc::path(getFolder(#FolderMods) + id$ + "/")
     EndIf
   EndProcedure
   
@@ -616,6 +656,149 @@ Module mods
   EndProcedure
   
   
+  Procedure backupsReadBackupInformation(filename$, root$="")
+    Protected *this.backup
+    Protected json
+    
+    If root$ = ""
+      root$ = backupsGetFolder()
+    EndIf
+    
+    If FindMapElement(backups(), filename$)
+      deb("mods:: backupLoadList() backup file "+filename$+" already in map")
+      DebuggerError("this should not happen")
+    Else
+      AddMapElement(backups(), filename$, #PB_Map_ElementCheck)
+    EndIf
+    *this = backups()
+    *this\vt = ?vtBackup
+    
+    json = LoadJSON(#PB_Any, root$ + filename$ + ".backup")
+    If json
+      ExtractJSONStructure(JSONValue(json), *this\info, backupInfo)
+      FreeJSON(json)
+    Else
+      deb("mods:: backup scan not able to open metadata file for "+filename$)
+    EndIf
+    
+    With *this\info
+      If \filename$ <> filename$
+        deb("mods:: backup scanner found wrong \filename in backup meta data for "+filename$+", corrected.")
+      EndIf
+      \filename$ = filename$
+      If Not \size
+        \size = FileSize(backupsGetFolder() + filename$)
+      EndIf
+      If \tpf_id$ = ""
+        \tpf_id$ = StringField(GetFilePart(filename$, #PB_FileSystem_NoExtension), 1, ".")
+      EndIf
+    EndWith
+      
+    If callbackNewBackup : callbackNewBackup(*this) : EndIf
+    If events(#EventNewBackup) : PostEvent(events(#EventNewBackup), *this, 0) : EndIf
+  EndProcedure
+  
+  Procedure backupsScanRecursive(root$, folder$="")
+    Protected dir, json
+    Protected filename$
+    Protected *this.backup
+    
+    If folder$ <> ""
+      folder$ = misc::path(folder$)
+    EndIf
+    
+    dir = ExamineDirectory(#PB_Any, root$ + folder$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        Select DirectoryEntryType(dir)
+          Case #PB_DirectoryEntry_Directory
+            If DirectoryEntryName(dir) = "." Or DirectoryEntryName(dir) = ".."
+              Continue
+            EndIf
+            backupsScanRecursive(root$, folder$ + DirectoryEntryName(dir))
+            
+          Case #PB_DirectoryEntry_File
+            filename$ = folder$ + DirectoryEntryName(dir)
+            If LCase(GetExtensionPart(filename$)) <> "zip"
+              Continue
+            EndIf
+            
+            backupsReadBackupInformation(filename$, root$)
+        EndSelect
+      Wend
+      FinishDirectory(dir)
+    Else
+      deb("mods:: failed to examine backup directory "+root$+folder$)
+    EndIf
+  EndProcedure
+  
+  Procedure backupsClearFolderRecursive(folder$)
+    Protected dir, file$, ext$
+    Protected json, info.backupInfo, time
+    Protected autoDeleteDays, backupAgeInDays
+    
+    folder$ = misc::path(folder$)
+    dir = ExamineDirectory(#PB_Any, folder$, "")
+    If dir
+      While NextDirectoryEntry(dir)
+        Select DirectoryEntryType(dir)
+          Case #PB_DirectoryEntry_Directory
+            If DirectoryEntryName(dir) = "." Or DirectoryEntryName(dir) = ".."
+              Continue
+            EndIf
+            backupsClearFolderRecursive(folder$ + DirectoryEntryName(dir))
+            
+          Case #PB_DirectoryEntry_File
+            file$ = folder$ + DirectoryEntryName(dir)
+            ext$ = LCase(GetExtensionPart(file$))
+            Select ext$
+              Case "zip"
+                
+              Case "backup"
+                Continue 
+              Default
+                DebuggerWarning("file of unknown file type in backup folder: "+file$)
+                Continue
+            EndSelect
+            
+            ;TODO delete all files that are not .zip or .backup (?)
+            
+            ;TODO delete backup files without zip
+            
+            ;TODO delete empty folders
+            
+            
+            ; read backup file
+            json = LoadJSON(#PB_Any, file$+".backup")
+            If json
+              ExtractJSONStructure(JSONValue(json), @info, backupInfo)
+              FreeJSON(json)
+              time = info\time
+            Else
+              deb("mods:: could not read "+file$+".backup")
+              time = DirectoryEntryDate(dir, #PB_Date_Modified)
+            EndIf
+            
+            ; delete old backups
+            autoDeleteDays = settings::getInteger("backup", "auto_delete_days")
+            If autoDeleteDays 
+              backupAgeInDays = (misc::time() - time)/86400
+              If backupAgeInDays > autoDeleteDays
+                deb("mods:: backup "+file$+" is "+backupAgeInDays+" days old, automatically delete backups after "+autoDeleteDays+" days. Backup will be removed now.")
+                DeleteFile(file$, #PB_FileSystem_Force)
+                DeleteFile(file$+".backup", #PB_FileSystem_Force)
+              EndIf
+            EndIf
+            
+        EndSelect
+      Wend
+      FinishDirectory(dir)
+    Else
+      deb("mods:: failed to examine backup directory "+folder$)
+    EndIf
+    
+  EndProcedure
+  
   
   Procedure convertToTGA(imageFile$)
     Protected im, i
@@ -665,83 +848,6 @@ Module mods
       deb("mods:: cannot examine "+path$)
     EndIf
     ProcedureReturn entry$
-  EndProcedure
-  
-  ; Backups
-  
-  Procedure.s getBackupFolder()
-    Protected backupFolder$
-    
-    If settings::getString("","path") = ""
-      ProcedureReturn ""
-    EndIf
-    
-    backupFolder$ = settings::getString("backup", "folder")
-    If backupFolder$ = ""
-      backupFolder$ = misc::path(settings::getString("","path") + "TPFMM/backups/")
-    EndIf
-    
-    ProcedureReturn backupFolder$
-    
-  EndProcedure
-  
-  Procedure moveBackupFolder(newFolder$)
-    Protected oldFolder$, entry$
-    Protected dir, error, count
-    
-    newFolder$ = misc::path(newFolder$)
-    oldFolder$ = getBackupFolder()
-    
-    misc::CreateDirectoryAll(newFolder$)
-    
-    ; check if new folder is empty (only use empty folder)
-    count = 0
-    dir = ExamineDirectory(#PB_Any, newFolder$, "")
-    If dir
-      While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          count + 1
-        EndIf
-      Wend
-      FinishDirectory(dir)
-    Else
-      deb("mods:: failed to examine directory "+newFolder$)
-      error = #True
-    EndIf
-    
-    If count
-      deb("mods:: target directory not empty")
-      ProcedureReturn #False  
-    EndIf
-    
-    ; move all *.zip and *.backup files from oldFolder$ to newFolder
-    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
-    If dir
-      While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          entry$ = DirectoryEntryName(dir)
-          If LCase(GetExtensionPart(entry$)) = "zip" Or
-             LCase(GetExtensionPart(entry$)) = "backup"
-            If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
-              deb("mods:: failed to move file "+entry$)
-              error = #True
-            EndIf
-          EndIf
-        EndIf
-      Wend
-      FinishDirectory(dir)
-    Else
-      deb("mods:: failed to examine directory "+oldFolder$)
-      error = #True
-    EndIf
-    
-    
-    If Not error
-      settings::setString("backup", "folder", newFolder$)
-      ProcedureReturn #True
-    EndIf
-    ProcedureReturn #False
-    
   EndProcedure
   
   
@@ -1300,14 +1406,11 @@ Module mods
     
     LockMutex(mutexMods)
     
-    defineFolder()
-    
-    
     postProgressEvent(0, locale::l("progress", "load"))
 ;     windowMain::progressMod(0, locale::l("progress","load")) ; 0%
     
     ; load list from json file
-    json = LoadJSON(#PB_Any, pTPFMM$ + "mods.json")
+    json = LoadJSON(#PB_Any, getFolder(#FolderTPFMM) + "mods.json")
     If json
       ExtractJSONMap(JSONValue(json), mods_json())
       FreeJSON(json)
@@ -1341,15 +1444,16 @@ Module mods
     ;   Internally, ? is used as prefix
     
     ; scan pMods
-    deb("mods:: scan mods folder {"+pMods$+"}")
-    dir = ExamineDirectory(#PB_Any, pMods$, "")
+    Protected folderMods$ = getfolder(#FolderMods)
+    deb("mods:: scan mods folder {"+folderMods$+"}")
+    dir = ExamineDirectory(#PB_Any, folderMods$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        If modCheckID(entry$) And modCheckValidTPF(pMods$ + entry$)
+        If modCheckID(entry$) And modCheckValidTPF(folderMods$ + entry$)
           scanner(entry$) = #True
         EndIf
       Wend
@@ -1357,8 +1461,9 @@ Module mods
     EndIf
     
     ;scan pWorkshop
-    deb("mods:: scan workshop folder {"+pWorkshop$+"}")
-    dir = ExamineDirectory(#PB_Any, pWorkshop$, "")
+    Protected folderWorkshop$ = getFolder(#FolderWorkshop)
+    deb("mods:: scan workshop folder {"+folderWorkshop$+"}")
+    dir = ExamineDirectory(#PB_Any, folderWorkshop$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -1366,7 +1471,7 @@ Module mods
         EndIf
         entry$ = DirectoryEntryName(dir)
         If modCheckWorkshopID(entry$)
-          If modCheckValidTPF(pWorkshop$ + entry$)
+          If modCheckValidTPF(folderWorkshop$ + entry$)
             ; workshop mod folders only have a number.
             ; Add * as prefix and _1 as postfix
             scanner("*"+entry$+"_1") = #True
@@ -1377,8 +1482,9 @@ Module mods
     EndIf
     
     ;scan pStagingArea
-    deb("mods:: scan staging area folder {"+pStagingArea$+"}")
-    dir = ExamineDirectory(#PB_Any, pStagingArea$, "")
+    Protected folderStaging$ = getFolder(#FolderStagingArea)
+    deb("mods:: scan staging area folder {"+folderStaging$+"}")
+    dir = ExamineDirectory(#PB_Any, folderStaging$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -1465,7 +1571,11 @@ Module mods
         PostEvent(events(#EventNewMod), *mod, 0)
       EndIf
     Next
-      
+    
+    ; addition: load backup files (keep between "stopDraw" calls)
+    backupsClearFolder()
+    backupsScan()
+    
     If callbackStopDraw
       callbackStopDraw(#False)
     EndIf
@@ -1494,17 +1604,15 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    defineFolder()
-    
-    If FileSize(pTPFMM$) <> -2
-      misc::CreateDirectoryAll(pTPFMM$)
+    If FileSize(getFolder(#FolderTPFMM)) <> -2
+      misc::CreateDirectoryAll(getFolder(#FolderTPFMM))
     EndIf
     
     LockMutex(mutexMods)
     Protected json
     json = CreateJSON(#PB_Any)
     InsertJSONMap(JSONValue(json), mods())
-    SaveJSON(json, pTPFMM$ + "mods.json", #PB_JSON_PrettyPrint)
+    SaveJSON(json, getFolder(#FolderTPFMM) + "mods.json", #PB_JSON_PrettyPrint)
     FreeJSON(json)
     UnlockMutex(mutexMods)
     
@@ -1818,20 +1926,16 @@ Module mods
   
   Procedure doBackup(id$)
     deb("mods::doBackup("+id$+")")
-    Protected backupFolder$, modFolder$, backupFile$, backupInfoFile$
-    Protected *mod.mod
+    Protected backupFolder$, modFolder$, filename$, tmpFile$, md5$, backupFile$
+    Protected *mod.mod, *this.backup, *old.backup
     Protected time
     
-    _backupActive = #True
+    WaitSemaphore(semaphoreBackup)
     
-    ; use local time, as this is displayed and only used to determine age of backup files...
-    time = Date()
+    ; use UTC time
+    time = misc::time()
     
-    backupFolder$ = getBackupFolder()
-    If backupFolder$ = ""
-      ProcedureReturn #False
-    EndIf
-    
+    backupFolder$ = backupsGetFolder()
     misc::CreateDirectoryAll(backupFolder$)
     
     LockMutex(mutexMods)
@@ -1841,14 +1945,13 @@ Module mods
     Else
       UnlockMutex(mutexMods)
       deb("mods:: cannot find mod {"+id$+"}")
-      _backupActive = #False
+      SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
     
-    
     If FileSize(backupFolder$) <> -2
       deb("mods:: target directory does not exist {"+backupFolder$+"}")
-      _backupActive = #False
+      SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
     
@@ -1856,71 +1959,98 @@ Module mods
     
     If FileSize(modFolder$) <> -2
       deb("mods:: mod directory does not exist {"+modFolder$+"}")
-      _backupActive = #False
+      SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
     
-    ; normally, use id$ as filename.
-    backupFile$ = id$
-    ; adjust name for workshop and staging area mods
-    If Left(id$, 1) = "*"     ; workshop
-      backupFile$ = Right(id$, Len(id$)-1)+"_1"
-    ElseIf Left(id$, 1) = "?" ; staging area
-      backupFile$ = Right(id$, Len(id$)-1)
-    EndIf
-    
-    backupFile$     = backupFolder$ + backupFile$ + "." + FormatDate("%yyyy%mm%dd-%hh%ii%ss", time) + ".zip"
-    backupInfoFile$ = backupFile$ + ".backup"
+    filename$ + modGetFoldername(*mod)+".zip"
+    tmpFile$ = GetCurrentDirectory()+"/tmp/"+filename$
     
     ; start backup now: modFolder$ -> zip -> backupFile$
     Protected NewMap strings$()
     strings$("mod") = *mod\name$
     postProgressEvent(90,  locale::getEx("progress", "backup_mod", strings$()))
-;     windowMain::progressMod(80, locale::getEx("progress", "backup_mod", strings$()))
     
-    If archive::pack(backupFile$, modFolder$)
-      deb("mods::doBackup() - success")
-      *mod\aux\backup\time = Date()
-      *mod\aux\backup\filename$ = GetFilePart(backupFile$)
-      
-      ;TODO check for older backups with identical checksum...
-      
-      ; save mod information with the backup file
-      Protected json
-      Protected backupInfo.backupInfo
-      json = CreateJSON(#PB_Any)
-      If json
-        backupInfo\name$      = *mod\name$
-        backupInfo\version$   = *mod\version$
-        backupInfo\author$    = modGetAuthorsString(*mod)
-        backupInfo\tpf_id$    = *mod\tpf_id$
-        backupInfo\filename$  = GetFilePart(backupFile$)
-        backupInfo\time       = time
-        backupInfo\size       = FileSize(backupFile$)
-        backupInfo\checksum$  = FileFingerprint(backupFile$, #PB_Cipher_MD5)
-        InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
-        SaveJSON(json, backupInfoFile$, #PB_JSON_PrettyPrint)
-        FreeJSON(json)
-        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          SetFileAttributes(backupInfoFile$, #PB_FileSystem_Hidden)
-        CompilerEndIf
-      Else
-        deb("mods:: failed to create backup meta data file: "+backupInfoFile$)
-      EndIf
-      
-      ; finished
-      postProgressEvent(-1, locale::l("progress", "backup_fin"))
-;       windowMain::progressMod(windowMain::#Progress_Hide, )
-      _backupActive = #False
-      ProcedureReturn #True
-    Else
+    ; create archive in tmp folder first
+    CreateDirectory(GetPathPart(tmpFile$))
+    If Not archive::pack(tmpFile$, modFolder$)
+      ; failed to create backup file
       deb("mods:: backup failed")
       postProgressEvent(-1, locale::l("progress", "backup_fail"))
-;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress", "backup_fail"))
-      _backupActive = #False
+      SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
     
+    If FileSize(tmpFile$) <= 0
+      deb("mods:: temporary backup file "+tmpFile$+" not found")
+      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+      SignalSemaphore(semaphoreBackup)
+      ProcedureReturn #False
+    EndIf
+    
+    ; get hash of file
+    md5$ = FileFingerprint(tmpFile$, #PB_Cipher_MD5)
+    
+    ; folder structure: backups/hash/mod_id.zip
+    ; collision if backup with same hash and same mod_id already exists
+    filename$ = misc::path(md5$) + filename$ ; filename is the filename relative to the backup folder
+    backupFile$ = misc::path(backupFolder$) + filename$
+    deb("mods:: target backup file "+filename$)
+    If FileSize(backupFile$) > 0
+      deb("mods:: backup file "+backupFile$+" already exists, delete old backup")
+      *old = FindMapElement(backups(), filename$)
+      If callbackRemoveBackup : callbackRemoveBackup(*old) : EndIf
+      If events(#EventRemoveBackup) : PostEvent(events(#EventRemoveBackup), *old, #Null) : EndIf
+      DeleteMapElement(backups(), filename$)
+      DeleteFile(backupFile$, #PB_FileSystem_Force)
+      DeleteFile(backupFile$+".backup", #PB_FileSystem_Force)
+    Else
+      misc::CreateDirectoryAll(GetPathPart(backupFile$))
+    EndIf
+    
+    If Not RenameFile(tmpFile$, backupFile$)
+      deb("mods:: renaming backup file failed!")
+      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+      SignalSemaphore(semaphoreBackup)
+      ProcedureReturn #False
+    EndIf
+    
+;     *mod\aux\backup\time = Date()
+;     *mod\aux\backup\filename$ = GetFilePart(backupFile$)
+    
+    ; save mod information with the backup file
+    Protected json
+    Protected backupInfo.backupInfo
+    json = CreateJSON(#PB_Any)
+    If json
+      backupInfo\filename$  = filename$ ; relative to the backup folder root
+      backupInfo\tpf_id$    = *mod\tpf_id$ ; or just "id$"
+      backupInfo\name$      = *mod\name$
+      backupInfo\version$   = *mod\version$
+      backupInfo\author$    = modGetAuthorsString(*mod)
+      backupInfo\time       = time
+      backupInfo\size       = FileSize(backupFile$)
+      backupInfo\checksum$  = md5$
+      InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
+      Debug ComposeJSON(json, #PB_JSON_PrettyPrint)
+      DeleteFile(backupFile$+".backup")
+      If Not SaveJSON(json, backupFile$+".backup", #PB_JSON_PrettyPrint)
+        deb("mods:: failed to create backup meta data file: "+backupFile$+".backup")
+      EndIf
+      FreeJSON(json)
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+        SetFileAttributes(backupFile$+".backup", #PB_FileSystem_Hidden)
+      CompilerEndIf
+    Else
+      deb("mods:: failed to create json data for backup file")
+    EndIf
+    
+    backupsReadBackupInformation(filename$, backupFolder$)
+    
+    ; finished
+    postProgressEvent(-1, locale::l("progress", "backup_fin"))
+    SignalSemaphore(semaphoreBackup)
+    ProcedureReturn #True
   EndProcedure
   
   Procedure doUpdate(id$)
@@ -2056,215 +2186,166 @@ Module mods
   EndProcedure
 
   ;- backup stuff
+  ;static
   
-  Procedure backupCleanFolder()
-    Protected backupFolder$, infoFile$, zipFile$, entry$
-    Protected dir, json, writeInfo
-    Protected NewList backups.backupInfo()
+  Procedure.s backupsGetFolder()
+    Protected backupFolder$
     
     If settings::getString("","path") = ""
-      ProcedureReturn #False
+      ProcedureReturn ""
     EndIf
     
-    If _backupActive
-      ProcedureReturn #False
-    EndIf
-    
-    
-    backupFolder$ = getBackupFolder()
+    backupFolder$ = settings::getString("backup", "folder")
     If backupFolder$ = ""
-      ProcedureReturn #False
+      backupFolder$ = "TPFMM/backups/"
     EndIf
     
+    ProcedureReturn misc::path(backupFolder$)
+  EndProcedure
+  
+  Procedure backupsMoveFolder(newFolder$)
+    Protected oldFolder$, entry$
+    Protected dir, error, count
     
-    ; delete all .backup files without a corresponding .zip file
-    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.backup")
+    newFolder$ = misc::path(newFolder$)
+    oldFolder$ = backupsGetFolder()
+    
+    misc::CreateDirectoryAll(newFolder$)
+    
+    ; check if new folder is empty (only use empty folder)
+    count = 0
+    dir = ExamineDirectory(#PB_Any, newFolder$, "")
     If dir
       While NextDirectoryEntry(dir)
-        entry$ = DirectoryEntryName(dir)
-        
-        infoFile$ = backupFolder$ + entry$
-        zipFile$ = Left(infoFile$, Len(infoFile$) - Len(".backup"))
-        
-        If FileSize(zipFile$) <= 0
-          DeleteFile(infoFile$)
-          Continue
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          count + 1
         EndIf
-        
       Wend
       FinishDirectory(dir)
+    Else
+      deb("mods:: failed to examine directory "+newFolder$)
+      error = #True
     EndIf
     
-    ; create missing .backup files or fill in missing information
-    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
+    If count
+      deb("mods:: target directory not empty")
+      ProcedureReturn #False  
+    EndIf
+    
+    ; move all *.zip and *.backup files from oldFolder$ to newFolder
+    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
     If dir
       While NextDirectoryEntry(dir)
-        entry$ = DirectoryEntryName(dir)
-        AddElement(backups())
-        
-        zipFile$  = backupFolder$ + entry$
-        infoFile$ = zipFile$ + ".backup"
-        
-        ; read .backup file (meta data like name, author, version, original ID, etc...
-        json = LoadJSON(#PB_Any, infoFile$)
-        If json
-          ExtractJSONStructure(JSONValue(json), backups(), backupInfo)
-          FreeJSON(json)
-        EndIf
-       
-        
-        With backups()
-          ; add missing information
-          writeInfo = #False
-          If \filename$ = ""
-            \filename$ = entry$
-            writeInfo = #True
-          EndIf
-          If \tpf_id$ = ""
-            \tpf_id$ = StringField(entry$, 1, ".") ; read filename up to first dot as tpf_id
-            writeInfo = #True
-          EndIf
-          If \name$ = ""
-            \name$ = \tpf_id$
-            writeInfo = #True
-          EndIf
-          If Not \size
-            \size = FileSize(zipFile$)
-            writeInfo = #True
-          EndIf
-          If Not \time
-            \time = GetFileDate(zipFile$, #PB_Date_Created)
-            writeInfo = #True
-          EndIf
-          If \checksum$ = ""
-            \checksum$ = FileFingerprint(zipFile$, #PB_Cipher_MD5)
-            writeInfo = #True
-          EndIf
-          
-          If writeInfo
-            json = CreateJSON(#PB_Any)
-            If json
-              InsertJSONStructure(JSONValue(json), backups(), backupInfo)
-              Debug infoFile$
-              DeleteFile(infoFile$)
-              SaveJSON(json, infoFile$, #PB_JSON_PrettyPrint)
-              FreeJSON(json)
-              CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-                SetFileAttributes(infoFile$, #PB_FileSystem_Hidden)
-              CompilerEndIf
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          entry$ = DirectoryEntryName(dir)
+          If LCase(GetExtensionPart(entry$)) = "zip" Or
+             LCase(GetExtensionPart(entry$)) = "backup"
+            If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
+              deb("mods:: failed to move file "+entry$)
+              error = #True
             EndIf
           EndIf
-        EndWith
-        
+        EndIf
       Wend
       FinishDirectory(dir)
+    Else
+      deb("mods:: failed to examine directory "+oldFolder$)
+      ; not a critical error, if old folder does not exist, simple do not move any files
     EndIf
     
-    
-    ; delete duplicates (same fingerprint)
-    Protected checksum$
-    SortStructuredList(backups(), #PB_Sort_Descending, OffsetOf(backupInfo\time), TypeOf(backupInfo\time))
-    ForEach backups()
-      PushListPosition(backups())
-      checksum$ = backups()\checksum$
-      While NextElement(backups())
-        If checksum$ = backups()\checksum$
-          backupDelete(backups()\filename$)
-          DeleteElement(backups())
-        EndIf
-      Wend
-      PopListPosition(backups())
-    Next
-    
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure getBackupList(List backups.backupInfoLocal(), filter$ = "")
-    Protected backupFolder$, entry$
-    Protected zipFile$, infoFile$
-    Protected dir, json, writeInfo
-    
-    ClearList(backups())
-    
-    If settings::getString("","path") = ""
-      ProcedureReturn #False
+    If Not error
+      settings::setString("backup", "folder", newFolder$)
+      ProcedureReturn #True
     EndIf
-    
-    backupFolder$ = getBackupFolder()
-    If backupFolder$ = ""
-      ProcedureReturn #False
-    EndIf
-    
-    
-    If Not backupCleanFolder()
-      ProcedureReturn #False
-    EndIf
-    
-    ; find all zip files in backup folder
-    dir = ExamineDirectory(#PB_Any, backupFolder$, "*.zip")
-    If dir
-      While NextDirectoryEntry(dir)
-        entry$ = DirectoryEntryName(dir)
-        AddElement(backups())
-        
-        zipFile$  = backupFolder$ + entry$
-        infoFile$ = zipFile$ + ".backup"
-        
-        ; read .backup file (meta data like name, author, version, original ID, etc...)
-        json = LoadJSON(#PB_Any, infoFile$)
-        If json
-          ExtractJSONStructure(JSONValue(json), backups(), backupInfo)
-          FreeJSON(json)
-        EndIf
-        
-        backups()\installed = isInstalled(backups()\tpf_id$)
-        
-      Wend
-      FinishDirectory(dir)
-    EndIf
-    
-    If ListSize(backups()) = 0
-      ProcedureReturn #False
-    EndIf
-    
-;     SortStructuredList(backups(), #PB_Sort_Ascending|#PB_Sort_NoCase, OffsetOf(backupInfoLocal\tpf_id$), #PB_String)
-    filter$ = Trim(filter$)
-    If filter$
-      ForEach backups()
-        If Not FindString(backups()\name$, filter$, 1, #PB_String_NoCase) And
-           Not FindString(backups()\tpf_id$, filter$, 1, #PB_String_NoCase) And
-           Not FindString(backups()\filename$, filter$, 1, #PB_String_NoCase) And
-           Not FindString(backups()\author$, filter$, 1, #PB_String_NoCase)
-          DeleteElement(backups())
-        EndIf
-      Next
-    EndIf
-    
-    
-    ProcedureReturn #True
+    ProcedureReturn #False
     
   EndProcedure
   
-  Procedure backupDelete(file$)
-    Protected backupFolder$
-    Protected val = #False
+  Procedure backupsClearFolder()
+    WaitSemaphore(semaphoreBackup)
+    backupsClearFolderRecursive(backupsGetFolder())
+    SignalSemaphore(semaphoreBackup)
+  EndProcedure
+  
+  Procedure backupsScan()
+    WaitSemaphore(semaphoreBackup)
+    If callbackClearBackups : callbackClearBackups() : EndIf
+    If events(#EventClearBackups) : PostEvent(events(#EventClearBackups), #Null, #Null) : EndIf
+    ClearMap(backups())
     
-    If _backupActive
-      ProcedureReturn #False
-    EndIf
+    backupsScanRecursive(backupsGetFolder())
     
-    backupFolder$ = getBackupFolder()
-    If backupFolder$
-      file$ = backupFolder$ + file$
-      If FileSize(file$) > 0
-        DeleteFile(file$)
-        DeleteFile(file$+".backup")
-        val = #True
+    deb("mods:: found "+MapSize(backups())+" backups")
+    SignalSemaphore(semaphoreBackup)
+  EndProcedure
+  
+  
+  ;methods
+  
+  Procedure.s backupGetFilename(*this.backup)
+    ProcedureReturn *this\info\filename$
+  EndProcedure
+  
+  Procedure.s backupGetFoldername(*this.backup)
+    ProcedureReturn *this\info\tpf_id$
+  EndProcedure
+  
+  Procedure.s backupGetName(*this.backup)
+    ProcedureReturn *this\info\name$
+  EndProcedure
+  
+  Procedure.s backupGetVersion(*this.backup)
+    ProcedureReturn *this\info\version$
+  EndProcedure
+  
+  Procedure.s backupGetAuthors(*this.backup)
+    ProcedureReturn *this\info\author$
+  EndProcedure
+  
+  Procedure backupGetDate(*this.backup)
+    ; time is saved in UTC
+    ; correct by timezone offset
+    ProcedureReturn *this\info\time + misc::timezone()*3600
+  EndProcedure
+  
+  Procedure.b backupIsInstalled(*this.backup)
+    DebuggerWarning("not implemented yet")
+  EndProcedure
+  
+  Procedure backupInstall(*this.backup)
+    DebuggerWarning("not implemented yet")
+  EndProcedure
+  
+  Procedure backupDelete(*this.backup)
+    Protected backup$, deleted.b, *element
+    
+    WaitSemaphore(semaphoreBackup)
+    backup$ = backupsGetFolder() + *this\info\filename$
+    deb("mods:: delete backup "+*this\info\filename$)
+    
+    ; delete file
+    If FileSize(backup$) > 0
+      If DeleteFile(backup$, #PB_FileSystem_Force)
+        DeleteFile(backup$+".backup", #PB_FileSystem_Force)
+        deleted = #True
+      Else
+        deb("mods:: could not delete backup file "+backup$)
       EndIf
+    Else
+      deb("mods:: backup file not found: "+backup$)
     EndIf
     
-    ProcedureReturn val
+    ; remove from internal list
+    If deleted
+      If callbackRemoveBackup : callbackRemoveBackup(*this) : EndIf
+      If events(#EventRemoveBackup) : PostEvent(events(#EventRemoveBackup), *this, #Null) : EndIf
+      DeleteMapElement(backups(), *this\info\filename$)
+    EndIf
+    
+    SignalSemaphore(semaphoreBackup)
+    ProcedureReturn deleted
   EndProcedure
+  
   
   ;- Callback
   
@@ -2276,6 +2357,12 @@ Module mods
         callbackRemoveMod = *callback
       Case #EventStopDraw
         callbackStopDraw = *callback
+      Case #EventNewBackup
+        callbackNewBackup = *callback
+      Case #EventRemoveBackup
+        callbackRemoveBackup = *callback
+      Case #EventClearBackups
+        callbackClearBackups = *callback
     EndSelect
   EndProcedure
   

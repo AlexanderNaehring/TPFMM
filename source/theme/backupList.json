@@ -1,0 +1,41 @@
+{
+  "item"      : {
+    "Width"  : 300,
+    "Margin" : 2,
+    "Padding": 4,
+    "TabAlign" : "list",
+    "tab-align-values": "'', 'line', 'list'",
+    "Lines"  : [
+      {
+        "REM"    : 1.2,
+        "Font"   : "",
+        "Bold"   : true,
+        "Italic" : false
+      },
+      {
+        "REM"    : 1.0,
+        "Font"   : ""
+      }
+    ],
+    "Image"  : {
+      "Display"  : false
+    }
+  },
+  "responsive": {
+    "Columnize"  : false,
+    "ExpandItems": true
+  },
+  "scrollbarWidth": 12,
+  "color"     : {
+    "ItemText"      : "#2F4763",
+    "ItemSelected"  : "#007BEE20",
+    "ItemBorder"    : "#829BAF",
+    "ItemBackground": "#FFFFFF",
+    "ItemHover"     : "#007BEE10",
+    "Border"        : "#829BAFFF",
+    "Background"    : "",
+    "Scrollbar"     : "#2F476340",
+    "ScrollbarHover": "#2F4763C0",
+    "SelectionBox"  : "#007BEE80"
+  }
+}

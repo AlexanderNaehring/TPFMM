@@ -1,6 +1,14 @@
 ﻿DeclareModule misc
   EnableExplicit
   
+  ImportC ""
+    time(*tloc = #Null)
+  EndImport
+  
+  Macro timezone()
+    ((Date() - misc::time())/3600)
+  EndMacro
+  
   Macro Min(a,b)
     (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
   EndMacro
@@ -16,7 +24,6 @@
     EndDataSection
     var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start-1, #PB_UTF8)
   EndMacro
-  
   
   Macro IncludeAndLoadXML(xml, file)
     DataSection
@@ -95,10 +102,6 @@
 EndDeclareModule
 
 Module misc
-  
-;   ImportC ""
-;     time(*tloc = #Null)
-;   EndImport
  
   Procedure.s path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end

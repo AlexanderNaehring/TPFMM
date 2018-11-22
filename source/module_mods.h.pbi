@@ -3,16 +3,18 @@
   
   #SCANNER_VERSION = #PB_Editor_CompileCount
   
-  
   ; callbacks for mod events
   
   Enumeration
     #EventNewMod
     #EventRemoveMod
-    #EventStopDraw
+    #EventStopDraw ; used to send multiple mods or backups in sequence
     #EventWorkerStarts
     #EventWorkerStops
     #EventProgress
+    #EventNewBackup
+    #EventRemoveBackup
+    #EventClearBackups
   EndEnumeration
   Global EventArraySize = #PB_Compiler_EnumerationValue -1
   
@@ -20,21 +22,9 @@
   Prototype callbackNewMod(*mod)
   Prototype callbackRemoveMod(*mod)
   Prototype callbackStopDraw(stop)
-  
-  Structure backupInfo
-    name$
-    version$
-    author$
-    tpf_id$
-    filename$
-    time.i
-    size.q
-    checksum$
-  EndStructure
-  
-  Structure backupInfoLocal Extends backupInfo
-    installed.b
-  EndStructure
+  Prototype callbackNewBackup(*backup)
+  Prototype callbackRemoveBackup(*backup)
+  Prototype callbackClearBackups()
   
   ;{ modSettings Structures
   
@@ -141,6 +131,18 @@
     getTag.s(n)
     
   EndInterface
+  
+  Interface BackupMod
+    getFilename.s()
+    getFoldername.s()
+    getName.s()
+    getVersion.s()
+    getAuthors.s()
+    getDate.i()
+    isInstalled.b()
+    install()
+    delete()
+  EndInterface
   ;}
   
   ;{ Functions
@@ -158,11 +160,22 @@
   Declare backup(folderID$)     ; backup installed mod
   Declare update(folderID$)     ; request update from repository and install
   
-  ; backup functions
-  Declare getBackupList(List backups.backupInfoLocal(), filter$="")
-  Declare backupDelete(file$)
-  Declare.s getBackupFolder()
-  Declare moveBackupFolder(newFolder$)
+  ; backup static functions
+  Declare.s backupsGetFolder()
+  Declare backupsMoveFolder(newFolder$)
+  Declare backupsClearFolder()
+  Declare backupsScan()
+  
+  ; backup methods
+  Declare.s backupGetFilename(*backup.BackupMod)
+  Declare.s backupGetFoldername(*backup.BackupMod)
+  Declare.s backupGetName(*backup.BackupMod)
+  Declare.s backupGetVersion(*backup.BackupMod)
+  Declare.s backupGetAuthors(*backup.BackupMod)
+  Declare.i backupGetDate(*backup.BackupMod)
+  Declare.b backupIsInstalled(*backup.BackupMod)
+  Declare backupInstall(*backup.BackupMod)
+  Declare backupDelete(*backup.BackupMod)
   
   ; mod static functions:
   Declare getMods(List *mods())

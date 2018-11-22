@@ -95,6 +95,7 @@ Module images
     IncludeAndLoadImage("btnShare",     "images/btn/32/share.png")
     IncludeAndLoadImage("btnBackup",    "images/btn/32/backup.png")
     IncludeAndLoadImage("btnUninstall", "images/btn/32/uninstall.png")
+    IncludeAndLoadImage("btnRestore",   "images/btn/32/restore.png")
     IncludeAndLoadImage("btnUpdateAll", "images/btn/32/update_all.png")
     IncludeAndLoadImage("btnDownload",  "images/btn/32/download.png")
     IncludeAndLoadImage("btnWebsite",   "images/btn/32/website.png")

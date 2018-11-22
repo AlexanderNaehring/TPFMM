@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -8,6 +8,8 @@ yes     = Yes
 no      = No
 error   = Error
 success = Success
+folder  = Folder
+by      = by
 
 [menu]
 file              = File
@@ -68,6 +70,7 @@ cancel          = Cancel
 download        = Download
 repo_clear_title= Repository Cache
 repo_clear_text = The repository preview image cache was deleted.
+install_date    = Installed on %yyyy/%mm/%dd
 backup_manage   = Manage Backups
 backup_restore  = Restore Backup
 backup_delete   = Delete Backup
@@ -79,6 +82,7 @@ backup_collapse = collapse all
 backup_check    = check all
 backup_clear    = uncheck all
 backup_filter   = Search backups
+backup_date     = Backed up on %yyyy/%mm/%dd
 add_to_pack     = Add to mod pack
 update_all      = Update all mods
 update_all_tip  = Update all mods for which a new version is available
@@ -112,6 +116,7 @@ cancel          = Cancel
 [settings]
 title           = TPFMM Settings
 general         = General Settings
+backup          = Backup Settings
 repository      = Online Repository
 path            = Transport Fever Path
 text            = Select the path to your Transport Fever installation.\nPlease make sure TPFMM has the required rights to write to this directory.
@@ -129,11 +134,19 @@ restore         = Restore TPFMM window position upon next start
 restore_tip     = Remember the window location and restore upon next start
 update          = Automatically check for new TPFMM updates
 update_tip      = TPFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting www.transportfevermods.com.
-backup_after_install    = Automatically backup mods after installation
-backup_before_update    = Automatically backup mods before updating
-backup_before_uninstall = Automatically backup mods before deleting
+backup_auto_create_label = Automatically create a mod backup
+backup_after_install    = after installation
+backup_before_update    = before updating
+backup_before_uninstall = before deleting
 backup_change_folder    = Change backup folder loaction
 backup_change_folder_wait = Moving folder...
+backup_auto_delete          = Automatically delete backups
+backup_auto_delete_never    = never
+backup_auto_delete_1week    = after 1 week
+backup_auto_delete_1month   = after 1 month
+backup_auto_delete_3months  = after 3 months
+backup_auto_delete_6months  = after 6 months
+backup_auto_delete_1year    =  after 1 year 
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
 locale          = Localization (Language)
