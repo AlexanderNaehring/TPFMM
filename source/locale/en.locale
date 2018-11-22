@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -287,6 +287,23 @@ save_list   = Save mod list...
 cleanup     = Cleanup...
 goodbye     = Goodbye!
 force_close = Force close
+
+[dialog]
+sort_by       = Sort by
+mod_name      = Mod name
+author_name   = Author name
+install_date  = Installation date
+folder_size   = Folder size
+folder_name   = Folder name
+updated       = Last updated
+backup_date   = Backup date
+mods_tf       = TF Mods
+mods_vanilla  = Vanilla Mods
+mods_hidden   = Hidden Mods
+mods_workshop = Steam Workshop Mods
+mods_staging  = Staging Area Mods
+updated_not_before  = Updated not before
+backup_on     = Backed up on
 
 [share]
 title       = List of Modifications

@@ -35,6 +35,8 @@ Module windowMain
   Structure dialog
     dialog.i
     window.i
+    listGadget.i
+    activeGadget.i
   EndStructure
   
   Structure fileSelectionDialog
@@ -806,14 +808,6 @@ Module windowMain
   
   ;- mod filter dialog
   
-  Procedure modFilterClose()
-;     deb("windowMain:: modFilterClose()")
-    HideWindow(modFilter\window, #True)
-    SetActiveWindow(window)
-    PostEvent(#PB_Event_Repaint, window, 0)
-    SetActiveGadget(gadget("modList"))
-  EndProcedure
-  
   Procedure modFilterCallback(*item.CanvasList::CanvasListItem, options)
     ; return true if this mod shall be displayed, false if hidden
     Protected *mod.mods::LocalMod = *item\GetUserData()
@@ -884,6 +878,7 @@ Module windowMain
   Procedure modFilterChange()
 ;     deb("windowMain:: modFilterChange()")
     ; save current filter to settings
+    settings::setString("modFilter", "filter",    GetGadgetText(DialogGadget(modfilter\dialog, "modFilterString")))
     settings::setInteger("modFilter", "tf",       GetGadgetState(DialogGadget(modfilter\dialog, "modFilterTF")))
     settings::setInteger("modFilter", "vanilla",  GetGadgetState(DialogGadget(modfilter\dialog, "modFilterVanilla")))
     settings::setInteger("modFilter", "hidden",   GetGadgetState(DialogGadget(modfilter\dialog, "modFilterHidden")))
@@ -903,23 +898,7 @@ Module windowMain
     modFilterChange()
   EndProcedure
   
-  Procedure modFilterShow()
-;     deb("windowMain:: modFilterShow()")
-    ResizeWindow(modFilter\window, DesktopMouseX()-WindowWidth(modFilter\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
-    HideWindow(modFilter\window, #False)
-    SetActiveGadget(DialogGadget(modFilter\dialog, "modFilterString"))
-    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-      SendMessage_(GadgetID(DialogGadget(modfilter\dialog, "modFilterString")), #EM_SETSEL, 0, -1)
-    CompilerEndIf
-  EndProcedure
-  
   ;- mod sort dialog
-  
-  Procedure modSortClose()
-    HideWindow(modSort\window, #True)
-    SetActiveWindow(window)
-    SetActiveGadget(gadget("modList"))
-  EndProcedure
   
   Procedure modSortChange()
 ;     deb("windowMain:: modSortChange()")
@@ -952,14 +931,7 @@ Module windowMain
     *modList\SortItems(CanvasList::#SortByUser, *comp, options, #True)
     
     ; close the mod sort tool window
-    modSortClose()
-  EndProcedure
-  
-  Procedure modSortShow()
-;     deb("windowMain:: modSortShow()")
-    ResizeWindow(modSort\window, DesktopMouseX()-WindowWidth(modSort\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
-    HideWindow(modSort\window, #False)
-    SetActiveGadget(DialogGadget(modFilter\dialog, "modSortBox"))
+    PostEvent(#PB_Event_CloseWindow, modSort\window, #Null)
   EndProcedure
   
   ;- mod item icon callbacks
@@ -1068,7 +1040,17 @@ Module windowMain
   Procedure modCallbackNewMod(*mod.mods::LocalMod)
     Protected *item.CanvasList::CanvasListItem
     
-    *item = *modList\AddItem(*mod\getName()+#LF$+*mod\getAuthorsString()+#LF$+"ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+FormatDate("Installed on %yyyy/%mm/%dd", *mod\getInstallDate()), *mod)
+    CompilerIf #PB_Compiler_Debugger
+      *item = *modList\AddItem(*mod\getName()+#LF$+
+                               locale::l("generic","by")+" "+*mod\getAuthorsString()+#LF$+
+                               "ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+
+                               FormatDate(locale::l("main", "install_date"), *mod\getInstallDate()), *mod)
+    CompilerElse
+      *item = *modList\AddItem(*mod\getName()+#LF$+
+                               locale::l("generic","by")+" "+*mod\getAuthorsString()+#LF$+
+                               FormatDate(locale::l("main", "install_date"), *mod\getInstallDate()), *mod)
+    CompilerEndIf
+    
     modItemSetup(*item, *mod)
   EndProcedure
   
@@ -1083,11 +1065,11 @@ Module windowMain
         EndIf
       Next
     EndIf
-    *modList\GetAllItems(*items())
   EndProcedure
   
   Procedure modCallbackStopDraw(stop)
     *modList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
+    *backupList\SetAttribute(CanvasList::#AttributePauseDraw, stop)
   EndProcedure
   
   Procedure modEventProgress()
@@ -1340,14 +1322,7 @@ Module windowMain
   EndProcedure
   
   ;- repo filter dialog
-  
-  Procedure repoFilterClose()
-    HideWindow(repoFilter\window, #True)
-    SetActiveWindow(window)
-;     PostEvent(#PB_Event_Repaint, window, 0)
-    SetActiveGadget(gadget("repoList"))
-  EndProcedure
-  
+    
   Procedure repoFilterCallback(*item.CanvasList::CanvasListItem, options)
     ; return true if this mod shall be displayed, false if hidden
     Protected *mod.repository::RepositoryMod = *item\GetUserData()
@@ -1407,6 +1382,8 @@ Module windowMain
     ; save current filter to settings
     ; TODO repoFilterChange() save current filter to settings?
     
+    settings::setString("repoFilter",   "filter", GetGadgetText(DialogGadget(repoFilter\dialog, "filterString")))
+    settings::setInteger("repoFilter",  "date",   GetGadgetState(DialogGadget(repoFilter\dialog, "filterDate")))
     ; opt 1) gather the "filter options" here: read gadget state and save to some filter flag variable
     ; opt 2) trigger filtering, and let the filter callback read the gadget states.
     ; use opt 2: (window must stay open)
@@ -1419,23 +1396,7 @@ Module windowMain
     repoFilterChange()
   EndProcedure
   
-  Procedure repoFilterShow()
-    ResizeWindow(repoFilter\window, DesktopMouseX()-WindowWidth(repoFilter\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
-    HideWindow(repoFilter\window, #False)
-    SetActiveGadget(DialogGadget(repoFilter\dialog, "filterString"))
-    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-      SendMessage_(GadgetID(DialogGadget(repoFilter\dialog, "filterString")), #EM_SETSEL, 0, -1)
-    CompilerEndIf
-  EndProcedure
-  
   ;- repo sort dialog
-  
-  Procedure repoSortClose()
-    HideWindow(repoSort\window, #True)
-    SetActiveWindow(window)
-    PostEvent(#PB_Event_Repaint, window, 0)
-    SetActiveGadget(gadget("repoList"))
-  EndProcedure
   
   Procedure repoSortChange()
     ; apply sorting to CanvasList
@@ -1458,13 +1419,7 @@ Module windowMain
     *repoList\SortItems(CanvasList::#SortByUser, *comp, options, #True)
     
     ; close the mod sort tool window
-    modSortClose()
-  EndProcedure
-  
-  Procedure repoSortShow()
-    ResizeWindow(repoSort\window, DesktopMouseX()-WindowWidth(repoSort\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
-    HideWindow(repoSort\window, #False)
-    SetActiveGadget(DialogGadget(repoFilter\dialog, "modSortBox"))
+    PostEvent(#PB_Event_CloseWindow, repoSort\window, #Null)
   EndProcedure
   
   ;- repo events
@@ -1821,7 +1776,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -2226,21 +2181,77 @@ Module windowMain
     ProcedureReturn height
   EndProcedure
   
+  ;-------------
   ;- dialogs
   
-  Procedure modFilterDialog()
-    modFilter\dialog = CreateDialog(#PB_Any)
-    If Not modFilter\dialog Or Not OpenXMLDialog(modFilter\dialog, xml, "modFilter", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
-      MessageRequester("Critical Error", "Could not open filter dialog!", #PB_MessageRequester_Error)
+  Macro dq()
+    "
+  EndMacro
+  Macro BuildDialogWindow(name)
+    name\dialog = CreateDialog(#PB_Any)
+    If Not name\dialog Or Not OpenXMLDialog(name\dialog, xml, dq()name#dq(), #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
+      deb("could not open "+dq()name#dq()+" dialog!")
       End
     EndIf
-    modFilter\window = DialogWindow(modFilter\dialog)
-    BindEvent(#PB_Event_CloseWindow, @modFilterClose(), modFilter\window)
-    BindEvent(#PB_Event_DeactivateWindow, @modFilterClose(), modFilter\window)
-    AddKeyboardShortcut(modFilter\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
-    AddKeyboardShortcut(modFilter\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
-    BindEvent(#PB_Event_Menu, @modFilterClose(), modFilter\window, #PB_Event_CloseWindow)
+    name\window = DialogWindow(name\dialog)
+    BindEvent(#PB_Event_CloseWindow, @dialogClose(), name\window)
+    BindEvent(#PB_Event_DeactivateWindow, @dialogClose(), name\window)
+    AddKeyboardShortcut(name\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
+    AddKeyboardShortcut(name\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
+    BindEvent(#PB_Event_Menu, @dialogClose(), name\window, #PB_Event_CloseWindow)
+    SetWindowData(name\window, @name)
+  EndMacro
+  
+  Procedure dialogClose()
+    Protected *dialog.dialog = GetWindowData(EventWindow())
+    HideWindow(*dialog\window, #True)
+    SetActiveWindow(window)
+    PostEvent(#PB_Event_Repaint, window, 0)
+    If *dialog\listGadget
+      SetActiveGadget(*dialog\listGadget)
+    EndIf
+  EndProcedure
+  
+  Procedure dialogShow(*dialog.dialog)
+    ResizeWindow(*dialog\window, DesktopMouseX()-WindowWidth(*dialog\window)+5, DesktopMouseY()-5, #PB_Ignore, #PB_Ignore)
+    HideWindow(*dialog\window, #False)
+    If *dialog\activeGadget
+      SetActiveGadget(*dialog\activeGadget)
+    EndIf
+  EndProcedure
+  
+  Procedure modSortShow()
+    dialogShow(@modSort)
+  EndProcedure
+  
+  Procedure modFilterShow()
+    dialogShow(@modFilter)
+  EndProcedure
+  
+  Procedure repoSortShow()
+    dialogShow(@repoSort)
+  EndProcedure
+  
+  Procedure repoFilterShow()
+    dialogShow(@repoFilter)
+  EndProcedure
+  
+  
+  ; create dialogs:
+  
+  Procedure modFilterDialog()
+    BuildDialogWindow(modFilter)
+    modFilter\listGadget = gadget("modList")
+    modFilter\activeGadget = DialogGadget(modFilter\dialog, "modFilterString")
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterTF"),        locale::l("dialog", "mods_tf"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterVanilla"),   locale::l("dialog", "mods_vanilla"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterHidden"),    locale::l("dialog", "mods_hidden"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterWorkshop"),  locale::l("dialog", "mods_workshop"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterStaging"),   locale::l("dialog", "mods_staging"))
+    RefreshDialog(modFilter\dialog)
+    ; load settings
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), "")
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), settings::getString("modFilter", "filter"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterTF"), settings::getInteger("modFilter", "tf"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterVanilla"), settings::getInteger("modFilter", "vanilla"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterHidden"), settings::getInteger("modFilter", "hidden"))
@@ -2259,25 +2270,14 @@ Module windowMain
   EndProcedure
   
   Procedure modSortDialog()
-    modSort\dialog = CreateDialog(#PB_Any)
-    If Not modSort\dialog Or Not OpenXMLDialog(modSort\dialog, xml, "modSort", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
-      MessageRequester("Critical Error", "Could not open sort dialog!", #PB_MessageRequester_Error)
-      End
-    EndIf
-    modSort\window = DialogWindow(modSort\dialog)
-    ; bind window events
-    BindEvent(#PB_Event_CloseWindow, @modSortClose(), modSort\window)
-    BindEvent(#PB_Event_DeactivateWindow, @modSortClose(), modSort\window)
-    ; use window menu for keyboard shortcuts
-    AddKeyboardShortcut(modSort\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
-    AddKeyboardShortcut(modSort\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
-    BindEvent(#PB_Event_Menu, @modSortClose(), modSort\window, #PB_Event_CloseWindow)
-    ; sorting options
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, "Mod Name")
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, "Author Name")
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, "Installation Date")
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, "Folder Size")
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, "Folder Name")
+    BuildDialogWindow(modSort)
+    modSort\listGadget = gadget("modList")
+    SetGadgetText(DialogGadget(modSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "author_name"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "install_date"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "folder_size"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "folder_name"))
     SetGadgetState(DialogGadget(modSort\dialog, "sortBox"), 0)
     RefreshDialog(modSort\dialog)
     BindGadgetEvent(DialogGadget(modSort\dialog, "sortBox"), @modSortChange())
@@ -2288,18 +2288,17 @@ Module windowMain
   EndProcedure
   
   Procedure repoFilterDialog()
-    repoFilter\dialog = CreateDialog(#PB_Any)
-    If Not repoFilter\dialog Or Not OpenXMLDialog(repoFilter\dialog, xml, "repoFilter", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
-      MessageRequester("Critical Error", "Could not open repo filter dialog!", #PB_MessageRequester_Error)
-      End
-    EndIf
-    repoFilter\window = DialogWindow(repoFilter\dialog)
-    BindEvent(#PB_Event_CloseWindow, @repoFilterClose(), repoFilter\window)
-    BindEvent(#PB_Event_DeactivateWindow, @repoFilterClose(), repoFilter\window)
-    AddKeyboardShortcut(repoFilter\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
-    AddKeyboardShortcut(repoFilter\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
-    BindEvent(#PB_Event_Menu, @repoFilterClose(), repoFilter\window, #PB_Event_CloseWindow)
+    BuildDialogWindow(repoFilter)
+    repoFilter\listGadget = gadget("repoList")
+    repoFilter\activeGadget = DialogGadget(repoFilter\dialog, "filterString")
+    SetGadgetText(DialogGadget(repoFilter\dialog, "filterDateLabel"), locale::l("dialog", "updated_not_before"))
+    RefreshDialog(repoFilter\dialog)
+    ; load settings
+    SetGadgetAttribute(DialogGadget(repoFilter\dialog, "filterDate"), #PB_Calendar_Maximum, Date())
+    SetGadgetAttribute(DialogGadget(repoFilter\dialog, "filterDate"), #PB_Calendar_Minimum, Date(2014, 8, 12, 0, 0, 0))
     SetGadgetText(DialogGadget(repoFilter\dialog, "filterString"), "")
+    SetGadgetText(DialogGadget(repoFilter\dialog, "filterString"), settings::getString("repoFilter", "filter"))
+    SetGadgetState(DialogGadget(repoFilter\dialog, "filterDate"), settings::getInteger("repoFilter", "date"))
     ; dynamically add available sources!
     ; bind events
     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterString"), @repoFilterChange(), #PB_EventType_Change)
@@ -2307,27 +2306,15 @@ Module windowMain
     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterDate"), @repoFilterChange(), #PB_EventType_Change)
 ;     BindGadgetEvent(DialogGadget(repoFilter\dialog, "filterReset"), @repoFilterReset())
     ; apply initial filtering
-    modFilterChange()
-    
+    repoFilterChange()
   EndProcedure
   
   Procedure repoSortDialog()
-    repoSort\dialog = CreateDialog(#PB_Any)
-    If Not repoSort\dialog Or Not OpenXMLDialog(repoSort\dialog, xml, "repoSort", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, WindowID(window))
-      MessageRequester("Critical Error", "Could not open sort dialog!", #PB_MessageRequester_Error)
-      End
-    EndIf
-    repoSort\window = DialogWindow(repoSort\dialog)
-    ; bind window events
-    BindEvent(#PB_Event_CloseWindow, @repoSortClose(), repoSort\window)
-    BindEvent(#PB_Event_DeactivateWindow, @repoSortClose(), repoSort\window)
-    ; use window menu for keyboard shortcuts
-    AddKeyboardShortcut(repoSort\window, #PB_Shortcut_Return, #PB_Event_CloseWindow)
-    AddKeyboardShortcut(repoSort\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
-    BindEvent(#PB_Event_Menu, @repoSortClose(), repoSort\window, #PB_Event_CloseWindow)
-    ; sorting options
-    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, "Last Update")
-    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, "Mod Name")
+    BuildDialogWindow(repoSort)
+    repoSort\listGadget = gadget("repoList")
+    SetGadgetText(DialogGadget(repoSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
+    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, locale::l("dialog", "updated"))
+    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
     SetGadgetState(DialogGadget(repoSort\dialog, "sortBox"), 0)
     RefreshDialog(repoSort\dialog)
     BindGadgetEvent(DialogGadget(repoSort\dialog, "sortBox"), @repoSortChange())
