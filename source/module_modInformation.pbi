@@ -10,6 +10,7 @@ XIncludeFile "module_modSettings.pbi"
 
 Module modInformation
   UseModule debugger
+  UseModule locale
   
   ; mod info window
   Structure modInfoGadget
@@ -332,17 +333,17 @@ Module modInformation
         UndefineMacro getGadget
         
         ; set text
-        SetWindowTitle(*data\window, locale::l("info","title"))
-        SetGadgetText(*data\gadgets("descriptionLabel"),  locale::l("info", "description"))
-        SetGadgetText(*data\gadgets("info"),              locale::l("info", "info"))
-        SetGadgetText(*data\gadgets("idLabel"),           locale::l("info", "id"))
-        SetGadgetText(*data\gadgets("folderLabel"),       locale::l("info", "folder"))
-        SetGadgetText(*data\gadgets("tagsLabel"),         locale::l("info", "tags"))
-        SetGadgetText(*data\gadgets("dependenciesLabel"), locale::l("info", "dependencies"))
-;         SetGadgetText(*data\gadgets("filesLabel"),        locale::l("info", "files"))
-        SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
-        SetGadgetText(*data\gadgets("modSettings"),       locale::l("info", "mod_settings"))
-        SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
+        SetWindowTitle(*data\window, _("info_title"))
+        SetGadgetText(*data\gadgets("descriptionLabel"),  _("info_description"))
+        SetGadgetText(*data\gadgets("info"),              _("info_info"))
+        SetGadgetText(*data\gadgets("idLabel"),           _("info_id"))
+        SetGadgetText(*data\gadgets("folderLabel"),       _("info_folder"))
+        SetGadgetText(*data\gadgets("tagsLabel"),         _("info_tags"))
+        SetGadgetText(*data\gadgets("dependenciesLabel"), _("info_dependencies"))
+;         SetGadgetText(*data\gadgets("filesLabel"),        _("info_files"))
+        SetGadgetText(*data\gadgets("sizeLabel"),         _("info_size"))
+        SetGadgetText(*data\gadgets("modSettings"),       _("info_mod_settings"))
+        SetGadgetText(*data\gadgets("sourcesLabel"),      _("info_sources"))
         
         
 ;         SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")

@@ -8,6 +8,7 @@ XIncludeFile "module_mods.h.pbi"
 
 Module mods
   UseModule debugger
+  UseModule locale
   
   ;{ VT
   DataSection
@@ -1406,8 +1407,8 @@ Module mods
     
     LockMutex(mutexMods)
     
-    postProgressEvent(0, locale::l("progress", "load"))
-;     windowMain::progressMod(0, locale::l("progress","load")) ; 0%
+    postProgressEvent(0, _("progress_load"))
+;     windowMain::progressMod(0, _("progress_load")) ; 0%
     
     ; load list from json file
     json = LoadJSON(#PB_Any, getFolder(#FolderTPFMM) + "mods.json")
@@ -1583,8 +1584,8 @@ Module mods
       PostEvent(events(#EventStopDraw), #False, 0)
     EndIf
     
-    postProgressEvent(-1, locale::l("progress", "loaded"))
-;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","loaded"))
+    postProgressEvent(-1, _("progress_loaded"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, _("progress_loaded"))
     
     UnlockMutex(mutexMods)
     
@@ -1670,8 +1671,8 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    postProgressEvent(20, locale::l("progress", "install"))
-;     windowMain::progressMod(20, locale::l("progress", "install"))
+    postProgressEvent(20, _("progress_install"))
+;     windowMain::progressMod(20, _("progress_install"))
     
     ; 1) extract to temp directory (in TPF folder: /Transport Fever/TPFMM/temp/)
     ; 2) check extracted files and format
@@ -1699,8 +1700,8 @@ Module mods
         deb("mods:: failed to extract files from {"+source$+"} to {"+target$+"}")
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         
-        postProgressEvent(-1, locale::l("progress","install_fail"))
-;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+        postProgressEvent(-1, _("progress_install_fail"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail"))
         ProcedureReturn #False
     EndIf
     
@@ -1714,8 +1715,8 @@ Module mods
     If modRoot$ = ""
       deb("mods:: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      postProgressEvent(-1, locale::l("progress","install_fail"))
-;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, _("progress_install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1738,8 +1739,8 @@ Module mods
         ;TODO backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
         
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        postProgressEvent(-1, locale::l("progress","install_fail_id"))
-;         windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail_id"))
+        postProgressEvent(-1, _("progress_install_fail_id"))
+;         windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail_id"))
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1800,8 +1801,8 @@ Module mods
     If Not RenameFile(modRoot$, modFolder$) ; RenameFile also works with directories!
       deb("mods:: could not move directory to {"+modFolder$+"}")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      postProgressEvent(-1, locale::l("progress", "install_fail"))
-;       windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","install_fail"))
+      postProgressEvent(-1, _("progress_install_fail"))
+;       windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail"))
       ProcedureReturn #False
     EndIf
     
@@ -1856,8 +1857,8 @@ Module mods
     EndIf
     
     ; finish installation
-    postProgressEvent(-1, locale::l("progress", "installed"))
-;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("progress","installed"))
+    postProgressEvent(-1, _("progress_installed"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, _("progress_installed"))
     deb("mods:: finish installation...")
     DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
     
@@ -1910,8 +1911,8 @@ Module mods
     
     DeleteMapElement(mods())
     
-    postProgressEvent(-1, locale::l("management", "uninstall_done"))
-;     windowMain::progressMod(windowMain::#Progress_Hide, locale::l("management", "uninstall_done"))
+    postProgressEvent(-1, _("management_uninstall_done"))
+;     windowMain::progressMod(windowMain::#Progress_Hide, _("management_uninstall_done"))
     
     ; callback remove mod
     If callbackRemoveMod
@@ -1967,23 +1968,21 @@ Module mods
     tmpFile$ = GetCurrentDirectory()+"/tmp/"+filename$
     
     ; start backup now: modFolder$ -> zip -> backupFile$
-    Protected NewMap strings$()
-    strings$("mod") = *mod\name$
-    postProgressEvent(90,  locale::getEx("progress", "backup_mod", strings$()))
+    postProgressEvent(90,  _("progress_backup_mod", "mod="+*mod\name$))
     
     ; create archive in tmp folder first
     CreateDirectory(GetPathPart(tmpFile$))
     If Not archive::pack(tmpFile$, modFolder$)
       ; failed to create backup file
       deb("mods:: backup failed")
-      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+      postProgressEvent(-1, _("progress_backup_fail"))
       SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
     
     If FileSize(tmpFile$) <= 0
       deb("mods:: temporary backup file "+tmpFile$+" not found")
-      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+      postProgressEvent(-1, _("progress_backup_fail"))
       SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
@@ -2010,7 +2009,7 @@ Module mods
     
     If Not RenameFile(tmpFile$, backupFile$)
       deb("mods:: renaming backup file failed!")
-      postProgressEvent(-1, locale::l("progress", "backup_fail"))
+      postProgressEvent(-1, _("progress_backup_fail"))
       SignalSemaphore(semaphoreBackup)
       ProcedureReturn #False
     EndIf
@@ -2048,7 +2047,7 @@ Module mods
     backupsReadBackupInformation(filename$, backupFolder$)
     
     ; finished
-    postProgressEvent(-1, locale::l("progress", "backup_fin"))
+    postProgressEvent(-1, _("progress_backup_fin"))
     SignalSemaphore(semaphoreBackup)
     ProcedureReturn #True
   EndProcedure

@@ -17,6 +17,7 @@ XIncludeFile "module_repository.pbi"
 
 Module windowPack
   UseModule debugger
+  UseModule locale
   
   Global window, dialog, parent
   Global *pack
@@ -46,10 +47,10 @@ Module windowPack
     
     
     If mods::isInstalled(packItem\id$)
-      installed$ = locale::l("pack","yes")
+      installed$ = _("pack_yes")
     Else
       ; not installed, check if download link available
-      installed$ = locale::l("pack","no")
+      installed$ = _("pack_no")
     EndIf
     
     Protected *mod.repository::RepositoryMod
@@ -63,13 +64,13 @@ Module windowPack
     If download$
       If repository::getModByLink(download$)
         ; download link found :-)
-        download$ = locale::l("pack","available")
+        download$ = _("pack_available")
       Else
         ; mod not found (may also be if repo not yet loaded)
-        download$ = locale::l("pack","invalid")
+        download$ = _("pack_invalid")
       EndIf
     Else
-      download$ = locale::l("pack","undefined")
+      download$ = _("pack_undefined")
     EndIf
     
     AddGadgetItem(gadget, index, packItem\name$+#LF$+installed$+#LF$+download$)
@@ -99,8 +100,8 @@ Module windowPack
     Protected pattern$
     
     If file$ = ""
-      pattern$ = locale::l("pack","pack_file")+"|*."+pack::#EXTENSION+"|"+locale::l("management","files_all")+"|*.*"
-      file$ = OpenFileRequester(locale::l("pack","open"), settings::getString("pack","lastFile"), pattern$, 0)
+      pattern$ = _("pack_pack_file")+"|*."+pack::#EXTENSION+"|"+_("management_files_all")+"|*.*"
+      file$ = OpenFileRequester(_("pack_open"), settings::getString("pack","lastFile"), pattern$, 0)
       If file$ = ""
         ProcedureReturn #False
       EndIf
@@ -135,13 +136,13 @@ Module windowPack
     author$ = pack::getAuthor(*pack)
     
     file$ = GetPathPart(settings::getString("pack","lastFile")) + name$
-    file$ = SaveFileRequester(locale::l("pack","save"), file$, locale::l("pack","pack_file")+"|*."+pack::#EXTENSION, 0)
+    file$ = SaveFileRequester(_("pack_save"), file$, _("pack_pack_file")+"|*."+pack::#EXTENSION, 0)
     If file$
       If LCase(GetExtensionPart(file$)) <> pack::#EXTENSION
         file$ + "." + pack::#EXTENSION
       EndIf
       If FileSize(file$) > 0
-        If MessageRequester(locale::l("management","overwrite_file"), locale::l("management","overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
+        If MessageRequester(_("management_overwrite_file"), _("management_overwrite_file"), #PB_MessageRequester_YesNo) <> #PB_MessageRequester_Yes
           ProcedureReturn #False
         EndIf
       EndIf
@@ -326,18 +327,18 @@ Module windowPack
     window = DialogWindow(dialog)
     
     ; set text
-    SetWindowTitle(window, l("pack","title"))
-    SetGadgetText(gadget("nameText"), l("pack","name"))
-    SetGadgetText(gadget("authorText"), l("pack","author"))
-    SetGadgetText(gadget("save"), l("pack","save"))
-    SetGadgetText(gadget("download"), l("pack","download_all"))
+    SetWindowTitle(window, _("pack_title"))
+    SetGadgetText(gadget("nameText"), _("pack_name"))
+    SetGadgetText(gadget("authorText"), _("pack_author"))
+    SetGadgetText(gadget("save"), _("pack_save"))
+    SetGadgetText(gadget("download"), _("pack_download_all"))
     SetGadgetText(gadget("author"), settings::getString("pack","author"))
-    GadgetToolTip(gadget("items"), l("pack","tip"))
+    GadgetToolTip(gadget("items"), _("pack_tip"))
     
     SetGadgetItemAttribute(gadget("items"), 0, #PB_ListIcon_ColumnWidth, 300, 0)
-    SetGadgetItemText(gadget("items"), -1, l("pack","mod"), 0)
-    AddGadgetColumn(gadget("items"), 1, l("pack","installed"), 70)
-    AddGadgetColumn(gadget("items"), 2, l("pack","download"), 70)
+    SetGadgetItemText(gadget("items"), -1, _("pack_mod"), 0)
+    AddGadgetColumn(gadget("items"), 1, _("pack_installed"), 70)
+    AddGadgetColumn(gadget("items"), 2, _("pack_download"), 70)
     
     BindGadgetEvent(gadget("items"), @GadgetItems())
     BindGadgetEvent(gadget("save"), @packSave())

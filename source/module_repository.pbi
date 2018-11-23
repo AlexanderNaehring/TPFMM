@@ -10,6 +10,7 @@ XIncludeFile "module_repository.h.pbi"
 
 Module repository
   UseModule debugger
+  UseModule locale
   
   ;{ VT
   
@@ -420,7 +421,7 @@ Module repository
         ClearList(\tagsLocalized$())
         ForEach \tags$()
           AddElement(\tagsLocalized$())
-          \tagsLocalized$() = locale::l("tags", \tags$())
+          \tagsLocalized$() = _("tags_"+\tags$())
         Next
       EndWith
     Next
@@ -467,7 +468,7 @@ Module repository
     
     N = ReadSourcesFromFile(repositories$())
     
-    postProgressEvent(0, locale::l("repository", "load"))
+    postProgressEvent(0, _("repository_load"))
     
     ; download all repositories
     _activeRepoDownloads = 0
@@ -495,9 +496,9 @@ Module repository
     Next
     
     If loaded > 0
-      postProgressEvent(-1, locale::l("repository", "loaded"))
+      postProgressEvent(-1, _("repository_loaded"))
     Else
-      postProgressEvent(-1, locale::l("repository", "load_failed"))
+      postProgressEvent(-1, _("repository_load_failed"))
     EndIf
     If CallbackRefreshFinished
       CallbackRefreshFinished()
@@ -1151,7 +1152,6 @@ Module repository
   Procedure fileDownloadError(*wget.wget::wget)
     Protected *file.file, *mod.mod
     Protected url$
-    Protected NewMap strings$()
     
     deb("repository:: fileDownloadError()")
     
@@ -1161,11 +1161,8 @@ Module repository
     *wget\free()
     *wget = #Null
     
-    strings$("modname") = *mod\name$
-    
     deb("repository:: download error: "+url$)
-    
-    postProgressEvent(-1, locale::getEx("repository", "download_fail", strings$()))
+    postProgressEvent(-1, _("repository_download_fail", "modname="+*mod\name$))
     
     SignalSemaphore(_semaphoreDownload)
     If events(#EventWorkerStops)
@@ -1176,7 +1173,6 @@ Module repository
   Procedure fileDownloadSuccess(*wget.wget::wget)
     Protected *file.file, *mod.mod
     Protected filename$
-    Protected NewMap strings$()
     
     deb("repository:: fileDownloadSuccess()")
     
@@ -1186,10 +1182,7 @@ Module repository
     *wget\free()
     *wget = #Null
     
-    strings$("modname") = *mod\name$
-    
-    postProgressEvent(-1, locale::getEx("repository", "download_finish", strings$()))
-    
+    postProgressEvent(-1, _("repository_download_finish", "modname="+*mod\name$))
     If events(#EventDownloadSuccess)
       PostEvent(events(#EventDownloadSuccess), *file, 0)
     EndIf
@@ -1206,7 +1199,6 @@ Module repository
     Protected *wget.wget::wget
     Protected *mod.mod = *file\mod
     Protected filename$, folder$
-    Protected NewMap strings$()
     
     ;TODO make sure that not in main thread? -> semaphore may wait
     ;TODO move download wait check (semaphore) to wget?
@@ -1225,8 +1217,7 @@ Module repository
     
     ; start
     deb("repository:: download file "+*file\url$)
-    strings$("modname") = *mod\name$
-    postProgressEvent(0, locale::getEx("repository", "download_start", strings$()))
+    postProgressEvent(0, _("repository_download_start", "modname="+*mod\name$))
     
     ; pre-process
     filename$ = *file\filename$

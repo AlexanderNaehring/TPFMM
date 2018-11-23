@@ -30,6 +30,7 @@ XIncludeFile "animation.pb"
 
 Module windowMain
   UseModule debugger
+  UseModule locale
   
   ;{ Structures
   Structure dialog
@@ -256,7 +257,7 @@ Module windowMain
     *workerAnimation = #Null
     
     main::setProgressPercent(15)
-    main::setProgressText(locale::l("progress", "close"))
+    main::setProgressText(_("progress_close"))
     
     settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
     settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
@@ -266,7 +267,7 @@ Module windowMain
     settings::setInteger("window", "tab", currentTab)
     
     main::setProgressPercent(30)
-    main::setProgressText(locale::l("progress", "stop_worker"))
+    main::setProgressText(_("progress_stop_worker"))
     deb("windowMain:: stop workers")
     mods::stopQueue()
     main::setProgressPercent(45)
@@ -274,18 +275,18 @@ Module windowMain
     repository::stopQueue()
     
     main::setProgressPercent(60)
-    main::setProgressText(locale::l("progress", "save_list"))
+    main::setProgressText(_("progress_save_list"))
     mods::saveList()
     
     main::setProgressPercent(75)
-    main::setProgressText(locale::l("progress", "cleanup"))
+    main::setProgressText(_("progress_cleanup"))
     deb("windowMain:: cleanup")
     mods::freeAll()
     main::setProgressPercent(90)
     repository::freeAll()
     
     main::setProgressPercent(99)
-    main::setProgressText(locale::l("progress", "goodbye"))
+    main::setProgressText(_("progress_goodbye"))
     
     ; free all dialogs
     FreeDialog(modFilter\dialog)
@@ -301,7 +302,7 @@ Module windowMain
   Procedure close()
     deb("windowMain:: close window")
     ; the exit procedure will run in a thread and wait for all workers to finish etc...
-    main::showProgressWindow(locale::l("progress", "close"), #EventCloseNow)
+    main::showProgressWindow(_("progress_close"), #EventCloseNow)
     CreateThread(@closeThread(), #EventCloseNow)
     ; todo also set up a timer event to close programm after (e.g.) 1 minute if cleanup procedure fails?
   EndProcedure
@@ -311,7 +312,7 @@ Module windowMain
   Procedure startThread(EventOnFinish)
     Protected i
     
-    main::setProgressText(locale::l("progress", "init"))
+    main::setProgressText(_("progress_init"))
     main::setProgressPercent(0)
     
     ; read gameDirectory from preferences
@@ -394,12 +395,12 @@ Module windowMain
     
     ; load mods and repository
     If settings::getString("", "path")
-      main::setProgressText(locale::l("progress", "load_mods"))
+      main::setProgressText(_("progress_load_mods"))
       mods::load(#False)
       main::setProgressPercent(50)
       
       
-      main::setProgressText(locale::l("progress", "load_repo"))
+      main::setProgressText(_("progress_load_repo"))
       repository::refreshRepositories(#False)
       main::setProgressPercent(80)
     EndIf
@@ -444,7 +445,7 @@ Module windowMain
     
     
     ; startup procedure
-    main::showProgressWindow(locale::l("progress", "start"), #EventCloseNow)
+    main::showProgressWindow(_("progress_start"), #EventCloseNow)
     CreateThread(@startThread(), #EventStartupFinished)
     
   EndProcedure
@@ -638,7 +639,7 @@ Module windowMain
     Protected types$
     types$ = "*.zip;*.rar;*.7z;*.gz;*.tar"
     
-    file$ = OpenFileRequester(locale::l("management","select_mod"), settings::getString("", "last_file"), locale::l("management","files_archive")+"|"+types$+"|"+locale::l("management","files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
+    file$ = OpenFileRequester(_("management_select_mod"), settings::getString("", "last_file"), _("management_files_archive")+"|"+types$+"|"+_("management_files_all")+"|*.*", 0, #PB_Requester_MultiSelection)
     
     If file$
       settings::setString("","last_file", file$)
@@ -657,25 +658,23 @@ Module windowMain
     Protected *mod.mods::LocalMod
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected count, result
-    Protected NewMap strings$()
+    Protected name$
     
     If *modList\GetAllSelectedItems(*items())
       ForEach *items()
         *mod = *items()\GetUserData()
         If *mod\canUninstall()
           count + 1
-          strings$("name") = *mod\getName()
+          name$ = *mod\getName()
         EndIf
       Next
     EndIf
     
     If count > 0
       If count = 1
-        result = MessageRequester(locale::l("main","uninstall"), locale::getEx("management", "uninstall1", strings$()), #PB_MessageRequester_YesNo)
+        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo)
       Else
-        ClearMap(strings$())
-        strings$("count") = Str(count)
-        result = MessageRequester(locale::l("main","uninstall_pl"), locale::getEx("management", "uninstall2", strings$()), #PB_MessageRequester_YesNo)
+        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo)
       EndIf
       
       If result = #PB_MessageRequester_Yes
@@ -1025,13 +1024,13 @@ Module windowMain
     
     CompilerIf #PB_Compiler_Debugger
       *item = *modList\AddItem(*mod\getName()+#LF$+
-                               locale::l("generic","by")+" "+*mod\getAuthorsString()+#LF$+
+                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
                                "ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+
-                               FormatDate(locale::l("main", "install_date"), *mod\getInstallDate()), *mod)
+                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
     CompilerElse
       *item = *modList\AddItem(*mod\getName()+#LF$+
-                               locale::l("generic","by")+" "+*mod\getAuthorsString()+#LF$+
-                               FormatDate(locale::l("main", "install_date"), *mod\getInstallDate()), *mod)
+                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
+                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
     CompilerEndIf
     
     modItemSetup(*item, *mod)
@@ -1134,7 +1133,7 @@ Module windowMain
     Debug "export "+ListSize(*mods())+" mods"
     
     ; get filename
-    file$ = SaveFileRequester(locale::l("management", "export_list"), settings::getString("export", "last"), "HTML|*.html", 0)
+    file$ = SaveFileRequester(_("management_export_list"), settings::getString("export", "last"), "HTML|*.html", 0)
     If file$ = ""
       ProcedureReturn #False
     EndIf
@@ -1145,7 +1144,7 @@ Module windowMain
     settings::setString("export", "last", file$)
     
     If FileSize(file$) > 0
-      If Not MessageRequester(locale::l("management", "export_list"), locale::l("management", "overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+      If Not MessageRequester(_("management_export_list"), _("management_overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1199,8 +1198,8 @@ Module windowMain
     
     html$ = modShareHTML$
     html$ = ReplaceString(html$, "{language}", locale::getCurrentLocale(), #PB_String_CaseSensitive, 1, 1)
-    html$ = ReplaceString(html$, "{title}", locale::l("share", "title"), #PB_String_CaseSensitive, 1, 1)
-    html$ = ReplaceString(html$, "{copyright}", locale::l("share", "copyright"), #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{title}", _("share_title"), #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{copyright}", _("share_copyright"), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{date}", FormatDate("%yyyy-%mm-%dd", Date()), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{TPFMM-version}", main::VERSION$, #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{mod-list}", json$, #PB_String_CaseSensitive, 1, 1)
@@ -1712,10 +1711,10 @@ Module windowMain
               EndIf
             Next
             
-            SetWindowTitle(DialogWindow(*dialog\dialog), locale::l("main","select_files"))
-            SetGadgetText(DialogGadget(*dialog\dialog, "selectText"), locale::l("main","select_files_text"))
-            SetGadgetText(DialogGadget(*dialog\dialog, "selectCancel"), locale::l("main","cancel"))
-            SetGadgetText(DialogGadget(*dialog\dialog, "selectDownload"), locale::l("main","download"))
+            SetWindowTitle(DialogWindow(*dialog\dialog), _("main_select_files"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectText"), _("main_select_files_text"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectCancel"), _("main_cancel"))
+            SetGadgetText(DialogGadget(*dialog\dialog, "selectDownload"), _("main_download"))
             
             
             BindGadgetEvent(DialogGadget(*dialog\dialog, "selectCancel"), @repoSelectFilesClose())
@@ -1755,10 +1754,10 @@ Module windowMain
     
     If *tfsave
       *saveModList\SetUserData(*tfsave)
-      SetGadgetText(gadget("saveName"), locale::l("save", "save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
+      SetGadgetText(gadget("saveName"), _("save_save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
-      SetGadgetText(gadget("saveDifficulty"), locale::l("save", "difficulty"+Str(*tfsave\difficulty)))
+      SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
       SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
@@ -1790,7 +1789,7 @@ Module windowMain
           DisableGadget(gadget("saveDownload"), #False)
         EndIf
       Else
-        *saveModList\AddItem(locale::l("save", "no_mods"))
+        *saveModList\AddItem(_("save_no_mods"))
         DisableGadget(gadget("saveDownload"), #True)
       EndIf
     Else
@@ -1802,7 +1801,7 @@ Module windowMain
       SetGadgetText(gadget("saveMoney"), " ")
       SetGadgetText(gadget("saveFileSize"), " ")
       SetGadgetText(gadget("saveFileSizeUncompressed"), " ")
-      *saveModList\AddItem(locale::l("save", "error"))
+      *saveModList\AddItem(_("save_error"))
     EndIf
   EndProcedure
   
@@ -1810,7 +1809,7 @@ Module windowMain
     ; open a new savegame
     Protected file$
     
-    file$ = OpenFileRequester(locale::l("save", "open_title"), settings::getString("save", "last"), "*.sav", 0)
+    file$ = OpenFileRequester(_("save_open_title"), settings::getString("save", "last"), "*.sav", 0)
     If file$
       settings::setString("save", "last", file$)
       
@@ -1889,9 +1888,9 @@ Module windowMain
     Protected *item.CanvasList::CanvasListItem
     
     *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+Chr(9)+
-                                locale::l("generic","folder")+": "+*backup\getFoldername()+#LF$+
-                                locale::l("generic","by")+" "+*backup\getAuthors()+Chr(9)+
-                                FormatDate(locale::l("main","backup_date"), *backup\getDate()), *backup)
+                                _("generic_folder")+": "+*backup\getFoldername()+#LF$+
+                                _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
+                                FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
     ; potentially, there already was a backup with this filename
     ; TODO check if backup is duplicate?
@@ -2125,11 +2124,11 @@ Module windowMain
     BuildDialogWindow(modFilter)
     modFilter\listGadget = gadget("modList")
     modFilter\activeGadget = DialogGadget(modFilter\dialog, "modFilterString")
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterTF"),        locale::l("dialog", "mods_tf"))
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterVanilla"),   locale::l("dialog", "mods_vanilla"))
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterHidden"),    locale::l("dialog", "mods_hidden"))
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterWorkshop"),  locale::l("dialog", "mods_workshop"))
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterStaging"),   locale::l("dialog", "mods_staging"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterTF"),        _("dialog_mods_tf"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterVanilla"),   _("dialog_mods_vanilla"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterHidden"),    _("dialog_mods_hidden"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterWorkshop"),  _("dialog_mods_workshop"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterStaging"),   _("dialog_mods_staging"))
     RefreshDialog(modFilter\dialog)
     ; load settings
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), "")
@@ -2154,12 +2153,12 @@ Module windowMain
   Procedure modSortDialog()
     BuildDialogWindow(modSort)
     modSort\listGadget = gadget("modList")
-    SetGadgetText(DialogGadget(modSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "author_name"))
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "install_date"))
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "folder_size"))
-    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, locale::l("dialog", "folder_name"))
+    SetGadgetText(DialogGadget(modSort\dialog, "sortBy"), _("dialog_sort_by"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, _("dialog_mod_name"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, _("dialog_author_name"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, _("dialog_install_date"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, _("dialog_folder_size"))
+    AddGadgetItem(DialogGadget(modSort\dialog, "sortBox"), -1, _("dialog_folder_name"))
     SetGadgetState(DialogGadget(modSort\dialog, "sortBox"), 0)
     RefreshDialog(modSort\dialog)
     BindGadgetEvent(DialogGadget(modSort\dialog, "sortBox"), @modSortChange())
@@ -2173,7 +2172,7 @@ Module windowMain
     BuildDialogWindow(repoFilter)
     repoFilter\listGadget = gadget("repoList")
     repoFilter\activeGadget = DialogGadget(repoFilter\dialog, "filterString")
-    SetGadgetText(DialogGadget(repoFilter\dialog, "filterDateLabel"), locale::l("dialog", "updated_not_before"))
+    SetGadgetText(DialogGadget(repoFilter\dialog, "filterDateLabel"), _("dialog_updated_not_before"))
     RefreshDialog(repoFilter\dialog)
     ; load settings
     SetGadgetAttribute(DialogGadget(repoFilter\dialog, "filterDate"), #PB_Calendar_Maximum, Date())
@@ -2194,9 +2193,9 @@ Module windowMain
   Procedure repoSortDialog()
     BuildDialogWindow(repoSort)
     repoSort\listGadget = gadget("repoList")
-    SetGadgetText(DialogGadget(repoSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
-    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, locale::l("dialog", "updated"))
-    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
+    SetGadgetText(DialogGadget(repoSort\dialog, "sortBy"), _("dialog_sort_by"))
+    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, _("dialog_updated"))
+    AddGadgetItem(DialogGadget(repoSort\dialog, "sortBox"), -1, _("dialog_mod_name"))
     SetGadgetState(DialogGadget(repoSort\dialog, "sortBox"), 0)
     RefreshDialog(repoSort\dialog)
     BindGadgetEvent(DialogGadget(repoSort\dialog, "sortBox"), @repoSortChange())
@@ -2210,7 +2209,7 @@ Module windowMain
     BuildDialogWindow(backupFilter)
     backupFilter\listGadget = gadget("backupList")
     backupFilter\activeGadget = DialogGadget(backupFilter\dialog, "filterString")
-    SetGadgetText(DialogGadget(backupFilter\dialog, "filterDateLabel"), locale::l("dialog", "backup_on"))
+    SetGadgetText(DialogGadget(backupFilter\dialog, "filterDateLabel"), _("dialog_backup_on"))
     RefreshDialog(backupFilter\dialog)
     ; load settings
     SetGadgetAttribute(DialogGadget(backupFilter\dialog, "filterDate"), #PB_Calendar_Maximum, Date())
@@ -2230,9 +2229,9 @@ Module windowMain
   Procedure backupSortDialog()
     BuildDialogWindow(backupSort)
     backupSort\listGadget = gadget("backupList")
-    SetGadgetText(DialogGadget(backupSort\dialog, "sortBy"), locale::l("dialog", "sort_by"))
-    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, locale::l("dialog", "backup_date"))
-    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, locale::l("dialog", "mod_name"))
+    SetGadgetText(DialogGadget(backupSort\dialog, "sortBy"), _("dialog_sort_by"))
+    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, _("dialog_backup_date"))
+    AddGadgetItem(DialogGadget(backupSort\dialog, "sortBox"), -1, _("dialog_mod_name"))
     SetGadgetState(DialogGadget(backupSort\dialog, "sortBox"), 0)
     RefreshDialog(backupSort\dialog)
     BindGadgetEvent(DialogGadget(backupSort\dialog, "sortBox"), @backupSortChange())
@@ -2248,44 +2247,44 @@ Module windowMain
   Procedure updateStrings()
     UseModule locale
     ; nav
-    GadgetToolTip(gadget("btnMods"),      l("main","mods"))
-    GadgetToolTip(gadget("btnMaps"),      l("main","maps"))
-    GadgetToolTip(gadget("btnOnline"),    l("main","repository"))
-    GadgetToolTip(gadget("btnBackups"),   l("main","backups"))
-    GadgetToolTip(gadget("btnSaves"),     l("main","saves"))
-    GadgetToolTip(gadget("btnSettings"),  l("menu","settings"))
-    GadgetToolTip(gadget("btnHelp"),      l("main","help"))
+    GadgetToolTip(gadget("btnMods"),      _("main_mods"))
+    GadgetToolTip(gadget("btnMaps"),      _("main_maps"))
+    GadgetToolTip(gadget("btnOnline"),    _("main_repository"))
+    GadgetToolTip(gadget("btnBackups"),   _("main_backups"))
+    GadgetToolTip(gadget("btnSaves"),     _("main_saves"))
+    GadgetToolTip(gadget("btnSettings"),  _("menu_settings"))
+    GadgetToolTip(gadget("btnHelp"),      _("main_help"))
     
     ; mod tab
-    GadgetToolTip(gadget("modFilter"),          l("main","filter"))
-    GadgetToolTip(gadget("modSort"),            l("main","sort"))
-    GadgetToolTip(gadget("modUpdate"),          l("main","update_tip"))
-    GadgetToolTip(gadget("modBackup"),          l("main","backup"))
-    GadgetToolTip(gadget("modUninstall"),       l("main","uninstall"))
-    GadgetToolTip(gadget("modUpdateAll"),       l("main","update_all_tip"))
+    GadgetToolTip(gadget("modFilter"),          _("main_filter"))
+    GadgetToolTip(gadget("modSort"),            _("main_sort"))
+    GadgetToolTip(gadget("modUpdate"),          _("main_update_tip"))
+    GadgetToolTip(gadget("modBackup"),          _("main_backup"))
+    GadgetToolTip(gadget("modUninstall"),       _("main_uninstall"))
+    GadgetToolTip(gadget("modUpdateAll"),       _("main_update_all_tip"))
     
     ; repo tab
-    GadgetToolTip(gadget("repoFilter"),         l("main","filter"))
-    GadgetToolTip(gadget("repoSort"),           l("main","sort"))
-    GadgetToolTip(gadget("repoDownload"),       l("main","download"))
-    GadgetToolTip(gadget("repoWebsite"),        l("main","website"))
+    GadgetToolTip(gadget("repoFilter"),         _("main_filter"))
+    GadgetToolTip(gadget("repoSort"),           _("main_sort"))
+    GadgetToolTip(gadget("repoDownload"),       _("main_download"))
+    GadgetToolTip(gadget("repoWebsite"),        _("main_website"))
     
     ; backup tab
-    GadgetToolTip(gadget("backupRestore"),      l("main","backup_restore"))
-    GadgetToolTip(gadget("backupDelete"),       l("main","backup_delete"))
-    GadgetToolTip(gadget("backupFolder"),       l("main","backup_folder"))
+    GadgetToolTip(gadget("backupRestore"),      _("main_backup_restore"))
+    GadgetToolTip(gadget("backupDelete"),       _("main_backup_delete"))
+    GadgetToolTip(gadget("backupFolder"),       _("main_backup_folder"))
     
     ; saves tab
-    *saveModList\SetEmptyScreen(l("main", "save_click_open"), "")
-    SetGadgetText(gadget("saveName"),           l("main","save_start")+":")
-    GadgetToolTip(gadget("saveOpen"),           l("main","save_open")+":")
-    GadgetToolTip(gadget("saveDownload"),       l("main","save_download")+":")
-    SetGadgetText(gadget("saveLabelYear"),      l("save", "year")+":")
-    SetGadgetText(gadget("saveLabelDifficulty"),l("save", "difficulty")+":")
-    SetGadgetText(gadget("saveLabelMapSize"),   l("save", "mapsize")+":")
-    SetGadgetText(gadget("saveLabelMoney"),     l("save", "money")+":")
-    SetGadgetText(gadget("saveLabelFileSize"),  l("save", "filesize")+":")
-    SetGadgetText(gadget("saveLabelFileSizeUncompressed"),  l("save", "filesize_uncompressed")+":")
+    *saveModList\SetEmptyScreen(_("main_save_click_open"), "")
+    SetGadgetText(gadget("saveName"),           _("main_save_start")+":")
+    GadgetToolTip(gadget("saveOpen"),           _("main_save_open")+":")
+    GadgetToolTip(gadget("saveDownload"),       _("main_save_download")+":")
+    SetGadgetText(gadget("saveLabelYear"),      _("save_year")+":")
+    SetGadgetText(gadget("saveLabelDifficulty"),_("save_difficulty")+":")
+    SetGadgetText(gadget("saveLabelMapSize"),   _("save_mapsize")+":")
+    SetGadgetText(gadget("saveLabelMoney"),     _("save_money")+":")
+    SetGadgetText(gadget("saveLabelFileSize"),  _("save_filesize")+":")
+    SetGadgetText(gadget("saveLabelFileSizeUncompressed"),  _("save_filesize_uncompressed")+":")
     
     UnuseModule locale
   EndProcedure
@@ -2464,23 +2463,23 @@ Module windowMain
     ;- Menu
     menu = CreateMenu(#PB_Any, WindowID(window))
     CompilerIf #PB_Compiler_OS <> #PB_OS_MacOS
-      MenuTitle(l("menu","file"))
+      MenuTitle(_("menu_file"))
     CompilerEndIf
-    MenuItem(#PB_Menu_Preferences, l("menu","settings") + Chr(9) + "Ctrl + P")
-    MenuItem(#PB_Menu_Quit, l("menu","close") + Chr(9) + "Alt + F4")
-    MenuTitle(l("menu","mods"))
-    MenuItem(#MenuItem_AddMod, l("menu","mod_add") + Chr(9) + "Ctrl + O")
-;     MenuItem(#MenuItem_, l("menu","mod_export"))
+    MenuItem(#PB_Menu_Preferences, _("menu_settings") + Chr(9) + "Ctrl + P")
+    MenuItem(#PB_Menu_Quit, _("menu_close") + Chr(9) + "Alt + F4")
+    MenuTitle(_("menu_mods"))
+    MenuItem(#MenuItem_AddMod, _("menu_mod_add") + Chr(9) + "Ctrl + O")
+;     MenuItem(#MenuItem_, _("menu_mod_export"))
     MenuBar()
-    MenuItem(#MenuItem_ShowBackups, l("menu","show_backups"))
-    MenuItem(#MenuItem_ShowDownloads, l("menu","show_downloads"))
-    MenuTitle(l("menu","pack"))
-    MenuItem(#MenuItem_PackNew, l("menu","pack_new"))
-    MenuItem(#MenuItem_PackOpen, l("menu","pack_open"))
-    MenuTitle(l("menu","about"))
-    MenuItem(#MenuItem_Homepage, l("menu","homepage") + Chr(9) + "F1")
-;     MenuItem(#PB_Menu_About, l("menu","license") + Chr(9) + "Ctrl + L")
-    MenuItem(#MenuItem_Log, l("menu","log"))
+    MenuItem(#MenuItem_ShowBackups, _("menu_show_backups"))
+    MenuItem(#MenuItem_ShowDownloads, _("menu_show_downloads"))
+    MenuTitle(_("menu_pack"))
+    MenuItem(#MenuItem_PackNew, _("menu_pack_new"))
+    MenuItem(#MenuItem_PackOpen, _("menu_pack_open"))
+    MenuTitle(_("menu_about"))
+    MenuItem(#MenuItem_Homepage, _("menu_homepage") + Chr(9) + "F1")
+;     MenuItem(#PB_Menu_About, _("menu_license") + Chr(9) + "Ctrl + L")
+    MenuItem(#MenuItem_Log, _("menu_log"))
     
     BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
     BindMenuEvent(menu, #PB_Menu_Quit, @close())
@@ -2514,9 +2513,9 @@ Module windowMain
     ; popup menu
     menuShare = CreatePopupMenu(#PB_Any)
     If menuShare
-      MenuItem(#MenuItem_ShareSelected, l("menu", "share_selected"))
-      MenuItem(#MenuItem_ShareFiltered, l("menu", "share_filtered"))
-      MenuItem(#MenuItem_ShareAll,      l("menu", "share_all"))
+      MenuItem(#MenuItem_ShareSelected, _("menu_share_selected"))
+      MenuItem(#MenuItem_ShareFiltered, _("menu_share_filtered"))
+      MenuItem(#MenuItem_ShareAll,      _("menu_share_all"))
       
       BindMenuEvent(menuShare, #MenuItem_ShareSelected, @modShareSelected())
       BindMenuEvent(menuShare, #MenuItem_ShareFiltered, @modShareFiltered())

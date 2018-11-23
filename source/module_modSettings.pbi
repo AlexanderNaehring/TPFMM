@@ -381,7 +381,7 @@ Module modSettings
             ; reset to default button
             *node = CreateXMLNode(*nodeBase, "button", -1)
             SetXMLAttribute(*node, "name", "default-"+\name$)
-            SetXMLAttribute(*node, "text", l("mod_settings", "default"))
+            SetXMLAttribute(*node, "text", _("mod_settings_default"))
             
           EndWith
         Next
@@ -394,7 +394,7 @@ Module modSettings
         FreeXML(xml)
         
         ; set texts
-        SetWindowTitle(*data\window, locale::l("mod_settings","title")+": "+*data\mod\getName())
+        SetWindowTitle(*data\window, _("mod_settings_title")+": "+*data\mod\getName())
         SetGadgetText(gadget("name"), *data\mod\getName())
         
         ; load current settings
@@ -513,9 +513,9 @@ Module modSettings
         AddKeyboardShortcut(*data\window, #PB_Shortcut_Return, 1)
         BindEvent(#PB_Event_Menu, @enter(), *data\window, 1)
         
-        SetGadgetText(gadget("settings"), l("mod_settings", "settings"))
-        SetGadgetText(gadget("save"), l("mod_settings", "save"))
-        SetGadgetText(gadget("cancel"), l("mod_settings", "cancel"))
+        SetGadgetText(gadget("settings"), _("mod_settings_settings"))
+        SetGadgetText(gadget("save"), _("mod_settings_save"))
+        SetGadgetText(gadget("cancel"), _("mod_settings_cancel"))
         BindGadgetEvent(gadget("save"), @save())
         BindGadgetEvent(gadget("cancel"), @close())
         

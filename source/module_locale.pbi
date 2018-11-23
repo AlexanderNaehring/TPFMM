@@ -1,4 +1,4 @@
-EnableExplicit
+﻿EnableExplicit
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_misc.pbi"
 
@@ -17,33 +17,10 @@ DeclareModule locale
   Declare setLocale(locale$)
   Declare.s getCurrentLocale()
   Declare.s _(key$, vars$="")
-  
-  ; legacy functions:
-  Declare.s l(g$, s$)
-  Declare.s get(g$,s$)
-  Declare.s getEx(g$, s$, Map v$())
 EndDeclareModule
 
 Module locale
   UseModule debugger
-  
-  ; legacy compatible
-  Procedure.s getEx(g$, s$, Map v$())
-    Protected v$
-    ForEach v$()
-      If v$
-        v$ + #SEP
-      EndIf
-      v$ = MapKey(v$())+"="+v$()
-    Next
-    ProcedureReturn _(g$+"_"+s$, v$)
-  EndProcedure
-  Procedure.s get(g$, s$)
-    ProcedureReturn _(g$+"_"+s$)
-  EndProcedure
-  Procedure.s l(g$, s$)
-    ProcedureReturn _(g$+"_"+s$)
-  EndProcedure
   
   ; constants
   #Path$ = "locale/"

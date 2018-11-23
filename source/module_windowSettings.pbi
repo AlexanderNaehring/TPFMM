@@ -24,6 +24,7 @@ XIncludeFile "module_aes.pbi"
 
 Module windowSettings
   UseModule debugger
+  UseModule locale
   
   Global _parentW, _dialog
   
@@ -161,9 +162,9 @@ Module windowSettings
     DisableWindow(window, #False)
     main::closeProgressWindow()
     If EventGadget()
-      MessageRequester(locale::l("generic","success"), locale::l("settings", "backup_move_success"), #PB_MessageRequester_Info)
+      MessageRequester(_("generic_success"), _("settings_backup_move_success"), #PB_MessageRequester_Info)
     Else
-      MessageRequester(locale::l("generic","error"), locale::l("settings", "backup_move_error"), #PB_MessageRequester_Error)
+      MessageRequester(_("generic_error"), _("settings_backup_move_error"), #PB_MessageRequester_Error)
     EndIf
     SetGadgetText(gadget("backupFolder"), mods::backupsGetFolder())
   EndProcedure
@@ -184,13 +185,13 @@ Module windowSettings
     Protected folder$
     Protected *folder
     
-    folder$ = PathRequester(locale::get("settings", "backup_change_folder"), mods::backupsGetFolder())
+    folder$ = PathRequester(_("settings_backup_change_folder"), mods::backupsGetFolder())
     If folder$ = ""
       ProcedureReturn #False
     EndIf
     
-    main::showProgressWindow(locale::l("settings", "backup_change_folder_wait"))
-    main::setProgressText(locale::l("settings", "backup_change_folder_wait"))
+    main::showProgressWindow(_("settings_backup_change_folder_wait"))
+    main::setProgressText(_("settings_backup_change_folder_wait"))
     DisableWindow(window, #True)
     
     *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
@@ -219,16 +220,16 @@ Module windowSettings
       ; 1   = path okay, executable found but cannot write
       ; 2   = path not okay
       If ret = 0
-        SetGadgetText(gadget("installationTextStatus"), locale::l("settings","success"))
+        SetGadgetText(gadget("installationTextStatus"), _("settings_success"))
         SetGadgetColor(gadget("installationTextStatus"), #PB_Gadget_FrontColor, RGB(0,100,0))
         DisableGadget(gadget("save"), #False)
       Else
         SetGadgetColor(gadget("installationTextStatus"), #PB_Gadget_FrontColor, RGB(255,0,0))
         DisableGadget(gadget("save"), #True)
         If ret = 1
-          SetGadgetText(gadget("installationTextStatus"), locale::l("settings","failed"))
+          SetGadgetText(gadget("installationTextStatus"), _("settings_failed"))
         Else
-          SetGadgetText(gadget("installationTextStatus"), locale::l("settings","not_found"))
+          SetGadgetText(gadget("installationTextStatus"), _("settings_not_found"))
         EndIf
       EndIf
     EndIf
@@ -257,7 +258,7 @@ Module windowSettings
         AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount)
       Else
         ; this repo is not loaded at the moment
-        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+locale::l("settings","repository_not_loaded"))
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+_("settings_repository_not_loaded"))
       EndIf
     Next
   EndProcedure
@@ -282,24 +283,24 @@ Module windowSettings
     EndIf
     
     ; show requester
-    url$ = InputRequester(locale::l("settings","repository_add"), locale::l("settings", "repository_input_url"), url$)
+    url$ = InputRequester(_("settings_repository_add"), _("settings_repository_input_url"), url$)
     
     If url$
       ; add repo
       If repository::CheckRepository(url$, @repoInfo)
         info$ = repoInfo\url$+#CRLF$+
-                locale::l("repository","repository")+" "+#DQUOTE$+repoInfo\name$+#DQUOTE$+" "+locale::l("repository","maintained_by")+" "+repoInfo\maintainer$+#CRLF$+#CRLF$
+                _("repository_repository")+" "+#DQUOTE$+repoInfo\name$+#DQUOTE$+" "+_("repository_maintained_by")+" "+repoInfo\maintainer$+#CRLF$+#CRLF$
         If repoInfo\info_url$
-          info$ + locale::l("repository","info_url")+" "+repoInfo\info_url$+#CRLF$
+          info$ + _("repository_info_url")+" "+repoInfo\info_url$+#CRLF$
         EndIf
         If repoInfo\terms$
-          info$ + locale::l("repository","terms")+" "+repoInfo\terms$+#CRLF$
+          info$ + _("repository_terms")+" "+repoInfo\terms$+#CRLF$
         EndIf
-        info$ + repoInfo\modCount+" "+locale::l("repository","mod_count")+#CRLF$+
+        info$ + repoInfo\modCount+" "+_("repository_mod_count")+#CRLF$+
                 #CRLF$+
-                locale::l("repository","confirm_add")
+                _("repository_confirm_add")
         
-        If MessageRequester(locale::l("repository", "confirm_add"), info$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        If MessageRequester(_("repository_confirm_add"), info$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           repository::AddRepository(url$)
           updateRepositoryList()
           repository::refreshRepositories() ; will trigger an event when update finished which updates the repo list again
@@ -307,23 +308,23 @@ Module windowSettings
       Else
         Select repoInfo\error
           Case repository::#ErrorDownloadFailed
-            error$ = locale::l("repository", "error_download")
+            error$ = _("repository_error_download")
           Case repository::#ErrorJSON
-            error$ = locale::l("repository", "error_json")
+            error$ = _("repository_error_json")
           Case repository::#ErrorNoSource
-            error$ = locale::l("repository", "error_no_source")
+            error$ = _("repository_error_no_source")
           Case repository::#ErrorDuplicateURL
-            error$ = locale::l("repository", "error_dup_url")
+            error$ = _("repository_error_dup_url")
           Case repository::#ErrorNoSource
-            error$ = locale::l("repository", "error_no_source")
+            error$ = _("repository_error_no_source")
           Case repository::#ErrorDuplicateSource
-            error$ = locale::l("repository", "error_dup_source")
+            error$ = _("repository_error_dup_source")
           Case repository::#ErrorNoMods
-            error$ = locale::l("repository", "error_no_mods")
+            error$ = _("repository_error_no_mods")
           Default
-            error$ = locale::l("repository", "error_unknown")
+            error$ = _("repository_error_unknown")
         EndSelect
-        MessageRequester(locale::l("repository","error"), error$, #PB_MessageRequester_Error)
+        MessageRequester(_("repository_error"), error$, #PB_MessageRequester_Error)
       EndIf
     EndIf
   EndProcedure
@@ -347,7 +348,7 @@ Module windowSettings
   
   Procedure repositoryClearThumb()
     repository::clearThumbCache()
-    MessageRequester(locale::l("generic", "success"), locale::l("settings", "repository_thumb_cleared"), #PB_MessageRequester_Info)
+    MessageRequester(_("generic_success"), _("settings_repository_thumb_cleared"), #PB_MessageRequester_Info)
   EndProcedure
   
   Procedure showWindow()
@@ -362,78 +363,78 @@ Module windowSettings
     UseModule locale
     
     ; set texts
-    SetWindowTitle(window, l("settings","title"))
+    SetWindowTitle(window, _("settings_title"))
     
-    SetGadgetItemText(gadget("panelSettings"), 0,   l("settings", "general"))
-    SetGadgetItemText(gadget("panelSettings"), 1,   l("settings", "backup"))
-    SetGadgetItemText(gadget("panelSettings"), 2,   l("settings", "proxy"))
-    SetGadgetItemText(gadget("panelSettings"), 3,   l("settings", "integrate"))
-    SetGadgetItemText(gadget("panelSettings"), 4,   l("settings", "repository"))
+    SetGadgetItemText(gadget("panelSettings"), 0,   _("settings_general"))
+    SetGadgetItemText(gadget("panelSettings"), 1,   _("settings_backup"))
+    SetGadgetItemText(gadget("panelSettings"), 2,   _("settings_proxy"))
+    SetGadgetItemText(gadget("panelSettings"), 3,   _("settings_integrate"))
+    SetGadgetItemText(gadget("panelSettings"), 4,   _("settings_repository"))
     
-    SetGadgetText(gadget("save"),                   l("settings","save"))
-    GadgetToolTip(gadget("save"),                   l("settings","save_tip"))
-    SetGadgetText(gadget("cancel"),                 l("settings","cancel"))
-    GadgetToolTip(gadget("cancel"),                 l("settings","cancel_tip"))
+    SetGadgetText(gadget("save"),                   _("settings_save"))
+    GadgetToolTip(gadget("save"),                   _("settings_save_tip"))
+    SetGadgetText(gadget("cancel"),                 _("settings_cancel"))
+    GadgetToolTip(gadget("cancel"),                 _("settings_cancel_tip"))
     
-    SetGadgetText(gadget("installationFrame"),      l("settings","path"))
-    SetGadgetText(gadget("installationTextSelect"), l("settings","text"))
-    SetGadgetText(gadget("installationAutodetect"), l("settings","autodetect"))
-    GadgetToolTip(gadget("installationAutodetect"), l("settings","autodetect_tip"))
+    SetGadgetText(gadget("installationFrame"),      _("settings_path"))
+    SetGadgetText(gadget("installationTextSelect"), _("settings_text"))
+    SetGadgetText(gadget("installationAutodetect"), _("settings_autodetect"))
+    GadgetToolTip(gadget("installationAutodetect"), _("settings_autodetect_tip"))
     SetGadgetText(gadget("installationPath"),       "")
-    SetGadgetText(gadget("installationBrowse"),     l("settings","browse"))
-    GadgetToolTip(gadget("installationBrowse"),     l("settings","browse_tip"))
+    SetGadgetText(gadget("installationBrowse"),     _("settings_browse"))
+    GadgetToolTip(gadget("installationBrowse"),     _("settings_browse_tip"))
     SetGadgetText(gadget("installationTextStatus"), "")
                
-    SetGadgetText(gadget("backupAutoDeleteLabel"),  l("settings","backup_auto_delete"))
+    SetGadgetText(gadget("backupAutoDeleteLabel"),  _("settings_backup_auto_delete"))
     ClearGadgetItems(gadget("backupAutoDeleteTime"))
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 0, l("settings","backup_auto_delete_never"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 0, _("settings_backup_auto_delete_never"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 0, 0)
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 1, l("settings","backup_auto_delete_1week"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 1, _("settings_backup_auto_delete_1week"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 1, 7)
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 2, l("settings","backup_auto_delete_1month"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 2, _("settings_backup_auto_delete_1month"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 2, 31)
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 3, l("settings","backup_auto_delete_3months"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 3, _("settings_backup_auto_delete_3months"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 3, 91)
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 4, l("settings","backup_auto_delete_6months"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 4, _("settings_backup_auto_delete_6months"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 4, 182)
-    AddGadgetItem(    gadget("backupAutoDeleteTime"), 5, l("settings","backup_auto_delete_1year"))
+    AddGadgetItem(    gadget("backupAutoDeleteTime"), 5, _("settings_backup_auto_delete_1year"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 5, 365)
     
-    SetGadgetText(gadget("backupAutoCreateLabel"),  l("settings","backup_auto_create_label"))
-    SetGadgetText(gadget("backupAfterInstall"),     l("settings","backup_after_install"))
-    SetGadgetText(gadget("backupBeforeUpdate"),     l("settings","backup_before_update"))
-    SetGadgetText(gadget("backupBeforeUninstall"),  l("settings","backup_before_uninstall"))
-    SetGadgetText(gadget("backupFolderChange"),     l("settings","backup_change_folder"))
+    SetGadgetText(gadget("backupAutoCreateLabel"),  _("settings_backup_auto_create_label"))
+    SetGadgetText(gadget("backupAfterInstall"),     _("settings_backup_after_install"))
+    SetGadgetText(gadget("backupBeforeUpdate"),     _("settings_backup_before_update"))
+    SetGadgetText(gadget("backupBeforeUninstall"),  _("settings_backup_before_uninstall"))
+    SetGadgetText(gadget("backupFolderChange"),     _("settings_backup_change_folder"))
     
-    SetGadgetText(gadget("miscFrame"),              l("settings","other"))
-    SetGadgetText(gadget("miscVersionCheck"),       l("settings","versioncheck"))
-    GadgetToolTip(gadget("miscVersionCheck"),       l("settings","versioncheck_tip"))
+    SetGadgetText(gadget("miscFrame"),              _("settings_other"))
+    SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
+    GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
     
-    SetGadgetText(gadget("languageFrame"),          l("settings","locale"))
+    SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
     SetGadgetText(gadget("languageSelection"),      "")
     
-    SetGadgetText(gadget("proxyEnabled"),           l("settings","proxy_enabled"))
-    SetGadgetText(gadget("proxyFrame"),             l("settings","proxy_frame"))
-    SetGadgetText(gadget("proxyServerLabel"),       l("settings","proxy_server"))
-    SetGadgetText(gadget("proxyUserLabel"),         l("settings","proxy_user"))
-    SetGadgetText(gadget("proxyPasswordLabel"),     l("settings","proxy_password"))
+    SetGadgetText(gadget("proxyEnabled"),           _("settings_proxy_enabled"))
+    SetGadgetText(gadget("proxyFrame"),             _("settings_proxy_frame"))
+    SetGadgetText(gadget("proxyServerLabel"),       _("settings_proxy_server"))
+    SetGadgetText(gadget("proxyUserLabel"),         _("settings_proxy_user"))
+    SetGadgetText(gadget("proxyPasswordLabel"),     _("settings_proxy_password"))
     
-    SetGadgetText(gadget("integrateText"),                l("settings","integrate_text"))
-    SetGadgetText(gadget("integrateRegisterProtocol"),    l("settings","integrate_register_protocol"))
-    SetGadgetText(gadget("integrateRegisterContextMenu"), l("settings","integrate_register_context"))
+    SetGadgetText(gadget("integrateText"),                _("settings_integrate_text"))
+    SetGadgetText(gadget("integrateRegisterProtocol"),    _("settings_integrate_register_protocol"))
+    SetGadgetText(gadget("integrateRegisterContextMenu"), _("settings_integrate_register_context"))
     
     RemoveGadgetColumn(gadget("repositoryList"), #PB_All)
-    AddGadgetColumn(gadget("repositoryList"), 0, l("settings","repository_url"), 100)
-    AddGadgetColumn(gadget("repositoryList"), 1, l("settings","repository_name"), 120)
-    AddGadgetColumn(gadget("repositoryList"), 2, l("settings","repository_maintainer"), 70)
-    AddGadgetColumn(gadget("repositoryList"), 3, l("settings","repository_source"), 60)
-    AddGadgetColumn(gadget("repositoryList"), 4, l("settings","repository_mods"), 50)
-    SetGadgetText(gadget("repositoryAdd"),          l("settings", "repository_add"))
-    SetGadgetText(gadget("repositoryRemove"),       l("settings", "repository_remove"))
-    SetGadgetText(gadget("repositoryRefresh"),      l("settings", "repository_refresh"))
-    SetGadgetText(gadget("repositoryClearThumb"),   l("settings", "repository_clear_thumb"))
-    SetGadgetText(gadget("repositoryUseCache"),     l("settings", "repository_usecache"))
-    GadgetToolTip(gadget("repositoryUseCache"),     l("settings", "repository_usecache_tip"))
+    AddGadgetColumn(gadget("repositoryList"), 0, _("settings_repository_url"), 100)
+    AddGadgetColumn(gadget("repositoryList"), 1, _("settings_repository_name"), 120)
+    AddGadgetColumn(gadget("repositoryList"), 2, _("settings_repository_maintainer"), 70)
+    AddGadgetColumn(gadget("repositoryList"), 3, _("settings_repository_source"), 60)
+    AddGadgetColumn(gadget("repositoryList"), 4, _("settings_repository_mods"), 50)
+    SetGadgetText(gadget("repositoryAdd"),          _("settings_repository_add"))
+    SetGadgetText(gadget("repositoryRemove"),       _("settings_repository_remove"))
+    SetGadgetText(gadget("repositoryRefresh"),      _("settings_repository_refresh"))
+    SetGadgetText(gadget("repositoryClearThumb"),   _("settings_repository_clear_thumb"))
+    SetGadgetText(gadget("repositoryUseCache"),     _("settings_repository_usecache"))
+    GadgetToolTip(gadget("repositoryUseCache"),     _("settings_repository_usecache_tip"))
     
     UnuseModule locale
   EndProcedure
