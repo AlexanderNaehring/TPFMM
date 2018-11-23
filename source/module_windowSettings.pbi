@@ -114,7 +114,7 @@ Module windowSettings
     
     settings::setString("", "path", dir$)
     If locale$ <> settings::getString("", "locale")
-      locale::use(locale$)
+      locale::setLocale(locale$)
       windowMain::updateStrings()
       ; no need to update strings in this window, as they will be updated on next window show()
       ; TODO update all strings, e.g. in filter/sort dialogs
@@ -491,7 +491,6 @@ Module windowSettings
     
     ; main
     SetGadgetText(gadget("installationPath"), settings::getString("", "path"))
-    locale$ = settings::getString("", "locale")
     SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
     
     ; backup
@@ -535,7 +534,20 @@ Module windowSettings
     EndIf
     
     ; locale
-    locale::listAvailable(gadget("languageSelection"), locale$)
+    locale$ = settings::getString("", "locale")
+    Protected NewList locales.locale::info()
+    ClearGadgetItems(gadget("languageSelection"))
+    If locale::getLocales(locales())
+      i = 0
+      ForEach locales()
+        AddGadgetItem(gadget("languageSelection"), i, "<"+locales()\locale$+"> "+locales()\name$, ImageID(locales()\flag))
+        If locale$ = locales()\locale$
+          SetGadgetState(gadget("languageSelection"), i)
+        EndIf
+        i + 1
+      Next
+    EndIf
+    
     
     ; repositories
     updateRepositoryList()

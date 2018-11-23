@@ -292,7 +292,8 @@ Module main
     
     ; read language from preferences
     settings::setFilename("TPFMM.ini")
-    locale::use(settings::getString("", "locale"))
+    locale::LoadLocales()
+    locale::setLocale(settings::getString("", "locale"))
     
     
     ; user must accept end user license agreement
