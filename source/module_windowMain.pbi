@@ -672,9 +672,9 @@ Module windowMain
     
     If count > 0
       If count = 1
-        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo)
+        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
       Else
-        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo)
+        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
       EndIf
       
       If result = #PB_MessageRequester_Yes
@@ -944,6 +944,13 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure modIconUninstall(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::LocalMod = *item\GetUserData()
+    If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
+      mods::uninstall(*mod\getID())
+    EndIf
+  EndProcedure
+  
   ;- mod callbacks
   
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
@@ -983,6 +990,11 @@ Module windowMain
       *item\AddButton(#Null, images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), images::images("itemBtnUpdateDisabled"))
     EndIf
     *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
+    If *mod\canUninstall()
+      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
+    Else
+      *item\AddButton(#Null, images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
+    EndIf
     
     ; icons
     *item\ClearIcons()
