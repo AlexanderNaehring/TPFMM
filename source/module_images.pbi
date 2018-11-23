@@ -109,6 +109,8 @@ Module images
     IncludeAndLoadImage("itemBtnWebsite",   "images/item-btn/website.png")
     IncludeAndLoadImage("itemBtnDownload",  "images/item-btn/download.png")
     IncludeAndLoadImage("itemBtnUpdate",    "images/item-btn/update.png")
+    IncludeAndLoadImage("itemBtnRestore",   "images/item-btn/restore.png")
+    IncludeAndLoadImage("itemBtnDelete",    "images/item-btn/delete.png")
     
     ; item icons
     IncludeAndLoadImage("itemIcon_blank",     "images/icon/blank.png")
@@ -134,6 +136,8 @@ Module images
     makeIcons("itemBtnWebsite")
     makeIcons("itemBtnDownload")
     makeIcons("itemBtnUpdate")
+    makeIcons("itemBtnRestore")
+    makeIcons("itemBtnDelete")
     
     ; also extract animation file here
     

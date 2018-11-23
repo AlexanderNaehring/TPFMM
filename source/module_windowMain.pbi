@@ -1872,6 +1872,20 @@ Module windowMain
     mods::backupsScan()
   EndProcedure
   
+  
+  Procedure backupIconRestore(*item.CanvasList::CanvasListItem)
+    DebuggerWarning("not implemented")
+  EndProcedure
+  
+  Procedure backupIconDelete(*item.CanvasList::CanvasListItem)
+    Protected *backup.mods::BackupMod
+    *backup = *item\GetUserData()
+    If *backup
+      *backup\delete()
+    EndIf
+  EndProcedure
+  
+  
   Procedure backupListItemEvent(*item, event)
     Select event
       Case #PB_EventType_LeftDoubleClick
@@ -1891,6 +1905,10 @@ Module windowMain
                                 _("generic_folder")+": "+*backup\getFoldername()+#LF$+
                                 _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
+    
+    *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"), images::images("itemBtnRestoreDisabled"))
+    *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
+    
     
     ; potentially, there already was a backup with this filename
     ; TODO check if backup is duplicate?
@@ -2338,6 +2356,7 @@ Module windowMain
     BindEvent(#EventCloseNow, main::@exit())
     
     
+    
     ;- custom canvas gadgets
     Protected theme$
     
@@ -2363,7 +2382,7 @@ Module windowMain
     ;- worker animation
     *workerAnimation = animation::new()
     *workerAnimation\setCanvas(gadget("workerCanvas"))
-    *workerAnimation\setBackgroundColor(misc::GetWindowBackgroundColor(WindowID(window)))
+    *workerAnimation\setBackgroundColor(misc::GetWindowBackgroundColor(WindowID(window))) ; GetWindowColor(window)
     *workerAnimation\setInterval(1000/60)
     *workerAnimation\loadAni("images/logo/logo.ani")
     *workerAnimation\draw(0) ; draw first frame
