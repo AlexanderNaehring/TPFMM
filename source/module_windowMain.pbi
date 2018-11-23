@@ -2414,6 +2414,8 @@ Module windowMain
     SetGadgetAttribute(gadget("backupSort"),    #PB_Button_Image, ImageID(images::images("btnSort")))
     SetGadgetAttribute(gadget("backupRestore"), #PB_Button_Image, ImageID(images::images("btnRestore")))
     SetGadgetAttribute(gadget("backupDelete"),  #PB_Button_Image, ImageID(images::images("btnUninstall")))
+    SetGadgetAttribute(gadget("backupRefresh"), #PB_Button_Image, ImageID(images::images("btnUpdate")))
+    SetGadgetAttribute(gadget("backupFolder"),  #PB_Button_Image, ImageID(images::images("btnFolder")))
     
     
     ;- update gadget texts

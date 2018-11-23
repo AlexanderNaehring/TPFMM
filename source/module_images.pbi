@@ -100,6 +100,7 @@ Module images
     IncludeAndLoadImage("btnDownload",  "images/btn/32/download.png")
     IncludeAndLoadImage("btnWebsite",   "images/btn/32/website.png")
     IncludeAndLoadImage("btnOpen",      "images/btn/32/open.png")
+    IncludeAndLoadImage("btnFolder",    "images/btn/32/folder.png")
     
     ; in-item buttons
     IncludeAndLoadImage("itemBtnFolder",    "images/item-btn/folder.png")
