@@ -982,23 +982,23 @@ Module windowMain
     
     ; add callbacks
     *item\ClearButtons()
-    *item\AddButton(@modIconInfo(),     images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), images::images("itemBtnInfoDisabled"))
-    *item\AddButton(@modIconFolder(),   images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), images::images("itemBtnFolderDisabled"))
+    *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"))
+    *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"))
     If *mod\hasSettings()
-      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), images::images("itemBtnSettingsDisabled"))
+      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"))
     Else
-      *item\AddButton(#Null, images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), images::images("itemBtnSettingsDisabled"))
+      *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
     EndIf
     If repoMod And updateAvailable
-      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), images::images("itemBtnUpdateDisabled"))
+      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"))
     Else
-      *item\AddButton(#Null, images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), images::images("itemBtnUpdateDisabled"))
+      *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
     EndIf
-    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
+    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"))
     If *mod\canUninstall()
-      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
+      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"))
     Else
-      *item\AddButton(#Null, images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
+      *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
     EndIf
     
     ; icons
@@ -1526,8 +1526,8 @@ Module windowMain
     
     
     ; buttons
-    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), images::images("itemBtnDownloadDisabled"))
-    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), images::images("itemBtnWebsiteDisabled"))
+    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"))
+    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"))
     
   EndProcedure
   
@@ -1775,7 +1775,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -1923,9 +1923,8 @@ Module windowMain
                                 _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
-    *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"), images::images("itemBtnRestoreDisabled"))
-    *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), images::images("itemBtnDeleteDisabled"))
-    
+    *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"))
+    *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"))
     
     ; potentially, there already was a backup with this filename
     ; TODO check if backup is duplicate?

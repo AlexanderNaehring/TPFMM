@@ -42,7 +42,7 @@ DeclareModule CanvasList
     IsHidden()
     AddIcon(image, align=#AlignRight)
     ClearIcons()
-    AddButton(*callback, image, imageHover, imageDisabled)
+    AddButton(*callback, image, imageHover=0)
     ClearButtons()
   EndInterface
   
@@ -109,7 +109,7 @@ DeclareModule CanvasList
   Declare ItemIsHidden(*item)
   Declare ItemAddIcon(*item, image, align=#AlignRight)
   Declare ItemClearIcons(*item)
-  Declare ItemAddButton(*item, *callback, image, imageHover, imageDisabled)
+  Declare ItemAddButton(*item, *callback, image, imageHover=0)
   Declare ItemClearButtons(*item)
   
   
@@ -275,7 +275,6 @@ Module CanvasList
   Structure itemBtn
     image.i
     imageHover.i
-    imageDisabled.i
     callback.itemBtnCallback
     box.box
     hover.b
@@ -968,14 +967,10 @@ Module CanvasList
                 h = \buttons()\box\height
                 ; background for each item button
                 Box(x, y, w, h, $FFFFFFFF)
-                If \buttons()\callback
-                  If \buttons()\hover
-                    DrawImage(ImageID(\buttons()\imageHover), x, y, w, h)
-                  Else
-                    DrawImage(ImageID(\buttons()\image), x, y, w, h)
-                  EndIf
-                Else ; no callback exists
-                  DrawImage(ImageID(\buttons()\imageDisabled), x, y, w, h)
+                If \buttons()\callback And \buttons()\hover And \buttons()\imageHover
+                  DrawImage(ImageID(\buttons()\imageHover), x, y, w, h)
+                Else
+                  DrawImage(ImageID(\buttons()\image), x, y, w, h)
                 EndIf
               Next
             EndIf
@@ -1969,13 +1964,12 @@ Module CanvasList
     UnlockMutex(*gadget\mItems)
   EndProcedure
   
-  Procedure ItemAddButton(*this.item, *callback, image, imageHover, imageDisabled)
+  Procedure ItemAddButton(*this.item, *callback, image, imageHover=0)
     ; TODO mutex lock!
     If IsImage(image)
       AddElement(*this\buttons())
       *this\buttons()\image = image
       *this\buttons()\imageHover = imageHover
-      *this\buttons()\imageDisabled = imageDisabled
       *this\buttons()\callback = *callback
     EndIf
   EndProcedure
