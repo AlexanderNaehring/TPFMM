@@ -7,11 +7,20 @@ DeclareModule windowSettings
   Declare show()
   Declare updateStrings()
   Declare close()
+  Declare showTab(tab)
   
   ; custom events that can be sent to "window"
   Enumeration #PB_Event_FirstCustomValue
     #EventRefreshRepoList
     #EventBackupFolderMoved
+  EndEnumeration
+  
+  Enumeration
+    #TabGeneral
+    #TabBackup
+    #TabProxy
+    #TabIntegration
+    #TabRepository
   EndEnumeration
   
 EndDeclareModule
@@ -365,11 +374,11 @@ Module windowSettings
     ; set texts
     SetWindowTitle(window, _("settings_title"))
     
-    SetGadgetItemText(gadget("panelSettings"), 0,   _("settings_general"))
-    SetGadgetItemText(gadget("panelSettings"), 1,   _("settings_backup"))
-    SetGadgetItemText(gadget("panelSettings"), 2,   _("settings_proxy"))
-    SetGadgetItemText(gadget("panelSettings"), 3,   _("settings_integrate"))
-    SetGadgetItemText(gadget("panelSettings"), 4,   _("settings_repository"))
+    SetGadgetItemText(gadget("panelSettings"), #TabGeneral,     _("settings_general"))
+    SetGadgetItemText(gadget("panelSettings"), #TabBackup,      _("settings_backup"))
+    SetGadgetItemText(gadget("panelSettings"), #TabProxy,       _("settings_proxy"))
+    SetGadgetItemText(gadget("panelSettings"), #TabIntegration, _("settings_integrate"))
+    SetGadgetItemText(gadget("panelSettings"), #TabRepository,  _("settings_repository"))
     
     SetGadgetText(gadget("save"),                   _("settings_save"))
     GadgetToolTip(gadget("save"),                   _("settings_save_tip"))
@@ -565,6 +574,10 @@ Module windowSettings
   
   Procedure close()
     FreeDialog(_dialog)
+  EndProcedure
+  
+  Procedure showTab(tab)
+    SetGadgetState(gadget("panelSettings"), tab)
   EndProcedure
   
 EndModule

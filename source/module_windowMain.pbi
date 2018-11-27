@@ -526,10 +526,6 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure MenuItemSettings() ; open settings window
-    windowSettings::show()
-  EndProcedure
-  
   Procedure MenuItemEnter()
     If GetActiveGadget() = gadget("repoList")
       ;TODO enter hotkey
@@ -617,8 +613,17 @@ Module windowMain
   
   Procedure navBtnSettings()
     deb("windowMain:: navBtnSaves()")
-    MenuItemSettings()
+    windowSettings::show()
     SetGadgetState(gadget("btnSettings"), 0)
+    
+    Select currentTab
+      Case #TabMods
+        windowSettings::showTab(windowSettings::#TabGeneral)
+      Case #TabBackup
+        windowSettings::showTab(windowSettings::#TabBackup)
+      Case #TabOnline
+        windowSettings::showTab(windowSettings::#TabRepository)
+    EndSelect
   EndProcedure
   
   Procedure navBtnHelp()
@@ -1770,7 +1775,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -2514,7 +2519,7 @@ Module windowMain
 ;     MenuItem(#PB_Menu_About, _("menu_license") + Chr(9) + "Ctrl + L")
     MenuItem(#MenuItem_Log, _("menu_log"))
     
-    BindMenuEvent(menu, #PB_Menu_Preferences, @MenuItemSettings())
+    BindMenuEvent(menu, #PB_Menu_Preferences, @navBtnSettings())
     BindMenuEvent(menu, #PB_Menu_Quit, @close())
     BindMenuEvent(menu, #MenuItem_AddMod, @modAddNewMod())
     BindMenuEvent(menu, #MenuItem_ShowBackups, @backupFolder())
