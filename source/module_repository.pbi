@@ -913,27 +913,22 @@ Module repository
   EndProcedure
   
   Procedure getFileByFoldername(foldername$)
-    Protected *file, regExpFolder, version
-    Static regexp
-    If Not regexp
-      regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
-    EndIf
+    Protected *file
     
-    If Left(foldername$, 1) = "?"
-      deb("staging area mod")
-      ShowCallstack()
-      CallDebugger
-    ElseIf Left(foldername$, 1) = "*"
-      deb("workshop mod")
-      ShowCallstack()
-      CallDebugger
+    ; can only download mods to "manual" mods/ folder, not to workshop or staging area!
+    If Left(foldername$, 1) = "*" Or Left(foldername$, 1) = "?"
+      Debug "repository:: looking for a workshop or staging area mod in repo. removeing prefix!"
+      foldername$ = Mid(foldername$, 2)
     EndIf
     
     LockMutex(mutexFilesMap)
     ; check if "foldername" is version independend, e.g. "urbangames_vehicles_no_end_year" (no _1 at the end)
-    If Not MatchRegularExpression(regexp, foldername$)
-      Debug "search version for foldername "+#DQUOTE$+foldername$+#DQUOTE$+" version independend"
+    If #False
+      ;TODO search version independen, e.g. also find _1 when searchign for _0 ?
+      ; by UG definition, major versions are incompatible to each other - thus no need to find these versions.
+      
       ; try to find a file matching the foldername without the version
+      Protected regExpFolder, version
       regExpFolder = CreateRegularExpression(#PB_Any, "^"+foldername$+"_([0-9]+)$")
       If regExpFolder
         version = -1
@@ -953,6 +948,7 @@ Module repository
           EndIf
         Next
         FreeRegularExpression(regExpFolder)
+        
       Else
         deb("repository:: could not create regexp "+#DQUOTE$+"^"+foldername$+"_([0-9]+)$"+#DQUOTE$)
         Debug RegularExpressionError()

@@ -1768,6 +1768,7 @@ Module windowMain
     EndIf
     *saveModList\ClearItems()
     *tfsave = tfsave::readInfo(file$)
+    DisableGadget(gadget("saveDownload"), #True)
     
     If *tfsave
       *saveModList\SetUserData(*tfsave)
@@ -1775,7 +1776,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km × "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km ï¿½ "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -1783,11 +1784,8 @@ Module windowMain
       If ListSize(*tfsave\mods())
         ForEach *tfsave\mods()
           *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
-          ; the "major version" (e.g. _1) is not saved in the "ID".
-          ; e.g. mod "urbangames_vehicles_no_end_year" may be version _0, _1, _2, ...
-          ; must check version independend
           
-          *tfsave\mods()\localmod = mods::getModByFoldername(*tfsave\mods()\id$)
+          *tfsave\mods()\localmod = mods::getModByID(*tfsave\mods()\id$, #False)
           *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
           
           If *tfsave\mods()\localmod
@@ -1797,9 +1795,11 @@ Module windowMain
           EndIf
           If *tfsave\mods()\repofile
             *item\AddIcon(images::images("itemIcon_availableOnline"))
-            download = #True
           Else
             *item\AddIcon(images::images("itemIcon_notAvailableOnline"))
+          EndIf
+          If *tfsave\mods()\repofile And Not *tfsave\mods()\localmod
+            download = #True
           EndIf
         Next
         If download
@@ -1807,11 +1807,8 @@ Module windowMain
         EndIf
       Else
         *saveModList\AddItem(_("save_no_mods"))
-        DisableGadget(gadget("saveDownload"), #True)
       EndIf
     Else
-      DisableGadget(gadget("saveDownload"), #True)
-      
       SetGadgetText(gadget("saveYear"), " ")
       SetGadgetText(gadget("saveDifficulty"), " ")
       SetGadgetText(gadget("saveMapSize"), " ")

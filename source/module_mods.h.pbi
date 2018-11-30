@@ -179,8 +179,8 @@
   
   ; mod static functions:
   Declare getMods(List *mods())
-  Declare getModByFoldername(foldername$)
-  Declare isInstalled(foldername$)
+  Declare getModByID(id$, exactMatch.b=#True)
+  Declare isInstalled(id$)
   
   ; mod methods
   ; get

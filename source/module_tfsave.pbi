@@ -1,13 +1,17 @@
 ﻿DeclareModule tfsave
   EnableExplicit
   
-  Declare readInfo(file$)
+  Enumeration
+    #ErrorNoError = 0
+    #ErrorVersionUnknown
+    #ErrorNotSaveFile
+    #ErrorModNumberError
+  EndEnumeration
   
   Structure mod
     id$
     name$
     unknown1.l
-    unknown2.l
     
     *localmod
     *repofile
@@ -24,14 +28,19 @@
     startYear.l
     numTilesX.l
     numTilesY.l
+    unknown1.l
     money.l
+    unknown2.l
     List mods.mod()
     achievements.b
     List settings.setting()
     
+    error.b
     fileSize.q
     fileSizeUncompressed.q
   EndStructure
+  
+  Declare readInfo(file$)
   
 EndDeclareModule
 
@@ -68,6 +77,7 @@ Module tfsave
         If ReadString(file, #PB_Ascii, 4) = "tf**"
           *info = AllocateStructure(tfsave)
           
+          *info\error = #ErrorNoError
           *info\fileSize = FileSize(file$)
           *info\fileSizeUncompressed = FileSize(tmpFile2$)
           
@@ -77,15 +87,14 @@ Module tfsave
             *info\startYear   = ReadLong(file)
             *info\numTilesX   = ReadLong(file)
             *info\numTilesY   = ReadLong(file)
-            ReadLong(file) ; unknown
-            *info\money       = ReadLong(file) ; unknown
-            ReadLong(file) ; unknown
+            *info\unknown1    = ReadLong(file) ; unknown
+            *info\money       = ReadLong(file) ; ?
+            *info\unknown2    = ReadLong(file) ; unknown
             
             ; num mods
             numMods = ReadLong(file)
             ClearList(*info\mods())
             If numMods > 0
-  ;             ReDim *info\mods(numMods-1)
               ; mod names
               For i = 0 To numMods-1
                 AddElement(*info\mods())
@@ -101,11 +110,11 @@ Module tfsave
             
             *info\achievements = ReadByte(file)
             
-            ; mod folder names
-            
+            ; mod folder names (id + version)
             numMods = ReadLong(file)
             If numMods > 0
               If numMods <> ListSize(*info\mods())
+                *info\error = #ErrorModNumberError
                 Debug "error: "+numMods+" <> "+Str(ListSize(*info\mods()))
               EndIf
               
@@ -117,7 +126,7 @@ Module tfsave
                 ReadData(file, *buffer, len)
                 *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8)
                 FreeMemory(*buffer)
-                *info\mods()\unknown2 = ReadLong(file); mod location (workshop, staging, etc...?)
+                *info\mods()\id$ + "_"+Str(ReadLong(file)) ; version
               Next
             EndIf
             
@@ -125,7 +134,6 @@ Module tfsave
             numSettings = ReadLong(file)
             ClearList(*info\settings())
             If numSettings > 0
-  ;             ReDim *info\settings(numSettings-1)
               For i = 0 To numSettings-1
                 AddElement(*info\settings())
                 len = ReadLong(file)
@@ -141,9 +149,11 @@ Module tfsave
               Next
             EndIf
           Else
+            *info\error = #ErrorVersionUnknown
             deb("tfsave:: TF save version "+*info\version+" unknown. Abort.")
           EndIf
         Else
+          *info\error = #ErrorNotSaveFile
           deb("tfsave:: no TF save recognized. Abort.")
         EndIf
         
@@ -184,12 +194,12 @@ CompilerIf #PB_Compiler_IsMainFile
         Debug ~"\ttiles:\t"+*info\numTilesX+"x"+*info\numTilesY
         Debug ~"\tachievements:\t"+*info\achievements
         Debug ~"\tmods:"
-        For i = 0 To ArraySize(*info\mods()) -1
-          Debug ~"\t\t"+*info\mods(i)\id$+~"\t("+*info\mods(i)\name$+")"
+        ForEach *info\mods()
+          Debug ~"\t\t"+*info\mods()\id$+~"\t("+*info\mods()\name$+")"
         Next
         Debug ~"\tsettings:"
-        For i = 0 To ArraySize(*info\settings()) -1
-          Debug ~"\t\t"+*info\settings(i)\key$+~"\t= "+*info\settings(i)\value$
+        ForEach *info\settings()
+          Debug ~"\t\t"+*info\settings()\key$+~"\t= "+*info\settings()\value$
         Next
       Else
         Debug "could not read savegame"
@@ -197,8 +207,4 @@ CompilerIf #PB_Compiler_IsMainFile
       Debug "extracted savegame information in "+StrF(time/1000, 2)+" seconds"
     Wend
   EndIf
-      
-  
-  
-  
 CompilerEndIf

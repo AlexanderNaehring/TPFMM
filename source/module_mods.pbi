@@ -859,51 +859,42 @@ Module mods
   
   ; functions working on individual mods
   
-  Procedure getModByFoldername(foldername$)
-    Protected *mod.mod, regExpFolder, version
-    Static regexp
-    If Not regexp
-      regexp = CreateRegularExpression(#PB_Any, "_[0-9]+$")
-    EndIf
+  Procedure getModByID(id$, exactMatch.b=#True) ; ID = foldername with prefix for folder location and postfix for version, e.g. *123456789_1 for a steam mod
+    Protected *mod.mod, foldername$
     
     LockMutex(mutexMods)
-    ; check if "foldername" is version independend, e.g. "urbangames_vehicles_no_end_year" (no _1 at the end)
-    If Not MatchRegularExpression(regexp, foldername$)
-      ; "foldername" search string is NOT ending on _1 (or similar) ...
-      ; add the _1 part to the foldername in a regexp and search
-      regExpFolder = CreateRegularExpression(#PB_Any, "^"+foldername$+"_([0-9]+)$", #PB_RegularExpression_NoCase) ; no case only valid on Windows, but may be fixed by removing and adding mod in game
-      If regExpFolder
-        version = -1
+    If FindMapElement(mods(), id$)
+      *mod = mods()
+    EndIf
+    If Not *mod And Not exactMatch
+      ; if searching for a steam mod (*123456_1) and exactMatch = #false, also find the manual version (123456_1) and vice versa
+      If Left(id$, 1) = "*" Or Left(id$, 1) = "?"
+        ; if searching for a prefix (workshop or staging area mod), remove prefix and search again
+        foldername$ = Mid(id$, 2)
+        If FindMapElement(mods(), foldername$)
+          *mod = mods()
+        EndIf
+      Else
+        ; if id$ had no prefix, use identical
+        foldername$ = id$
+      EndIf
+      
+      If Not *mod
+        ; foldername$ has no prefix, search in installed mods without prefix as well
         ForEach mods()
-          If MatchRegularExpression(regExpFolder, MapKey(mods()))
-            ; found a match, keep on searching for a higher version number (e.g.: if version _1 and _2 are found, use _2)
-            ; try to extract version number
-            If ExamineRegularExpression(regExpFolder, MapKey(mods()))
-              If NextRegularExpressionMatch(regExpFolder)
-                If Val(RegularExpressionGroup(regExpFolder, 1)) > version
-                  ; if version is higher, save version and file link
-                  version = Val(RegularExpressionGroup(regExpFolder, 1))
-                  *mod = mods()
-                EndIf
-              EndIf
-            EndIf
+          If modGetFoldername(mods()) = foldername$
+            *mod = mods()
+            Break
           EndIf
         Next
-        FreeRegularExpression(regExpFolder)
-      Else
-        deb("repository:: could not create regexp "+#DQUOTE$+"^"+foldername$+"_([0-9]+)$"+#DQUOTE$+" "+RegularExpressionError())
-      EndIf
-    Else
-      If FindMapElement(mods(), foldername$)
-        *mod = mods()
       EndIf
     EndIf
     UnlockMutex(mutexMods)
     ProcedureReturn *mod
   EndProcedure
   
-  Procedure isInstalled(foldername$)
-    ProcedureReturn Bool(getModByFoldername(foldername$))
+  Procedure isInstalled(id$)
+    ProcedureReturn Bool(getModByID(id$))
   EndProcedure
   
   ;- ####################
