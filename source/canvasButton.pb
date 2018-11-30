@@ -421,6 +421,13 @@ Module CanvasButton
       *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
     Else
       If Not IsGadget(useExistingCanvas)
+        deb("canvasButton:: cannot use existing canvas, #"+useExistingCanvas+" not a valid gadget")
+        FreeStructure(*this)
+        ProcedureReturn #False
+      EndIf
+      If Not CanvasOutput(useExistingCanvas)
+        deb("canvasButton:: cannot use existing canvas, #"+useExistingCanvas+" not a valid canvas")
+        FreeStructure(*this)
         ProcedureReturn #False
       EndIf
       *this\gCanvas = useExistingCanvas
@@ -446,12 +453,11 @@ Module CanvasButton
     *this\style(#StyleDefault)\colorBorder  = GetSysColor_(#COLOR_BTNSHADOW)
     ; Highlight (hover)
     CopyStructure(*this\style(#StyleDefault), *this\style(#StyleHighlight), style)
-    *this\style(#StyleHighlight)\colorBack  = GetSysColor_(#COLOR_HIGHLIGHT)
-    *this\style(#StyleHighlight)\colorText  = GetSysColor_(#COLOR_HIGHLIGHTTEXT)
+    *this\style(#StyleHighlight)\colorBack  = $fbf1e5
     ; Active (toggle or click)
     CopyStructure(*this\style(#StyleHighlight), *this\style(#StyleActive), style)
-    *this\style(#StyleActive)\colorBack     = GetSysColor_(#COLOR_HOTLIGHT)
-    *this\style(#StyleActive)\colorBorder   = GetSysColor_(#COLOR_BTNTEXT)
+    *this\style(#StyleActive)\colorBack     = $f7e4cc
+    *this\style(#StyleActive)\colorBorder   = GetSysColor_(#COLOR_HOTLIGHT)
     ; ActiveHighlight (toggled and hover)
     CopyStructure(*this\style(#StyleActive), *this\style(#StyleActiveHighlight), style)
     
