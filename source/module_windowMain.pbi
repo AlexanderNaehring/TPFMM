@@ -1478,6 +1478,15 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure repoRefresh()
+    DisableGadget(gadget("repoRefresh"), #True)
+    repository::refreshRepositories()
+  EndProcedure
+  
+  Procedure repoRefreshFinished()
+    DisableGadget(gadget("repoRefresh"), #False)
+  EndProcedure
+  
   ;- repo callbacks
   
   Procedure repoItemSetup(*item.CanvasList::CanvasListItem, *mod.Repository::RepositoryMod = #Null)
@@ -1583,7 +1592,7 @@ Module windowMain
     ; called when all repositories are loaded
     ; TODO repoCallbackRefreshFinished() - update mod list (add update information to mods)
     ; send event to main thread
-    PostEvent(#EventRepoRefreshFinished, window, #Null) ; not doing anything at the moment
+    PostEvent(#EventRepoRefreshFinished, window, #Null)
     
     ; inform settings window to refresh repo list
     PostEvent(windowSettings::#EventRefreshRepoList, windowSettings::window, #Null)
@@ -2299,11 +2308,13 @@ Module windowMain
     GadgetToolTip(gadget("repoSort"),           _("main_sort"))
     GadgetToolTip(gadget("repoDownload"),       _("main_download"))
     GadgetToolTip(gadget("repoWebsite"),        _("main_website"))
+    GadgetToolTip(gadget("repoRefresh"),        _("main_repo_refresh"))
     
     ; backup tab
     GadgetToolTip(gadget("backupRestore"),      _("main_backup_restore"))
     GadgetToolTip(gadget("backupDelete"),       _("main_backup_delete"))
     GadgetToolTip(gadget("backupFolder"),       _("main_backup_folder"))
+    GadgetToolTip(gadget("backupRefresh"),      _("main_backup_refresh"))
     
     ; saves tab
     *saveModList\SetEmptyScreen(_("main_save_click_open"), "")
@@ -2433,6 +2444,7 @@ Module windowMain
     
     SetGadgetAttribute(gadget("repoDownload"),  #PB_Button_Image, ImageID(images::images("btnDownload")))
     SetGadgetAttribute(gadget("repoWebsite"),   #PB_Button_Image, ImageID(images::images("btnWebsite")))
+    SetGadgetAttribute(gadget("repoRefresh"),   #PB_Button_Image, ImageID(images::images("btnUpdate")))
     
     ; saves tab
     SetGadgetAttribute(gadget("saveOpen"),      #PB_Button_Image, ImageID(images::images("btnOpen")))
@@ -2479,6 +2491,8 @@ Module windowMain
     BindGadgetEvent(gadget("repoFilter"),       @repoFilterShow())
     BindGadgetEvent(gadget("repoWebsite"),      @repoWebsite())
     BindGadgetEvent(gadget("repoDownload"),     @repoDownload())
+    BindGadgetEvent(gadget("repoRefresh"),      @repoRefresh())
+    BindEvent(#EventRepoRefreshFinished, @repoRefreshFinished(), window)
     
     ; backup tab
     BindGadgetEvent(gadget("backupSort"),       @backupSortShow())

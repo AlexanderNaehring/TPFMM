@@ -45,14 +45,18 @@
               <vbox expand='item:1'>
                 <hbox expand='item:1'>
                   <canvas name='repoList' flags='#PB_Canvas_Keyboard' />
-                  <vbox expand='no'>
+                  <vbox expand='item:3'>
                     <hbox expand='no' align='center'>
                       <buttonimage name='repoSort' />
                       <buttonimage name='repoFilter' />
                     </hbox>
-                    <vbox expand='no' comment='action for selected mods'>
+                    <vbox expand='no' comment='action for selected items'>
                       <buttonimage name='repoDownload' />
                       <buttonimage name='repoWebsite' />
+                    </vbox>
+                    <empty />
+                    <vbox expand='no' comment='generic actions'>
+                      <buttonimage name='repoRefresh' />
                     </vbox>
                   </vbox>
                 </hbox>
