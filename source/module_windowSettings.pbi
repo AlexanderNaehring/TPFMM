@@ -112,17 +112,16 @@ Module windowSettings
   
   Procedure GadgetSaveSettings()
     Protected Dir$, locale$, oldDir$
+    Protected proxyChange.b
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
+    oldDir$ = settings::getString("", "path")
+    settings::setString("", "path", dir$)
     
     locale$ = StringField(StringField(GetGadgetText(gadget("languageSelection")), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
       locale$ = "en"
     EndIf
-    
-    oldDir$ = settings::getString("", "path")
-    
-    settings::setString("", "path", dir$)
     If locale$ <> settings::getString("", "locale")
       locale::setLocale(locale$)
       windowMain::updateStrings()
@@ -130,12 +129,20 @@ Module windowSettings
       ; TODO update all strings, e.g. in filter/sort dialogs
     EndIf
     settings::setString("", "locale", locale$)
+    
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     
     settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
     settings::setInteger("backup", "before_update", GetGadgetState(gadget("backupBeforeUpdate")))
     settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("backupBeforeUninstall")))
+    
+    If settings::getInteger("proxy", "enabled") <> GetGadgetState(gadget("proxyEnabled")) Or
+       settings::getString("proxy", "server") <> GetGadgetText(gadget("proxyServer")) Or
+       settings::getString("proxy", "user") <> GetGadgetText(gadget("proxyUser")) Or
+       settings::getString("proxy", "password") <> aes::encryptString(GetGadgetText(gadget("proxyPassword")))
+      proxyChange = #True
+    EndIf
     
     settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
     settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
@@ -150,17 +157,14 @@ Module windowSettings
     main::initProxy()
     main::updateDesktopIntegration()
     
-    
-;     If misc::checkGameDirectory(Dir$) = 0
-;       ; 0   = path okay, executable found and writing possible
-;       ; 1   = path okay, executable found but cannot write
-;       ; 2   = path not okay
-;     EndIf
-    
     If oldDir$ <> dir$
       ; gameDir changed
       mods::freeAll()
       mods::load()
+    EndIf
+    
+    If proxyChange
+      repository::refreshRepositories()
     EndIf
     
     GadgetCloseSettings()
