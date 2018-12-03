@@ -1,27 +1,26 @@
-DeclareModule main
+﻿DeclareModule main
   EnableExplicit
   
-  Global _DEBUG     = #True ; write debug messages to log file
-  Global _TESTMODE  = #False
-  Global VERSION$ = "TPFMM v1.1." + #PB_Editor_BuildCount
-  Global WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
-  Global VERSION_FULL$ = VERSION$ + " b" + #PB_Editor_CompileCount
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
-      VERSION_FULL$ + " Win"
+      #OS$ = "Win"
     CompilerCase #PB_OS_Linux
-      VERSION_FULL$ + " Lin"
+      #OS$ = "Lin"
     CompilerCase #PB_OS_MacOS
-      VERSION_FULL$ + " OSX"
+      #OS$ = "OSX"
   CompilerEndSelect
-  UseMD5Fingerprint()
-  VERSION_FULL$ + " {" + StringFingerprint(CPUName() + "/" + ComputerName() + "/" + UserName(), #PB_Cipher_MD5) + "}"
   
+  #DEBUG = #True ; write debug messages to log file
+  #VERSION$ = "TPFMM v1.1." + #PB_Editor_BuildCount
+  #WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   #UPDATER$ = "https://www.transportfevermods.com/repository/"
   #PORT = 14123
   #EULAVersion = 2
   
-  #DRAG_MOD = 1
+  UseMD5Fingerprint()
+  
+  Global _TESTMODE  = #False
+  Global VERSION_FULL$ = #VERSION$ + " b" + #PB_Editor_CompileCount + " " + #OS$ + " {" + StringFingerprint(CPUName() + "/" + ComputerName() + "/" + UserName(), #PB_Cipher_MD5) + "}"
   
   Declare init()
   Declare initProxy()
@@ -65,7 +64,7 @@ Module main
     
     ; Error and System Information
     WriteStringN(file, "Please provide the following information at")
-    WriteStringN(file, main::WEBSITE$)
+    WriteStringN(file, main::#WEBSITE$)
     WriteStringN(file, "Copy the whole file content in the text box, or attach the .txt file directly.")
     WriteStringN(file, "")
     WriteStringN(file, "[code]")
@@ -285,7 +284,7 @@ Module main
       EndIf
     EndIf
     
-    If _DEBUG
+    If #DEBUG
       debugger::SetLogFile("tpfmm.log")
     EndIf
     debugger::DeleteLogFile()
@@ -320,6 +319,7 @@ Module main
   Procedure initProxy()
     Protected server$, user$, password$
     
+    InitNetwork()
     If settings::getInteger("proxy", "enabled")
       server$   = settings::getString("proxy", "server")
       user$     = settings::getString("proxy", "user")

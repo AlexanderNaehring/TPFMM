@@ -1,4 +1,4 @@
-XIncludeFile "module_debugger.pbi"
+﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -517,7 +517,7 @@ Module repository
     
     ; download for same image may be triggered multiple times!
     ; make sure, same image is not downloaded in parallel
-    
+     
     If *thumbnailData\mod\thumbnailImage
       *thumbnailData\callback(*thumbnailData\mod\thumbnailImage, *thumbnailData\userdata)
     Else
@@ -640,7 +640,7 @@ Module repository
         KillThread(*queueThread)
         ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
       EndIf
-        
+      
       queueStop = #False
     EndIf
     *queueThread = #Null

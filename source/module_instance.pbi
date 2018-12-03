@@ -60,7 +60,7 @@ Module instance
       _port = port
       callback = receiveFn
       
-      _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP, "127.0.0.1")
+      _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP|#PB_Network_IPv4, "127.0.0.1")
       If _server
         _stop = #False
         _thread = CreateThread(@listener(), _server)
@@ -69,6 +69,8 @@ Module instance
           CloseNetworkServer(_server)
           _server = #Null
         EndIf
+      Else
+        Debug "could not create server on port "+_port
       EndIf
       
       If _server And _thread

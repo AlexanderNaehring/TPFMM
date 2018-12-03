@@ -198,9 +198,9 @@ Module windowPack
   Procedure itemsDrop()
     Protected files$, file$, i
     If EventDropType() = #PB_Drop_Private
-      If EventDropPrivate() = main::#DRAG_MOD
+;       If EventDropPrivate() = ;undefined
         addSelectedMods()
-      EndIf
+;       EndIf
     Else
       files$ = EventDropFiles()
       
@@ -355,7 +355,7 @@ Module windowPack
     AddKeyboardShortcut(window, #PB_Shortcut_Delete, #MenuItem_Del)
     
     ; enable mods to be dropped in the pack item list
-    EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, main::#DRAG_MOD)
+    EnableGadgetDrop(gadget("items"), #PB_Drop_Private, #PB_Drag_Copy, 0)
     EnableGadgetDrop(gadget("items"), #PB_Drop_Files, #PB_Drag_Copy|#PB_Drag_Move)
     BindEvent(#PB_Event_GadgetDrop, @itemsDrop(), window, gadget("items"))
     

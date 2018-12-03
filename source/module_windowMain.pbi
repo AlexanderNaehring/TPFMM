@@ -559,7 +559,7 @@ Module windowMain
   ;- MENU
   
   Procedure MenuItemHomepage()
-    misc::openLink(main::WEBSITE$) ; Download Page TFMM (Train-Fever.net)
+    misc::openLink(main::#WEBSITE$) ; Download Page TFMM (Train-Fever.net)
   EndProcedure
   
   Procedure MenuItemLog()
@@ -1149,7 +1149,7 @@ Module windowMain
       Case #PB_EventType_RightClick
 ;         DisplayPopupMenu(MenuLibrary, WindowID(window))
       Case #PB_EventType_DragStart
-        DragPrivate(main::#DRAG_MOD)
+;         DragPrivate(main::#DRAG_MOD)
     EndSelect
   EndProcedure
   
@@ -1268,7 +1268,7 @@ Module windowMain
     html$ = ReplaceString(html$, "{title}", _("share_title"), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{copyright}", _("share_copyright"), #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{date}", FormatDate("%yyyy-%mm-%dd", Date()), #PB_String_CaseSensitive, 1, 1)
-    html$ = ReplaceString(html$, "{TPFMM-version}", main::VERSION$, #PB_String_CaseSensitive, 1, 1)
+    html$ = ReplaceString(html$, "{TPFMM-version}", main::#VERSION$, #PB_String_CaseSensitive, 1, 1)
     html$ = ReplaceString(html$, "{mod-list}", json$, #PB_String_CaseSensitive, 1, 1)
     
     ; write file
@@ -2467,7 +2467,7 @@ Module windowMain
     
     ;-------------------
     ;-initialize gadget images
-    SetGadgetText(gadget("version"), main::VERSION$)
+    SetGadgetText(gadget("version"), main::#VERSION$)
     
     ; nav
     SetGadgetAttribute(gadget("btnMods"),     #PB_Button_Image,   ImageID(images::Images("navMods")))
