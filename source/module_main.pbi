@@ -1,4 +1,4 @@
-﻿DeclareModule main
+DeclareModule main
   EnableExplicit
   
   Global _DEBUG     = #True ; write debug messages to log file
@@ -17,6 +17,7 @@
   UseMD5Fingerprint()
   VERSION_FULL$ + " {" + StringFingerprint(CPUName() + "/" + ComputerName() + "/" + UserName(), #PB_Cipher_MD5) + "}"
   
+  #UPDATER$ = "https://www.transportfevermods.com/repository/"
   #PORT = 14123
   #EULAVersion = 2
   

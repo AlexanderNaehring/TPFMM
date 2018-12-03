@@ -226,8 +226,6 @@ more_author   = Show all mods by {author}
 installed_all = Installed or not installed
 installed_yes = Show only installed
 installed_no  = Show only not installed
-update        = Update
-update_text   = New Version of TPFMM available.\nDownload now?
 disabled_update = Please use latest Version of TPFMM
 download_start  = Start Download '{modname}'...
 download_finish = Download finished
@@ -249,6 +247,10 @@ error_no_source   = The repsitory does not provide any source ID. Please contact
 error_dup_source  = The repository source ID matches the ID of another repository that is already loaded.\nThe repository source ID must be unique.\nEither this repository is already loaded or the maintainer must change the source ID.
 error_no_mods     = TPFMM cannot find any mods in this repository. Please contact the repository maintainer.
 error_unknown     = Cannot add the repository due to an unknown error. Please try again or submit a bug report.
+
+[update]
+available        = New Version of TPFMM available.
+available_text   = {version} is available.\nDo you want to visit the website for downloading the new version now?
 
 [mods]
 filter_all      = Show All Folders

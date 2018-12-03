@@ -56,6 +56,13 @@ Module windowMain
     download$
     source$
   EndStructure
+  
+  Structure update
+    build.i
+    version$
+    url$
+  EndStructure
+  
   ;}
   
   Macro gadget(name)
@@ -107,6 +114,8 @@ Module windowMain
     
     #EventWorkerStarts
     #EventWorkerStops
+    
+    #EventUpdateAvailable
   EndEnumeration
   
   Enumeration #PB_EventType_FirstCustomValue
@@ -237,6 +246,45 @@ Module windowMain
     Else
       DisableGadget(gadget("backupRestore"), #True)
       DisableGadget(gadget("backupDelete"), #True)
+    EndIf
+  EndProcedure
+  
+  Procedure checkUpdate(*null)
+    Protected *buffer, json, tpfmm
+    Static update.update
+    
+    *buffer = ReceiveHTTPMemory(main::#UPDATER$, 0, main::VERSION_FULL$)
+    If *buffer
+      json = CatchJSON(#PB_Any, *buffer, MemorySize(*buffer), #PB_JSON_NoCase)
+      If json
+        tpfmm = GetJSONMember(JSONValue(json), "tpfmm")
+        If tpfmm
+          ExtractJSONStructure(tpfmm, @update, update)
+          If update\build > #PB_Editor_CompileCount ; update available
+            PostEvent(#EventUpdateAvailable, window, @update)
+          Else
+            deb("windowMain:: updater, no update available")
+          EndIf
+        Else
+          deb("windowMain:: updater, could not find json member 'tpfmm'")
+        EndIf
+        FreeJSON(json)
+      Else
+        deb("windowMain:: updater, json error '"+JSONErrorMessage()+"'")
+      EndIf
+      FreeMemory(*buffer)
+    Else
+      deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
+    EndIf
+  EndProcedure
+  
+  Procedure updateAvailable()
+    Protected *update.update
+    *update = EventGadget()
+    If *update
+      If MessageRequester(_("update_available"), _("update_available_text", "version="+*update\version$), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        misc::openLink(*update\url$)
+      EndIf
     EndIf
   EndProcedure
   
@@ -418,6 +466,8 @@ Module windowMain
     main::closeProgressWindow()
     HideWindow(windowMain::window, #False)
     
+    ; start updater thread
+    CreateThread(@checkUpdate(), #Null)
     
     If settings::getString("", "path") = ""
       ; no path specified upon program start -> open settings dialog
@@ -2378,6 +2428,7 @@ Module windowMain
     BindEvent(#PB_Event_CloseWindow, @close(), window)
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     BindEvent(#EventCloseNow, main::@exit())
+    BindEvent(#EventUpdateAvailable, @updateAvailable(), window)
     
     
     
