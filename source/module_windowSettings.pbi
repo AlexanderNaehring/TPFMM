@@ -470,6 +470,12 @@ Module windowSettings
     BindEvent(#EventRefreshRepoList, @updateRepositoryList(), window)
     BindEvent(#EventBackupFolderMoved, @backupFolderMoved(), window)
     
+    AddKeyboardShortcut(window, #PB_Shortcut_Escape, 1)
+    BindEvent(#PB_Event_Menu, @GadgetCloseSettings(), window, 1)
+    
+    AddKeyboardShortcut(window, #PB_Shortcut_Control|#PB_Shortcut_S, 2)
+    BindEvent(#PB_Event_Menu, @GadgetSaveSettings(), window, 2)
+    
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())
     BindGadgetEvent(gadget("installationBrowse"), @GadgetButtonBrowse())
