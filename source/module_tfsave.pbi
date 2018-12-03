@@ -82,7 +82,8 @@ Module tfsave
           *info\fileSizeUncompressed = FileSize(tmpFile2$)
           
           *info\version     = ReadLong(file)
-          If *info\version = 103
+          If *info\version = 103 Or 
+             *info\version = 168
             *info\difficulty  = ReadLong(file)
             *info\startYear   = ReadLong(file)
             *info\numTilesX   = ReadLong(file)
