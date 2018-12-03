@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -629,10 +629,14 @@ Module repository
       queueStop = #True
       time = ElapsedMilliseconds()
       
+      LockMutex(mutexQueue)
+      ClearList(queue())
+      UnlockMutex(mutexQueue)
+      
       WaitThread(*queueThread, timeout)
       
       If IsThread(*queueThread)
-        deb("repository:: kill worker")
+        deb("repository:: kill worker due to timeout! Program continues unsafe!")
         KillThread(*queueThread)
         ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
       EndIf
@@ -650,6 +654,7 @@ Module repository
   
   
   Procedure refreshRepositories(async=#True)
+    stopQueue()
     freeAll()
     
     ; always add official repositories to sources
