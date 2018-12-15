@@ -283,6 +283,8 @@ Module CanvasList
   Structure itemIcon
     image.i
     align.b
+    box.box
+    hint$
   EndStructure
   
   Structure item
@@ -297,8 +299,13 @@ Module CanvasList
     wasVisible.b  ; item was visible at some point in the past (used for event "onFirstVisible")
     List icons.itemIcon() ; multiple (optional) user icons displayed on the item
     List buttons.itemBtn() ; same buttons used for all items...
-    *userdata     ; userdata
+    *userdata              ; userdata
+    ; position information:
     canvasBox.box ; location on canvas stored for speeding up drawing operation
+    iOffset.l     ; offset for image
+    iconOffsetL.l ; offset for icons left
+    iconOffsetR.l ; offset for icons right
+    refreshContentPosition.b ; flag to update item content positions (buttons, icon, image, text...)
   EndStructure
   
   Prototype itemEventCallback(*item.CanvasListItem, event)
@@ -625,7 +632,6 @@ Module CanvasList
     
   EndProcedure
   
-  
   Procedure countVisibleItems(*this.gadget)
     Protected count
     LockMutex(*this\mItems)
@@ -674,10 +680,53 @@ Module CanvasList
     ProcedureReturn #True
   EndProcedure
   
+  Procedure refreshItemContentPosition(*this.gadget, *item.item)
+    Protected k
+    Protected padding = *this\theme\item\Padding
+    Protected iconBtnSize = 24
+    Protected iconSize = *this\theme\item\Lines(0)\REM * *this\fontHeight
+    Protected nl, nr
+    Protected iconOffsetL, iconOffsetR
+    
+    ForEach *this\items()\buttons()
+      ; calculate position relative to item
+      k = ListSize(*item\buttons()) - ListIndex(*item\buttons())
+      *item\buttons()\box\x       = *item\canvasBox\width - k * padding - k * iconBtnSize - (*this\theme\scrollbarWidth)
+      ; scrollbarwidth offset just the scrollbar not covering the icon btn
+      *item\buttons()\box\y       = *item\canvasBox\height - padding - iconBtnSize
+      *item\buttons()\box\width   = iconBtnSize
+      *item\buttons()\box\height  = iconBtnSize
+    Next
+    
+    ForEach *this\items()\icons()
+      ; calculate position relative to item
+      nl = 0 : nr = 0 
+      *item\iconOffsetL = 0 : *item\iconOffsetR = 0
+      ForEach *item\icons()
+        ; left overlay, ignore other objects: x = \canvasBox\x + nl * iconSize + padding
+        If *item\icons()\align = #AlignLeft
+          *item\icons()\box\x = *item\iOffset + nl * (iconSize + padding) + padding
+          *item\iconOffsetL = (nl+1) * (iconSize + padding) + padding
+          nl + 1
+        ElseIf *item\icons()\align = #AlignRight
+          *item\icons()\box\x = *item\canvasBox\width - ((nr+1) * (iconSize + padding) + *this\theme\scrollbarWidth )
+          *item\iconOffsetR = (nr+2) * (iconSize + padding) + *this\theme\scrollbarWidth
+          nr + 1
+        EndIf
+        *item\icons()\box\y       = padding
+        *item\icons()\box\width   = iconSize
+        *item\icons()\box\height  = iconSize
+      Next
+    Next
+    
+    *item\refreshContentPosition = #False
+  EndProcedure
+    
   Procedure updateItemPosition(*this.gadget)
     Protected x, y, width, height
     Protected numColumns, columnWidth, r, c, i, k
     Protected margin, padding
+    Protected *item.item
     
     If *this\pauseDraw
       ProcedureReturn #False
@@ -717,8 +766,9 @@ Module CanvasList
     
     i = 0
     ForEach *this\items()
-      If *this\items()\hidden
-        *this\items()\isOnCanvas = #False
+      *item = *this\items()
+      If *item\hidden
+        *item\isOnCanvas = #False
         Continue
       EndIf
       c = Mod(i, numColumns)
@@ -727,51 +777,44 @@ Module CanvasList
       x = *this\theme\item\Margin + c*(width + 2*margin)
       y = *this\theme\item\Margin + r*(*this\theme\item\Height + *this\theme\item\Margin) - *this\scrollbar\position
       
-      *this\items()\canvasBox\x = x
-      *this\items()\canvasBox\y = y
-      *this\items()\canvasBox\width = width
-      *this\items()\canvasBox\height = height
+      *item\canvasBox\x = x
+      *item\canvasBox\y = y
+      *item\canvasBox\width = width
+      *item\canvasBox\height = height
       
-      If *this\items()\canvasBox\y + *this\theme\item\Height > 0 And *this\items()\canvasBox\y < GadgetHeight(*this\gCanvas)
+      If *item\canvasBox\y + *this\theme\item\Height > 0 And *item\canvasBox\y < GadgetHeight(*this\gCanvas)
         ; item is visible
-        If Not *this\items()\isOnCanvas
-          ; was not visible before
+        If Not *item\isOnCanvas
+          ; was not visible during last position update
           ; execute callback if exists
           ForEach *this\itemEvents()
             If *this\itemEvents()\event = #OnItemVisible
-              *this\itemEvents()\callback(*this\items(), #OnItemVisible)
+              *this\itemEvents()\callback(*item, #OnItemVisible)
             ElseIf Not *this\items()\wasVisible And *this\itemEvents()\event = #OnItemFirstVisible
-              *this\itemEvents()\callback(*this\items(), #OnItemFirstVisible)
+              *this\itemEvents()\callback(*item, #OnItemFirstVisible)
             EndIf
           Next
         EndIf
-        *this\items()\isOnCanvas = #True
-        *this\items()\wasVisible = #True
-      Else
-        ; item not visible
-        If *this\items()\isOnCanvas
-          ; was visible before
+        *item\isOnCanvas = #True
+        *item\wasVisible = #True
+      Else ; item not visible
+        If *item\isOnCanvas
+          ; was visible dureing last position update
           ; execute callback if exists
           ForEach *this\itemEvents()
             If *this\itemEvents()\event = #OnItemInvisible
-              *this\itemEvents()\callback(*this\items(), #OnItemInvisible)
+              *this\itemEvents()\callback(*item, #OnItemInvisible)
             EndIf
           Next
         EndIf
-        *this\items()\isOnCanvas = #False
+        *item\isOnCanvas = #False
       EndIf
       
-      
-      Protected iconBtnSize = 24
-      ForEach *this\items()\buttons()
-        ; position relative to item!
-        k = ListSize(*this\items()\buttons()) - ListIndex(*this\items()\buttons())
-        *this\items()\buttons()\box\x       = *this\items()\canvasBox\width - k * padding - k * iconBtnSize - (*this\theme\scrollbarWidth)
-        ; scrollbarwidth offset just the scrollbar not covering the icon btn
-        *this\items()\buttons()\box\y       = *this\items()\canvasBox\height - padding - iconBtnSize
-        *this\items()\buttons()\box\width   = iconBtnSize
-        *this\items()\buttons()\box\height  = iconBtnSize
-      Next
+      ; when item location changes, item content moves relative to item
+      ; content position update only required when content changes (new button, text change, etc...)
+      If *item\refreshContentPosition
+        refreshItemContentPosition(*this, *item)
+      EndIf
       
       i + 1
     Next
@@ -863,31 +906,18 @@ Module CanvasList
                 DrawImage(ImageID(\image), \canvasBox\x + padding, \canvasBox\y + padding, iW, iH)
               EndIf
             EndIf
+            \iOffset = iOffset
             
             
             ; icons
             If ListSize(\icons()) > 0
               DrawingMode(#PB_2DDrawing_AlphaBlend)
               ; draw icons in "first line", use same size as text in first line
-              Protected size = *this\theme\item\Lines(0)\REM * *this\fontHeight
-              Protected nl, nr
-              Protected iconOffsetL, iconOffsetR
-              nl = 0 : nr = 0 
-              iconOffsetL = 0 : iconOffsetR = 0
               ForEach \icons()
-                ; left overlay, ignore other objects: x = \canvasBox\x + nl * size + padding
-                If \icons()\align = #AlignLeft
-                  x = \canvasBox\x + iOffset + nl * (size + padding) + padding
-                  iconOffsetL = (nl+1) * (size + padding) + padding
-                  nl + 1
-                ElseIf \icons()\align = #AlignRight
-                  x = \canvasBox\x + \canvasBox\width - ((nr+1) * (size + padding) + *this\theme\scrollbarWidth )
-                  iconOffsetR = (nr+2) * (size + padding) + *this\theme\scrollbarWidth
-                  nr + 1
-                EndIf
-                y = \canvasBox\y + padding
-                w = size
-                h = size
+                x = \canvasBox\x + \icons()\box\x
+                y = \canvasBox\y + \icons()\box\y
+                w = \icons()\box\width
+                h = \icons()\box\height
                 DrawImage(ImageID(\icons()\image), x, y, w, h)
               Next
             EndIf
@@ -902,11 +932,12 @@ Module CanvasList
               y = \canvasBox\y + *this\theme\item\Lines(i)\yOffset
               w = \canvasBox\width - 2*padding - iOffset
               If i = 0 ; icon offset only in first line
-                x + iconOffsetL
-                w - iconOffsetL - iconOffsetR
+                x + \iconOffsetL
+                w - \iconOffsetL - \iconOffsetR
               EndIf
               
               If Not CountString(line$, Chr(9))
+                ; no #TAB used in line$, draw text without any alignment
                 DrawText(x, y, TextMaxWidth(line$, w), ColorFromHTML(*this\theme\color\ItemText$))
               Else ; if using tab, split string and draw multiple text boxes
                 For k = 1 To CountString(line$, Chr(9))+1
@@ -1249,13 +1280,13 @@ Module CanvasList
           updateItemPosition(*this)
           draw(*this)
           
-          
         ElseIf *this\selectbox\active = 1
           ; if mousedown and moving for some px in either direction, show selectbox (active = 2)
           If Abs(*this\selectbox\box\x - p\x) > 5 Or
              Abs(*this\selectbox\box\y - p\y + *this\scrollbar\position) > 5
             *this\selectbox\active = 2
           EndIf
+          
         ElseIf *this\selectbox\active = 2
           ; problem: only works if mouse moving... maybe need a timer ?
           If GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY) > GadgetHeight(*this\gCanvas) - 25
@@ -1546,8 +1577,7 @@ Module CanvasList
     LockMutex(*this\mItems)
     ForEach *this\items()
       ; free items!
-      ; TODO free all item related memory
-      
+      ; TODO free all item related memory?
     Next
     ClearList(*this\items())
     UnlockMutex(*this\mItems)
@@ -1561,12 +1591,6 @@ Module CanvasList
   
   Procedure Resize(*this.gadget, x, y, width, height)
     ResizeGadget(*this\gCanvas, x, y, width, height)
-    
-    ; TODO CHECK should cause resize callback
-    ; not used in this project
-;     updateScrollbar(*this)
-;     updateItemPosition(*this)
-;     draw(*this)
   EndProcedure
   
   Procedure Redraw(*this.gadget)
@@ -1598,6 +1622,7 @@ Module CanvasList
     *item\parent = *this
     *item\text$ = text$
     *item\userdata = *userdata ; must store userdata before filter and sort
+    *item\refreshContentPosition = #True ; initial position required
     
     ; if persistent filter is active, apply filter to new item
     If *this\filter\filterFun
@@ -1897,7 +1922,7 @@ Module CanvasList
   
   Procedure ItemSetImage(*this.item, image)
     *this\image = image
-    
+    *this\refreshContentPosition = #True
     draw(*this\parent)
   EndProcedure
   
@@ -1949,7 +1974,10 @@ Module CanvasList
       *icon = AddElement(*this\icons())
       *icon\image = image
       *icon\align = align
+      *this\refreshContentPosition = #True
       UnlockMutex(*gadget\mItems)
+      updateItemPosition(*this\parent)
+      draw(*this\parent)
     Else
       deb("CanvasList:: image not valid")
     EndIf
@@ -1961,6 +1989,7 @@ Module CanvasList
     *gadget.gadget = *this\parent
     LockMutex(*gadget\mItems)
     ClearList(*this\icons())
+    *this\refreshContentPosition = #True
     UnlockMutex(*gadget\mItems)
   EndProcedure
   
@@ -1971,14 +2000,17 @@ Module CanvasList
       *this\buttons()\image = image
       *this\buttons()\imageHover = imageHover
       *this\buttons()\callback = *callback
+      *this\refreshContentPosition = #True
+      updateItemPosition(*this\parent)
+      draw(*this\parent)
     EndIf
   EndProcedure
   
   Procedure ItemClearButtons(*this.item)
     ClearList(*this\buttons())
+    *this\refreshContentPosition = #True
+    updateItemPosition(*this\parent)
+    draw(*this\parent)
   EndProcedure
-  
-  
-  
   
 EndModule
