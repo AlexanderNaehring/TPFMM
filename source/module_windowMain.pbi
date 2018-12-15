@@ -344,6 +344,8 @@ Module windowMain
     windowSettings::close()
     
     main::closeProgressWindow()
+    
+    locale::logStats()
     PostEvent(event) ; inform main thread that closure procedure is finished
   EndProcedure
   
@@ -1009,7 +1011,6 @@ Module windowMain
   ;- mod callbacks
   
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
-    Protected icon
     Protected.b repoMod, updateAvailable
     
     If *mod = #Null
@@ -1032,21 +1033,21 @@ Module windowMain
     
     ; add callbacks
     *item\ClearButtons()
-    *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"))
-    *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"))
+    *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
+    *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
     If *mod\hasSettings()
-      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"))
+      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
     Else
       *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
     EndIf
     If repoMod And updateAvailable
-      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"))
+      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), _("hint_mod_update"))
     Else
       *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
     EndIf
-    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"))
+    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
     If *mod\canUninstall()
-      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"))
+      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
     Else
       *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
     EndIf
@@ -1055,28 +1056,27 @@ Module windowMain
     *item\ClearIcons()
     ; folder icon
     If *mod\isVanilla()
-      icon = images::images("itemIcon_vanilla")
+      *item\AddIcon(images::images("itemIcon_vanilla"), _("hint_mod_source_vanilla"))
     ElseIf *mod\isWorkshop()
-      icon = images::images("itemIcon_workshop")
+      *item\AddIcon(images::images("itemIcon_workshop"), _("hint_mod_source_workshop"))
     ElseIf *mod\isStagingArea()
       ; todo staging area mod icon?
-      icon = images::images("itemIcon_mod")
+      *item\AddIcon(images::images("itemIcon_mod"), _("hint_mod_source_staging"))
     Else
-      icon = images::images("itemIcon_mod")
+      *item\AddIcon(images::images("itemIcon_mod"), _("hint_mod_source_manual"))
     EndIf
-    *item\AddIcon(icon)
     ; settings icon
     If *mod\hasSettings()
-      *item\AddIcon(images::images("itemIcon_settings"))
+      *item\AddIcon(images::images("itemIcon_settings"), _("hint_mod_has_settings"))
     Else
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     ; update icon
     If repoMod
       If updateAvailable
-        *item\AddIcon(images::images("itemIcon_updateAvailable"))
+        *item\AddIcon(images::images("itemIcon_updateAvailable"), _("hint_mod_update_available"))
       Else
-        *item\AddIcon(images::images("itemIcon_up2date"))
+        *item\AddIcon(images::images("itemIcon_up2date"), _("hint_mod_up2date"))
       EndIf
     Else
       *item\AddIcon(images::images("itemIcon_blank"))
@@ -1564,7 +1564,9 @@ Module windowMain
     
     ; icons
     If IsImage(images::images("itemIcon_"+*mod\getSource()))
-      *item\AddIcon(images::images("itemIcon_"+*mod\getSource()))
+      Protected repoInfo.repository::RepositoryInformation
+      repository::GetRepositoryInformation(*mod\GetRepositoryURL(), @repoInfo)
+      *item\AddIcon(images::images("itemIcon_"+*mod\getSource()), _("hint_repo_source","repo_name="+repoInfo\name$))
     Else
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
@@ -1578,15 +1580,15 @@ Module windowMain
       Next
     EndIf
     If installed
-      *item\AddIcon(images::images("itemIcon_installed"))
+      *item\AddIcon(images::images("itemIcon_installed"), _("hint_repo_installed"))
     Else
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     
     
     ; buttons
-    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"))
-    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"))
+    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
     
   EndProcedure
   
@@ -1815,6 +1817,23 @@ Module windowMain
   ;-------------------
   ;- save tab
   
+  Procedure updateModStatus()
+    ; for mods in list, check if installed or online available
+    Protected NewList *items.CanvasList::CanvasListItem()
+    Protected *tfSaveMod.tfsave::mod
+    Protected *localmod, *repofile
+    
+    ;TODO update all icons, bind event for mod install and repo update to refresh mod status as well!
+    
+    *saveModList\GetAllItems(*items())
+    ForEach *items()
+      *tfSaveMod = *items()\GetUserData()
+      If *tfSaveMod
+        ; TODO ...
+      EndIf
+    Next
+  EndProcedure
+  
   Procedure saveOpenFile(file$)
     Protected *tfsave.tfsave::tfsave
     Protected *item.CanvasList::CanvasListItem
@@ -1835,7 +1854,7 @@ Module windowMain
       
       SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
       SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km � "+Str(*tfsave\numTilesY/4)+" km")
+      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km x "+Str(*tfsave\numTilesY/4)+" km")
       SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
       SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
       SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
@@ -1848,14 +1867,14 @@ Module windowMain
           *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
           
           If *tfsave\mods()\localmod
-            *item\AddIcon(images::images("itemIcon_installed"))
+            *item\AddIcon(images::images("itemIcon_installed"), _("hint_save_installed"))
           Else
-            *item\AddIcon(images::images("itemIcon_notInstalled"))
+            *item\AddIcon(images::images("itemIcon_notInstalled"), _("hint_save_not_installed"))
           EndIf
           If *tfsave\mods()\repofile
-            *item\AddIcon(images::images("itemIcon_availableOnline"))
+            *item\AddIcon(images::images("itemIcon_availableOnline"), _("hint_save_online"))
           Else
-            *item\AddIcon(images::images("itemIcon_notAvailableOnline"))
+            *item\AddIcon(images::images("itemIcon_notAvailableOnline"), _("hint_save_not_online"))
           EndIf
           If *tfsave\mods()\repofile And Not *tfsave\mods()\localmod
             download = #True
@@ -1865,7 +1884,8 @@ Module windowMain
           DisableGadget(gadget("saveDownload"), #False)
         EndIf
       Else
-        *saveModList\AddItem(_("save_no_mods"))
+        *saveModList\SetEmptyScreen(_("save_no_mods"), "")
+        *saveModList\ClearItems()
       EndIf
     Else
       SetGadgetText(gadget("saveYear"), " ")
@@ -1902,6 +1922,7 @@ Module windowMain
         *tfsaveMod = *items()\GetUserData()
         If *tfsaveMod\repofile And Not *tfsaveMod\localmod
           deb("windowMain:: download missing mod '"+*tfsaveMod\id$+"'")
+          *file = *tfsaveMod\repofile
           *file\download()
         EndIf
       Next
@@ -1979,8 +2000,8 @@ Module windowMain
                                 _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
-    *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"))
-    *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"))
+    *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"), _("hint_backup_restore"))
+    *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_backup_delete"))
     
     ; potentially, there already was a backup with this filename
     ; TODO check if backup is duplicate?
@@ -2346,31 +2367,34 @@ Module windowMain
     GadgetToolTip(gadget("btnHelp"),      _("main_help"))
     
     ; mod tab
-    GadgetToolTip(gadget("modFilter"),          _("main_filter"))
-    GadgetToolTip(gadget("modSort"),            _("main_sort"))
-    GadgetToolTip(gadget("modUpdate"),          _("main_update_tip"))
-    GadgetToolTip(gadget("modBackup"),          _("main_backup"))
-    GadgetToolTip(gadget("modUninstall"),       _("main_uninstall"))
-    GadgetToolTip(gadget("modUpdateAll"),       _("main_update_all_tip"))
+    GadgetToolTip(gadget("modFilter"),          _("hint_mods_filter"))
+    GadgetToolTip(gadget("modSort"),            _("hint_mods_sort"))
+    GadgetToolTip(gadget("modUpdate"),          _("hint_mods_update"))
+    GadgetToolTip(gadget("modBackup"),          _("hint_mods_backup"))
+    GadgetToolTip(gadget("modUninstall"),       _("hint_mods_uninstall"))
+    GadgetToolTip(gadget("modShare"),           _("hint_mods_share"))
+    GadgetToolTip(gadget("modUpdateAll"),       _("hint_mods_update_all"))
     
     ; repo tab
-    GadgetToolTip(gadget("repoFilter"),         _("main_filter"))
-    GadgetToolTip(gadget("repoSort"),           _("main_sort"))
-    GadgetToolTip(gadget("repoDownload"),       _("main_download"))
-    GadgetToolTip(gadget("repoWebsite"),        _("main_website"))
-    GadgetToolTip(gadget("repoRefresh"),        _("main_repo_refresh"))
+    GadgetToolTip(gadget("repoFilter"),         _("hint_repo_filter"))
+    GadgetToolTip(gadget("repoSort"),           _("hint_repo_sort"))
+    GadgetToolTip(gadget("repoDownload"),       _("hint_repo_download"))
+    GadgetToolTip(gadget("repoWebsite"),        _("hint_repo_website"))
+    GadgetToolTip(gadget("repoRefresh"),        _("hint_repo_refresh"))
     
     ; backup tab
-    GadgetToolTip(gadget("backupRestore"),      _("main_backup_restore"))
-    GadgetToolTip(gadget("backupDelete"),       _("main_backup_delete"))
-    GadgetToolTip(gadget("backupFolder"),       _("main_backup_folder"))
-    GadgetToolTip(gadget("backupRefresh"),      _("main_backup_refresh"))
+    GadgetToolTip(gadget("backupFilter"),       _("hint_backup_filter"))
+    GadgetToolTip(gadget("backupSort"),         _("hint_backup_sort"))
+    GadgetToolTip(gadget("backupRestore"),      _("hint_backup_restore"))
+    GadgetToolTip(gadget("backupDelete"),       _("hint_backup_delete"))
+    GadgetToolTip(gadget("backupFolder"),       _("hint_backup_folder"))
+    GadgetToolTip(gadget("backupRefresh"),      _("hint_backup_refresh"))
     
     ; saves tab
     *saveModList\SetEmptyScreen(_("main_save_click_open"), "")
-    SetGadgetText(gadget("saveName"),           _("main_save_start")+":")
-    GadgetToolTip(gadget("saveOpen"),           _("main_save_open")+":")
-    GadgetToolTip(gadget("saveDownload"),       _("main_save_download")+":")
+    SetGadgetText(gadget("saveName"),           _("main_save_start"))
+    GadgetToolTip(gadget("saveOpen"),           _("hint_save_open")+":")
+    GadgetToolTip(gadget("saveDownload"),       _("hint_save_download")+":")
     SetGadgetText(gadget("saveLabelYear"),      _("save_year")+":")
     SetGadgetText(gadget("saveLabelDifficulty"),_("save_difficulty")+":")
     SetGadgetText(gadget("saveLabelMapSize"),   _("save_mapsize")+":")

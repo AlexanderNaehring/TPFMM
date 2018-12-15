@@ -22,6 +22,7 @@ Module repository
     Data.i @modGetFiles()
     Data.i @modIsInstalled()
     Data.i @modGetSource()
+    Data.i @modGetRepositoryURL()
     Data.i @modCanDownload()
     Data.i @modDownload()
     Data.i @modGetLink()
@@ -71,7 +72,7 @@ Module repository
   
   Structure mod ; each mod in the list has these information
     *vt.RepositoryMod ; OOP interface table
-    
+    *modRepositoryPointer; point to parent mod repo
     source$
     id.q
     name$
@@ -109,6 +110,8 @@ Module repository
     file_base_url$
     thumbnail_base_url$
     List mods.mod()
+    
+    url$ ; map key
   EndStructure
   
   
@@ -372,6 +375,7 @@ Module repository
     *modRepository = AddMapElement(ModRepositories(), url$)
     ExtractJSONStructure(JSONValue(json), *modRepository, ModRepository)
     FreeJSON(json)
+    *modRepository\url$ = url$
     
     ; process
     If *modRepository\repo_info\icon$
@@ -400,6 +404,7 @@ Module repository
         ; mod vt
         \vt = ?vtMod
         ; source
+        \modRepositoryPointer = *modRepository
         \source$ = *modRepository\repo_info\source$
         ; mod url
         If \url$ And *modRepository\mod_base_url$
@@ -924,6 +929,7 @@ Module repository
     If Left(foldername$, 1) = "*" Or Left(foldername$, 1) = "?"
       Debug "repository:: looking for a workshop or staging area mod in repo. removeing prefix!"
       foldername$ = Mid(foldername$, 2)
+      Debug "search for "+foldername$
     EndIf
     
     LockMutex(mutexFilesMap)
@@ -960,6 +966,7 @@ Module repository
       EndIf
     Else
       ;notice attention: folderByFoldername only has "last" source, if multiple sources have mod with same foldername
+      
       If FindMapElement(*filesByFoldername(), foldername$)
         *file = *filesByFoldername()
       EndIf
@@ -1044,6 +1051,13 @@ Module repository
   
   Procedure.s modGetSource(*mod.mod)
     ProcedureReturn *mod\source$
+  EndProcedure
+  
+  Procedure.s modGetRepositoryURL(*mod.mod)
+    Protected *modRepo.ModRepository
+    
+    *modRepo.ModRepository = *mod\modRepositoryPointer
+    ProcedureReturn *modRepo\url$
   EndProcedure
   
   Procedure modCanDownload(*mod.mod)

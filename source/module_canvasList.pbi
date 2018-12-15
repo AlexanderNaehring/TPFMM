@@ -40,9 +40,9 @@ DeclareModule CanvasList
     GetSelected()
     Hide(hidden.b)
     IsHidden()
-    AddIcon(image, align=#AlignRight)
+    AddIcon(image, hint$="", align=#AlignRight)
     ClearIcons()
-    AddButton(*callback, image, imageHover=0)
+    AddButton(*callback, image, imageHover=0, hint$="")
     ClearButtons()
   EndInterface
   
@@ -107,11 +107,10 @@ DeclareModule CanvasList
   Declare ItemGetSelected(*item)
   Declare ItemHide(*item, hidden.b)
   Declare ItemIsHidden(*item)
-  Declare ItemAddIcon(*item, image, align=#AlignRight)
+  Declare ItemAddIcon(*item, image, hint$="", align=#AlignRight)
   Declare ItemClearIcons(*item)
-  Declare ItemAddButton(*item, *callback, image, imageHover=0)
+  Declare ItemAddButton(*item, *callback, image, imageHover=0, hint$="")
   Declare ItemClearButtons(*item)
-  
   
 EndDeclareModule
 
@@ -278,6 +277,7 @@ Module CanvasList
     callback.itemBtnCallback
     box.box
     hover.b
+    hint$
   EndStructure
   
   Structure itemIcon
@@ -341,6 +341,7 @@ Module CanvasList
     winColor.i
     textOnEmpty$
     textOnFilter$
+    tooltip$
   EndStructure
   ;}
   
@@ -860,6 +861,14 @@ Module CanvasList
     
   EndProcedure
   
+  Procedure setTooltip(*this.gadget, tooltip$)
+    If tooltip$ <> *this\tooltip$
+      *this\tooltip$ = tooltip$
+      GadgetToolTip(*this\gCanvas, tooltip$)
+      Debug "set canvasList tooltip: "+tooltip$
+    EndIf
+  EndProcedure
+  
   Procedure draw(*this.gadget)
     Protected margin, padding
     Protected i, line$
@@ -1145,6 +1154,7 @@ Module CanvasList
         
       Case #PB_EventType_MouseLeave
         *this\hover = #False
+        GadgetToolTip(*this\gCanvas, "")
         LockMutex(*this\mItems)
         ForEach *this\items()
           *this\items()\hover = #False
@@ -1269,6 +1279,8 @@ Module CanvasList
         
         
       Case #PB_EventType_MouseMove
+        Protected tooltip$
+        tooltip$ = ""
         If *this\scrollbar\dragActive
           ; dragging scrollbar
           
@@ -1345,18 +1357,36 @@ Module CanvasList
               EndIf
               If PointInBox(@p, *item\canvasBox)
                 *item\hover = #True
-                ForEach *this\items()\buttons()
+                ; tooltip$ = StringField(*item\text$, 1, #LF$)
+                Protected btnHover
+                btnHover = #False
+                ForEach *item\buttons()
                   Protected box.box
-                  box\x = *item\canvasBox\x + *this\items()\buttons()\box\x
-                  box\y = *item\canvasBox\y + *this\items()\buttons()\box\y
-                  box\width = *this\items()\buttons()\box\width
-                  box\height = *this\items()\buttons()\box\height
+                  box\x = *item\canvasBox\x + *item\buttons()\box\x
+                  box\y = *item\canvasBox\y + *item\buttons()\box\y
+                  box\width = *item\buttons()\box\width
+                  box\height = *item\buttons()\box\height
                   If PointInBox(@p, @box)
-                    *this\items()\buttons()\hover = #True
+                    *item\buttons()\hover = #True
+                    tooltip$ = *item\buttons()\hint$
+                    btnHover = #True
                   Else
-                    *this\items()\buttons()\hover = #False
+                    *item\buttons()\hover = #False
                   EndIf
                 Next
+                If Not btnHover
+                  ; test if hover over item
+                  ForEach *item\icons()
+                    box\x = *item\canvasBox\x + *item\icons()\box\x
+                    box\y = *item\canvasBox\y + *item\icons()\box\y
+                    box\width = *item\icons()\box\width
+                    box\height = *item\icons()\box\height
+                    If PointInBox(@p, @box)
+                      tooltip$ = *item\icons()\hint$
+                      Break
+                    EndIf
+                  Next
+                EndIf
                 Break ; can only hover on one item!
               EndIf
             Next
@@ -1366,6 +1396,7 @@ Module CanvasList
           draw(*this)
         EndIf
         
+        setTooltip(*this, tooltip$)
         
       Case #PB_EventType_KeyUp
         Select GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Key)
@@ -1962,7 +1993,7 @@ Module CanvasList
     ProcedureReturn *this\hidden
   EndProcedure
   
-  Procedure ItemAddIcon(*this.item, image, align=#AlignRight)
+  Procedure ItemAddIcon(*this.item, image, hint$="", align=#AlignRight)
     ; todo use mutex just for item icons?
     ; must adjust mutex lock in "add", "clear", "draw", init mutex on item creation, free mutex on item deletion
     Protected *gadget.gadget
@@ -1974,6 +2005,7 @@ Module CanvasList
       *icon = AddElement(*this\icons())
       *icon\image = image
       *icon\align = align
+      *icon\hint$ = hint$
       *this\refreshContentPosition = #True
       UnlockMutex(*gadget\mItems)
       updateItemPosition(*this\parent)
@@ -1993,13 +2025,14 @@ Module CanvasList
     UnlockMutex(*gadget\mItems)
   EndProcedure
   
-  Procedure ItemAddButton(*this.item, *callback, image, imageHover=0)
+  Procedure ItemAddButton(*this.item, *callback, image, imageHover=0, hint$ = "")
     ; TODO mutex lock!
     If IsImage(image)
       AddElement(*this\buttons())
       *this\buttons()\image = image
       *this\buttons()\imageHover = imageHover
       *this\buttons()\callback = *callback
+      *this\buttons()\hint$ = hint$
       *this\refreshContentPosition = #True
       updateItemPosition(*this\parent)
       draw(*this\parent)

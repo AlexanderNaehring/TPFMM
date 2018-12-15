@@ -59,6 +59,7 @@ DeclareModule repository
     getFiles(List *files.RepositoryFile())
     isInstalled()
     getSource.s()
+    GetRepositoryURL.s()
     canDownload()
     download()
     getLink.s()
@@ -69,6 +70,7 @@ DeclareModule repository
     getWebsite.s()
     setThumbnailImage(image)
   EndInterface
+  
   
   
   ; base methods
@@ -99,6 +101,7 @@ DeclareModule repository
   Declare modGetFiles(*mod, List *files.RepositoryFile())
   Declare modIsInstalled(*mod)
   Declare.s modGetSource(*mod)
+  Declare.s modGetRepositoryURL(*mod)
   Declare modCanDownload(*mod)
   Declare modDownload(*mod)
   Declare.s modGetLink(*mod)
@@ -128,27 +131,5 @@ DeclareModule repository
   Prototype CallbackRefreshFinished()
   
   Prototype CallbackThumbnail(image, *userdata)
-  
-  
-;   ; check functions
-;   Declare getModByID(source$, id.q)
-;   Declare getFileByID(*repoMod.mod, fileID.q)
-;   Declare canDownloadModByID(source$, id.q, fileID.q = 0)
-;   Declare canDownloadMod(*repoMod.mod)
-;   Declare canDownloadFile(*file.file)
-;   Declare download(source$, id.q, fileID.q = 0)
-;   
-;   ; search for mod by link or foldername
-;   Declare getModByLink(link$)
-;   Declare getModByFoldername(foldername$)
-;   Declare.s getLinkByFoldername(foldername$)
-;   
-;   ; other
-;   Declare refresh()
-;   Declare clearCache()
-;   Declare listRepositories(Map gadgets()) ; used by settings window
-;   
-;   Global TPFMM_UPDATE.tpfmm
-;   Global _READY
   
 EndDeclareModule
