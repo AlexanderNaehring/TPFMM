@@ -16,6 +16,7 @@ DeclareModule locale
   Declare getLocales(List locales$())
   Declare setLocale(locale$)
   Declare.s getCurrentLocale()
+  Declare logStats()
   Declare.s _(key$, vars$="")
 EndDeclareModule
 
@@ -36,6 +37,9 @@ Module locale
   ; Globals
   Global l$
   Global NewMap locales.locale()
+  
+  Global NewMap missingStrings()
+  Global NewMap stringCounter()
   
   ; Init
   misc::CreateDirectoryAll(#Path$)
@@ -94,6 +98,7 @@ Module locale
             ExaminePreferenceKeys()
             While NextPreferenceKey()
               locales(locale$)\strings$(PreferenceGroupName()+"_"+PreferenceKeyName()) = PreferenceKeyValue()
+              stringCounter(PreferenceGroupName()+"_"+PreferenceKeyName()) = 0
             Wend
           Wend
           ClosePreferences()
@@ -140,12 +145,28 @@ Module locale
     ProcedureReturn l$
   EndProcedure
   
+  Procedure logStats()
+    ; print all strings that have not been used during this program execution
+    deb("locale:: __unused strings__")
+    ForEach stringCounter()
+      If stringCounter() = 0
+        deb("locale:: <"+MapKey(stringCounter())+">")
+      EndIf
+    Next
+    deb("locale:: __missing strings__")
+    ForEach missingStrings()
+      deb("locale:: <"+MapKey(missingStrings())+">")
+    Next
+  EndProcedure
+  
   Procedure.s _(key$, vars$="")
     Protected group$, out$
     
     If key$ = ""
       ProcedureReturn ""
     EndIf
+    
+    stringCounter(key$) + 1
     
     key$ = ReplaceString(key$, " ", "_")
     group$ = StringField(key$, 1, "_")
@@ -158,7 +179,10 @@ Module locale
     
     If out$ = ""
       If group$ <> "tags"
-        deb("locale:: failed to load '"+key$+"' from '"+l$+"'")
+        missingStrings(l$+"_"+key$) + 1
+        If missingStrings(l$+"_"+key$) <= 1
+          deb("locale:: failed to load '"+key$+"' from '"+l$+"'")
+        EndIf
       EndIf
       
       out$ = locales("en")\strings$(key$)
@@ -167,7 +191,10 @@ Module locale
           ; deb("locale::getEx() - cannot find tag '"+string$+"'")
           out$ = key$
         Else
-          deb("locale:: failed to load fallback for '"+key$+"'")
+          missingStrings("en_"+key$) + 1
+          If missingStrings("en_"+key$) <= 1
+            deb("locale:: failed to load fallback for '"+key$+"'")
+          EndIf
           out$ = "<"+key$+">"
         EndIf
       EndIf
