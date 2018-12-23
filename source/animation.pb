@@ -135,6 +135,7 @@ Module animation
   EndProcedure
   
   Procedure freeAll(*this.ani)
+    deb("animation:: free animation #"+*this)
     freeImages(*this)
     FreeStructure(*this)
   EndProcedure
@@ -417,7 +418,7 @@ Module animation
     pack = OpenPack(#PB_Any, aniFile$, #PB_PackerPlugin_Tar)
     If pack
       If UncompressPackMemory(pack, @numFiles, SizeOf(numFiles), "numFiles")
-        deb("animation:: "+numFiles+" frames defined in *.ani file")
+        Debug "animation:: "+numFiles+" frames defined in *.ani file"
         freeImages(*this)
         ReDim *this\frames(numFiles-1)
         
