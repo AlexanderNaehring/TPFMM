@@ -141,10 +141,9 @@
   <window id='#PB_Any' name='selectFiles' text='Select File' minwidth='300' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='no'>
       <text name='selectText' />
-
         <vbox expand='no' id='selectBox'>
+          
         </vbox>
-
       <hbox expand='equal'>
         <button name='selectCancel' />
         <empty />
@@ -159,7 +158,7 @@
         <string name='modFilterString' text='' />
         <button name='modFilterReset' text='X' />
       </hbox>
-      <checkbox name='modFilterTF'       text='TF Mods' />
+      <checkbox name='modFilterDeprecated' text='Old Mods' />
       <checkbox name='modFilterVanilla'  text='Vanilla Mods' />
       <checkbox name='modFilterHidden'   text='Hidden Mods' />
       <checkbox name='modFilterWorkshop' text='Steam Workshop Mods' />

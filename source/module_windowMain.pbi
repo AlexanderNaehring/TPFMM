@@ -852,7 +852,10 @@ Module windowMain
     Protected *mod.mods::LocalMod = *item\GetUserData()
     Protected string$, s$, i, n
     
-    ; TODO tf mod support not implemented
+    ; check decrepated mods
+    If *mod\isDeprecated() And Not GetGadgetState(DialogGadget(modfilter\dialog, "modFilterDeprecated"))
+      ProcedureReturn #False
+    EndIf
     
     ; check vanilla mod
     If *mod\isVanilla() And Not GetGadgetState(DialogGadget(modfilter\dialog, "modFilterVanilla"))
@@ -918,7 +921,7 @@ Module windowMain
 ;     deb("windowMain:: modFilterChange()")
     ; save current filter to settings
     settings::setString("modFilter", "filter",    GetGadgetText(DialogGadget(modfilter\dialog, "modFilterString")))
-    settings::setInteger("modFilter", "tf",       GetGadgetState(DialogGadget(modfilter\dialog, "modFilterTF")))
+    settings::setInteger("modFilter", "deprecated", GetGadgetState(DialogGadget(modfilter\dialog, "modFilterDeprecated")))
     settings::setInteger("modFilter", "vanilla",  GetGadgetState(DialogGadget(modfilter\dialog, "modFilterVanilla")))
     settings::setInteger("modFilter", "hidden",   GetGadgetState(DialogGadget(modfilter\dialog, "modFilterHidden")))
     settings::setInteger("modFilter", "workshop", GetGadgetState(DialogGadget(modfilter\dialog, "modFilterWorkshop")))
@@ -1052,9 +1055,11 @@ Module windowMain
       *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
     EndIf
     
+    
     ; icons
     *item\ClearIcons()
-    ; folder icon
+    
+    ; location icon
     If *mod\isVanilla()
       *item\AddIcon(images::images("itemIcon_vanilla"), _("hint_mod_source_vanilla"))
     ElseIf *mod\isWorkshop()
@@ -1065,12 +1070,7 @@ Module windowMain
     Else
       *item\AddIcon(images::images("itemIcon_mod"), _("hint_mod_source_manual"))
     EndIf
-    ; settings icon
-    If *mod\hasSettings()
-      *item\AddIcon(images::images("itemIcon_settings"), _("hint_mod_has_settings"))
-    Else
-      *item\AddIcon(images::images("itemIcon_blank"))
-    EndIf
+    
     ; update icon
     If repoMod
       If updateAvailable
@@ -1080,6 +1080,21 @@ Module windowMain
       EndIf
     Else
       *item\AddIcon(images::images("itemIcon_blank"))
+    EndIf
+    
+    ; settings icon
+    If *mod\hasSettings()
+      *item\AddIcon(images::images("itemIcon_settings"), _("hint_mod_has_settings"))
+    Else
+      *item\AddIcon(images::images("itemIcon_blank"))
+    EndIf
+    
+    ; deprecated / error
+    If *mod\isDeprecated()
+      *item\AddIcon(images::images("itemIcon_deprecated"), _("hint_mod_deprecated"))
+    EndIf
+    If *mod\isLuaError()
+      *item\AddIcon(images::images("itemIcon_error"), _("hint_mod_lua_error"))
     EndIf
     
     *modList\redraw() ; after all icons and buttons are added, redraw the gadget
@@ -2235,7 +2250,7 @@ Module windowMain
     BuildDialogWindow(modFilter)
     modFilter\listGadget = gadget("modList")
     modFilter\activeGadget = DialogGadget(modFilter\dialog, "modFilterString")
-    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterTF"),        _("dialog_mods_tf"))
+    SetGadgetText(DialogGadget(modFilter\dialog, "modFilterDeprecated"),_("dialog_mods_deprecated"))
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterVanilla"),   _("dialog_mods_vanilla"))
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterHidden"),    _("dialog_mods_hidden"))
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterWorkshop"),  _("dialog_mods_workshop"))
@@ -2244,7 +2259,7 @@ Module windowMain
     ; load settings
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), "")
     SetGadgetText(DialogGadget(modFilter\dialog, "modFilterString"), settings::getString("modFilter", "filter"))
-    SetGadgetState(DialogGadget(modFilter\dialog, "modFilterTF"), settings::getInteger("modFilter", "tf"))
+    SetGadgetState(DialogGadget(modFilter\dialog, "modFilterDeprecated"), settings::getInteger("modFilter", "deprecated"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterVanilla"), settings::getInteger("modFilter", "vanilla"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterHidden"), settings::getInteger("modFilter", "hidden"))
     SetGadgetState(DialogGadget(modFilter\dialog, "modFilterWorkshop"), settings::getInteger("modFilter", "workshop"))
@@ -2252,7 +2267,7 @@ Module windowMain
     ; bind events
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterString"), @modFilterChange(), #PB_EventType_Change)
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterReset"), @modFilterReset())
-    BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterTF"), @modFilterChange())
+    BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterDeprecated"), @modFilterChange())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterVanilla"), @modFilterChange())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterHidden"), @modFilterChange())
     BindGadgetEvent(DialogGadget(modFilter\dialog, "modFilterWorkshop"), @modFilterChange())

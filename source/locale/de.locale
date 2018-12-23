@@ -102,6 +102,8 @@ mod_source_manual   = Manuell installierte Mod, kann von TPFMM verwaltet werden
 mod_has_settings      = Mod-Einstellungen werden unterstützt
 mod_update_available  = Aktualisierung verfügbar
 mod_up2date           = Modifikation ist auf dem aktuellen Stand
+mod_deprecated  = Mod-Format ist veraltet und der Mod wird eventuell von Transport Fever nicht korrekt erkannt.
+mod_lua_error   = Feler beim einlesen der mod.lua Datei
 
 repo_filter     = Mods filtern / suchen
 repo_sort       = Mods sortieren
@@ -346,7 +348,7 @@ folder_size   = Ordnergröße
 folder_name   = Ordername
 updated       = letztem Update
 backup_date   = Backup Datum
-mods_tf       = TF Mods
+mods_deprecated = Veraltete Mods
 mods_vanilla  = Vanilla Mods
 mods_hidden   = Versteckte Mods
 mods_workshop = Steam Workshop Mods

@@ -618,7 +618,11 @@ Module luaParser
     
     ; iterate over data-table and search for "info" key!
     ; -1 = location of data-table... proceedure will leave stack as it is after finish
-    modlua_iterateDataTable(L, -1)
+    If GetFilePart(file$) = "info.lua"
+      modlua_iterateInfoTable(L, -1)
+    Else
+      modlua_iterateDataTable(L, -1)
+    EndIf
      
     ; stack is like before table iteration, with original table on top of stack
     lua_pop(L, 1)
@@ -813,9 +817,14 @@ Module luaParser
   
   ;- PUBLIC FUNCTIONS
   
-  Procedure parseModLua(modfolder$, *mod.mods::LocalMod, language$="")
-    If modfolder$ = "" Or FileSize(modfolder$) <> -2
-      deb("lua:: {"+modfolder$+"} not found")
+  Procedure parseModLua(file$, *mod.mods::LocalMod, language$="")
+    Protected L
+    Protected success = #False
+    Protected stringsLua$, modFolder$
+    Protected string$, tmp$
+    
+    If file$ = "" Or FileSize(file$) <= 0
+      deb("lua:: {"+file$+"} not found")
       ProcedureReturn #False
     EndIf
     
@@ -828,19 +837,16 @@ Module luaParser
       language$ = locale::getCurrentLocale()
     EndIf
     
-    Protected stringsLua$, modLua$
-    Protected string$, tmp$
-    modfolder$  = misc::path(modfolder$)
-    modLua$     = modfolder$ + "mod.lua"
+    modFolder$  = misc::path(modfolder$)
+    modFolder$  = GetPathPart(file$)
     stringsLua$ = modfolder$ + "strings.lua"
     
-    If FileSize(modLua$) <= 0
-      deb("lua:: {"+modLua$+"} not found")
+    If FileSize(file$) <= 0
+      deb("lua:: {"+file$+"} not found")
       ProcedureReturn #False
     EndIf
     
     ; start
-    Protected L
     L = initLUA(modfolder$)
     
     lua(Str(L))\language$ = language$
@@ -851,16 +857,13 @@ Module luaParser
       openStringsLua(L, stringsLua$)
     EndIf
     
-    
-    Protected success = #False
-    
-    If modlua_open(L, modLua$)
-      *mod\setLuaDate(GetFileDate(modLua$, #PB_Date_Modified))
-      *mod\setLuaLanguage(locale::getCurrentLocale())
+    If modlua_open(L, file$)
+      *mod\setLuaDate(GetFileDate(file$, #PB_Date_Modified))
+      *mod\setLuaLanguage(language$)
       
       success = #True
     Else
-      deb("lua:: could not read "+modLua$)
+      deb("lua:: could not read "+file$)
     EndIf
     
     DeleteMapElement(lua(), Str(L))
@@ -900,8 +903,6 @@ Module luaParser
   EndProcedure
   
 EndModule
-
-
 
 CompilerIf #PB_Compiler_IsMainFile
   Define *mod.mods::mod

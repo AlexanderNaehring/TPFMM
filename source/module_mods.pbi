@@ -58,6 +58,8 @@ Module mods
     Data.i @modIsWorkshop()
     Data.i @modIsStagingArea()
     Data.i @modIsHidden()
+    Data.i @modIsDecrepated()
+    Data.i @modIsLuaError()
     Data.i @modIsUpdateAvailable()
     Data.i @modCanBackup()
     Data.i @modCanUninstall()
@@ -120,6 +122,7 @@ Module mods
     hidden.b          ; hidden from overview ("visible" in mod.lua)
 ;     backup.backup     ; backup information (local)
     luaParseError.b   ; set true if parsing of mod.lua failed
+    deprecated.b      ; set true if no mod.lua found or otherwise incorrect mod format
     size.i
   EndStructure
   
@@ -502,20 +505,20 @@ Module mods
           If entry$ = "." Or entry$ = ".."
             Continue
           EndIf
-          
-          If entry$ = "res" And #False ; only rely on "mod.lua"
+          If #False ; entry$ = "res" ; must have any info file!
             FinishDirectory(dir)
             ProcedureReturn path$
-          Else
+          Else ; any directory > recurse
             result$ = modGetRoot(path$ + entry$)
             If result$
               FinishDirectory(dir)
               ProcedureReturn result$
             EndIf
           EndIf
-          
-        Else
-          If entry$ = "mod.lua"
+        Else ; file
+          If entry$ = "mod.lua" Or  ; tpf mod
+             entry$ = "info.lua" Or ; tf mod (new)
+             entry$ = "tfmm.ini"    ; tf mod (old)
             FinishDirectory(dir)
             ProcedureReturn path$
           EndIf
@@ -525,7 +528,6 @@ Module mods
     
     FinishDirectory(dir)
     ProcedureReturn ""
-    
   EndProcedure
   
   Procedure modInfoProcessing(*mod.mod)    ; post processing
@@ -582,46 +584,65 @@ Module mods
       ProcedureReturn
     EndIf
     
-    
     Protected id$ = *mod\tpf_id$
     Protected modFolder$, luaFile$
     Protected file
     
-    ; debugger::add("mods::loadInfo() - {"+id$+"}");
     
     ; for all mods found in folder: get location of folder and check mod.lua for changes
     ; folder may be workshop, mods/ or dlcs/
     modFolder$ = getModFolder(id$)
-    luaFile$ = modFolder$ + "mod.lua"
-    ;- TODO: mod.lua not used for maps!
+      
+    If FileSize(modFolder$ + "tfmm.ini")
+      If OpenPreferences(modFolder$ + "tfmm.ini")
+        *mod\aux\deprecated = #True
+        *mod\name$ = ReadPreferenceString("name", "")
+        *mod\version$ = ReadPreferenceString("version", "")
+        ClearList(*mod\authors())
+        AddElement(*mod\authors())
+        *mod\authors()\name$ = ReadPreferenceString("author", "")
+        If *mod\authors()\name$ = ""
+          ClearList(*mod\authors())
+        EndIf
+        ClosePreferences()
+      EndIf
+    EndIf
+      
+    If FileSize(modFolder$ + "mod.lua") > 0
+      luaFile$ = modFolder$ + "mod.lua"
+      *mod\aux\deprecated = #False
+    ElseIf FileSize(modFolder$ + "info.lua") > 0
+      luaFile$ = modFolder$ + "info.lua"
+      *mod\aux\deprecated = #True
+    Else
+      ; no file
+      *mod\aux\deprecated = #True
+    EndIf
     
-    ; read mod.lua if required
-    If *mod\name$ = "" Or                                                 ; no name
-       *mod\aux\luaDate <> GetFileDate(luaFile$, #PB_Date_Modified) Or    ; mod.lua modified
-       *mod\aux\sv <> #SCANNER_VERSION Or                                 ; new program version
-       *mod\aux\luaLanguage$ <> locale::getCurrentLocale()                ; language changed
-      ; load info from mod.lua
-      If FileSize(luaFile$) > 0
-;         debugger::add("mods::loadInfo() - reload mod.lua for {"+id$+"}")
+    If luaFile$
+      ; read mod.lua if required
+      If *mod\name$ = "" Or                                                 ; no name
+         *mod\aux\luaDate <> GetFileDate(luaFile$, #PB_Date_Modified) Or    ; mod.lua modified
+         *mod\aux\sv <> #SCANNER_VERSION Or                                 ; new program version
+         *mod\aux\luaLanguage$ <> locale::getCurrentLocale()                ; language changed
+        ; load info from mod.lua
         *mod\aux\luaParseError = #False
-        If luaParser::parseModLua(modFolder$, *mod) ; current language
+        If luaParser::parseModLua(luaFile$, *mod) ; current language
           ; ok
           *mod\aux\sv = #SCANNER_VERSION
+          modInfoProcessing(*mod)
         Else
           *mod\aux\luaParseError = #True
         EndIf
-      Else
-        ; no mod.lua present -> extract info from ID
-        deb("mods:: no mod.lua for mod {"+id$+"} found!")
-      EndIf
       
-      modInfoProcessing(*mod) ; IMPORTANT
-      
-      If *mod\name$ = ""
-        deb("mods:: mod {"+id$+"} has no name")
+        
+        If *mod\name$ = ""
+          deb("mods:: mod {"+id$+"} has no name")
+        EndIf
       EndIf
+    Else
+      deb("mods:: no mod.lua for mod {"+id$+"} found!")
     EndIf
-    
     
     ; do this always
 ;     localizeTags(*mod)
@@ -703,6 +724,7 @@ Module mods
     Protected dir, json
     Protected filename$
     Protected *this.backup
+    Protected num
     
     If folder$ <> ""
       folder$ = misc::path(folder$)
@@ -717,8 +739,10 @@ Module mods
               Continue
             EndIf
             backupsScanRecursive(root$, folder$ + DirectoryEntryName(dir))
+            num + 1
             
           Case #PB_DirectoryEntry_File
+            num + 1
             filename$ = folder$ + DirectoryEntryName(dir)
             If LCase(GetExtensionPart(filename$)) <> "zip"
               Continue
@@ -728,6 +752,11 @@ Module mods
         EndSelect
       Wend
       FinishDirectory(dir)
+      If Not num
+        deb("mods:: delete empty backup folder " + root$ + folder$)
+        DeleteDirectory(root$ + folder$, "")
+      EndIf
+      
     Else
       deb("mods:: failed to examine backup directory "+root$+folder$)
     EndIf
@@ -1244,7 +1273,6 @@ Module mods
     EndIf
   EndProcedure
   
-  
   ;- ####################
   ;- check
   
@@ -1285,6 +1313,14 @@ Module mods
     If *mod
       ProcedureReturn *mod\aux\hidden
     EndIf
+  EndProcedure
+  
+  Procedure modIsDecrepated(*mod.mod)
+    ProcedureReturn *mod\aux\deprecated
+  EndProcedure
+  
+  Procedure modIsLuaError(*mod.mod)
+    ProcedureReturn *mod\aux\luaParseError
   EndProcedure
   
   Procedure modIsUpdateAvailable(*mod.mod) 
@@ -1692,7 +1728,6 @@ Module mods
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
         
         postProgressEvent(-1, _("progress_install_fail"))
-;         windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail"))
         ProcedureReturn #False
     EndIf
     
@@ -1700,24 +1735,40 @@ Module mods
     ; (2) try to find mod in target$ (may be in some sub-directory)...
     
     postProgressEvent(40)
-;     windowMain::progressMod(40)
     modRoot$ = modGetRoot(target$)
     
     If modRoot$ = ""
       deb("mods:: getModRoot("+target$+") failed!")
       DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
       postProgressEvent(-1, _("progress_install_fail"))
-;       windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail"))
       ProcedureReturn #False
     EndIf
     
-    ; modRoot folder found. 
+    ; modRoot folder found.
     ; try to get ID from folder name
     id$ = misc::getDirectoryName(modRoot$)
     
     If Not modCheckID(id$) And modCheckWorkshopID(id$)
-      ; backuped mods from workshop only have number, add _1
+      ; old backup mods from workshop only have number, add _1
       id$ = id$ + "_1"
+    EndIf
+    
+    ; if tfmm.ini file found
+    If FileSize(modRoot$ + "tfmm.ini") > 0
+      ; tpfmm.ini found (old TF mods)
+      If OpenPreferences(modRoot$ + "tfmm.ini")
+        id$ = ReadPreferenceString("id", "")
+        If id$
+          id$ = ReplaceString(id$, ".", "_") + "_1"
+        Else
+          id$ = ReadPreferenceString("author", "unknown") + "_" + ReadPreferenceString("name", "unknown") + "_1"
+          If id$ = "unknown_unknown_1"
+            id$ = ""
+          EndIf
+        EndIf
+        deb("mods:: reconstructed mod ID "+id$+" from tfmm.ini")
+        ClosePreferences()
+      EndIf
     EndIf
     
     If Not modCheckID(id$)
@@ -1727,16 +1778,15 @@ Module mods
       id$ = GetFilePart(source$, #PB_FileSystem_NoExtension)
       If Not modCheckID(id$)
         deb("mods:: archive name not valid id ("+id$+")")
-        ;TODO backuped archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
+        ;TODO backup archives are "folder_id.<date>.zip" -> remove .<date> part to get ID?
         
         DeleteDirectory(target$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-        postProgressEvent(-1, _("progress_install_fail_id"))
-;         windowMain::progressMod(windowMain::#Progress_Hide, _("progress_install_fail_id"))
+        postProgressEvent(-1, _("progress_install_fail_id", "id="+id$))
         ProcedureReturn #False
       EndIf
     EndIf
     
-    
+    ; get full path to mod folder based on ID (<installdir>/mods/ID)
     modFolder$ = getModFolder(id$)
     
     ; check if mod already installed?
@@ -1753,14 +1803,16 @@ Module mods
       EndIf
       
       If Not modCanUninstall(*installedMod)
+        ;TODO fix this... (e.g. cannot overwrite vanilla mods...)
         deb("mods:: existing mod MUST NOT be uninstalled, still continue with overwrite...")
       EndIf
       
       If callbackRemoveMod
-        callbackRemoveMod(*installedMod) ; send pointe for removal, attention: pointer already invalid
+        callbackRemoveMod(*installedMod)
       EndIf
       If events(#EventRemoveMod)
         PostEvent(events(#EventRemoveMod), *installedMod, 0)
+        ; send pointer for removal, attention: pointer may be invalid when trigger is processed
       EndIf
       
       ; remove mod from internal map.
