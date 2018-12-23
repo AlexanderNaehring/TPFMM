@@ -29,8 +29,7 @@
     numTilesX.l
     numTilesY.l
     unknown1.l
-    money.l
-    unknown2.l
+    money.q
     List mods.mod()
     achievements.b
     List settings.setting()
@@ -83,14 +82,14 @@ Module tfsave
           
           *info\version     = ReadLong(file)
           If *info\version = 103 Or 
-             *info\version = 168
+             *info\version = 168 Or
+             *info\version = 172
             *info\difficulty  = ReadLong(file)
             *info\startYear   = ReadLong(file)
             *info\numTilesX   = ReadLong(file)
             *info\numTilesY   = ReadLong(file)
             *info\unknown1    = ReadLong(file) ; unknown
-            *info\money       = ReadLong(file) ; ?
-            *info\unknown2    = ReadLong(file) ; unknown
+            *info\money       = ReadQuad(file) ; ?
             
             ; num mods
             numMods = ReadLong(file)
