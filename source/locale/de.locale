@@ -94,6 +94,7 @@ mod_information = Zeige Mod Informationen
 mod_website     = Öffne Website
 mod_open_folder = Öffne Ordner
 mod_update      = Mod aktualisieren
+mod_backup      = Mod sichern
 mod_uninstall   = Mod entfernen
 mod_source_vanilla  = Vorinstallierte "Vanilla" Mod
 mod_source_workshop = Workshop Modifikation, verwaltet von Steam

@@ -1004,6 +1004,11 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure modIconBackup(*item.CanvasList::CanvasListItem)
+    Protected *mod.mods::LocalMod = *item\GetUserData()
+    mods::backup(*mod\getID())
+  EndProcedure
+  
   Procedure modIconUninstall(*item.CanvasList::CanvasListItem)
     Protected *mod.mods::LocalMod = *item\GetUserData()
     If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
@@ -1034,7 +1039,7 @@ Module windowMain
     ; set image
     *item\SetImage(*mod\getPreviewImage())
     
-    ; add callbacks
+    ; add buttons (callbacks)
     *item\ClearButtons()
     *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
     *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
@@ -1049,6 +1054,7 @@ Module windowMain
       *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
     EndIf
     *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
+    *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
     If *mod\canUninstall()
       *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
     Else
@@ -1386,7 +1392,7 @@ Module windowMain
   EndProcedure
   
   ;- repo filter dialog
-    
+  
   Procedure repoFilterCallback(*item.CanvasList::CanvasListItem, options)
     ; return true if this mod shall be displayed, false if hidden
     Protected *mod.repository::RepositoryMod = *item\GetUserData()
@@ -1955,8 +1961,16 @@ Module windowMain
   ;- backup tab
   
   Procedure backupRestore()
-    ; todo implement backup restore
-    DebuggerWarning("not implemented yet")
+    Protected NewList *items.CanvasList::CanvasListItem()
+    Protected *backup.mods::BackupMod
+    If *backupList\GetAllSelectedItems(*items())
+      ForEach *items()
+        *backup = *items()\GetUserData()
+        If *backup
+          *backup\install()
+        EndIf
+      Next
+    EndIf
   EndProcedure
   
   Procedure backupDelete()
@@ -1983,7 +1997,11 @@ Module windowMain
   
   
   Procedure backupIconRestore(*item.CanvasList::CanvasListItem)
-    DebuggerWarning("not implemented")
+    Protected *backup.mods::BackupMod
+    *backup = *item\GetUserData()
+    If *backup
+      *backup\install()
+    EndIf
   EndProcedure
   
   Procedure backupIconDelete(*item.CanvasList::CanvasListItem)

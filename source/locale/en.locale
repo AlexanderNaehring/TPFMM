@@ -93,6 +93,7 @@ mod_information = Show mod information window
 mod_website     = Open website
 mod_open_folder = Open mod folder
 mod_update      = Update mod
+mod_backup      = Backup mod
 mod_uninstall   = Uninstall Mod
 mod_source_vanilla  = Pre-installed vanilla mod
 mod_source_workshop = Workshop mod managed by Steam client

@@ -109,6 +109,7 @@ Module images
     IncludeAndLoadImage("itemBtnWebsite",   "images/item-btn/website.png")
     IncludeAndLoadImage("itemBtnDownload",  "images/item-btn/download.png")
     IncludeAndLoadImage("itemBtnUpdate",    "images/item-btn/update.png")
+    IncludeAndLoadImage("itemBtnBackup",    "images/item-btn/backup.png")
     IncludeAndLoadImage("itemBtnRestore",   "images/item-btn/restore.png")
     IncludeAndLoadImage("itemBtnDelete",    "images/item-btn/delete.png")
     
@@ -138,6 +139,7 @@ Module images
     makeIcons("itemBtnWebsite")
     makeIcons("itemBtnDownload")
     makeIcons("itemBtnUpdate")
+    makeIcons("itemBtnBackup")
     makeIcons("itemBtnRestore")
     makeIcons("itemBtnDelete")
     

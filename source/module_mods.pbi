@@ -2355,7 +2355,10 @@ Module mods
   EndProcedure
   
   Procedure backupInstall(*this.backup)
-    DebuggerWarning("not implemented yet")
+    Protected backup$
+    backup$ = backupsGetFolder() + *this\info\filename$
+    deb("mods:: install backup "+*this\info\filename$)
+    install(backup$)
   EndProcedure
   
   Procedure backupDelete(*this.backup)
