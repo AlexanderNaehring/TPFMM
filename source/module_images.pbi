@@ -119,6 +119,8 @@ Module images
     IncludeAndLoadImage("itemIcon_vanilla",   "images/icon/mod_official.png")
     IncludeAndLoadImage("itemIcon_workshop",  "images/icon/steam.png")
     IncludeAndLoadImage("itemIcon_tpfnet",    "images/icon/tpfnet.png")
+    IncludeAndLoadImage("itemIcon_error",     "images/icon/error.png")
+    IncludeAndLoadImage("itemIcon_deprecated",  "images/icon/deprecated.png")
     IncludeAndLoadImage("itemIcon_updateAvailable",    "images/icon/updateAvailable.png")
     IncludeAndLoadImage("itemIcon_up2date",    "images/icon/up2date.png")
     IncludeAndLoadImage("itemIcon_installed",           "images/icon/installed.png")
