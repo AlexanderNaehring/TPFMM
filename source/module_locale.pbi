@@ -147,16 +147,19 @@ Module locale
   
   Procedure logStats()
     ; print all strings that have not been used during this program execution
-    deb("locale:: __unused strings__")
+    Protected out$
+    out$ = "locale:: "
+    out$ + "__unused strings__" + #CRLF$
     ForEach stringCounter()
       If stringCounter() = 0
-        deb("locale:: <"+MapKey(stringCounter())+">")
+        out$ + #TAB$ + "<"+MapKey(stringCounter())+">" + #CRLF$
       EndIf
     Next
-    deb("locale:: __missing strings__")
+    out$ + #CRLF$ + "__missing strings__" + #CRLF$
     ForEach missingStrings()
-      deb("locale:: <"+MapKey(missingStrings())+">")
+      out$ + #TAB$ + "<"+MapKey(missingStrings())+">" + #CRLF$
     Next
+    deb(out$)
   EndProcedure
   
   Procedure.s _(key$, vars$="")
