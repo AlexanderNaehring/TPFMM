@@ -84,8 +84,8 @@ Module windowMain
     #MenuItem_Enter
     #MenuItem_CtrlA
     #MenuItem_CtrlF
-    #MenuItem_PackNew
-    #MenuItem_PackOpen
+;     #MenuItem_PackNew
+;     #MenuItem_PackOpen
     
     #MenuItem_ShareSelected
     #MenuItem_ShareFiltered
@@ -2644,9 +2644,9 @@ Module windowMain
     MenuBar()
     MenuItem(#MenuItem_ShowBackups, _("menu_show_backups"))
     MenuItem(#MenuItem_ShowDownloads, _("menu_show_downloads"))
-    MenuTitle(_("menu_pack"))
-    MenuItem(#MenuItem_PackNew, _("menu_pack_new"))
-    MenuItem(#MenuItem_PackOpen, _("menu_pack_open"))
+;     MenuTitle(_("menu_pack"))
+;     MenuItem(#MenuItem_PackNew, _("menu_pack_new"))
+;     MenuItem(#MenuItem_PackOpen, _("menu_pack_open"))
     MenuTitle(_("menu_about"))
     MenuItem(#MenuItem_Homepage, _("menu_homepage") + Chr(9) + "F1")
 ;     MenuItem(#PB_Menu_About, _("menu_license") + Chr(9) + "Ctrl + L")
@@ -2659,8 +2659,8 @@ Module windowMain
     BindMenuEvent(menu, #MenuItem_ShowDownloads, @modShowDownloadFolder())
     BindMenuEvent(menu, #MenuItem_Homepage, @MenuItemHomepage())
     BindMenuEvent(menu, #MenuItem_Log, @MenuItemLog())
-    BindMenuEvent(menu, #MenuItem_PackNew, @MenuItemPackNew())
-    BindMenuEvent(menu, #MenuItem_PackOpen, @MenuItemPackOpen())
+;     BindMenuEvent(menu, #MenuItem_PackNew, @MenuItemPackNew())
+;     BindMenuEvent(menu, #MenuItem_PackOpen, @MenuItemPackOpen())
     
     
     ;- create shortcuts
