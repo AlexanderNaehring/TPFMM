@@ -32,6 +32,7 @@ EndDeclareModule
 XIncludeFile "module_debugger.pbi"
 
 Module pack
+  UseModule debugger
   
   Global NewMap packs()
   Global mutex = CreateMutex()
@@ -73,7 +74,7 @@ Module pack
   
   Procedure free(*pack.pack)
     If Not isPack(*pack)
-      debugger::add("pack::free() - WARNING: try to free invalid pack")
+      deb("pack:: trying to free invalid pack")
       ProcedureReturn #False
     EndIf
     
@@ -87,11 +88,10 @@ Module pack
   Procedure open(file$)
     Protected json
     Protected *pack.pack, packMutex
-    debugger::add("pack::open() "+file$)
     
     json = LoadJSON(#PB_Any, file$)
     If Not json
-      debugger::add("pack::open() - could not open json file")
+      deb("pack:: could not open json "+file$)
       ProcedureReturn #False
     EndIf
     
@@ -108,7 +108,7 @@ Module pack
     Protected json = CreateJSON(#PB_Any)
     InsertJSONStructure(JSONValue(json), *pack, pack)
     If Not SaveJSON(json, file$, #PB_JSON_PrettyPrint)
-      debugger::add("pack::save() - error writing json file {"+file$+"}")
+      deb("pack:: error writing json {"+file$+"}")
     EndIf
     FreeJSON(json)
     
@@ -144,7 +144,7 @@ Module pack
     LockMutex(*pack\mutex)
     ForEach *pack\items()
       If LCase(*pack\items()\id$) = LCase(*item\id$)
-        debugger::add("pack::addItem() - overwrite duplicate ID #"+*item\id$)
+        deb("pack:: overwrite duplicate ID #"+*item\id$)
         ; overwrite with "new" entry in order to maybe get more recent information (name, download id, ...)
         CopyStructure(*item, *pack\items(), packItem) ; possible memory leak? does copyStructure clear the old strings ? TODO check this
         
@@ -153,7 +153,6 @@ Module pack
       EndIf
     Next
     If add
-      debugger::add("pack::addItem() - add item #"+*item\id$)
       LastElement(*pack\items())
       AddElement(*pack\items())
       CopyStructure(*item, *pack\items(), packItem)

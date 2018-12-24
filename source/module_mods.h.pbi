@@ -3,34 +3,30 @@
   
   #SCANNER_VERSION = #PB_Editor_CompileCount
   
-  Structure backup  ;-- information about last backup if available
-    time.i
-    filename$
-  EndStructure
+  ; callbacks for mod events
   
-  Structure aux     ;-- additional information about mod
-    type$             ; "mod", "map", "dlc", ...
-    isVanilla.b       ; pre-installed mods should not be uninstalled
-    luaDate.i         ; date of info.lua (reload info when newer version available)
-    luaLanguage$      ; language of currently loaded info from mod.lua -> reload mod.lua when language changes
-    installDate.i     ; date of first encounter of this file (added to TPFMM)
-    repoTimeChanged.i ; timechanged value from repository if installed from repo (if timechanged in repo > timechanged in mod: update available
-    tfnetID.i         ; entry ID in transportfever.net download section
-    workshopID.q      ; fileID in Steam Workshop
-    installSource$    ; name of install source (workshop, tpfnet)
-    *link_tfnetMod         ; (temp) link to mod in repository
-    *link_workshopMod      ; (temp) link to mod in repository
-    sv.i              ; scanner version, rescan if newer scanner version is used
-    hidden.b          ; hidden from overview ("visible" in mod.lua)
-    backup.backup     ; backup information (local)
-    luaParseError.b   ; set true if parsing of mod.lua failed
-  EndStructure
+  Enumeration
+    #EventNewMod
+    #EventRemoveMod
+    #EventStopDraw ; used to send multiple mods or backups in sequence
+    #EventWorkerStarts
+    #EventWorkerStops
+    #EventProgress
+    #EventNewBackup
+    #EventRemoveBackup
+    #EventClearBackups
+  EndEnumeration
+  Global EventArraySize = #PB_Compiler_EnumerationValue -1
   
-  ; as saved in settings.lua
-  Structure modSetting
-    value$            ; single value
-    List values$()    ; table type value
-  EndStructure
+  
+  Prototype callbackNewMod(*mod)
+  Prototype callbackRemoveMod(*mod)
+  Prototype callbackStopDraw(stop)
+  Prototype callbackNewBackup(*backup)
+  Prototype callbackRemoveBackup(*backup)
+  Prototype callbackClearBackups()
+  
+  ;{ modSettings Structures
   
   ; a single value for table-type setting definition in mod.lua
   Structure tableValue
@@ -56,7 +52,15 @@
     im.i              ; image # 
   EndStructure
   
+  ; as saved in settings.lua
+  Structure modSetting ; only used in "modSettings" window (for display) and luaParser (for reading)
+    value$            ; single value
+    List values$()    ; table type value
+  EndStructure
   
+  ;}
+  
+  ;{ Author Structure
   Structure author  ;-- information about author
     name$             ; name of author
     role$             ; CREATOR, CO_CREATOR, TESTER, BASED_ON, OTHER
@@ -65,108 +69,185 @@
     steamId.q         ; SteamID
     steamProfile$     ; Steam profile link
   EndStructure
+  ;}
   
-  Structure dependency ;-- dependency information
-    mod$            ; folder name
-    version.i       ; minorVersion
-    steamId.q       ; steam workshop ID
-    tfnetId.i       ; transportfever.net ID
-    exactMatch.b    ; is only exact version match allowed?
-  EndStructure
+  ;{ Interfaces
   
-  Structure mod           ;-- information about mod/dlc
-    tpf_id$              ; folder name in game: author_name_version or steam workshop ID
-    uuid$                   ; Universally unique identifier for a single mod (all versions of mod on all online sources)
-    name$                   ; name of mod
-    majorVersion.i          ; first part of version number, identical to version in ID string
-    minorVersion.i          ; latter part of version number
-    version$                ; version string: major.minor(.build)
-    severityAdd$            ; potential impact to game when adding mod
-    severityRemove$         ; potential impact to game when removeing mod
-    description$            ; optional description
-    List authors.author()   ; information about author(s)
-    List tags$()            ; list of tags
-    minGameVersion.i        ; minimum required build number of game
-    List dependencies.dependency()    ; list of required mods (folder name of required mod)
-    url$                    ; website with further information
+  Interface LocalMod
+    ; get
+    getID.s()
+    getFoldername.s()
+    getName.s()
+    getVersion.s()
+    getDescription.s()
+    getAuthorsString.s()
+    getTags.s()
+    getDownloadLink.s()
+    getRepoMod()
+    getRepoFile()
+    getSize(refresh=#False)
+    getWebsite.s()
+    getTfnetID()
+    getWorkshopID.q()
+    getSettings(List *settings.modLuaSetting())
+    getInstallDate()
+    getPreviewImage()
     
-    List settings.modLuaSetting() ; mod settings (optional)
-    aux.aux                 ; auxiliary information
-  EndStructure
+    ; set
+    setName(name$)
+    setDescription(description$)
+    setMinorVersion(version)
+    setHidden(hidden)
+    setTFNET(id)
+    setWorkshop(id.q)
+    setLuaDate(date)
+    setLuaLanguage(language$)
+    
+    ; add to / clear / sort lists
+    addAuthor()
+    clearAuthors()
+    addTag(tag$)
+    clearTags()
+    addDependency(dependency$)
+    clearDependencies()
+    addSetting()
+    clearSettings()
+    sortSettings()
+    
+    ; check
+    isVanilla()
+    isWorkshop()
+    isStagingArea()
+    isHidden()
+    isDeprecated()
+    isLuaError()
+    isUpdateAvailable()
+    canBackup()
+    canUninstall()
+    hasSettings()
+    
+    ; other
+    countAuthors()
+    getAuthor(n)
+    countTags()
+    getTag.s(n)
+    
+  EndInterface
   
-  Structure backupInfo
-    name$
-    version$
-    author$
-    tpf_id$
-    filename$
-    time.i
-    size.q
-    checksum$
-  EndStructure
+  Interface BackupMod
+    getFilename.s()
+    getFoldername.s()
+    getName.s()
+    getVersion.s()
+    getAuthors.s()
+    getDate.i()
+    isInstalled.b()
+    install()
+    delete()
+  EndInterface
+  ;}
   
-  Structure backupInfoLocal Extends backupInfo
-    installed.b
-  EndStructure
+  ;{ Functions
+  ; static functions:
+  Declare freeAll()   ; free all mods in map
+  Declare saveList()  ; save list of current mods to json
+  Declare generateID(*mod, id$ = "")
+  Declare.s getModFolder(id$="") ; location on disc, depending on "workshop, staging area, manual mod"
+  Declare stopQueue(timeout = 5000)
   
-  
-  Global isLoaded.b
-  Global working.b
-  
-  
-  ; mod functions:
-  
-  Declare modCountAuthors(*mod.mod)
-  Declare modGetAuthor(*mod.mod, n.i, *author.author)
-  Declare modCountTags(*mod.mod)
-  Declare.s modGetTag(*mod.mod, n.i)
-  Declare.s modGetTags(*mod.mod)
-  
-  ; mod-list functions:
-  
-  
-  Declare register(window, gadgetModList, gadgetFilterString, gadgetFilterHidden, gadgetFilterVanilla, gadgetFilterFolder)
-  
-  Declare init()    ; allocate new mod structure, return *mod
-  Declare freeAll() ; free all mods in map
-  Declare saveList()
-  
-  Declare generateID(*mod.mod, id$ = "")
-  
-  Declare.s getModFolder(id$ = "", type$ = "mod")
-  
-  ; required interfaces:
-  ; install(*data) - extract an archive to the game folder
-  ; uninstall(*data) - remove a mod folder from the game
-  ; 
-  ; download(*data) - provided by repository module! -> dowloads file to temp dir and calls install procedure
-  
-  ; check mod functions:
-  
-  Declare canUninstall(*mod.mod)
-  Declare canBackup(*mod.mod)
-  Declare isInstalledByRemote(source$, id)
-  Declare isInstalled(id$)
-  Declare.s getDownloadLink(*mod.mod)
-  
-  Declare getBackupList(List backups.backupInfoLocal(), filter$="")
-  Declare backupDelete(file$)
-  Declare.s getBackupFolder()
-  Declare moveBackupFolder(newFolder$)
-  
-  ; actions
-  Declare load()                ; load mods.json and find installed mods
+  ; actions - all actions will be handled by mod main thread
+  Declare load(async=#True)     ; load mods.json and find installed mods
   Declare install(file$)        ; check and extract archive to game folder
   Declare uninstall(folderID$)  ; remove mod folder from game, maybe create a security backup by zipping content
   Declare backup(folderID$)     ; backup installed mod
-  Declare update(folderID$)
+  Declare update(folderID$)     ; request update from repository and install
   
-  ; export
-  Declare getMods(List *mods.mod())
-  Declare exportList(all=#False)
+  ; backup static functions
+  Declare.s backupsGetFolder()
+  Declare backupsMoveFolder(newFolder$)
+  Declare backupsClearFolder()
+  Declare backupsScan()
   
-  ; display callbacks
-  Declare displayMods()
+  ; backup methods
+  Declare.s backupGetFilename(*backup.BackupMod)
+  Declare.s backupGetFoldername(*backup.BackupMod)
+  Declare.s backupGetName(*backup.BackupMod)
+  Declare.s backupGetVersion(*backup.BackupMod)
+  Declare.s backupGetAuthors(*backup.BackupMod)
+  Declare.i backupGetDate(*backup.BackupMod)
+  Declare.b backupIsInstalled(*backup.BackupMod)
+  Declare backupInstall(*backup.BackupMod)
+  Declare backupDelete(*backup.BackupMod)
   
-  Declare getPreviewImage(*mod.mod, original=#False)
+  ; mod static functions:
+  Declare getMods(List *mods())
+  Declare getModByID(id$, exactMatch.b=#True)
+  Declare isInstalled(id$)
+  
+  ; mod methods
+  ; get
+  Declare.s modGetID(*mod)
+  Declare.s modGetFoldername(*mod)
+  Declare.s modGetName(*mod)
+  Declare.s modGetVersion(*mod)
+  Declare.s modGetDescription(*mod)
+  Declare.s modGetAuthorsString(*mod)
+  Declare.s modGetTags(*mod)
+  Declare.s modGetDownloadLink(*mod)
+  Declare modGetRepoMod(*mod)
+  Declare modGetRepoFile(*mod)
+  Declare modGetSize(*mod, refresh=#False)
+  Declare.s modGetWebsite(*mod)
+  Declare modGetTfnetID(*mod)
+  Declare.q modGetWorkshopID(*mod)
+  Declare modGetSettings(*mod, List settings.modLuaSetting())
+  Declare modGetInstallDate(*mod)
+  Declare modGetPreviewImage(*mod)
+  
+  ; set
+  Declare modSetName(*mod, name$)
+  Declare modSetDescription(*mod, description$)
+  Declare modSetMinorVersion(*mod, version)
+  Declare modSetHidden(*mod, hidden)
+  Declare modSetTFNET(*mod, id)
+  Declare modSetWorkshop(*mod, id.q)
+  Declare modSetLuaDate(*mod, date)
+  Declare modSetLuaLanguage(*mod, language$)
+  
+  ; add to / clear / sort lists
+  Declare modAddAuthor(*mod)
+  Declare modClearAuthors(*mod)
+  Declare modAddTag(*mod, tag$)
+  Declare modClearTags(*mod)
+  Declare modAddDependency(*mod, dependency$)
+  Declare modClearDependencies(*mod)
+  Declare modAddSetting(*mod)
+  Declare modClearSettings(*mod)
+  Declare modSortSettings(*mod)
+  
+  ; check
+  Declare modIsVanilla(*mod)
+  Declare modIsWorkshop(*mod)
+  Declare modIsStagingArea(*mod)
+  Declare modIsHidden(*mod)
+  Declare modIsDecrepated(*mod)
+  Declare modIsLuaError(*mod)
+  Declare modIsUpdateAvailable(*mod)
+  Declare modCanBackup(*mod)
+  Declare modCanUninstall(*mod)
+  Declare modHasSettings(*mod)
+  
+  ; other
+  Declare modCountAuthors(*mod)
+  Declare modGetAuthor(*mod, n.i)
+  Declare modCountTags(*mod)
+  Declare.s modGetTag(*mod, n.i)
+  
+  ; Bind Callback Events
+  Declare BindEventCallback(Event, *callback)
+  Declare BindEventPost(ModEvent, WindowEvent, *callback)
+  
+  ;}
 EndDeclareModule
+
+

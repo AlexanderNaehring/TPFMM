@@ -9,9 +9,10 @@
   
 EndDeclareModule
 
- 
+XIncludeFile "module_debugger.pbi"
 
 Module instance
+  UseModule debugger
   #BufferSize = 1024
   
   CompilerIf Not  #PB_Compiler_Thread 
@@ -38,7 +39,7 @@ Module instance
           received$ + PeekS(*buffer, len, #PB_UTF8)
         Until len < #BufferSize
         
-        Debug "instance::listener() - received: "+received$
+        deb("instance:: received: "+received$)
         ; send received text to callback
         If callback
           callback(received$)
@@ -59,7 +60,7 @@ Module instance
       _port = port
       callback = receiveFn
       
-      _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP, "127.0.0.1")
+      _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP|#PB_Network_IPv4, "127.0.0.1")
       If _server
         _stop = #False
         _thread = CreateThread(@listener(), _server)
@@ -68,6 +69,8 @@ Module instance
           CloseNetworkServer(_server)
           _server = #Null
         EndIf
+      Else
+        Debug "could not create server on port "+_port
       EndIf
       
       If _server And _thread
@@ -120,7 +123,6 @@ CompilerIf #PB_Compiler_IsMainFile
   EndProcedure
   
   Procedure receiveCallback(text$)
-    Debug "callback: "+text$
     SetGadgetText(0, "Got a message: "+text$)
   EndProcedure
   
@@ -137,7 +139,6 @@ CompilerIf #PB_Compiler_IsMainFile
     ForEver
   Else
     ; Either another instance is running or port is blocked by another program...
-    Debug "send message"
     instance::sendString("This is a test!")
   EndIf
 

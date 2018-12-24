@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="64"
+   height="64"
+   viewBox="0 0 64.000001 64.000001"
+   id="svg4194"
+   version="1.1"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   sodipodi:docname="saves.svg"
+   inkscape:export-filename="saves.png"
+   inkscape:export-xdpi="60"
+   inkscape:export-ydpi="60">
+  <defs
+     id="defs4196" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="5.6"
+     inkscape:cx="-3.8622532"
+     inkscape:cy="23.963442"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1769"
+     inkscape:window-height="1178"
+     inkscape:window-x="143"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata4199">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,0)">
+    <g
+       id="g4529"
+       transform="matrix(1.7339992,0,0,1.7339992,-43.444235,-76.898463)"
+       style="stroke-width:0.57670152">
+      <path
+         id="path4186"
+         d="m 27.861048,45.500864 c -0.915871,0 -1.653286,0.737415 -1.653286,1.653289 v 31.295514 c 0,0.91588 0.737415,1.65329 1.653286,1.65329 H 59.15656 c 0.91588,0 1.65329,-0.73741 1.65329,-1.65329 V 51.152055 l -5.65119,-5.651191 z"
+         style="fill:#2f4763;fill-opacity:1;stroke:none;stroke-width:0.12302966;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         inkscape:connector-curvature="0" />
+      <path
+         id="path4182"
+         d="m 35.38432,45.500864 v 8.146491 c 0,1.356255 1.09203,2.447684 2.44828,2.447684 h 12.73567 c 1.35626,0 2.44829,-1.091429 2.44829,-2.447684 v -8.146491 z m 9.87994,1.019217 h 4.76698 v 8.789602 h -4.76698 z"
+         style="fill:#dcdcdc;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.12302966;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         inkscape:connector-curvature="0" />
+      <path
+         id="rect4136"
+         d="m 32.78294,58.781404 h 20.88517 c 0.91587,0 1.65329,0.737416 1.65329,1.653287 v 16.752266 c 0,0.91587 -0.73742,1.65328 -1.65329,1.65328 H 32.78294 c -0.91587,0 -1.65329,-0.73741 -1.65329,-1.65328 V 60.434691 c 0,-0.915871 0.73742,-1.653287 1.65329,-1.653287 z"
+         style="fill:#f0f0f0;fill-opacity:1;stroke:none;stroke-width:0.12302966;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         inkscape:connector-curvature="0" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:125%;font-family:Arial;-inkscape-font-specification:'Arial, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2f4763;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="14.144532"
+       y="47.831993"
+       id="text821"><tspan
+         sodipodi:role="line"
+         id="tspan819"
+         x="14.144532"
+         y="47.831993"
+         style="font-size:18.66666603px">.sav</tspan></text>
+  </g>
+</svg>

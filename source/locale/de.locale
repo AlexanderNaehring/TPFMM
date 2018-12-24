@@ -1,7 +1,14 @@
 ﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
-version     = 1740
+
+[generic]
+yes     = Ja
+no      = Nein
+error   = Fehler
+success = Erfolgreich
+folder  = Ordnername
+by      = von
 
 [menu]
 file              = Datei
@@ -18,13 +25,13 @@ update            = Aktualisiere TPFMM
 license           = Lizenz
 show_backups      = Öffne Ordner mit Sicherheitskopien
 show_downloads    = Öffne Download-Ordner
-repository        = Repository
-repo_refresh      = Aktualisiere Repository
-repo_clear        = Repository Cache für Vorschaubilder leeren
 log               = Zeige Log Datei
 pack              = Mod Pakete
 pack_new          = Erstelle neues Mod Paket
 pack_open         = Öffne ein Mod Paket
+share_selected    = Teile eine Liste aller ausgewählten Mods
+share_filtered    = Teile eine Liste aller aktuell in der Liste angezeigten Mods
+share_all         = Teile eine Liste aller Mods, inklusive der Versteckten
 
 [main]
 mods            = Modifikationen
@@ -32,11 +39,12 @@ dlcs            = Herunterladbare Inhalte (DLC)
 repository      = Online Datenbank
 backups         = Sicherheitskopien
 maps            = Karten
+saves           = Spielstände
 name            = Name
 author          = Ersteller
 category        = Kategorie
 version         = Version
-mod_options     = ✇
+mod_options     = ✍
 new_mod         = Neue Mod
 start_tf        = Starte Transport Fever
 management      = Mod Verwaltung
@@ -46,29 +54,19 @@ uninstall       = Entferne Modifikation
 uninstall_pl    = Entferne Modifikationen
 backup          = Erstelle Sicherheitskopie
 backup_pl       = Erstelle Sicherheitskopien
-information     = Mod Informationen
-settings        = Mod Einstellungen
 search_online   = Suche Mod in Repository
-download_current = Lade aktuelle Version herunter
-filter          = Filter Modifikationen
 filter_hidden   = Zeige Versteckte
 filter_vanilla  = Zeige Vanilla
-mod_website     = Öffne Website
-search_online   = Suche Mod in Repository
-show_online     = Zeige Mod in Repository
-load_update     = Lade und installiere aktuelle Version
-open_folder     = Öffne Mod Ordner
+website         = Website
 select_files    = Wähle Dateien aus
 select_files_text = Welche Dateien sollen heruntergeladen und installiert werden?
 cancel          = Abbrechen
 download        = Herunterladen
+repo_refresh    = Repositories aktualisieren
 repo_clear_title= Repository Cache
 repo_clear_text = Der Reposiotory Cache für Vorschaubilder wurde geleert.
+install_date    = Installiert am %dd.%mm.%yyyy
 backup_manage   = Verwalte Sicherheitskopien
-backup_refresh  = Liste erneut laden
-backup_restore  = Sicherung wiederherstellen
-backup_delete   = Sicherung entfernen
-backup_folder   = Ordner mit Sicherheitskopien öffnen
 backup_file     = Datei
 backup_files    = Dateien
 backup_expand   = Alle ausklappen
@@ -76,13 +74,67 @@ backup_collapse = Alle einklappen
 backup_check    = Alle markieren
 backup_clear    = Markierungen aufheben
 backup_filter   = Durchsuche Sicherungen
+backup_date     = Sicherheitskopie vom %dd.%mm.%yyyy
 add_to_pack     = Zu Mod-Paket hinzufügen
+save_click_open = Hier klicken, um einen Spielstand zu öffnen
+save_start      = Bitte zuerst einen Spielstand öffnen ↴
+help            = Hilfe/Benutzerhandbuch
+
+[hint]
+mods_filter     = Mods filtern / suchen
+mods_sort       = Mods sortieren
+mods_update     = Ausgewählte Mods aktualisieren
+mods_backup     = Ausgewählte Mods sichern
+mods_uninstall  = Ausgewählte Mods entfernen
+mods_share      = Modliste exportieren
+mods_update_all = Aktualisiere alle Mods, für die eine neue Version vorliegt
+
+mod_settings    = Öffne Mod Einstellungen
+mod_information = Zeige Mod Informationen
+mod_website     = Öffne Website
+mod_open_folder = Öffne Ordner
+mod_update      = Mod aktualisieren
+mod_backup      = Mod sichern
+mod_uninstall   = Mod entfernen
+mod_source_vanilla  = Vorinstallierte "Vanilla" Mod
+mod_source_workshop = Workshop Modifikation, verwaltet von Steam
+mod_source_staging  = Mod in der Staging-Area
+mod_source_manual   = Manuell installierte Mod, kann von TPFMM verwaltet werden
+mod_has_settings      = Mod-Einstellungen werden unterstützt
+mod_update_available  = Aktualisierung verfügbar
+mod_up2date           = Modifikation ist auf dem aktuellen Stand
+mod_deprecated  = Mod-Format ist veraltet und der Mod wird eventuell von Transport Fever nicht korrekt erkannt.
+mod_lua_error   = Feler beim einlesen der mod.lua Datei
+
+repo_filter     = Mods filtern / suchen
+repo_sort       = Mods sortieren
+repo_source     = {repo_name}
+repo_installed  = Mod ist installiert
+repo_download   = Diese Mod herunterladen
+repo_website    = Öffne Website
+repo_refresh    = Repositoroies aktualisieren
+
+backup_filter   = Sicherungen filtern
+backup_sort     = Sicherungen sortieren
+backup_restore  = Sicherung wiederherstellen
+backup_delete   = Sicherung entfernen
+backup_folder   = Ordner mit Sicherheitskopien öffnen
+backup_refresh  = Liste von Sicherungen aktualisieren
+
+save_installed      = Mod ist installiert
+save_not_installed  = Mod ist nicht installiert
+save_online         = Mod kann heruntergeladen werden
+save_not_online     = Dieser Mod konnte online nicht gefunden werden
+save_open           = Einen Spielstand öffnen
+save_download       = Alle nicht installierten Mods herunterladen, die online verfügbar sind
+
 
 [info]
 title           = Mod Informationen
 description     = Mod Beschreibung
 info            = Mod Informationen
 uuid            = Universell einzigartige ID:
+id              = ID:
 folder          = Ordnername:
 tags            = Tags:
 dependencies    = Abhängigkeiten:
@@ -101,6 +153,7 @@ cancel          = Änderungen verwerfen
 [settings]
 title           = TPFMM Einstellungen
 general         = Allgemeine Einstellungen
+backup          = Sicherheitskopien
 repository      = Online Repository
 path            = Transport Fever Verzeichnis
 text            = Wähle den Transport Fever Installationspfad.\nBeachte, dass TPFMM Schreibrechte für den Ordner benötigt.
@@ -118,11 +171,19 @@ restore         = Merke Fensterposition
 restore_tip     = TPFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TPFMM
 update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.transportfevermods.com eigenständig auf neue Versionen überprüft werden.
-backup_after_install    = Automatische Sicherheitskopie von Mods nach Installation
-backup_before_update    = Automatische Sicherheitskopie von Mods vor Update
-backup_before_uninstall = Automatische Sicherheitskopie von Mods vor Löschen
+backup_auto_create_label = Erstelle automatische Sicherung von Mods
+backup_after_install    = nach der Installation
+backup_before_update    = vor einem Update
+backup_before_uninstall = vorm Löschen
 backup_change_folder    = Ordner für Sicherheitskopien ändern
-backup_change_folder_wait = Ordner wird verschoben...
+backup_change_folder_wait = Ordner wird verschoben ...
+backup_auto_delete          = Automatisches Löschen von Sicherungen
+backup_auto_delete_never    = niemals
+backup_auto_delete_1week    = nach einer Woche
+backup_auto_delete_1month   = nach einem Monat
+backup_auto_delete_3months  = nach drei Monaten
+backup_auto_delete_6months  = nach sechs Monaten
+backup_auto_delete_1year    =  nach einem Jahr
 versioncheck    = Nutze Versionsvergleich für Update
 versioncheck_tip = When aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
 locale          = Lokalisierung (Sprache)
@@ -137,19 +198,23 @@ proxy_server    = Server
 proxy_user      = Nutzername
 proxy_password  = Passwort
 integrate                   = Desktop Integration
-integrate_text              = Mit der Desktop Integration kann dabei helfen die Installation von Mods aus dem Datei-Explorer sowie von Webseiten zu vereinfachen.
+integrate_text              = Die Desktop Integration kann dabei helfen, die Installation von Mods aus dem Datei-Explorer sowie von Webseiten zu vereinfachen.
 integrate_register_protocol = Registriere tpfmm:// Protokoll
 integrate_register_context  = Füge Kontext-Menü zu Archiv-Dateien hinzu
+repository_url          = URL
+repository_name         = Name
+repository_maintainer   = Verwalter
+repository_mods         = Mods
+repository_source       = Quell-ID
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
-repository_name         = Name:
-repository_curator      = Verwalter:
-repository_description  = Beschreibung:
-color                       = Farbeinstellungen
-color_mod_up_to_date        = Mod aktuell
-color_mod_update_available  = Mod Update verfügbar
-color_mod_lua_error         = LUA Fehler beim lesen
-color_mod_hidden            = Mod versteckt
+repository_input_url    = Bitte gebe die URL für das Repository ein
+repository_refresh      = Repositories aktualisieren
+repository_clear_thumb  = Vorschaubilder löschen
+repository_thumb_cleared  = Zwischenspeicher für Vorschaubilder erfolgreich gelöscht.
+repository_usecache     = Nutze lokalen Cache
+repository_usecache_tip = Zeige die letzte lokale Version der Online-Datenbank, wenn keine Internetverbindung besteht.
+repository_not_loaded   = Nicht geladen
 
 [management]
 install       = Füge '{name}' zu Transport Fever hinzu
@@ -196,14 +261,31 @@ more_author   = Zeige alle Mods von {author}
 installed_all = Zeige Alle
 installed_yes = Zeige nur installierte
 installed_no  = Zeige nur nicht installierte
-update        = Update
-update_text   = Neue Version von TPFMM verfügbar.\nJetzt herunterladen?
 disabled_update = Bitte benutze die neueste Version von TPFMM
 download_start  = Starte Download '{modname}'...
 download_finish = Herunterladen erfolgreich
 download_fail   = Fehler beim Herunterladen von {modname}
 download_429    = Zu viele Anfragen, bitte später erneut versuchen
 downloading     = Lade '{modname}' herunter
+repository    = Repository
+confirm_add   = Soll dieses Repository hinzugefügt werden?
+maintained_by = verwaltet von
+description = Beschreibung:
+info_url    = Weiterführende Informationen:
+terms       = Nutzungsbedingungen:
+mod_count   = Mods im Repository.
+error             = Kann Repository nicht hinzufügen
+error_download    = Herunterladen fehlgeschlagen. Überprüfe die URL auf Fehler und stelle sicher, dass TPFMM Zugriff zum Internet hat.
+error_json        = Das Repository gibt kein korrektes JSON.
+error_dup_url     = Ein Repository mit dieser Adresse ist bereits geladen.
+error_no_source   = Das Repository gibt keine ID an. Bitte kontaktiere den Verwalter des Repositories.
+error_dup_source  = Die Repository ID ist identisch mit einem bereits geladenen Repository.\nDie ID muss einzigartig sein.\nEntweder ist dieses Repository bereits geladen, oder der Verwalter muss die ID ändern.
+error_no_mods     = TPFMM kann keine Mods in dem Repository finden. Bitte kontaktiere den Verwalter.
+error_unknown     = Das Repository konnte wegen einem unbekannten Fehler nicht hinzugefügt werden. Bitte versuche es erneut oder sende einen Fehlerbericht.
+
+[update]
+available        = Neue Version von TPFMM verfügbar.
+available_text   = {version} ist verfügbar.\nSoll die Website zum herunterladen der neuen Version jetzt geöffnet werden?
 
 [mods]
 filter_all      = Zeige Alle Ordner
@@ -224,10 +306,65 @@ mod         = Mod
 yes         = Ja
 no          = Nein
 available   = verfügbar
-undefined   = nicht angegeben
+undefined   = —
 invalid     = ungültig
 pack_file   = TPFMM Paketdatei
 tip         = Ziehe Mods vom Hauptfenter nach hier, um sie dem Paket hinzuzufügen.
+
+[save]
+open_title  = Spielstand öffnen
+save        = Spielstand
+year        = Startjahr
+difficulty  = Schwierigkeitsgrad
+mapsize     = Kartengröße
+money       = Geld
+filesize    = Dateigröße
+filesize_uncompressed = Dateigröße (unkomprimiert)
+loading             = Lade Spielstand...
+error_not_save_file = Datei ist kein Transport Fever Spielstand.
+error_version       = Spielstand Version {version} nicht unterstützt.
+error_mod_mismatch  = Fehler beim auslesen der Mods (number mismatch).
+error_no_mods       = Dieser Spielstand hat keine aktiven Mods.
+error_unknown       = Unbekannter Fehler beim Lesen des Spielstandes.
+error_read_file     = Datei konnte nicht geöffnet werden: {filename}
+difficulty0 = Einfach
+difficulty1 = Mittel
+difficulty2 = Schwer
+
+[progress]
+please_wait = Bitte warten...
+start       = Starte TPFMM...
+init        = Initialisiere...
+load_mods   = Modifikationen werden geladen...
+load_repo   = Repositories werden geladen...
+open_window = Fenster wird geöffnet...
+close       = Schließe TPFMM...
+stop_worker = Stoppe Hintergrundaufgaben...
+save_list   = Speichere Mod Liste...
+cleanup     = Aufräumen...
+goodbye     = Auf Wiedersehen!
+force_close = Schließen erzwingen
+
+[dialog]
+sort_by       = Sortiere nach
+mod_name      = Mod Name
+author_name   = Autor
+install_date  = Installationsdatum
+folder_size   = Ordnergröße
+folder_name   = Ordername
+updated       = letztem Update
+backup_date   = Backup Datum
+mods_deprecated = Veraltete Mods
+mods_vanilla  = Vanilla Mods
+mods_hidden   = Versteckte Mods
+mods_workshop = Steam Workshop Mods
+mods_staging  = Staging Area Mods
+updated_not_before  = Zuletzt aktualisiert ab dem
+backup_on     = Gesichert am
+
+[share]
+title       = Liste der Modifikationen
+copyright   = Erstellt vom <a href='https://transportfevermods.com/'>Transport Fever Mod Manager (TPFMM)</a>.<br />{TPFMM-version} &copy; Alexander Nähring, München, Deutschland
 
 [tags]
 mod         = Modifikation

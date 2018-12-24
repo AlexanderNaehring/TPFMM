@@ -2,13 +2,15 @@
 DeclareModule modInformation
   EnableExplicit
   
-  Declare modInfoShow(*mod.mods::mod, parentWindowID=0)
+  Declare modInfoShow(*mod, parentWindowID=0)
   
 EndDeclareModule
 
 XIncludeFile "module_modSettings.pbi"
 
 Module modInformation
+  UseModule debugger
+  UseModule locale
   
   ; mod info window
   Structure modInfoGadget
@@ -60,7 +62,7 @@ Module modInformation
   Global xml
   xml = CatchXML(#PB_Any, ?dialogXML, ?dialogXMLend - ?dialogXML)
   If Not xml Or XMLStatus(xml) <> #PB_XML_Success
-    debugger::add("modInfo:: - ERROR (XML): could not read window definition")
+    deb("modInfo:: could not read window definition")
   EndIf
   
   Procedure modInfoClose()
@@ -182,35 +184,35 @@ Module modInformation
     
   EndProcedure
   
-  Procedure modInfoShow(*mod.mods::mod, parentWindowID=0)
+  Procedure modInfoShow(*mod.mods::LocalMod, parentWindowID=0)
     If Not *mod
       ProcedureReturn #False
     EndIf
-    debugger::add("modInformation::modInfoShow()")
     
     Protected *data.modInfoWindow
     *data = AllocateStructure(modInfoWindow)
     
-    *data\modFolder$ = mods::getModFolder(*mod\tpf_id$, *mod\aux\type$)
+    *data\modFolder$ = mods::getModFolder(*mod\getID())
     
     ; manipulate xml before opening dialog
     Protected *nodeBase, *node, *nodeBox
     If IsXML(xml)
       ; fill authors
-      Protected count, i, author.mods::author
+      Protected count, i, *author.mods::author
       *nodeBase = XMLNodeFromID(xml, "infoBoxAuthors")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
         count = mods::modCountAuthors(*mod)
         For i = 0 To count-1
-          If Not mods::modGetAuthor(*mod, i, @author)
+          *author = mods::modGetAuthor(*mod, i)
+          If Not *author
             Continue
           EndIf
           AddElement(*data\authors())
-          *data\authors()\name$ = author\name$
-          *data\authors()\role$ = author\role$
-          *data\authors()\tfnetId = author\tfnetId
-          *data\authors()\steamId = author\steamId
+          *data\authors()\name$ = *author\name$
+          *data\authors()\role$ = *author\role$
+          *data\authors()\tfnetId = *author\tfnetId
+          *data\authors()\steamId = *author\steamId
           
           *node = *nodeBase
           ; new container
@@ -238,18 +240,18 @@ Module modInformation
           *node = CreateXMLNode(*nodeBox, "text", -1)
           *data\authors()\gadgetAuthor\name$ = "author-"+Str(*data\authors())
           SetXMLAttribute(*node, "name", "author-"+Str(*data\authors()))
-          SetXMLAttribute(*node, "text", author\name$)
+          SetXMLAttribute(*node, "text", *author\name$)
           
           *node = CreateXMLNode(*nodeBox, "text", -1)
           *data\authors()\gadgetRole\name$ = "role-"+Str(*data\authors())
           SetXMLAttribute(*node, "name", "role-"+Str(*data\authors()))
-          SetXMLAttribute(*node, "text", author\role$)
+          SetXMLAttribute(*node, "text", *author\role$)
           
           
-          If author\tfnetId
-            *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(author\tfnetId)+"/"
-          ElseIf author\steamId
-            *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(author\steamId)+"/"
+          If *author\tfnetId
+            *data\authors()\url$      = "https://www.transportfever.net/index.php/User/"+Str(*author\tfnetId)+"/"
+          ElseIf *author\steamId
+            *data\authors()\url$      = "http://steamcommunity.com/profiles/"+Str(*author\steamId)+"/"
           EndIf
         Next
       EndIf
@@ -260,25 +262,37 @@ Module modInformation
       *nodeBase = XMLNodeFromID(xml, "infoBoxSources")
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
-        If *mod\aux\tfnetID
-          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
-          SetXMLAttribute(*node, "name", "source-tpfnet")
-          SetXMLAttribute(*node, "text", "TransportFever.net")
-          AddElement(*data\sources())
-          *data\sources()\name$ = "source-tpfnet"
-          *data\sources()\url$  = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\aux\tfnetID+"/"
-        EndIf
-        If *mod\aux\workshopID
-          *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
-          SetXMLAttribute(*node, "name", "source-workshop")
-          SetXMLAttribute(*node, "text", "Workshop")
-          AddElement(*data\sources())
-          *data\sources()\name$ = "source-workshop"
-          *data\sources()\url$  = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\aux\workshopID
-        EndIf
+        ; TODO use foldername and repository information
+;         If *mod\getTfnetID()
+;           *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+;           SetXMLAttribute(*node, "name", "source-tpfnet")
+;           SetXMLAttribute(*node, "text", "TransportFever.net")
+;           AddElement(*data\sources())
+;           *data\sources()\name$ = "source-tpfnet"
+;           *data\sources()\url$  = "https://www.transportfever.net/filebase/index.php/Entry/"+*mod\getTfnetID()+"/"
+;         EndIf
+;         If *mod\getWorkshopID()
+;           *node = CreateXMLNode(*nodeBase, "hyperlink", -1)
+;           SetXMLAttribute(*node, "name", "source-workshop")
+;           SetXMLAttribute(*node, "text", "Workshop")
+;           AddElement(*data\sources())
+;           *data\sources()\name$ = "source-workshop"
+;           *data\sources()\url$  = "http://steamcommunity.com/sharedfiles/filedetails/?id="+*mod\getWorkshopID()
+;         EndIf
       EndIf
       
-      
+      ; check if image is available
+      Protected image
+      image = *mod\getPreviewImage()
+      *node = XMLNodeFromID(xml, "image")
+      If image
+        SetXMLAttribute(*node, "invisible", "no")
+        SetXMLAttribute(*node, "width", Str(ImageWidth(image)))
+        SetXMLAttribute(*node, "height", Str(ImageHeight(image)))
+      Else
+        SetXMLAttribute(*node, "invisible", "yes")
+        SetXMLAttribute(*node, "height", "0")
+      EndIf
       
       
       ; show window
@@ -292,18 +306,17 @@ Module modInformation
         Macro getGadget(gadget)
           *data\gadgets(gadget) = DialogGadget(*data\dialog, gadget)
           If *data\gadgets(gadget) = -1
-            debugger::add("modInformation::modInfoShow() - Error: could not get gadget '"+gadget+"'")
+            deb("modInformation:: could not get gadget '"+gadget+"'")
           EndIf
         EndMacro
         
         getGadget("top")
         getGadget("bar")
-        getGadget("name")
         getGadget("descriptionLabel")
         getGadget("description")
         getGadget("info")
-;         getGadget("uuidLabel")
-;         getGadget("uuid")
+        getGadget("idLabel")
+        getGadget("id")
         getGadget("folderLabel")
         getGadget("folder")
         getGadget("tagsLabel")
@@ -315,30 +328,36 @@ Module modInformation
         getGadget("size")
         getGadget("modSettings")
         getGadget("sourcesLabel")
+        getGadget("image")
         
         UndefineMacro getGadget
         
         ; set text
-        SetWindowTitle(*data\window, locale::l("info","title"))
-        SetGadgetText(*data\gadgets("descriptionLabel"),  locale::l("info", "description"))
-        SetGadgetText(*data\gadgets("info"),              locale::l("info", "info"))
-;         SetGadgetText(*data\gadgets("uuidLabel"),         locale::l("info", "uuid"))
-        SetGadgetText(*data\gadgets("folderLabel"),       locale::l("info", "folder"))
-        SetGadgetText(*data\gadgets("tagsLabel"),         locale::l("info", "tags"))
-        SetGadgetText(*data\gadgets("dependenciesLabel"), locale::l("info", "dependencies"))
-;         SetGadgetText(*data\gadgets("filesLabel"),        locale::l("info", "files"))
-        SetGadgetText(*data\gadgets("sizeLabel"),         locale::l("info", "size"))
-        SetGadgetText(*data\gadgets("modSettings"),       locale::l("info", "mod_settings"))
-        SetGadgetText(*data\gadgets("sourcesLabel"),      locale::l("info", "sources"))
+        SetWindowTitle(*data\window, _("info_title"))
+        SetGadgetText(*data\gadgets("descriptionLabel"),  _("info_description"))
+        SetGadgetText(*data\gadgets("info"),              _("info_info"))
+        SetGadgetText(*data\gadgets("idLabel"),           _("info_id"))
+        SetGadgetText(*data\gadgets("folderLabel"),       _("info_folder"))
+        SetGadgetText(*data\gadgets("tagsLabel"),         _("info_tags"))
+        SetGadgetText(*data\gadgets("dependenciesLabel"), _("info_dependencies"))
+;         SetGadgetText(*data\gadgets("filesLabel"),        _("info_files"))
+        SetGadgetText(*data\gadgets("sizeLabel"),         _("info_size"))
+        SetGadgetText(*data\gadgets("modSettings"),       _("info_mod_settings"))
+        SetGadgetText(*data\gadgets("sourcesLabel"),      _("info_sources"))
         
         
-        SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
-        SetGadgetText(*data\gadgets("description"),       *mod\description$)
-;         SetGadgetText(*data\gadgets("uuid"),              *mod\uuid$)
-        SetGadgetText(*data\gadgets("folder"),            *mod\tpf_id$)
-        SetGadgetText(*data\gadgets("tags"),              mods::modGetTags(*mod))
-        SetGadgetText(*data\gadgets("size"),              misc::printSize(misc::getDirectorySize(*data\modFolder$)))
+;         SetGadgetText(*data\gadgets("name"),              *mod\name$+" (v"+*mod\version$+")")
+        SetGadgetText(*data\gadgets("description"),       *mod\getDescription())
+        SetGadgetText(*data\gadgets("id"),                *mod\getID())
+        SetGadgetText(*data\gadgets("folder"),            *mod\getFoldername())
+        SetGadgetText(*data\gadgets("tags"),              *mod\getTags())
+        SetGadgetText(*data\gadgets("size"),              misc::printSize(*mod\getSize(#True)))
         
+        If image
+          SetGadgetState(*data\gadgets("image"), ImageID(image))
+        EndIf
+        
+        SetWindowTitle(*data\window, *mod\getName()+" (v"+*mod\getVersion()+")")
         
         
         Static fontHeader, fontBigger
@@ -348,11 +367,6 @@ Module modInformation
         If Not fontBigger
           fontBigger = LoadFont(#PB_Any, misc::getDefaultFontName(), Round(misc::getDefaultFontSize()*1.4, #PB_Round_Nearest), #PB_Font_Bold)
         EndIf
-        
-        SetGadgetFont(*data\gadgets("name"), FontID(fontHeader))
-        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_FrontColor, RGB($FF, $FF, $FF))
-        SetGadgetColor(*data\gadgets("name"), #PB_Gadget_BackColor, RGB(47, 71, 99))
-        
         
         ; bind events
         BindEvent(#PB_Event_CloseWindow, @ModInfoClose(), *data\window)
@@ -372,7 +386,7 @@ Module modInformation
           *data\authors()\thread = CreateThread(@modInfoAuthorImage(), *data\authors())
         Next
         
-        If ListSize(*mod\settings()) > 0
+        If *mod\hasSettings()
           DisableGadget(*data\gadgets("modSettings"), #False)
           BindGadgetEvent(*data\gadgets("modSettings"), @modInfoShowSettings())
         EndIf
@@ -384,7 +398,7 @@ Module modInformation
         
         
         ; store all information attached to the window:
-        ; todo - create structure for modInfoWindow
+        ; todo create structure for modInfoWindow
         SetWindowData(*data\window, *data)
         
         
@@ -406,7 +420,7 @@ Module modInformation
         
         ProcedureReturn #True
       Else
-        debugger::add("modInformation::modInfoShow() - Error: "+DialogError(*data\dialog))
+        deb("modInformation:: "+DialogError(*data\dialog))
       EndIf
     EndIf
     ; failed to open window -> free data

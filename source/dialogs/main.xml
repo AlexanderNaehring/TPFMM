@@ -5,107 +5,128 @@
       <singlebox margin='top:-8,left:-8,right:-8,bottom:0' comment='place headerMain directly at window bounds'>
         <image name='headerMain' height='8' />
       </singlebox>
+
       <singlebox margin='top:0,left:-5,right:-5,bottom:0' comment='reduce margin around panel'>
-        <panel name='panel'>
-          <tab text='Modifications'>
-            <vbox expand='item:1'>
+        <hbox expand='item:2'>
+          <vbox expand='item:6' width='80' comment='nav-bar on left side'>
+            <buttonimage name='btnMods' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnOnline' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnBackups' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnMaps' flags='#PB_Button_Toggle' />
+            <buttonimage name='btnSaves' flags='#PB_Button_Toggle' />
+            <empty />
+            <buttonimage name='btnSettings' flags='' />
+            <buttonimage name='btnHelp' flags='' />
+          </vbox>
+          <multibox comment='main content area'>
+            <container name='containerMods' invisible='yes' flags='' > <!--#PB_Container_Flat-->
               <hbox expand='item:1'>
-                <listicon name='modList' flags='#PB_ListIcon_MultiSelect | #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
-                <vbox expand='no'>
-                  <frame name='modFilterFrame' text=' '>
-                    <vbox expand='no'>
-                      <hbox expand='item:1'>
-                        <string name='modFilterString' text=' ' />
-                        <button name='modFilterReset' text='X' />
-                      </hbox>
-                      <combobox name='modFilterFolder' />
-                      <hbox expand='equal'>
-                        <checkbox name='modFilterHidden' text=' ' />
-                        <checkbox name='modFilterVanilla' text=' ' />
-                      </hbox>
-                    </vbox>
-                  </frame>
-                  <image name='modPreviewImage' width='240' height='135' />
-                  <frame name='modManagementFrame' text=' '>
-                    <vbox expand='no'>
-                      <button name='modInformation' text=' ' />
-                      <button name='modSettings' text=' ' disabled='yes' />
-                      <button name='modUpdate' text=' ' />
-                      <button name='modBackup' text=' ' />
-                      <button name='modUninstall' text=' ' />
-                    </vbox>
-                  </frame>
-                </vbox>
-              </hbox>
-            </vbox>
-          </tab>
-          <tab text='Online Repositories'>
-            <vbox expand='item:1'>
-              <hbox expand='item:1'>
-                <listicon name='repoList' flags=' #PB_ListIcon_GridLines | #PB_ListIcon_FullRowSelect | #PB_ListIcon_AlwaysShowSelection' />
-                <vbox expand='no'>
-                  <frame name='repoFilterFrame' text=' '>
-                    <vbox expand='no'>
-                      <combobox name='repoFilterSources' />
-                      <combobox name='repoFilterTypes' />
-                      <combobox name='repoFilterInstalled' />
-                      <hbox expand='item:1'>
-                        <string name='repoFilterString' text=' '/>
-                        <button name='repoFilterReset' text='X' />
-                      </hbox>
-                    </vbox>
-                  </frame>
-                  <frame name='repoManagementFrame' text=' '>
-                    <vbox expand='no'>
-                      <button name='repoWebsite' text=' ' />
-                      <button name='repoInstall' text=' ' />
-                    </vbox>
-                  </frame>
-                  <image name='repoPreviewImage' width='210' height='118' />
-                </vbox>
-              </hbox>
-            </vbox>
-          </tab>
-          <tab text='Backups'>
-            <hbox expand='item:1'>
-              <vbox expand='item:1'>
-                <tree name='backupTree' flags='#PB_Tree_CheckBoxes|#PB_Tree_ThreeState' />
-                <hbox expand='item:2'>
-                  <hbox expand='equal'>
-                    <button name='backupExpand' text=' ' />
-                    <button name='backupCollapse' text=' ' />
-                    <button name='backupCheck' text=' ' />
-                    <button name='backupClear' text=' ' />
+                <canvas name='modList' flags='#PB_Canvas_Keyboard' />
+                <vbox expand='item:3'>
+                  <hbox expand='no' align='center'>
+                    <buttonimage name='modSort' />
+                    <buttonimage name='modFilter' />
                   </hbox>
+                  <vbox expand='no' comment='action for selected mods'>
+                    <buttonimage name='modUpdate' />
+                    <buttonimage name='modBackup' />
+                    <buttonimage name='modUninstall' />
+                  </vbox>
                   <empty />
+                  <vbox expand='no' comment='actions for all (visible) mods'>
+                    <buttonimage name='modShare' />
+                    <buttonimage name='modUpdateAll' />
+                  </vbox>
+                </vbox>
+              </hbox>
+            </container>
+
+            <container name='containerOnline' invisible='yes'>
+              <vbox expand='item:1'>
+                <hbox expand='item:1'>
+                  <canvas name='repoList' flags='#PB_Canvas_Keyboard' />
+                  <vbox expand='item:3'>
+                    <hbox expand='no' align='center'>
+                      <buttonimage name='repoSort' />
+                      <buttonimage name='repoFilter' />
+                    </hbox>
+                    <vbox expand='no' comment='action for selected items'>
+                      <buttonimage name='repoDownload' />
+                      <buttonimage name='repoWebsite' />
+                    </vbox>
+                    <empty />
+                    <vbox expand='no' comment='generic actions'>
+                      <buttonimage name='repoRefresh' />
+                    </vbox>
+                  </vbox>
                 </hbox>
               </vbox>
-              <vbox expand='no'>
-                <frame name='backupFrameFilter'>
-                  <hbox expand='item:1'>
-                    <string name='backupFilter' text=' ' />
-                    <button name='backupFilterReset' text='X' />
+            </container>
+
+            <container name='containerBackups' invisible='yes'>
+              <hbox expand='item:1'>
+                <canvas name='backupList' flags='#PB_Canvas_Keyboard' />
+                <vbox expand='item:3'>
+                  <hbox expand='no' align='center'>
+                    <buttonimage name='backupSort' />
+                    <buttonimage name='backupFilter' />
                   </hbox>
-                </frame>
-                <frame name='backupFrame' text=' ' width='210'>
-                  <vbox expand='no'>
-                    <!--<button name='backupRefresh' text=' ' />-->
-                    <button name='backupRestore' text=' ' />
-                    <button name='backupDelete' text=' ' />
-                    <button name='backupFolder' text=' ' />
+                  <vbox expand='no' comment='action for selected item'>
+                    <buttonimage name='backupRestore' />
+                    <buttonimage name='backupDelete' />
                   </vbox>
-                </frame>
+                  <empty />
+                  <vbox expand='no' comment='generic actions'>
+                    <buttonimage name='backupRefresh' />
+                    <buttonimage name='backupFolder' />
+                  </vbox>
+                </vbox>
+              </hbox>
+            </container>
+
+            <container name='containerMaps' invisible='yes'>
+            </container>
+
+            <container name='containerSaves' invisible='yes'>
+              <vbox expand='item: 2'>
+                <text name='saveName' text=' ' flags='#PB_Text_Center' />
+                <hbox expand='item: 1'>
+                  <vbox expand='item:1'>
+                    <canvas name='saveModList' flags='#PB_Canvas_Keyboard' />
+                    <gridbox columns='6'>
+                      <text name='saveLabelYear' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveYear' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelDifficulty' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveDifficulty' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelFileSize' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveFileSize' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelMapSize' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveMapSize' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelMoney' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveMoney' text=' ' flags='#PB_String_ReadOnly' />
+                      <text name='saveLabelFileSizeUncompressed' text=' ' flags='#PB_Text_Right' />
+                      <string name='saveFileSizeUncompressed' text=' ' flags='#PB_String_ReadOnly' />
+                    </gridbox>
+                  </vbox>
+                  <vbox expand='no'>
+                    <buttonimage name='saveOpen' text='Open Save' />
+                    <buttonimage name='saveDownload' />
+                  </vbox>
+                </hbox>
               </vbox>
-            </hbox>
-          </tab>
-        </panel>
+            </container>
+
+          </multibox>
+        </hbox>
+
       </singlebox>
-      <hbox expand='item:1' spacing='10'>
+      <hbox expand='item:2' spacing='10'>
+        <canvas name='workerCanvas' width='80' height='45' />
         <gridbox columns='3' colexpand='equal' rowexpand='no'>
-        <text name='progressRepoText' text=' ' flags='#PB_Text_Right' />
           <progressbar name='progressRepoBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
-          <text name='progressModText' text=' ' flags='#PB_Text_Right' />
+          <text name='progressRepoText' text=' ' flags_='#PB_Text_Right' />
           <progressbar name='progressModBar' min='0' max='100' value='0' invisible='yes' colspan='2' />
+          <text name='progressModText' text=' ' flags_='#PB_Text_Right' />
         </gridbox>
         <vbox expand='item:1'>
           <empty />
@@ -120,10 +141,9 @@
   <window id='#PB_Any' name='selectFiles' text='Select File' minwidth='300' minheight='auto' flags='#PB_Window_SystemMenu | #PB_Window_Tool | #PB_Window_WindowCentered'>
     <vbox expand='no'>
       <text name='selectText' />
-
         <vbox expand='no' id='selectBox'>
+          
         </vbox>
-
       <hbox expand='equal'>
         <button name='selectCancel' />
         <empty />
@@ -132,4 +152,64 @@
     </vbox>
   </window>
 
+  <window id='#PB_Any' name='modFilter' text='Filter Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='modFilterString' text='' />
+        <button name='modFilterReset' text='X' />
+      </hbox>
+      <checkbox name='modFilterDeprecated' text='Old Mods' />
+      <checkbox name='modFilterVanilla'  text='Vanilla Mods' />
+      <checkbox name='modFilterHidden'   text='Hidden Mods' />
+      <checkbox name='modFilterWorkshop' text='Steam Workshop Mods' />
+      <checkbox name='modFilterStaging'  text='Staging Area Mods' />
+    </vbox>
+  </window>
+
+  <window id='#PB_Any' name='modSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='sortBy' text='Sort by' />
+      <combobox name='sortBox' width='100' />
+    </hbox>
+  </window>
+
+  <window id='#PB_Any' name='repoFilter' text='Filter Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='filterString' text=' ' width='100' />
+        <button name='filterReset' text='X' />
+      </hbox>
+      <hbox expand='item:1'>
+        <text name='filterDateLabel' text='-' />
+        <date name='filterDate' flags='#PB_Date_Checkbox' />
+      </hbox>
+    </vbox>
+  </window>
+
+  <window id='#PB_Any' name='repoSort' text='Sort Mods' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='sortBy' text='-' />
+      <combobox name='sortBox' width='100' />
+    </hbox>
+  </window>
+  
+  <window id='#PB_Any' name='backupFilter' text='Filter Backups' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <vbox expand='no'>
+      <hbox expand='item:1'>
+        <string name='filterString' text='' width='100' />
+        <button name='filterReset' text='X' />
+      </hbox>
+      <hbox expand='item:1'>
+        <text name='filterDateLabel' text='-' />
+        <date name='filterDate' flags='#PB_Date_Checkbox' />
+      </hbox>
+    </vbox>
+  </window>
+
+  <window id='#PB_Any' name='backupSort' text='Sort Backups' flags='#PB_Window_Tool|#PB_Window_SystemMenu|#PB_Window_Invisible'>
+    <hbox expand='no'>
+      <text name='sortBy' text='-' />
+      <combobox name='sortBox' width='100' />
+    </hbox>
+  </window>
 </dialogs>

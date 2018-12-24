@@ -3,127 +3,133 @@
 DeclareModule repository
   EnableExplicit
   
-  #OFFICIAL_REPOSITORY$ = "https://www.transportfevermods.com/repository/"
+  ; Event Callbacks
+  
+  Enumeration
+    #EventAddMods
+    #EventClearMods
+    #EventRefreshFinished
+    #EventWorkerStarts
+    #EventWorkerStops
+    #EventProgress
+    #EventShowModFileSelection
+    #EventDownloadSuccess
+  EndEnumeration
+  Global EventArraySize = #PB_Compiler_EnumerationValue -1
+  
+  Enumeration
+    #ErrorNoError = 0
+    #ErrorDownloadFailed
+    #ErrorJSON
+    #ErrorDuplicateURL
+    #ErrorNoSource
+    #ErrorDuplicateSource
+    #ErrorNoMods
+  EndEnumeration
   
   
-  ; mod strucutres
-  
-  Structure file
-    fileid.q
-    filename$         ; 
-    url$              ; url to download this file
-    timechanged.i     ; last time this file was changed
-  EndStructure
-  
-  Structure mod
-    source$
-    id.q
+  Structure RepositoryInformation ; information about the mod repository
+    url$
     name$
-    author$
-    authorid.i
-    version$
-    type$
-    url$
-    thumbnail$
-    timecreated.i
-    timechanged.i
-    List files.file()
-    List tags$()
-    List tagsLocalized$()
-    
-    installSource$ ; used when installing after download
-    installed.i
-  EndStructure
-  
-  
-  ; repository structres
-  
-  Structure tpfmm
-    build.i
-    version$
-    url$
-  EndStructure
-  
-  Structure repo_info     ; information about any repository
-    name$                 ; name
+    maintainer$
     source$
     description$
-    maintainer$
-    url$
     info_url$
-    changed.i
+    terms$
+    modCount.i
+    error.b
   EndStructure
   
-  Structure repo_link     ; link to a sub-repository (e.g. a mod repo)
-    url$                  ; location of repo
-    age.i                 ; age in seconds
-    enc$                  ; encoding scheme
-  EndStructure
+  ; file interface
+  Interface RepositoryFile
+    getMod()
+    isInstalled()
+    canDownload()
+    download()
+    getLink.s()
+    getFolderName.s()
+    getFileName.s()
+  EndInterface
   
-  Structure main_json     ; main (root level) repository json data
-    repository.repo_info  ; information about this repository
-    TPFMM.tpfmm           ; TPFMM update information (if official repository)
-    List mods.repo_link() ; list of mod repos linked by this repository
-  EndStructure
+  ; mod interface
+  Interface RepositoryMod
+    getName.s()
+    getVersion.s()
+    getAuthor.s()
+    getFiles(List *files.RepositoryFile())
+    isInstalled()
+    getSource.s()
+    GetRepositoryURL.s()
+    canDownload()
+    download()
+    getLink.s()
+    getThumbnailUrl.s()
+    getThumbnailFile.s()
+    getThumbnailAsync(*callback, *userdata)
+    getTimeChanged()
+    getWebsite.s()
+    setThumbnailImage(image)
+  EndInterface
   
-  Structure repository    ; lowest level: list of "repository"
-    url$                  ; location
-    main_json.main_json   ; data from json
-  EndStructure
-  
-  Structure repo_mods     ; repository for mods
-    repo_info.repo_info
-    mod_base_url$
-    file_base_url$
-    thumbnail_base_url$
-    List mods.mod()
-  EndStructure
   
   
-  Structure column         ; public column identifier
-    name$
-    width.i
-  EndStructure
+  ; base methods
+  Declare refreshRepositories(async=#True)
+  Declare freeAll()
+  Declare clearThumbCache()
+  Declare.b isloaded()
+  Declare stopQueue(timeout = 5000)
   
-  Structure download
-    source$   ; online repository source
-    id.q      ; mod ID in this source
-    fileID.q  ; if a mod has multiple files, specify fileID
-  EndStructure
+  ; source handling
+  Declare AddRepository(url$)
+  Declare CanRemoveRepository(url$) ; default repositories cannot be removed
+  Declare RemoveRepository(url$)
+  Declare ReadSourcesFromFile(List urls$())
+  Declare GetRepositoryInformation(url$, *repoInfo.RepositoryInformation)
+  Declare CheckRepository(url$, *repositoryInformation.RepositoryInformation)
   
-  ; start repository loading
-  Declare init()
+  ; get mod/file object
+  Declare getModByFoldername(foldername$)
+  Declare getModByLink(link$)
+  Declare getFileByFoldername(foldername$)
+  Declare getFileByLink(link$)
   
-  ; register functions
-  Declare registerWindow(windowID)
-  Declare registerListGadget(gadgetID, Array columns.column(1))
-  Declare registerThumbGadget(gadgetID)
-  Declare registerFilterGadgets(gadgetString, gadgetType, gadgetSource, gadgetInstalled)
+  ; work on mod object
+  Declare.s modGetName(*mod)
+  Declare.s modGetVersion(*mod)
+  Declare.s modGetAuthor(*mod)
+  Declare modGetFiles(*mod, List *files.RepositoryFile())
+  Declare modIsInstalled(*mod)
+  Declare.s modGetSource(*mod)
+  Declare.s modGetRepositoryURL(*mod)
+  Declare modCanDownload(*mod)
+  Declare modDownload(*mod)
+  Declare.s modGetLink(*mod)
+  Declare.s modGetThumbnailUrl(*mod)
+  Declare.s modGetThumbnailFile(*mod)
+  Declare modGetThumbnailAsync(*mod, *callback, *userdata=#Null) ; will call callback when image is available
+  Declare modGetTimeChanged(*mod)
+  Declare.s modGetWebsite(*mod)
+  Declare modSetThumbnailImage(*mod, image)
   
-  ; display fucntions
-  Declare displayMods()
-  Declare displayThumbnail(url$)
-  Declare selectModInList(*mod.mod)
-  Declare searchMod(name$, author$="")
+  ; work on file object
+  Declare fileGetMod(*file)
+  Declare fileIsInstalled(*file)
+  Declare fileCanDownload(*file)
+  Declare fileDownload(*file)
+  Declare.s fileGetLink(*file)
+  Declare.s fileGetFolderName(*file)
+  Declare.s fileGetFilename(*file)
   
-  ; check functions
-  Declare getModByID(source$, id.q)
-  Declare getFileByID(*repoMod.mod, fileID.q)
-  Declare canDownloadModByID(source$, id.q, fileID.q = 0)
-  Declare canDownloadMod(*repoMod.mod)
-  Declare canDownloadFile(*file.file)
-  Declare downloadMod(source$, id.q, fileID.q = 0)
-  Declare findModOnline(*mod.mods::mod)
-  Declare findModByID(source$, id.q)
+  ; callbacks to GUI
+  Declare BindEventCallback(Event, *callback)
+  Declare BindEventPost(RepoEvent, WindowEvent, *callback)
   
-  Declare getRepoMod(*mod.mods::mod)
   
-  ; other
-  Declare refresh()
-  Declare clearCache()
-  Declare listRepositories(Map gadgets()) ; used by settings window
+  Prototype CallbackAddMods(List *mods.RepositoryMod())
+  Prototype CallbackClearList()
+  Prototype CallbackRefreshFinished()
   
-  Global TPFMM_UPDATE.tpfmm
-  Global _READY
+  Prototype CallbackThumbnail(image, *userdata)
   
 EndDeclareModule

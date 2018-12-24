@@ -1,0 +1,11 @@
+<window id='#PB_Any' name='progress' text='Please Wait...' width='400' flags='#PB_Window_Borderless|#PB_Window_Invisible'>
+  <vbox expand='item:2'>
+    <singlebox align='center' expand='no'>
+      <canvas name='logo' width='160' height='90' />
+    </singlebox>
+    <vbox expand='equal'>
+      <text name='text' text=' ' flags='#PB_Text_Center' />
+      <progressbar name='percent' min='0' max='100' value='0' />
+    </vbox>
+  </vbox>
+</window>

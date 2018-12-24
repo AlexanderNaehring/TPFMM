@@ -4,17 +4,21 @@ DeclareModule debugger
   Declare SetLogFile(file$)
   Declare.s GetLogFile()
   Declare DeleteLogFile()
-  Declare add(str$)
+  Declare deb(str$)
   Declare.s getLog()
 EndDeclareModule
 
 Module debugger
   Global LogFile$
   Global log$
+  Global file
   Global mutexDebug = CreateMutex()
   
   Procedure SetLogFile(file$)
     LockMutex(mutexDebug)
+    If file And IsFile(file)
+      CloseFile(file)
+    EndIf
     LogFile$ = file$
     UnlockMutex(mutexDebug)
   EndProcedure
@@ -25,16 +29,18 @@ Module debugger
   
   Procedure DeleteLogFile()
     LockMutex(mutexDebug)
+    If file And IsFile(file)
+      CloseFile(file)
+    EndIf
+    
     DeleteFile(LogFile$, #PB_FileSystem_Force)
     UnlockMutex(mutexDebug)
   EndProcedure
   
-  Procedure add(str$)
-    Static file
+  Procedure deb(str$)
     LockMutex(mutexDebug)
-    Debug str$
+    Debug "|>  "+str$
     
-    log$ + #CRLF$ + str$
     If LogFile$ <> ""
       If Not file Or Not IsFile(file)
         file = OpenFile(#PB_Any, LogFile$, #PB_File_Append|#PB_File_NoBuffering)
@@ -43,8 +49,10 @@ Module debugger
         WriteStringN(file, str$)
       EndIf
     EndIf
+    log$ + #CRLF$ + str$
     UnlockMutex(mutexDebug)
   EndProcedure
+  
   Procedure.s getLog()
     Protected str$
     LockMutex(mutexDebug)
@@ -52,4 +60,5 @@ Module debugger
     UnlockMutex(mutexDebug)
     ProcedureReturn ret$
   EndProcedure
+  
 EndModule

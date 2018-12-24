@@ -1,0 +1,9 @@
+<window id='#PB_Any' name='license' text='License' width='580' height='480' flags='#PB_Window_SystemMenu|#PB_Window_Invisible'>
+  <vbox expand='item:1'>
+    <editor name='text' flags='#PB_Editor_ReadOnly|#PB_Editor_WordWrap' />
+    <hbox expand='equal'>
+      <button name='btnDecline' text='I Do Not Agree' />
+      <button name='btnAgree' text='I Agree' />
+    </hbox>
+  </vbox>
+</window>

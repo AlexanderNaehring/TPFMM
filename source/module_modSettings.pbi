@@ -1,4 +1,4 @@
-﻿
+
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_mods.h.pbi"
@@ -6,23 +6,24 @@ XIncludeFile "module_mods.h.pbi"
 DeclareModule modSettings
   EnableExplicit
   
-  Declare show(*mod.mods::mod, parentWindowID=0)
+  Declare show(*mod.mods::LocalMod, parentWindowID=0)
   
 EndDeclareModule
 
 
 Module modSettings
-  
   UseModule locale
+  UseModule debugger
   
   ;- Structures
+  
   
   Structure modSettingsWindow
     xml.i
     dialog.i
     window.i
     
-    *mod.mods::mod
+    *mod.mods::LocalMod
   EndStructure
   
   ;- Macros
@@ -150,8 +151,11 @@ Module modSettings
       CloseWindow(*data\window)
       FreeDialog(*data\dialog)
       
-      ForEach *data\mod\settings()
-        With *data\mod\settings()
+      Protected NewList *settings.mods::ModLuaSetting()
+      *data\mod\getSettings(*settings())
+      
+      ForEach *settings()
+        With *settings()
           If \im And IsImage(\im)
             FreeImage(\im)
           EndIf
@@ -167,17 +171,20 @@ Module modSettings
     Protected *data.modSettingsWindow
     *data = GetWindowData(EventWindow())
     
-    Protected modFolder$ = mods::getModFolder(*data\mod\tpf_id$, *data\mod\aux\type$)
+    Protected modFolder$ = mods::getModFolder(*data\mod\getID())
     Protected file, gadget, item
     Protected val$
     Protected *tableValue.mods::tableValue
     
     file = CreateFile(#PB_Any, modFolder$+"settings.lua")
     
+    Protected NewList *settings.mods::ModLuaSetting()
+    *data\mod\getSettings(*settings())
+      
     If file
       WriteStringN(file, "return {")
-      ForEach *data\mod\settings()
-        With *data\mod\settings()
+      ForEach *settings()
+        With *settings()
           gadget = gadget("value-"+\name$)
           
           Select \type$
@@ -226,7 +233,7 @@ Module modSettings
       CloseFile(file)
 ;       misc::openLink(modFolder$+"settings.lua")
     Else
-      debugger::add("modSettings::save() - ERROR: could not create "+modFolder$+"settings.lua")
+      deb("modSettings:: could not create "+modFolder$+" settings.lua")
     EndIf
   
     
@@ -234,13 +241,11 @@ Module modSettings
     close()
   EndProcedure
   
-  Procedure show(*mod.mods::mod, parentWindowID=0)
-    debugger::add("modSettings::modSettingsShow()")
-    
+  Procedure show(*mod.mods::LocalMod, parentWindowID=0)
     If Not *mod
       ProcedureReturn #False
     EndIf
-    If ListSize(*mod\settings()) = 0
+    If Not *mod\hasSettings()
       ProcedureReturn #False
     EndIf
     
@@ -249,13 +254,13 @@ Module modSettings
     *data\mod = *mod
     
     Protected modFolder$
-    modFolder$ = mods::getModFolder(*mod\tpf_id$, *mod\aux\type$)
+    modFolder$ = mods::getModFolder(*mod\getID())
     
     ; load default XML
     Protected xml
     xml = CatchXML(#PB_Any, ?dialogModSettingsXML, ?dialogModSettingsXMLend - ?dialogModSettingsXML)
     If Not xml Or XMLStatus(xml) <> #PB_XML_Success
-      debugger::add("modSettings::modSettingsShow() - ERROR (XML): could not read window definition")
+      deb("modSettings:: could not read window definition")
       ProcedureReturn #False
     EndIf
     
@@ -270,20 +275,29 @@ Module modSettings
       If *nodeBase
         misc::clearXMLchildren(*nodeBase)
         
-        ForEach *data\mod\settings()
-          With *data\mod\settings()
+        Protected NewList *settings.mods::ModLuaSetting()
+        *data\mod\getSettings(*settings())
+    
+        ForEach *settings()
+          With *settings()
             ; preview image
             
             If \image$ And FileSize(modFolder$ + \image$) > 0
               \im = LoadImage(#PB_Any, modFolder$ + \image$)
-              factor = 1
-              ; If ImageWidth(\im) > #WIDTH
-                factor = #WIDTH / ImageWidth(\im)
-              ; EndIf
-              If ImageHeight(\im) * factor > #HEIGHT
-                factor = #HEIGHT / ImageHeight(\im)
+              If \im
+                factor = 1
+                ; If ImageWidth(\im) > #WIDTH
+                  factor = #WIDTH / ImageWidth(\im)
+                ; EndIf
+                If ImageHeight(\im) * factor > #HEIGHT
+                  factor = #HEIGHT / ImageHeight(\im)
+                EndIf
+                ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
+              Else ; not \im
+                deb("modSettings:: could not load image "+modFolder$+\image$)
               EndIf
-              ResizeImage(\im, ImageWidth(\im) * factor, ImageHeight(\im) * factor)
+            ElseIf \image$ ; and not filesize(...)
+              deb("modSettings:: could not find image file "+modFolder$+\image$)
             EndIf
             
             If \im
@@ -292,7 +306,7 @@ Module modSettings
               SetXMLAttribute(*node, "width", Str(ImageWidth(\im)))
               SetXMLAttribute(*node, "height", Str(ImageHeight(\im)))
               If \type$ = "boolean"
-                ; no text for boolean type, only image
+                ; no text for boolean type, only image (text is right of checkbox)
                 SetXMLAttribute(*node, "colspan", "2")
               EndIf
             EndIf
@@ -367,31 +381,34 @@ Module modSettings
             ; reset to default button
             *node = CreateXMLNode(*nodeBase, "button", -1)
             SetXMLAttribute(*node, "name", "default-"+\name$)
-            SetXMLAttribute(*node, "text", l("mod_settings", "default"))
+            SetXMLAttribute(*node, "text", _("mod_settings_default"))
             
           EndWith
         Next
       EndIf
       
       ; show window
-      debugger::add("modInformation::modInfoShow() - open window...")
       *data\dialog = CreateDialog(#PB_Any)
       If *data\dialog And OpenXMLDialog(*data\dialog, xml, "modSettings", #PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, parentWindowID)
         *data\window = DialogWindow(*data\dialog)
         FreeXML(xml)
         
         ; set texts
-        SetWindowTitle(*data\window, locale::l("mod_settings","title")+": "+*data\mod\name$)
-        SetGadgetText(gadget("name"), *data\mod\name$)
+        SetWindowTitle(*data\window, _("mod_settings_title")+": "+*data\mod\getName())
+        SetGadgetText(gadget("name"), *data\mod\getName())
         
         ; load current settings
         Protected NewMap currentSettings.mods::modSetting()
         luaParser::parseSettingsLua(modFolder$, currentSettings())
         
         ; apply current setting or default 
+        
+        Protected NewList *settings.mods::ModLuaSetting()
+        *data\mod\getSettings(*settings())
+        
         Protected val$, option$
-        ForEach *data\mod\settings()
-          With *data\mod\settings()
+        ForEach *settings()
+          With *settings()
             option$ = \key$
             
             
@@ -447,8 +464,8 @@ Module modSettings
             
             ; standard bindings
             BindGadgetEvent(gadget("default-"+\name$), @setDefault())
-            SetGadgetData(gadget("default-"+\name$), *data\mod\settings())
-            SetGadgetData(gadget("value-"+\name$), *data\mod\settings())
+            SetGadgetData(gadget("default-"+\name$), *settings())
+            SetGadgetData(gadget("value-"+\name$), *settings())
             GadgetToolTip(gadget("value-"+\name$), \description$)
             
             
@@ -496,9 +513,9 @@ Module modSettings
         AddKeyboardShortcut(*data\window, #PB_Shortcut_Return, 1)
         BindEvent(#PB_Event_Menu, @enter(), *data\window, 1)
         
-        SetGadgetText(gadget("settings"), l("mod_settings", "settings"))
-        SetGadgetText(gadget("save"), l("mod_settings", "save"))
-        SetGadgetText(gadget("cancel"), l("mod_settings", "cancel"))
+        SetGadgetText(gadget("settings"), _("mod_settings_settings"))
+        SetGadgetText(gadget("save"), _("mod_settings_save"))
+        SetGadgetText(gadget("cancel"), _("mod_settings_cancel"))
         BindGadgetEvent(gadget("save"), @save())
         BindGadgetEvent(gadget("cancel"), @close())
         
@@ -508,7 +525,7 @@ Module modSettings
         HideWindow(*data\window, #False, #PB_Window_WindowCentered)
         ProcedureReturn #True
       Else
-        debugger::add("modInformation::modInfoShow() - Error: "+DialogError(*data\dialog))
+        deb("modInformation:: "+DialogError(*data\dialog))
       EndIf
     EndIf
     ; failed to open window -> free data

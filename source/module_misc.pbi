@@ -1,14 +1,41 @@
-﻿XIncludeFile "module_debugger.pbi"
-XIncludeFile "module_main.pbi"
-
-DeclareModule misc
+﻿DeclareModule misc
   EnableExplicit
+  
+  ImportC ""
+    time(*tloc = #Null)
+  EndImport
+  
+  Macro timezone()
+    ((Date() - misc::time())/3600)
+  EndMacro
   
   Macro Min(a,b)
     (Bool((a)<=(b)) * (a) + Bool((b)<(a)) * (b))
   EndMacro
   Macro Max(a,b)
    (Bool((a)>=(b)) * (a) + Bool((b)>(a)) * (b))
+  EndMacro
+  
+  Macro BinaryAsString(file, var)
+    DataSection
+      _str#MacroExpandedCount#Start:
+      IncludeBinary file
+      _str#MacroExpandedCount#End:
+    EndDataSection
+    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start-1, #PB_UTF8)
+  EndMacro
+  
+  Macro IncludeAndLoadXML(xml, file)
+    DataSection
+      _xml#MacroExpandedCount#Start:
+      IncludeBinary file
+      _xml#MacroExpandedCount#End:
+    EndDataSection
+    
+    xml = CatchXML(#PB_Any, ?_xml#MacroExpandedCount#Start, ?_xml#MacroExpandedCount#End - ?_xml#MacroExpandedCount#Start)
+    If Not xml Or XMLStatus(xml) <> #PB_XML_Success
+      DebuggerError("Could not open XML "+file+": "+XMLError(xml))
+    EndIf
   EndMacro
   
   Macro openLink(link)
@@ -35,6 +62,16 @@ DeclareModule misc
     CompilerEndIf
   EndMacro
   
+  Macro useBinary(file, overwrite)
+    DataSection
+      _bin#MacroExpandedCount#Start:
+      IncludeBinary file
+      _bin#MacroExpandedCount#End:
+    EndDataSection
+    
+    misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start, overwrite)
+  EndMacro
+  
   Declare.s path(path$, delimiter$ = "")
   Declare.s getDirectoryName(path$)
   Declare VersionCheck(current$, required$)
@@ -47,26 +84,24 @@ DeclareModule misc
   Declare HexStrToFile(hex$, file$)
   Declare.s luaEscape(s$)
   Declare encodeTGA(image, file$, depth =24)
-  Declare checkGameDirectory(Dir$)
+  Declare checkGameDirectory(Dir$, testmode=#False)
   Declare examineDirectoryRecusrive(root$, List files$(), path$="")
   Declare.s printSize(bytes.q)
   Declare.q getDirectorySize(path$)
-  Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+  Declare SortStructuredPointerList(List *pointerlist(), options, offset, type, *compareFunction=0, low=0, high=-1)
   Declare.s getOSVersion()
   Declare.s getDefaultFontName()
   Declare getDefaultFontSize()
   Declare clearXMLchildren(*node)
   Declare registerProtocolHandler(protocol$, program$, description$="")
-  Declare time(*tloc = #Null)
+;   Declare time(*tloc = #Null)
   Declare getRowHeight(gadget)
+  Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
+  Declare GetWindowBackgroundColor(hwnd=0)
 EndDeclareModule
 
 Module misc
-  
-  ImportC ""
-    time(*tloc = #Null)
-  EndImport
  
   Procedure.s path(path$, delimiter$ = "")
     path$ + "/"                             ; add a / delimiter to the end
@@ -109,7 +144,6 @@ Module misc
     
     While dir_sub$ <> ""
       If Not FileSize(dir_total$) = -2
-        debugger::Add("misc::CreateDirectory("+dir_total$+")")
         CreateDirectory(dir_total$)
       EndIf
       count + 1
@@ -146,6 +180,7 @@ Module misc
     If Not overwrite And FileSize(filename$) >= 0
       ProcedureReturn #False
     EndIf
+    CreateDirectoryAll(GetPathPart(filename$))
     file = CreateFile(#PB_Any, filename$)
     If Not file
       ProcedureReturn #False
@@ -159,7 +194,7 @@ Module misc
   EndProcedure
   
   Procedure ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
-    If IsImage(im)
+    If im
       Protected image.i, factor_w.d, factor_h.d, factor.d, im_w.i, im_h.i
       im_w = ImageWidth(im)
       im_h = ImageHeight(im)
@@ -183,7 +218,6 @@ Module misc
   EndProcedure
   
   Procedure HexStrToMem(hex$, *memlen = 0)
-    debugger::Add("misc::HexStrToMem()")
     Protected strlen.i, memlen.i, pos.i, *memory
     strlen = Len(hex$)
     If strlen % 2 = 1 Or strlen = 0
@@ -192,7 +226,7 @@ Module misc
     memlen = strlen / 2
     *memory = AllocateMemory(memlen, #PB_Memory_NoClear)
     If Not *memory
-      debugger::Add("misc::HexStrToMem() - Error allocating memory")
+      Debug "misc::HexStrToMem() - Error allocating memory"
       ProcedureReturn #False
     EndIf
     For pos = 0 To memlen-1
@@ -205,7 +239,6 @@ Module misc
   EndProcedure
   
   Procedure.s MemToHexStr(*mem, memlen.i)
-    debugger::Add("misc::MemToHexStr("+Str(*mem)+", "+Str(memlen)+")")
     Protected hex$ = ""
     Protected pos.i
     For pos = 0 To memlen-1
@@ -215,7 +248,6 @@ Module misc
   EndProcedure
   
   Procedure.s FileToHexStr(file$)
-    debugger::Add("misc::FileToHexStr()")
     Protected hex$ = ""
     Protected file.i, *memory, size.i
     
@@ -236,7 +268,6 @@ Module misc
   EndProcedure
   
   Procedure HexStrToFile(hex$, file$)
-    debugger::Add("misc::HexStrToFile()")
     Protected file.i, *memory, memlen.i
     *memory = HexStrToMem(hex$, @memlen)
     file = CreateFile(#PB_Any, file$)
@@ -258,18 +289,15 @@ Module misc
     Protected file.i, color.i, x.i, y.i
     
     If Not IsImage(image)
-      debugger::Add("misc::encodeTGA() - ERROR - image {"+Str(image)+"} is no valid image")
       ProcedureReturn #False
     EndIf
     
     If Not StartDrawing(ImageOutput(image))
-      debugger::Add("misc::encodeTGA() - ERROR - drawing on image failed")
       ProcedureReturn #False
     EndIf
     
     file = CreateFile(#PB_Any, file$)
     If Not file
-      debugger::Add("misc::encodeTGA() - ERROR - failed to create {"+file$+"}")
       StopDrawing()
       ProcedureReturn #False
     EndIf
@@ -321,14 +349,14 @@ Module misc
     ProcedureReturn #True
   EndProcedure
   
-  Procedure checkGameDirectory(Dir$)
+  Procedure checkGameDirectory(Dir$, testmode=#False)
     ; 0   = path okay, executable found and writing possible
     ; 1   = path okay, executable found but cannot write
     ; 2   = path not okay
     If Dir$
       If FileSize(Dir$) = -2
         Dir$ = Path(Dir$)
-        If main::_TESTMODE
+        If testmode
           ; in testmode, do not check if directory is correct
           ProcedureReturn 0
         EndIf
@@ -385,7 +413,7 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn #True
     Else
-      debugger::Add("          ERROR: could not examine directory "+path(root$ + path$))
+      Debug "could not examine"
     EndIf
     ProcedureReturn #False
   EndProcedure
@@ -431,7 +459,7 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn size
     Else
-      debugger::Add("          ERROR: could not examine directory "+path(path$))
+      Debug "could not examine"
     EndIf
     ProcedureReturn #False
   EndProcedure
@@ -481,14 +509,23 @@ Module misc
     ProcedureReturn doSwap
   EndProcedure
   
-  Procedure SortStructuredPointerList_Quicksort(List *pointerlist(), options, offset, type, low, high, level=0)
+  Prototype.i compare(*element1, *element2, options, offset, type)
+  
+  Procedure SortStructuredPointerList_Quicksort(List *pointerlist(), options, offset, type, *compare, low, high, level=0)
     Protected *midElement, *highElement, *iElement, *wallElement
-    Protected wall, i
+    Protected wall, i, sw
+    Protected comp.compare
     
     If high - low < 1
       ProcedureReturn
     EndIf
     
+    ; use user function or simpler compare by offset function
+    If *compare
+      comp = *compare
+    Else
+      comp = @compareIsGreater()
+    EndIf
     
     ; swap mid element and high element to avoid bad performance with already sorted list
     *midElement = SelectElement(*pointerlist(), low + (high-low)/2)
@@ -500,7 +537,7 @@ Module misc
     *highElement = SelectElement(*pointerlist(), high)
     For i = low To high -1
       *iElement = SelectElement(*pointerlist(), i)
-      If compareIsGreater(*highElement, *iElement, options, offset, type)
+      If comp(*highElement, *iElement, options, offset, type)
         *wallElement = SelectElement(*pointerlist(), wall)
         SwapElements(*pointerlist(), *iElement, *wallElement)
         wall +1
@@ -514,48 +551,20 @@ Module misc
     SwapElements(*pointerlist(), *wallElement, *highElement)
     
     ; sort below wall
-    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, wall-1, level+1)
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, low, wall-1, level+1)
     
     ; sort above wall
-    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, wall+1, high, level+1)
+    SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, wall+1, high, level+1)
     
   EndProcedure
   
-  Procedure SortStructuredPointerList_SimpleSort(List *pointerlist(), options, offset, type)
-    Protected finished, doSwap
-    Protected *currentListElement, *pointer1, *pointer2
-    Protected val1, val2, str1$, str2$
-    
-    Repeat
-      finished = #True
-      ForEach *pointerlist()
-        *currentListElement = @*pointerlist()
-        While NextElement(*pointerlist())
-          ;compare the current element with others in the list and swap if required
-          
-          If compareIsGreater(*currentListElement, @*pointerlist(), options, offset, type)
-            SwapElements(*pointerList(), *currentListElement, @*pointerlist())
-            finished = #False
-          EndIf
-        Wend
-        ChangeCurrentElement(*pointerlist(), *currentListElement)
-      Next
-    Until finished
-    ProcedureReturn #True
-  EndProcedure
-  
-  Procedure SortStructuredPointerList(List *pointerlist(), options, offset, type, low=0, high=-1)
+  Procedure SortStructuredPointerList(List *pointerlist(), options, offset, type, *compare=0, low=0, high=-1)
     ; options = #PB_Sort_Ascending = 0 (default) | #PB_Sort_Descending = 1 | #PB_Sort_NoCase = 2
-    
-;     ; simple sorting algorithm for small lists?
-;     If #False
-;       ProcedureReturn SortStructuredPointerList_SimpleSort(*pointerlist(), options, offset, type)
-;     EndIf
     
     If high = -1
       high = ListSize(*pointerlist()) -1
     EndIf
-    ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, low, high)
+    ProcedureReturn SortStructuredPointerList_Quicksort(*pointerlist(), options, offset, type, *compare, low, high)
     
   EndProcedure
   
@@ -667,47 +676,42 @@ Module misc
     Wend
   EndProcedure
   
-  
-CompilerSelect #PB_Compiler_OS
-  CompilerCase #PB_OS_Windows
-    
-    Procedure getRowHeight(gadget)
-      ; ListIconGadget get/set row height: http://www.purebasic.fr/english/viewtopic.php?f=13&t=54533&start=7
+  Procedure getRowHeight(gadget)
+    ; ListIconGadget get/set row height: http://www.purebasic.fr/english/viewtopic.php?f=13&t=54533&start=7
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
       
-      If GadgetType(gadget) = #PB_GadgetType_ListView
-        ProcedureReturn SendMessage_(GadgetID(gadget), #LB_GETITEMHEIGHT, 0, 0)
+        If GadgetType(gadget) = #PB_GadgetType_ListView
+          ProcedureReturn SendMessage_(GadgetID(gadget), #LB_GETITEMHEIGHT, 0, 0)
+          
+        ElseIf GadgetType(gadget) = #PB_GadgetType_ListIcon
+          Protected rectangle.RECT
+          rectangle\left = #LVIR_BOUNDS
+          SendMessage_(GadgetID(gadget), #LVM_GETITEMRECT, 0, rectangle)
+          ProcedureReturn rectangle\bottom - rectangle\top - 1
+          
+        EndIf
         
-      ElseIf GadgetType(gadget) = #PB_GadgetType_ListIcon
-        Protected rectangle.RECT
-        rectangle\left = #LVIR_BOUNDS
-        SendMessage_(GadgetID(gadget), #LVM_GETITEMRECT, 0, rectangle)
-        ProcedureReturn rectangle\bottom - rectangle\top - 1
         
-      EndIf
-    EndProcedure
-    
-  CompilerCase #PB_OS_Linux
-
-    Procedure getRowHeight(gadget)
-      Protected height, yOffset
-      Protected *tree, *tree_column
-      If GadgetType(gadget) = #PB_GadgetType_ListIcon Or
-         GadgetType(gadget) = #PB_GadgetType_ListView
-        
-        *tree = GadgetID(gadget)
-        
-        ; https://developer.gnome.org/gtk3/stable/GtkTreeView.html#gtk-tree-view-get-column
-        *tree_column = gtk_tree_view_get_column_(*tree, 0)
-        
-        ; https://developer.gnome.org/gtk3/stable/GtkTreeViewColumn.html#gtk-tree-view-column-cell-get-size
-        gtk_tree_view_column_cell_get_size_(*tree_column, #Null, #Null, @yOffset, #Null, @height)
-        
-        ProcedureReturn height
-      EndIf
-    EndProcedure
-
-CompilerEndSelect
-
+      CompilerCase #PB_OS_Linux
+        Protected height, yOffset
+        Protected *tree, *tree_column
+        If GadgetType(gadget) = #PB_GadgetType_ListIcon Or
+           GadgetType(gadget) = #PB_GadgetType_ListView
+          
+          *tree = GadgetID(gadget)
+          
+          ; https://developer.gnome.org/gtk3/stable/GtkTreeView.html#gtk-tree-view-get-column
+          *tree_column = gtk_tree_view_get_column_(*tree, 0)
+          
+          ; https://developer.gnome.org/gtk3/stable/GtkTreeViewColumn.html#gtk-tree-view-column-cell-get-size
+          gtk_tree_view_column_cell_get_size_(*tree_column, #Null, #Null, @yOffset, #Null, @height)
+          
+          ProcedureReturn height
+        EndIf
+    CompilerEndSelect
+  EndProcedure
+  
   Procedure getDefaultRowHeight(type=#PB_GadgetType_ListView)
     Static heightLV, heightLI
     Protected window, gadgetLV, gadgetLI
@@ -734,10 +738,30 @@ CompilerEndSelect
     
   EndProcedure
   
-
-
+  Procedure getScrollbarWidth(gadget)
+    Protected oldWidth, oldHeight, oldScrollX, oldScrollY, viewWidth, scrollbarWidth
+    oldWidth  = GetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth)
+    oldHeight = GetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight)
+    oldScrollX = GetGadgetAttribute(gadget, #PB_ScrollArea_X)
+    oldScrollY = GetGadgetAttribute(gadget, #PB_ScrollArea_Y)
+    ; enlarge inner size to force scrollbars
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth, oldWidth + GadgetWidth(gadget))
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight, oldHeight + GadgetHeight(gadget))
+    ; move scroll location to far end
+    SetGadgetAttribute(gadget, #PB_ScrollArea_X, GetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth))
+    ; get scroll position and innerWidth to calculate viewport width
+    viewWidth = GetGadgetAttribute(gadget,#PB_ScrollArea_InnerWidth) - GetGadgetAttribute(gadget,#PB_ScrollArea_X)
+    scrollbarWidth = GadgetWidth(gadget, #PB_Gadget_ActualSize) - viewWidth
+    ; return to old state
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerWidth, oldWidth)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_InnerHeight, oldHeight)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_X, oldScrollX)
+    SetGadgetAttribute(gadget, #PB_ScrollArea_Y, oldScrollY)
+    
+    ProcedureReturn scrollbarWidth
+  EndProcedure
+  
   Procedure registerProtocolHandler(protocol$, program$, description$="")
-    debugger::add("misc::registerProtocolHandler("+protocol$+", "+program$+", "+description$+")")
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         ; Windows: Protocol Handlers are registered in the registry under HKEY_CURRENT_USER\Software\Classes (not HKEY_CLASSES_ROOT)
@@ -793,14 +817,11 @@ CompilerEndSelect
           DeleteFile(regFile$)
           
           If exitcode = 0
-            debugger::add("misc::registerProtocolHandler() - Successful")
             ProcedureReturn #True
           Else
-            debugger::add("misc::registerProtocolHandler() - Error: Could not handle registry keys")
             ProcedureReturn #False
           EndIf
         Else
-          debugger::add("misc::registerProtocolHandler() - Error: could not create file")
           ProcedureReturn #False
         EndIf
         
@@ -824,5 +845,42 @@ CompilerEndSelect
         CompilerError "No protocol handler registration defined for this OS"
     CompilerEndSelect
   EndProcedure
+  
+  Procedure GetWindowBackgroundColor(hwnd=0)
+    ; found on https://www.purebasic.fr/english/viewtopic.php?f=12&t=66974
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows  
+        Protected color = GetSysColor_(#COLOR_WINDOW)
+        If color = $FFFFFF Or color=0
+          color = GetSysColor_(#COLOR_BTNFACE)
+        EndIf
+        ProcedureReturn color
+        
+      CompilerCase #PB_OS_Linux   ;thanks to uwekel http://www.purebasic.fr/english/viewtopic.php?p=405822
+        If Not hwnd
+          DebuggerError("hwnd must be specified")
+        EndIf
+        Protected *style.GtkStyle, *color.GdkColor
+        *style = gtk_widget_get_style_(hwnd) ;GadgetID(Gadget))
+        *color = *style\bg[0]                ;0=#GtkStateNormal
+        ProcedureReturn RGB(*color\red >> 8, *color\green >> 8, *color\blue >> 8)
+        
+      CompilerCase #PB_OS_MacOS   ;thanks to wilbert http://purebasic.fr/english/viewtopic.php?f=19&t=55719&p=497009
+        Protected.i color, Rect.NSRect, Image, NSColor = CocoaMessage(#Null, #Null, "NSColor windowBackgroundColor")
+        If NSColor
+          Rect\size\width = 1
+          Rect\size\height = 1
+          Image = CreateImage(#PB_Any, 1, 1)
+          StartDrawing(ImageOutput(Image))
+          CocoaMessage(#Null, NSColor, "drawSwatchInRect:@", @Rect)
+          color = Point(0, 0)
+          StopDrawing()
+          FreeImage(Image)
+          ProcedureReturn color
+        Else
+          ProcedureReturn -1
+        EndIf
+    CompilerEndSelect
+  EndProcedure  
   
 EndModule
