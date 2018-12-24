@@ -40,6 +40,7 @@
   EndStructure
   
   Declare readInfo(file$)
+  Declare freeInfo(*info.tfsave)
   
 EndDeclareModule
 
@@ -73,10 +74,9 @@ Module tfsave
       
       file = OpenFile(#PB_Any, tmpFile2$)
       If file
+        *info = AllocateStructure(tfsave)
         If ReadString(file, #PB_Ascii, 4) = "tf**"
-          *info = AllocateStructure(tfsave)
-          
-          *info\error = #ErrorNoError
+          *info\error = #ErrorNoError ; init with no error
           *info\fileSize = FileSize(file$)
           *info\fileSizeUncompressed = FileSize(tmpFile2$)
           
@@ -102,7 +102,7 @@ Module tfsave
                 pos = Loc(file)
                 *buffer = AllocateMemory(len)
                 ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-                *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8)
+                *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
                 FreeMemory(*buffer)
                 *info\mods()\unknown1 = ReadLong(file) ; (?)
               Next
@@ -124,7 +124,7 @@ Module tfsave
                 len = ReadLong(file)
                 *buffer = AllocateMemory(len)
                 ReadData(file, *buffer, len)
-                *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8)
+                *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
                 FreeMemory(*buffer)
                 version = ReadLong(file)
                 If version <> -1
@@ -144,12 +144,12 @@ Module tfsave
                 len = ReadLong(file)
                 *buffer = AllocateMemory(len)
                 ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-                *info\settings()\key$ = PeekS(*buffer, Len, #PB_UTF8)
+                *info\settings()\key$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
                 FreeMemory(*buffer)
                 len = ReadLong(file)
                 *buffer = AllocateMemory(len)
                 ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-                *info\settings()\value$ = PeekS(*buffer, Len, #PB_UTF8)
+                *info\settings()\value$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
                 FreeMemory(*buffer)
               Next
             EndIf
@@ -170,6 +170,10 @@ Module tfsave
     EndIf
     
     ProcedureReturn *info
+  EndProcedure
+  
+  Procedure freeInfo(*info.tfsave)
+    FreeStructure(*info)
   EndProcedure
   
 EndModule
