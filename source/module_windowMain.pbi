@@ -1863,59 +1863,74 @@ Module windowMain
     ; free old data if available
     *tfsave = *saveModList\GetUserData()
     If *tfsave
-      FreeStructure(*tfsave)
+      tfsave::freeInfo(*tfsave)
+      *saveModList\SetUserData(#Null)
     EndIf
     *saveModList\ClearItems()
+    *saveModList\SetEmptyScreen(_("save_loading"), "")
+    
+    ; reset gadgets
+    SetGadgetText(gadget("saveYear"), " ")
+    SetGadgetText(gadget("saveDifficulty"), " ")
+    SetGadgetText(gadget("saveMapSize"), " ")
+    SetGadgetText(gadget("saveMoney"), " ")
+    SetGadgetText(gadget("saveFileSize"), " ")
+    SetGadgetText(gadget("saveFileSizeUncompressed"), " ")
+    
+    ; try to read info from file
     *tfsave = tfsave::readInfo(file$)
     DisableGadget(gadget("saveDownload"), #True)
     
     If *tfsave
       *saveModList\SetUserData(*tfsave)
-      SetGadgetText(gadget("saveName"), _("save_save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
-      
-      SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
-      SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
-      SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km x "+Str(*tfsave\numTilesY/4)+" km")
-      SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
-      SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
-      SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
-      
-      If ListSize(*tfsave\mods())
-        ForEach *tfsave\mods()
-          *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
+      Select *tfsave\error
+        Case tfsave::#ErrorNotSaveFile
+          *saveModList\SetEmptyScreen(_("save_error_not_save_file"), "")
+        Case tfsave::#ErrorVersionUnknown
+          *saveModList\SetEmptyScreen(_("save_error_version", "version="+*tfsave\version), "")
+        Case tfsave::#ErrorModNumberError
+          *saveModList\SetEmptyScreen(_("save_error_mod_number_mismatch"), "")
+        Case tfsave::#ErrorNoError
+          SetGadgetText(gadget("saveName"), _("save_save")+": "+GetFilePart(file$, #PB_FileSystem_NoExtension))
+          SetGadgetText(gadget("saveYear"), Str(*tfsave\startYear))
+          SetGadgetText(gadget("saveDifficulty"), _("save_difficulty"+Str(*tfsave\difficulty)))
+          SetGadgetText(gadget("saveMapSize"), Str(*tfsave\numTilesX/4)+" km x "+Str(*tfsave\numTilesY/4)+" km")
+          SetGadgetText(gadget("saveMoney"), "$"+StrF(*tfsave\money/1000000, 2)+" Mio")
+          SetGadgetText(gadget("saveFileSize"), misc::printSize(*tfsave\fileSize))
+          SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
           
-          *tfsave\mods()\localmod = mods::getModByID(*tfsave\mods()\id$)
-          *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
-          
-          If *tfsave\mods()\localmod
-            *item\AddIcon(images::images("itemIcon_installed"), _("hint_save_installed"))
+          If ListSize(*tfsave\mods())
+            ForEach *tfsave\mods()
+              *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
+              
+              *tfsave\mods()\localmod = mods::getModByID(*tfsave\mods()\id$)
+              *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
+              
+              If *tfsave\mods()\localmod
+                *item\AddIcon(images::images("itemIcon_installed"), _("hint_save_installed"))
+              Else
+                *item\AddIcon(images::images("itemIcon_notInstalled"), _("hint_save_not_installed"))
+              EndIf
+              If *tfsave\mods()\repofile
+                *item\AddIcon(images::images("itemIcon_availableOnline"), _("hint_save_online"))
+              Else
+                *item\AddIcon(images::images("itemIcon_notAvailableOnline"), _("hint_save_not_online"))
+              EndIf
+              If *tfsave\mods()\repofile And Not *tfsave\mods()\localmod
+                download = #True
+              EndIf
+            Next
+            If download
+              DisableGadget(gadget("saveDownload"), #False)
+            EndIf
           Else
-            *item\AddIcon(images::images("itemIcon_notInstalled"), _("hint_save_not_installed"))
+            *saveModList\SetEmptyScreen(_("save_error_no_mods"), "")
           EndIf
-          If *tfsave\mods()\repofile
-            *item\AddIcon(images::images("itemIcon_availableOnline"), _("hint_save_online"))
-          Else
-            *item\AddIcon(images::images("itemIcon_notAvailableOnline"), _("hint_save_not_online"))
-          EndIf
-          If *tfsave\mods()\repofile And Not *tfsave\mods()\localmod
-            download = #True
-          EndIf
-        Next
-        If download
-          DisableGadget(gadget("saveDownload"), #False)
-        EndIf
-      Else
-        *saveModList\SetEmptyScreen(_("save_no_mods"), "")
-        *saveModList\ClearItems()
-      EndIf
+        Default
+          *saveModList\SetEmptyScreen(_("save_error_unknown"), "")
+      EndSelect
     Else
-      SetGadgetText(gadget("saveYear"), " ")
-      SetGadgetText(gadget("saveDifficulty"), " ")
-      SetGadgetText(gadget("saveMapSize"), " ")
-      SetGadgetText(gadget("saveMoney"), " ")
-      SetGadgetText(gadget("saveFileSize"), " ")
-      SetGadgetText(gadget("saveFileSizeUncompressed"), " ")
-      *saveModList\AddItem(_("save_error"))
+      *saveModList\SetEmptyScreen(_("save_error_read_file", "filename="+file$), "")
     EndIf
   EndProcedure
   
