@@ -681,7 +681,7 @@ Module CanvasList
     ProcedureReturn #True
   EndProcedure
   
-  Procedure refreshItemContentPosition(*this.gadget, *item.item)
+  Procedure itemUpdateContentPosition(*this.gadget, *item.item)
     Protected k
     Protected padding = *this\theme\item\Padding
     Protected iconBtnSize = 24
@@ -814,7 +814,7 @@ Module CanvasList
       ; when item location changes, item content moves relative to item
       ; content position update only required when content changes (new button, text change, etc...)
       If *item\refreshContentPosition
-        refreshItemContentPosition(*this, *item)
+        itemUpdateContentPosition(*this, *item)
       EndIf
       
       i + 1
@@ -1139,6 +1139,11 @@ Module CanvasList
     
     Select EventType()
       Case #PB_EventType_Resize
+        LockMutex(*this\mItems)
+        ForEach *this\items()
+          *this\items()\refreshContentPosition = #True
+        Next
+        UnlockMutex(*this\mItems)
         updateScrollbar(*this)
         updateItemPosition(*this)
         draw(*this)
