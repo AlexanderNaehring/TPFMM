@@ -1089,12 +1089,19 @@ Module CanvasList
       
             
       ; draw scrollbar
-      If *this\hover And Not *this\scrollbar\disabled
+      If Not *this\scrollbar\disabled
         ; 2 px margin to outer gadget borders
-        *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - 2
-        *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2 ; pagelength = gadgetheight!
-        *this\scrollbar\box\width = *this\theme\scrollbarWidth
-        *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum ; pagelength = gadgetheight!
+        If *this\hover
+          *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - *this\theme\scrollbarWidth - 3
+          *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2 ; pagelength = gadgetheight!
+          *this\scrollbar\box\width = *this\theme\scrollbarWidth
+          *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum ; pagelength = gadgetheight!
+        Else
+          *this\scrollbar\box\x = GadgetWidth(*this\gCanvas) - 4 - 3
+          *this\scrollbar\box\y = *this\scrollbar\position * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum + 2 ; pagelength = gadgetheight!
+          *this\scrollbar\box\width = 4
+          *this\scrollbar\box\height = *this\scrollbar\pagelength * (GadgetHeight(*this\gCanvas)-4) / *this\scrollbar\maximum ; pagelength = gadgetheight!
+        EndIf
         If *this\scrollbar\box\height < *this\theme\scrollbarWidth*2
           *this\scrollbar\box\height = *this\theme\scrollbarWidth*2
         EndIf
