@@ -461,7 +461,7 @@ Module mods
     ProcedureReturn MatchRegularExpression(regexp, id$)
   EndProcedure
   
-  Procedure modCheckValidTPF(path$)
+  Procedure modCheckRoot(path$)
     path$ = misc::path(path$)
     ; check if mod at specified path is valid
     ; mods must have
@@ -479,16 +479,30 @@ Module mods
       ProcedureReturn #False
     EndIf
     
-    If FileSize(path$ + "res") = -2
-      ; res/ folder found, assume mod is ok
-      ProcedureReturn #True
-    EndIf
-    
     If FileSize(path$ + "mod.lua") > 0
-      ; mod.lua found, assume mod is ok
       ProcedureReturn #True
     EndIf
+    deb("mods:: {"+path$+"} has no mod.lua")
     
+    ; every mod should have a mod.lua file
+    ; if not, may still be a mod with deprecated mod format:
+    
+    ; folder has res/ folder, may be a TF mod
+    If FileSize(path$ + "res") = -2
+      ProcedureReturn #True
+    EndIf
+    deb("mods:: {"+path$+"} has not mod.lua")
+    
+    If FileSize(path$ + "info.lua") > 0 ; old TF mod
+      ProcedureReturn #True
+    EndIf
+    deb("mods:: {"+path$+"} has no info.lua")
+    
+    
+    If FileSize(path$ + "tfmm.ini") > 0
+      ProcedureReturn #True
+    EndIf
+    deb("mods:: {"+path$+"} is not a TPF or TF mod")
     
   EndProcedure
   
@@ -588,26 +602,10 @@ Module mods
     Protected modFolder$, luaFile$
     Protected file
     
-    
     ; for all mods found in folder: get location of folder and check mod.lua for changes
     ; folder may be workshop, mods/ or dlcs/
     modFolder$ = getModFolder(id$)
-      
-    If FileSize(modFolder$ + "tfmm.ini")
-      If OpenPreferences(modFolder$ + "tfmm.ini")
-        *mod\aux\deprecated = #True
-        *mod\name$ = ReadPreferenceString("name", "")
-        *mod\version$ = ReadPreferenceString("version", "")
-        ClearList(*mod\authors())
-        AddElement(*mod\authors())
-        *mod\authors()\name$ = ReadPreferenceString("author", "")
-        If *mod\authors()\name$ = ""
-          ClearList(*mod\authors())
-        EndIf
-        ClosePreferences()
-      EndIf
-    EndIf
-      
+    
     If FileSize(modFolder$ + "mod.lua") > 0
       luaFile$ = modFolder$ + "mod.lua"
       *mod\aux\deprecated = #False
@@ -615,26 +613,37 @@ Module mods
       luaFile$ = modFolder$ + "info.lua"
       *mod\aux\deprecated = #True
     Else
-      ; no file
+      ; no mod.lua or info.lua
       *mod\aux\deprecated = #True
+      If FileSize(modFolder$ + "tfmm.ini")
+        If OpenPreferences(modFolder$ + "tfmm.ini")
+          *mod\name$ = ReadPreferenceString("name", "")
+          *mod\version$ = ReadPreferenceString("version", "")
+          ClearList(*mod\authors())
+          AddElement(*mod\authors())
+          *mod\authors()\name$ = ReadPreferenceString("author", "")
+          If *mod\authors()\name$ = ""
+            ClearList(*mod\authors())
+          EndIf
+          ClosePreferences()
+        EndIf
+      EndIf
     EndIf
     
     If luaFile$
-      ; read mod.lua if required
+      ; read mod.lua (or info.lua) if required
       If *mod\name$ = "" Or                                                 ; no name
          *mod\aux\luaDate <> GetFileDate(luaFile$, #PB_Date_Modified) Or    ; mod.lua modified
          *mod\aux\sv <> #SCANNER_VERSION Or                                 ; new program version
          *mod\aux\luaLanguage$ <> locale::getCurrentLocale()                ; language changed
         ; load info from mod.lua
         *mod\aux\luaParseError = #False
-        If luaParser::parseModLua(luaFile$, *mod) ; current language
-          ; ok
+        If luaParser::parseModLua(luaFile$, *mod)
           *mod\aux\sv = #SCANNER_VERSION
           modInfoProcessing(*mod)
         Else
           *mod\aux\luaParseError = #True
         EndIf
-      
         
         If *mod\name$ = ""
           deb("mods:: mod {"+id$+"} has no name")
@@ -647,12 +656,9 @@ Module mods
     ; do this always
 ;     localizeTags(*mod)
     *mod\aux\isVanilla = modIsVanilla(*mod)
-    
-    
     If Left(id$, 1) = "*"
       ; workshop mod, read workshop file id directly from id
       *mod\aux\workshopID = Val(Mid(id$, 2, Len(id$)-3))
-      
     Else
       ; not workshop mod, but "workshop_fileid.txt" present
       If FileSize(modFolder$ + "workshop_fileid.txt")
@@ -665,9 +671,8 @@ Module mods
       EndIf
     EndIf
     
-    
-    If FileSize(luaFile$) <= 0
-      ; maybe write a lua file?
+    If FileSize(modFolder$ + "mod.lua") <= 0
+      ;TODO maybe write mod.lua file to increase compatibility with game?
     EndIf
   EndProcedure
   
@@ -947,8 +952,10 @@ Module mods
   EndProcedure
   
   Procedure.s modGetName(*mod.mod)
-    If *mod
+    If modCheckID(*mod\tpf_id$)
       ProcedureReturn *mod\name$
+    Else
+      ProcedureReturn *mod\name$+" ***" ; mod folder deprecated!
     EndIf
   EndProcedure
   
@@ -1481,7 +1488,10 @@ Module mods
           Continue
         EndIf
         entry$ = DirectoryEntryName(dir)
-        If modCheckID(entry$) And modCheckValidTPF(folderMods$ + entry$)
+        If entry$ = "." Or entry$ = ".."
+          Continue
+        EndIf
+        If modCheckRoot(folderMods$ + entry$); And modCheckID(entry$)
           scanner(entry$) = #True
         EndIf
       Wend
@@ -1499,7 +1509,7 @@ Module mods
         EndIf
         entry$ = DirectoryEntryName(dir)
         If modCheckWorkshopID(entry$)
-          If modCheckValidTPF(folderWorkshop$ + entry$)
+          If modCheckRoot(folderWorkshop$ + entry$)
             ; workshop mod folders only have a number.
             ; Add * as prefix and _1 as postfix
             scanner("*"+entry$+"_1") = #True

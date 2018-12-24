@@ -1884,7 +1884,7 @@ Module windowMain
         ForEach *tfsave\mods()
           *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
           
-          *tfsave\mods()\localmod = mods::getModByID(*tfsave\mods()\id$, #False)
+          *tfsave\mods()\localmod = mods::getModByID(*tfsave\mods()\id$)
           *tfsave\mods()\repofile = repository::getFileByFoldername(*tfsave\mods()\id$)
           
           If *tfsave\mods()\localmod

@@ -55,7 +55,7 @@ Module tfsave
   Procedure readInfo(file$)
     deb("tfsave:: readInfo("+file$+")")
     Protected p, file
-    Protected pos, numMods, i, len, numSettings
+    Protected pos, numMods, i, len, numSettings, version
     Protected *info.tfsave, *buffer
     Protected tmpFile1$, tmpFile2$
     *info = #Null
@@ -126,7 +126,12 @@ Module tfsave
                 ReadData(file, *buffer, len)
                 *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8)
                 FreeMemory(*buffer)
-                *info\mods()\id$ + "_"+Str(ReadLong(file)) ; version
+                version = ReadLong(file)
+                If version <> -1
+                  *info\mods()\id$ + "_"+Str(version) ; version
+                Else
+                  Debug "mod "+*info\mods()\id$+" is deprecated"
+                EndIf
               Next
             EndIf
             
