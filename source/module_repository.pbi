@@ -5,7 +5,6 @@ XIncludeFile "wget.pb"
 
 XIncludeFile "module_repository.h.pbi"
 
-
 ;TODO use winapi for downloads? https://msdn.microsoft.com/en-us/ie/ms775123(v=vs.94)
 
 Module repository
@@ -1201,6 +1200,9 @@ Module repository
     If events(#EventDownloadSuccess)
       PostEvent(events(#EventDownloadSuccess), *file, 0)
     EndIf
+    
+    ;TODO check downlaoded file, if redircetion page, download real file again!
+    ; ...
     
     mods::install(filename$)
     
