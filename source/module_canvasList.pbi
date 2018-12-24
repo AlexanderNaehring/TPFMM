@@ -875,6 +875,8 @@ Module CanvasList
     Protected k, nextX, str$
     Protected x, y, w, h
     Protected redraw.b
+    Protected visibleItems, text$
+    
     margin = *this\theme\Item\Margin
     padding = *this\theme\Item\Padding
     
@@ -896,6 +898,7 @@ Module CanvasList
           If \hidden
             Continue
           EndIf
+          visibleItems + 1
           
           ; only draw if visible
           If \isOnCanvas
@@ -1025,14 +1028,6 @@ Module CanvasList
       
       
       ; show text if no items is visible
-      Protected visibleItems, text$
-      visibleItems = 0
-      ForEach *this\items()
-        If Not *this\items()\hidden
-          visibleItems + 1
-        EndIf
-      Next
-      
       If ListSize(*this\items()) = 0
         ; list empty
         text$ = *this\textOnEmpty$
@@ -1043,12 +1038,20 @@ Module CanvasList
         text$ = ""
       EndIf
       If text$
-        FrontColor(RGBA($0, $0, $0, $FF))
+        DrawingFont(GetGadgetFont(#PB_Default))
         w = TextWidth(text$)
         h = TextHeight(text$)
-        DrawingMode(#PB_2DDrawing_AlphaBlend|#PB_2DDrawing_Transparent)
-        DrawingFont(GetGadgetFont(#PB_Default))
-        DrawText((GadgetWidth(*this\gCanvas) - w)/2, (GadgetHeight(*this\gCanvas) - h)/2, text$)
+        x = (GadgetWidth(*this\gCanvas) - w)/2
+        y = (GadgetHeight(*this\gCanvas) - h)/2
+        
+        DrawingMode(#PB_2DDrawing_Default)
+        Box(x-padding, y-padding, w+2*padding, h+2*padding, ColorFromHTML(*this\theme\color\ItemBackground$))
+            
+        DrawingMode(#PB_2DDrawing_Outlined)
+        Box(x-padding, y-padding, w+2*padding, h+2*padding, ColorFromHTML(*this\theme\color\ItemBorder$))
+        
+        DrawingMode(#PB_2DDrawing_Transparent)
+        DrawText(x, y, text$, ColorFromHTML(*this\theme\color\ItemText$))
       EndIf
       
       
