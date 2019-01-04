@@ -1334,10 +1334,15 @@ Module mods
     Protected compare, *repo_mod.repository::RepositoryMod
     ; todo modIsUpdateAvailable() not yet threadsafe... cannot access repo mods while repositories are loaded
     
+    If modIsWorkshop(*mod)
+      ProcedureReturn #False
+    EndIf
+    
     *repo_mod = modGetRepoMod(*mod)
     If Not *repo_mod
       ProcedureReturn #False
     EndIf
+    
     
     If settings::getInteger("", "compareVersion") And *repo_mod\getSource() <> "workshop" And *repo_mod\getVersion()
       compare = Bool(*repo_mod\getVersion() And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\getVersion()))
