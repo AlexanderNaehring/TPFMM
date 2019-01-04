@@ -250,12 +250,19 @@ Module windowMain
   EndProcedure
   
   Procedure checkUpdate(*null)
-    Protected *buffer, json, tpfmm
+    Protected json, tpfmm
+    Protected tmp$, *wget.wget::wget
     Static update.update
     
-    *buffer = ReceiveHTTPMemory(main::#UPDATER$, 0, main::VERSION_FULL$)
-    If *buffer
-      json = CatchJSON(#PB_Any, *buffer, MemorySize(*buffer), #PB_JSON_NoCase)
+    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+    If FileSize(tmp$) > 0
+      DeleteFile(tmp$, #PB_FileSystem_Force)
+    EndIf
+    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #False)
+    *wget\download()
+    If FileSize(tmp$) > 0
+      json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
+      DeleteFile(tmp$, #PB_FileSystem_Force)
       If json
         tpfmm = GetJSONMember(JSONValue(json), "tpfmm")
         If tpfmm
@@ -272,7 +279,6 @@ Module windowMain
       Else
         deb("windowMain:: updater, json error '"+JSONErrorMessage()+"'")
       EndIf
-      FreeMemory(*buffer)
     Else
       deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
     EndIf

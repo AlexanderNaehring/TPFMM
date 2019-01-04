@@ -222,7 +222,6 @@ Module main
     progressDialog\onclose = PostEventOnClose
     
     SetWindowTitle(progressDialog\window, title$)
-;     SetGadgetState(DialogGadget(dialog, "logo"), ImageID(images::images("logo")))
     
     Debug "load progress window animation"
     progressDialog\ani = animation::new()
@@ -266,8 +265,6 @@ Module main
     CompilerIf Not #PB_Compiler_Debugger
       OnErrorCall(@onError())
     CompilerEndIf
-    
-    InitNetwork()
     
     ; check if TPFMM instance is already running
     If Not instance::create(#PORT, @handleParameter())
@@ -319,7 +316,6 @@ Module main
   Procedure initProxy()
     Protected server$, user$, password$
     
-    InitNetwork()
     If settings::getInteger("proxy", "enabled")
       server$   = settings::getString("proxy", "server")
       user$     = settings::getString("proxy", "user")
@@ -328,10 +324,8 @@ Module main
     
     If server$
       deb("main:: server: "+server$+", user:"+user$)
-      HTTPProxy(server$, user$, password$)
       wget::setProxy(server$, user$, password$)
     Else
-      HTTPProxy("")
       wget::setProxy("")
     EndIf
     
@@ -366,7 +360,6 @@ Module main
       CompilerCase #PB_OS_Linux
         ProcedureReturn Bool(pthread_self_() = mainThread)
     CompilerEndSelect
-    
   EndProcedure
   
   ;- Exit

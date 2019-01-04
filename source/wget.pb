@@ -174,7 +174,7 @@ Module wget
     *this\program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Read|#PB_Program_Error|#PB_Program_Hide)
     
     If *this\program
-      deb("wget:: #"+*this+" downloading...")
+      deb("wget:: start #"+*this+" "+#DQUOTE$+*this\remote$+#DQUOTE$+" > "+#DQUOTE$+*this\local$+#DQUOTE$)
       While ProgramRunning(*this\program)
         If *this\cancel
           deb("wget:: #"+*this+" cancel download, kill wget.exe")
@@ -213,7 +213,7 @@ Module wget
       *this\program = #Null
       
       If *this\exitCode = 0
-        Deb("wget:: #"+*this+" download ok")
+        Deb("wget:: #"+*this+": download ok")
       Else
         Select *this\exitCode
           Case 0 ; no error, cannot be reached
@@ -239,7 +239,7 @@ Module wget
             *this\lastError$ = "unknown error"
         EndSelect
         
-        deb("wget:: "+*this\lastError$)
+        deb("wget:: #"+*this+": "+*this\lastError$)
         
         If STDOUT$
           deb("wget:: #"+*this+" STDOUT output:"+#CRLF$+STDOUT$+#CRLF$)
@@ -251,7 +251,7 @@ Module wget
       
     Else ; could not start program
       *this\lastError$ = "could not start wget"
-      deb("wget:: #"+*this+" "+*this\lastError$)
+      deb("wget:: #"+*this+": "+*this\lastError$)
       *this\exitCode = -1
     EndIf
     

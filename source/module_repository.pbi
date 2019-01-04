@@ -2,17 +2,13 @@
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
-
 XIncludeFile "module_repository.h.pbi"
-
-;TODO use winapi for downloads? https://msdn.microsoft.com/en-us/ie/ms775123(v=vs.94)
 
 Module repository
   UseModule debugger
   UseModule locale
   
   ;{ VT
-  
   DataSection
     vtMod:
     Data.i @modGetName()
@@ -41,11 +37,9 @@ Module repository
     Data.i @fileGetFolderName()
     Data.i @fileGetFilename()
   EndDataSection
-  
   ;}
   
   ;{ Structures
-  
   Structure download ; download information
     *file.file
     *mod.mod
@@ -128,7 +122,6 @@ Module repository
   ;}
   
   ;{ Globals
-  
   Global NewMap ModRepositories.modRepository() ; allow multiple repositories -> use map, with repository URL as key
   Global NewMap *filesByFoldername.mod()        ; pointer to original mods in ModRepositories\mods() with foldername as key
   Global mutexMods = CreateMutex(),
@@ -167,7 +160,6 @@ Module repository
       EndIf
     EndIf
     
-    InitNetwork()
     UseMD5Fingerprint()
     UsePNGImageDecoder()
     UseJPEGImageDecoder()
@@ -176,7 +168,6 @@ Module repository
   
   init()
   ;}
-  
   
   ;----------------------------------------------------------------------------
   ;---------------------------- PRIVATE FUNCTIONS -----------------------------
@@ -241,41 +232,6 @@ Module repository
       ProcedureReturn #RepoThumbCache$ + "/" + Left(name$, 2) + "/" + name$ + ".jpg"
     Else
       ProcedureReturn ""
-    EndIf
-  EndProcedure
-  
-  Procedure downloadToMemory_deprecated(url$, timeout=#RepoDownloadTimeout)
-    ; some bug in HTTP_Async causes IMA... do not use async (no timeout available...)
-    ProcedureReturn ReceiveHTTPMemory(url$, 0, main::VERSION_FULL$)
-    
-    Protected con, time, lastBytes, progress, *buffer
-    con = ReceiveHTTPMemory(url$, #PB_HTTP_Asynchronous, main::VERSION_FULL$)
-    
-    If con
-      time = ElapsedMilliseconds()
-      Repeat
-        progress = HTTPProgress(con)
-        
-        If progress = lastBytes
-          If ElapsedMilliseconds() - time > timeout
-            Debug "download timed out"
-            AbortHTTP(con)
-          EndIf
-        Else
-          lastBytes = progress
-          time = ElapsedMilliseconds()
-        EndIf
-        
-        If progress < 0
-          *buffer = FinishHTTP(con)
-          Break
-        EndIf
-        
-      Until progress < 0
-    EndIf
-    
-    If progress = #PB_Http_Success
-      ProcedureReturn *buffer
     EndIf
   EndProcedure
   
@@ -517,6 +473,7 @@ Module repository
   Procedure queueThumbnail(*thumbnailData.thumbnailAsync)
     Protected url$, file$
     Protected image, *buffer
+    Protected tmp$, *wget.wget::wget
     ; TODO this function can be optimized!
     
     ; download for same image may be triggered multiple times!
@@ -533,27 +490,28 @@ Module repository
       If FileSize(file$) <= 0
         ; download image
         Debug "Download Thumbnail '"+*thumbnailData\mod\thumbnail$+"'"
-        CreateDirectory(GetPathPart(file$))
-        *buffer = ReceiveHTTPMemory(url$, #Null, main::VERSION_FULL$)
-        If *buffer
-          If MemorySize(*buffer) > 1024 ; often rx 92 bytes when proxy error occurs
-            image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
-            If image
-              image = misc::ResizeCenterImage(image, 160, 90)
-              SaveImage(image, file$, #PB_ImagePlugin_JPEG, 7, 24)
-              FreeImage(image)
-            Else
-              Debug "cold not load image"
-            EndIf
+        tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+        If FileSize(tmp$) > 0
+          DeleteFile(tmp$, #PB_FileSystem_Force)
+        EndIf
+        *wget = wget::NewDownload(url$, tmp$, 2, #False)
+        *wget\download()
+        If FileSize(tmp$) > 0
+          image = LoadImage(#PB_Any, tmp$)
+          DeleteFile(tmp$, #PB_FileSystem_Force)
+          If image
+            image = misc::ResizeCenterImage(image, 160, 90)
+            CreateDirectory(GetPathPart(file$))
+            SaveImage(image, file$, #PB_ImagePlugin_JPEG, 7, 24)
+            FreeImage(image)
           Else
-            Debug "mem buffer too small?"
+            Debug "cold not load image"
           EndIf
-          FreeMemory(*buffer)
         Else
-          Debug "donload failed"
+          Debug "download failed"
         EndIf
       EndIf
-        
+      
       If FileSize(file$) > 0
         ; file exists, load image
         ;TODO: repository may download image, but move image load() to windowMain:: ?
@@ -650,12 +608,9 @@ Module repository
     *queueThread = #Null
   EndProcedure
   
-  
-  
   ;----------------------------------------------------------------------------
   ;----------------------------- PUBLIC FUNCTION ------------------------------
   ;----------------------------------------------------------------------------
-  
   
   Procedure refreshRepositories(async=#True)
     stopQueue()
@@ -1159,6 +1114,21 @@ Module repository
     EndIf
   EndProcedure
   
+  Declare fileDownloadProgress(*wget.wget::wget)
+  Declare fileDownloadError(*wget.wget::wget)
+  Declare fileDownloadSuccess(*wget.wget::wget)
+  
+  Procedure downloadURL(url$, filename$, *userdata=#Null)
+    Protected *wget.wget::wget
+    *wget = wget::NewDownload(url$, filename$, #RepoDownloadTimeout/1000, #True)
+    *wget\setUserAgent(main::VERSION_FULL$)
+    *wget\setUserData(*userdata)
+    *wget\CallbackOnProgress(@fileDownloadProgress())
+    *wget\CallbackOnSuccess(@fileDownloadSuccess())
+    *wget\CallbackOnError(@fileDownloadError())
+    *wget\download()
+  EndProcedure
+  
   Procedure fileDownloadProgress(*wget.wget::wget)
     postProgressEvent(*wget\getProgress())
   EndProcedure
@@ -1201,15 +1171,41 @@ Module repository
       PostEvent(events(#EventDownloadSuccess), *file, 0)
     EndIf
     
-    ;TODO check downlaoded file, if redircetion page, download real file again!
-    ; ...
-    
-    mods::install(filename$)
-    
-    SignalSemaphore(_semaphoreDownload)
-    If events(#EventWorkerStops)
-      PostEvent(events(#EventWorkerStops))
+    ; additional check:
+    ; tpfnet downloads may be a redirect page instead of actual file...
+    Protected file, line$
+    Protected regExp, redirect$
+    If FileSize(filename$) < 50*1024 ; may be a redirtect page
+      file = ReadFile(#PB_Any, filename$, #PB_UTF8)
+      If file
+        regExp = CreateRegularExpression(#PB_Any, ~"<meta http-equiv=\"refresh\" content=\"(\\d+);URL=(.+)\" />")
+        While Not Eof(file)
+          line$ = ReadString(file)
+          If MatchRegularExpression(regExp, line$)
+            If ExamineRegularExpression(regExp, line$)
+              While NextRegularExpressionMatch(regExp)
+                redirect$ = RegularExpressionGroup(regexp, 2)
+              Wend
+            EndIf
+          EndIf
+        Wend
+        FreeRegularExpression(regExp)
+        CloseFile(file)
+      EndIf
     EndIf
+    
+    If redirect$
+      ; will re-download new URL
+      deb("repository:: download was HTML with redirection - redirect to "+redirect$)
+      downloadURL(redirect$, filename$, *file)
+    Else
+      mods::install(filename$)
+      SignalSemaphore(_semaphoreDownload)
+      If events(#EventWorkerStops)
+        PostEvent(events(#EventWorkerStops))
+      EndIf
+    EndIf
+    
   EndProcedure
   
   Procedure fileDownload(*file.file)
@@ -1217,16 +1213,22 @@ Module repository
     Protected *mod.mod = *file\mod
     Protected filename$, folder$
     
-    ;TODO make sure that not in main thread? -> semaphore may wait
-    ;TODO move download wait check (semaphore) to wget?
+    If main::isMainThread()
+      CreateThread(@fileDownload(), *file)
+      ProcedureReturn
+    EndIf
     
     ; only one download at a time
     ; simple: just "WaitSemaphore()", TrySemaphore() only for debug
-    If Not TrySemaphore(_semaphoreDownload)
-      deb("repository:: wait for free download slot...")
+    CompilerIf #PB_Compiler_Debugger
+      If Not TrySemaphore(_semaphoreDownload)
+        deb("repository:: wait for free download slot...")
+        WaitSemaphore(_semaphoreDownload)
+        deb("repository:: download slot got available, start now")
+      EndIf
+    CompilerElse
       WaitSemaphore(_semaphoreDownload)
-      deb("repository:: download slot got available, start now")
-    EndIf
+    CompilerEndIf
     
     If events(#EventWorkerStarts)
       PostEvent(events(#EventWorkerStarts))
@@ -1248,13 +1250,7 @@ Module repository
     misc::CreateDirectoryAll(folder$)
     filename$ = folder$ + filename$
     
-    *wget = wget::NewDownload(*file\url$, filename$, #RepoDownloadTimeout/1000, #True)
-    *wget\setUserAgent(main::VERSION_FULL$)
-    *wget\setUserData(*file)
-    *wget\CallbackOnProgress(@fileDownloadProgress())
-    *wget\CallbackOnSuccess(@fileDownloadSuccess())
-    *wget\CallbackOnError(@fileDownloadError())
-    *wget\download()
+    downloadURL(*file\url$, filename$, *file)
   EndProcedure
   
   Procedure.s fileGetLink(*file.file)
@@ -1301,6 +1297,5 @@ Module repository
       ProcedureReturn #False
     EndIf
   EndProcedure
-  
   
 EndModule

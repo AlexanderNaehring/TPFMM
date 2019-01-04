@@ -155,7 +155,7 @@ Module modInformation
         image = images(url$)
       Else
         ; get avatar from transportfever.net
-        *buffer = ReceiveHTTPMemory(url$)
+        *buffer = ReceiveHTTPMemory(url$, #Null, main::VERSION_FULL$)
         If *buffer
           image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
           FreeMemory(*buffer)
