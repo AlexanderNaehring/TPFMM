@@ -15,7 +15,7 @@
   #WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
   #UPDATER$ = "https://www.transportfevermods.com/repository/"
   #PORT = 14123
-  #EULAVersion = 2
+  #EULAVersion = 3
   
   UseMD5Fingerprint()
   
