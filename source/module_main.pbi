@@ -13,7 +13,7 @@
   #DEBUG = #True ; write debug messages to log file
   #VERSION$ = "TPFMM v1.1." + #PB_Editor_BuildCount
   #WEBSITE$ = "https://www.transportfever.net/index.php/Thread/7777-TPFMM-Transport-Fever-Mod-Manager/"
-  #UPDATER$ = "https://www.transportfevermods.com/repository/"
+  #UPDATER$ = "https://api.github.com/repos/AlexanderNaehring/TPFMM/releases/latest"
   #PORT = 14123
   #EULAVersion = 3
   

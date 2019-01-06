@@ -285,7 +285,7 @@ error_unknown     = Das Repository konnte wegen einem unbekannten Fehler nicht h
 
 [update]
 available        = Neue Version von TPFMM verfügbar.
-available_text   = {version} ist verfügbar.\nSoll die Website zum herunterladen der neuen Version jetzt geöffnet werden?
+available_text   = {name} ist verfügbar.\nSoll die Website zum herunterladen der neuen Version jetzt geöffnet werden?
 
 [mods]
 filter_all      = Zeige Alle Ordner

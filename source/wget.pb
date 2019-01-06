@@ -157,7 +157,7 @@ Module wget
     Protected regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
     
     program$ = "wget\wget.exe"
-    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
+    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --header="+#DQUOTE$+"Accept: text/html,*/*"+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
     ; --proxy-user=user --proxy-password=password  or use environment variable
     ; -U user-agent
     ; -S print HTTP headers

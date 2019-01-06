@@ -57,10 +57,29 @@ Module windowMain
     source$
   EndStructure
   
-  Structure update
-    build.i
-    version$
+  Structure GithubAssets
     url$
+    id.i
+    name$
+    size.i
+    browser_download_url$
+  EndStructure
+  
+  Structure GithubRelease
+    url$
+    id.i
+    name$
+    html_url$
+    tag_name$
+    published_at$
+    body$
+    List assets.GitHubAssets()
+  EndStructure
+  
+  Structure version
+    major.i
+    minor.i
+    patch.i
   EndStructure
   
   ;}
@@ -249,28 +268,65 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure getSemanticVersion(string$, *version.version)
+    Protected re, ret
+    If *version
+      re = CreateRegularExpression(#PB_Any, "(\d+)\.(\d+).(\d+)")
+      If re And ExamineRegularExpression(re, string$)
+        If NextRegularExpressionMatch(re)
+          *version\major = Val(RegularExpressionGroup(re, 1))
+          *version\minor = Val(RegularExpressionGroup(re, 2))
+          *version\patch = Val(RegularExpressionGroup(re, 3))
+          ret = #True
+        EndIf
+        FreeRegularExpression(re)
+      EndIf
+    EndIf
+    ProcedureReturn ret
+  EndProcedure
+  
+  Procedure semanticVersionIsGreater(*current.version, *new.version)
+    If *new\major > *current\major
+      ProcedureReturn #True
+    ElseIf *new\major = *current\major
+      If *new\minor > *current\minor
+        ProcedureReturn #True
+      ElseIf *new\minor = *current\minor
+        If *new\patch > *current\patch
+          ProcedureReturn #True
+        EndIf
+      EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
   Procedure checkUpdate(*null)
     Protected json, tpfmm
     Protected tmp$, *wget.wget::wget
-    Static update.update
+    Protected local.version, remote.version
+    Static latest.GithubRelease ; keep in memory for GUI to access the data
     
     tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
     If FileSize(tmp$) > 0
       DeleteFile(tmp$, #PB_FileSystem_Force)
     EndIf
     *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #False)
+    *wget\setUserAgent("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36")
     *wget\download()
     If FileSize(tmp$) > 0
       json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
       DeleteFile(tmp$, #PB_FileSystem_Force)
       If json
-        tpfmm = GetJSONMember(JSONValue(json), "tpfmm")
-        If tpfmm
-          ExtractJSONStructure(tpfmm, @update, update)
-          If update\build > #PB_Editor_CompileCount ; update available
-            PostEvent(#EventUpdateAvailable, window, @update)
+        ExtractJSONStructure(JSONValue(json), @latest, GithubRelease)
+        If ListSize(latest\assets()) > 0 ; binaries available
+          If getSemanticVersion(main::#VERSION$, @local) And getSemanticVersion(latest\tag_name$, @remote)
+            If semanticVersionIsGreater(local, remote)
+              PostEvent(#EventUpdateAvailable, window, @latest)
+            Else
+              deb("windowMain:: updater, no update available")
+            EndIf
           Else
-            deb("windowMain:: updater, no update available")
+            deb("windowMain:: updater, could not read semantic version")
           EndIf
         Else
           deb("windowMain:: updater, could not find json member 'tpfmm'")
@@ -285,11 +341,12 @@ Module windowMain
   EndProcedure
   
   Procedure updateAvailable()
-    Protected *update.update
-    *update = EventGadget()
-    If *update
-      If MessageRequester(_("update_available"), _("update_available_text", "version="+*update\version$), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        misc::openLink(*update\url$)
+    Protected *latest.GithubRelease
+    *latest = EventGadget()
+    
+    If *latest
+      If MessageRequester(_("update_available"), _("update_available_text", "name="+*latest\name$+#SEP+"tag="+*latest\tag_name$+#SEP+"body="+*latest\body$), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        misc::openLink(*latest\html_url$)
       EndIf
     EndIf
   EndProcedure

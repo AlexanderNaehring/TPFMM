@@ -181,7 +181,7 @@ backup_auto_delete_1week    = after 1 week
 backup_auto_delete_1month   = after 1 month
 backup_auto_delete_3months  = after 3 months
 backup_auto_delete_6months  = after 6 months
-backup_auto_delete_1year    =  after 1 year 
+backup_auto_delete_1year    =  after 1 year
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
 locale          = Localization (Language)
@@ -274,7 +274,7 @@ terms       = Terms & Conditions:
 mod_count   = Number of mods:
 error             = Cannot add repository
 error_download    = Download failed. Please make sure that the URL is correct and TPFMM has access to the internet.
-error_json        = The repository does not provide a valid JSON file or is malformed. 
+error_json        = The repository does not provide a valid JSON file or is malformed.
 error_dup_url     = A repository with the same URL is already loaded.
 error_no_source   = The repsitory does not provide any source ID. Please contact the repository maintainer.
 error_dup_source  = The repository source ID matches the ID of another repository that is already loaded.\nThe repository source ID must be unique.\nEither this repository is already loaded or the maintainer must change the source ID.
@@ -283,7 +283,7 @@ error_unknown     = Cannot add the repository due to an unknown error. Please tr
 
 [update]
 available        = New Version of TPFMM available.
-available_text   = {version} is available.\nDo you want to visit the website for downloading the new version now?
+available_text   = {name} is available.\nDo you want to visit the website for downloading the new version now?
 
 [mods]
 filter_all      = Show All Folders
