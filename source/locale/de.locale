@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -120,6 +120,7 @@ backup_restore  = Sicherung wiederherstellen
 backup_delete   = Sicherung entfernen
 backup_folder   = Ordner mit Sicherheitskopien öffnen
 backup_refresh  = Liste von Sicherungen aktualisieren
+backup_open_file = Sicherheitskopie öffnen
 
 save_installed      = Mod ist installiert
 save_not_installed  = Mod ist nicht installiert

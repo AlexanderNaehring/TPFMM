@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -119,6 +119,7 @@ backup_restore  = Restore Backup
 backup_delete   = Delete Backup
 backup_folder   = Open Backup Folder
 backup_refresh  = Refresh backup list
+backup_open_file = Open backup archive
 
 save_installed      = Mod is installed
 save_not_installed  = Mod is not installed

@@ -2073,6 +2073,13 @@ Module windowMain
     mods::backupsScan()
   EndProcedure
   
+  Procedure backupIconOpenFile(*item.CanvasList::CanvasListItem)
+    Protected *backup.mods::BackupMod
+    *backup = *item\GetUserData()
+    If *backup
+      misc::openLink(mods::backupsGetFolder()+*backup\getFilename())
+    EndIf
+  EndProcedure
   
   Procedure backupIconRestore(*item.CanvasList::CanvasListItem)
     Protected *backup.mods::BackupMod
@@ -2111,6 +2118,7 @@ Module windowMain
                                 _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
+    *item\AddButton(@backupIconOpenFile(), images::Images("itemBtnFile"), images::images("itemBtnFileHover"), _("hint_backup_open_file"))
     *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"), _("hint_backup_restore"))
     *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_backup_delete"))
     
