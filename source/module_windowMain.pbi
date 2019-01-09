@@ -2146,7 +2146,6 @@ Module windowMain
   
   Procedure backupCallbackRemoveBackup(*backup.mods::BackupMod)
     Protected NewList *items.CanvasList::CanvasListItem()
-    
     If *backupList\GetAllItems(*items())
       ForEach *items()
         If *backup = *items()\GetUserData()
@@ -2541,7 +2540,6 @@ Module windowMain
     
     UnuseModule locale
   EndProcedure
-  
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------

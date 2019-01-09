@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_misc.pbi"
+XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -694,6 +694,7 @@ Module mods
     If FindMapElement(backups(), filename$)
       deb("mods:: backupLoadList() backup file "+filename$+" already in map")
       DebuggerError("this should not happen")
+      ; TODO: use md5 fingerprint as key instead of filename
     Else
       AddMapElement(backups(), filename$, #PB_Map_ElementCheck)
     EndIf
@@ -710,7 +711,7 @@ Module mods
     
     With *this\info
       If \filename$ <> filename$
-        deb("mods:: backup scanner found wrong \filename in backup meta data for "+filename$+", corrected.")
+        Debug "mods:: file was moved after backup: "+filename$+""
       EndIf
       \filename$ = filename$
       If Not \size
@@ -2048,7 +2049,7 @@ Module mods
     ; get hash of file
     md5$ = FileFingerprint(tmpFile$, #PB_Cipher_MD5)
     
-    ; folder structure: backups/hash/mod_id.zip
+    ; folder structure: <backups>/hash/mod_id.zip
     ; collision if backup with same hash and same mod_id already exists
     filename$ = misc::path(md5$) + filename$ ; filename is the filename relative to the backup folder
     backupFile$ = misc::path(backupFolder$) + filename$
