@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -281,6 +281,12 @@ error_no_source   = The repsitory does not provide any source ID. Please contact
 error_dup_source  = The repository source ID matches the ID of another repository that is already loaded.\nThe repository source ID must be unique.\nEither this repository is already loaded or the maintainer must change the source ID.
 error_no_mods     = TPFMM cannot find any mods in this repository. Please contact the repository maintainer.
 error_unknown     = Cannot add the repository due to an unknown error. Please try again or submit a bug report.
+
+[backup]
+delete_mod_title  = Delete Backup of '{name}'?
+delete_mod_body   = Do you want to delete the backup of '{name}'?
+delete_mods_title = Delete {number} backups?
+delete_mods_body  = Do you want to delete {number} backups?
 
 [update]
 available        = New Version of TPFMM available.

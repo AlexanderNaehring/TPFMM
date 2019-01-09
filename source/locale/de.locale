@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -283,6 +283,12 @@ error_no_source   = Das Repository gibt keine ID an. Bitte kontaktiere den Verwa
 error_dup_source  = Die Repository ID ist identisch mit einem bereits geladenen Repository.\nDie ID muss einzigartig sein.\nEntweder ist dieses Repository bereits geladen, oder der Verwalter muss die ID ändern.
 error_no_mods     = TPFMM kann keine Mods in dem Repository finden. Bitte kontaktiere den Verwalter.
 error_unknown     = Das Repository konnte wegen einem unbekannten Fehler nicht hinzugefügt werden. Bitte versuche es erneut oder sende einen Fehlerbericht.
+
+[backup]
+delete_mod_title  = Sicherheitskopie von '{name}' löschen?
+delete_mod_body   = Soll die Sicherheitskopie von '{name}' wirklich gelöscht werden?
+delete_mods_title = {number} Sicherheitskopien löschen?
+delete_mods_body  = Sollen die {number} markierten Sicherheitskopien gelöscht werden?
 
 [update]
 available        = Neue Version von TPFMM verfügbar.

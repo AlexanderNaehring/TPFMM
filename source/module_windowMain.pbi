@@ -2054,19 +2054,33 @@ Module windowMain
   Procedure backupDelete()
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected *backup.mods::BackupMod
+    
     If *backupList\GetAllSelectedItems(*items())
-      ForEach *items()
+      ; get backups
+      If ListSize(*items()) = 1
         *backup = *items()\GetUserData()
-        If *backup
-          ; not in thread, wait for deletion, should be fast
+        If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
+                            _("backup_delete_mod_body", "name="+*backup\getName()),
+                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           *backup\delete()
         EndIf
-      Next
+      Else ; multiple backups selected
+        If MessageRequester(_("backup_delete_mods_title", "number="+ListSize(*items())), 
+                            _("backup_delete_mods_body", "number="+ListSize(*items())),
+                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+          ForEach *items()
+            *backup = *items()\GetUserData()
+            *backup\delete()
+          Next
+        EndIf
+      EndIf
     EndIf
   EndProcedure
   
   Procedure backupFolder()
-    misc::openLink(mods::backupsGetFolder())
+    Protected folder$ = mods::backupsGetFolder()
+    misc::CreateDirectoryAll(folder$)
+    misc::openLink(folder$)
   EndProcedure
   
   Procedure backupRefreshList()
@@ -2093,7 +2107,11 @@ Module windowMain
     Protected *backup.mods::BackupMod
     *backup = *item\GetUserData()
     If *backup
-      *backup\delete()
+      If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
+                          _("backup_delete_mod_body", "name="+*backup\getName()),
+                          #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        *backup\delete()
+      EndIf
     EndIf
   EndProcedure
   
