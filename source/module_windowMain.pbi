@@ -311,7 +311,7 @@ Module windowMain
       DeleteFile(tmp$, #PB_FileSystem_Force)
     EndIf
     *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #False)
-    *wget\setUserAgent("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36")
+    *wget\setUserAgent(main::#VERSION$)
     *wget\download()
     If FileSize(tmp$) > 0
       json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
