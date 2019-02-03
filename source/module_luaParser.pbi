@@ -1,4 +1,4 @@
-﻿CompilerIf #PB_Compiler_IsMainFile
+CompilerIf #PB_Compiler_IsMainFile
   XIncludeFile "module_main.pbi"
 CompilerEndIf
 
@@ -790,8 +790,8 @@ Module luaParser
 ;     luaopen_base(L)	; base lib laden , fuer print usw
     
     ; add search path for require function:
-    tmp$ = misc::path(settings::getString("", "path"), "/")
-    string$ = "package.path = '"+tmp$+"res/config/?.lua;"+tmp$+"res/scripts/?.lua;"+misc::path(modfolder$, "/")+"res/scripts/?.lua';"
+    tmp$ = misc::path(settings::getString("", "path"), #False, "/")
+    string$ = "package.path = '"+tmp$+"/res/config/?.lua;"+tmp$+"/res/scripts/?.lua;"+misc::path(modfolder$, #False, "/")+"/res/scripts/?.lua';"
     luaL_dostring(L, string$)
     
     ; make translation function known to lua global
@@ -837,8 +837,7 @@ Module luaParser
       language$ = locale::getCurrentLocale()
     EndIf
     
-    modFolder$  = misc::path(modfolder$)
-    modFolder$  = GetPathPart(file$)
+    modFolder$  = misc::path(GetPathPart(file$))
     stringsLua$ = modfolder$ + "strings.lua"
     
     If FileSize(file$) <= 0

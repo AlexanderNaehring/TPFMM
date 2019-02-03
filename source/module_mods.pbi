@@ -220,7 +220,7 @@ Module mods
     gameDirectory$ = settings::getString("", "path")
     Select folder
       Case #FolderGame
-        ProcedureReturn gameDirectory$
+        ProcedureReturn misc::Path(gameDirectory$)
       Case #FolderTPFMM
         ProcedureReturn misc::Path(gameDirectory$ + "/TPFMM/")
       Case #FolderMods
@@ -428,11 +428,11 @@ Module mods
     EndIf
     
     If Left(id$, 1) = "*"
-      ProcedureReturn misc::Path(getFolder(#FolderWorkshop) + Mid(id$, 2, Len(id$)-3) + "/")
+      ProcedureReturn getFolder(#FolderWorkshop) + Mid(id$, 2, Len(id$)-3) + #PS$
     ElseIf Left(id$, 1) = "?"
-      ProcedureReturn misc::Path(getFolder(#FolderStagingArea) + Mid(id$, 2) + "/")
+      ProcedureReturn getFolder(#FolderStagingArea) + Mid(id$, 2) + #PS$
     Else
-      ProcedureReturn misc::path(getFolder(#FolderMods) + id$ + "/")
+      ProcedureReturn getFolder(#FolderMods) + id$ + #PS$
     EndIf
   EndProcedure
   
@@ -509,7 +509,7 @@ Module mods
   Procedure.s modGetRoot(path$) ; try to find mod.lua to determine the root location of the mod
     Protected dir
     Protected entry$, result$
-    path$ = misc::path(path$) ; makes sure that string ends on delimiter
+    path$ = misc::path(path$)
     
     dir = ExamineDirectory(#PB_Any, path$, "")
     If dir
@@ -582,11 +582,6 @@ Module mods
         EndIf
       EndIf
     EndWith
-    
-    ; Check for known DLC
-;     If *mod\tpf_id$ = "usa_1" Or *mod\tpf_id$ = "nordic_1"
-;       *mod\aux\type$ = "dlc"
-;     EndIf
     
     ProcedureReturn #True
   EndProcedure
@@ -690,6 +685,7 @@ Module mods
     If root$ = ""
       root$ = backupsGetFolder()
     EndIf
+    root$ = misc::path(root$)
     
     If FindMapElement(backups(), filename$)
       deb("mods:: backupLoadList() backup file "+filename$+" already in map")
@@ -711,7 +707,8 @@ Module mods
     
     With *this\info
       If \filename$ <> filename$
-        Debug "mods:: file was moved after backup: "+filename$+""
+        deb("mods:: file was moved after backup: "+filename$+"")
+        ;TODO fix information?
       EndIf
       \filename$ = filename$
       If Not \size
@@ -732,9 +729,8 @@ Module mods
     Protected *this.backup
     Protected num
     
-    If folder$ <> ""
-      folder$ = misc::path(folder$)
-    EndIf
+    root$ = misc::path(root$)
+    folder$ = misc::path(folder$)
     
     dir = ExamineDirectory(#PB_Any, root$ + folder$, "")
     If dir
@@ -764,7 +760,7 @@ Module mods
       EndIf
       
     Else
-      deb("mods:: failed to examine backup directory "+root$+folder$)
+      deb("mods:: failed to examine backup directory " + root$ + folder$)
     EndIf
   EndProcedure
   
@@ -2024,7 +2020,7 @@ Module mods
     EndIf
     
     filename$ + modGetFoldername(*mod)+".zip"
-    tmpFile$ = GetCurrentDirectory()+"/tmp/"+filename$
+    tmpFile$ = misc::path(GetCurrentDirectory() + #PS$ + "tmp") + filename$
     
     ; start backup now: modFolder$ -> zip -> backupFile$
     postProgressEvent(90,  _("progress_backup_mod", "mod="+*mod\name$))

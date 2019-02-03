@@ -1,4 +1,4 @@
-﻿DeclareModule misc
+DeclareModule misc
   EnableExplicit
   
   ImportC ""
@@ -72,10 +72,10 @@
     misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start, overwrite)
   EndMacro
   
-  Declare.s path(path$, delimiter$ = "")
+  Declare.s path(path$, trailingPS=#True, ps$=#PS$)
   Declare.s getDirectoryName(path$)
   Declare VersionCheck(current$, required$)
-  Declare CreateDirectoryAll(dir$, delimiter$ = "")
+  Declare CreateDirectoryAll(dir$)
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
   Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
   Declare HexStrToMem(hex$, *memlen = 0)
@@ -103,43 +103,54 @@ EndDeclareModule
 
 Module misc
  
-  Procedure.s path(path$, delimiter$ = "")
-    path$ + "/"                             ; add a / delimiter to the end
-    path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
-    While FindString(path$, "//")           ; strip multiple /
-      path$ = ReplaceString(path$, "//", "/")
+  CompilerIf Defined(debugger, #PB_Module)
+    UseModule debugger
+  CompilerElse
+    Macro deb(s)
+      Debug s
+    EndMacro
+  CompilerEndIf
+  
+  Procedure.s path(path$, trailingPS=#True, ps$=#PS$)
+    
+    ; fix all wrong ps in path$
+    If ps$ = "/"
+      ReplaceString(path$, "\", ps$, #PB_String_InPlace) 
+    ElseIf ps$ = "\"
+      ReplaceString(path$, "/", ps$, #PB_String_InPlace)
+    Else
+      Debug "unknown path delimiter"
+    EndIf
+    
+    ; strip multiples
+    While FindString(path$, ps$+ps$)
+      path$ = ReplaceString(path$, ps$+ps$, ps$)
     Wend
-    If delimiter$ = ""
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        delimiter$ = "\"
-      CompilerElse
-        delimiter$ = "/"
-      CompilerEndIf
+    
+    If trailingPS
+      If Right(path$, 1) <> ps$
+        path$ + ps$
+      EndIf
+    Else
+      If Right(path$, 1) = ps$
+        path$ = Left(path$, Len(path$)-1)
+      EndIf
     EndIf
-    If delimiter$ <> "/"
-      path$ = ReplaceString(path$, "/", delimiter$)
-    EndIf
+    
     ProcedureReturn path$  
   EndProcedure
   
-  Procedure CreateDirectoryAll(dir$, delimiter$ = "")
+  Procedure CreateDirectoryAll(dir$)
     Protected result, dir_sub$, dir_total$, count
-    If delimiter$ = ""
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        delimiter$ = "\"
-      CompilerElse
-        delimiter$ = "/"
-      CompilerEndIf
-    EndIf
     
-    dir$ = Path(dir$, delimiter$)
+    dir$ = Path(dir$)
     
     If FileSize(dir$) = -2
       ProcedureReturn #True
     EndIf
     
     count = 1
-    dir_sub$ = StringField(dir$, count, delimiter$) + delimiter$
+    dir_sub$ = StringField(dir$, count, #PS$)
     dir_total$ = dir_sub$
     
     While dir_sub$ <> ""
@@ -147,22 +158,15 @@ Module misc
         CreateDirectory(dir_total$)
       EndIf
       count + 1
-      dir_sub$ = StringField(dir$, count, delimiter$)
-      dir_total$ + dir_sub$ + delimiter$
+      dir_sub$ = StringField(dir$, count, #PS$)
+      dir_total$ + #PS$ + dir_sub$
     Wend
     
-    
-    If FileSize(dir$) = -2
-      ProcedureReturn #True
-    EndIf
-    ProcedureReturn #False
+    ProcedureReturn Bool(FileSize(dir$) = -2)
   EndProcedure
   
   Procedure.s getDirectoryName(path$)
-    path$ = path(path$)
-    path$ = Left(path$, Len(path$)-1)
-    path$ = GetFilePart(path$)
-    ProcedureReturn path$
+    ProcedureReturn GetFilePart(path(path$, #False))
   EndProcedure
   
   Procedure VersionCheck(current$, required$)
@@ -443,7 +447,7 @@ Module misc
     Protected name$
     
     path$ = path(path$)
-    dir = ExamineDirectory(#PB_Any, path(path$), "")
+    dir = ExamineDirectory(#PB_Any, path$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -459,9 +463,9 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn size
     Else
-      Debug "could not examine"
+      deb("misc:: could not examine "+path$)
+      ProcedureReturn #False
     EndIf
-    ProcedureReturn #False
   EndProcedure
   
   Procedure compareIsGreater(*element1, *element2, options, offset, type)

@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -1248,7 +1248,7 @@ Module repository
     ; download location
     folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
     misc::CreateDirectoryAll(folder$)
-    filename$ = folder$ + filename$
+    filename$ = folder$ + #PS$ + filename$
     
     downloadURL(*file\url$, filename$, *file)
   EndProcedure
