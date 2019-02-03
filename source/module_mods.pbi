@@ -1,4 +1,4 @@
-XIncludeFile "module_misc.pbi"
+﻿XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -2253,7 +2253,7 @@ Module mods
     
     backupFolder$ = settings::getString("backup", "folder")
     If backupFolder$ = ""
-      backupFolder$ = "TPFMM/backups/"
+      backupFolder$ = GetCurrentDirectory()+"/backups/"
     EndIf
     
     ProcedureReturn misc::path(backupFolder$)
