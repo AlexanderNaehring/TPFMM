@@ -9,6 +9,7 @@
 EndDeclareModule
 
 XIncludeFile "animation.pb"
+XIncludeFile "threads.pb"
 
 Module windowProgress
   
@@ -45,7 +46,7 @@ Module windowProgress
   
   Procedure closeProgressWindowEvent()
     ; cannot close a window from a thread, must be main thread
-    If Not misc::isMainThread()
+    If Not threads::isMainThread()
       DebuggerError("main:: closeProgressWindowEvent() must always be called from main thread")
     EndIf
     
@@ -70,7 +71,7 @@ Module windowProgress
       progressDialog\ani\pause()  ; if garbage collector closes window before the animation is stopped/freed, animation update will cause IMA
       Delay(progressDialog\ani\getInterval()*2) ; wait for 2 intervals to make sure that no draw call is made after pause()
       
-      If misc::isMainThread()
+      If threads::isMainThread()
         closeProgressWindowEvent()
       Else
         RemoveWindowTimer(progressDialog\window, 0)

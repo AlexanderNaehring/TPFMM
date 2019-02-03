@@ -2,6 +2,8 @@
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
+XIncludeFile "threads.pb"
+
 XIncludeFile "module_repository.h.pbi"
 
 Module repository
@@ -1227,7 +1229,7 @@ Module repository
     Protected *mod.mod = *file\mod
     Protected filename$, folder$
     
-    If misc::isMainThread()
+    If threads::isMainThread()
       CreateThread(@fileDownload(), *file)
       ProcedureReturn
     EndIf

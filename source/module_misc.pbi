@@ -99,7 +99,6 @@
   Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
   Declare GetWindowBackgroundColor(hwnd=0)
-  Declare isMainThread()
 EndDeclareModule
 
 Module misc
@@ -873,24 +872,5 @@ Module misc
         EndIf
     CompilerEndSelect
   EndProcedure  
-  
-  Global mainThread
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      mainThread = GetCurrentThreadId_()
-    CompilerCase #PB_OS_Linux
-      mainThread = pthread_self_()
-    CompilerDefault
-      DebuggerError("not implemented")
-  CompilerEndSelect
-  
-  Procedure isMainThread()
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        ProcedureReturn Bool(GetCurrentThreadId_() = mainThread)
-      CompilerCase #PB_OS_Linux
-        ProcedureReturn Bool(pthread_self_() = mainThread)
-    CompilerEndSelect
-  EndProcedure
   
 EndModule

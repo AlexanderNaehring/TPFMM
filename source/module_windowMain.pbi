@@ -30,6 +30,7 @@ XIncludeFile "module_canvasList.pbi"
 XIncludeFile "module_tfsave.pbi"
 XIncludeFile "animation.pb"
 XIncludeFile "windowProgress.pb"
+XIncludeFile "threads.pb"
 
 Module windowMain
   UseModule debugger
@@ -572,7 +573,7 @@ Module windowMain
     Protected i
     ; called when startup procedure is finished
     
-    If Not misc::isMainThread()
+    If Not threads::isMainThread()
       DebuggerError("must be in main thread")
     EndIf
     
@@ -587,7 +588,7 @@ Module windowMain
   Procedure start()
     Protected i
     
-    If Not misc::isMainThread()
+    If Not threads::isMainThread()
       deb("windowMain:: start() not in main thread!")
       RaiseError(#PB_OnError_Breakpoint)
     EndIf
