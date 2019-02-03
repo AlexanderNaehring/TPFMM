@@ -136,7 +136,9 @@ Module wget
   Global NewList *objects._wget()
   ;}
   
-  misc::useBinary("wget\wget.exe", #False)
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+    misc::useBinary("wget\wget.exe", #False)
+  CompilerEndIf
   
   CompilerIf Defined(debugger, #PB_Module)
     ; in bigger project, use custom module (writes debug messages to log file)
@@ -154,10 +156,14 @@ Module wget
     Protected program$, parameter$,
               str$, STDOUT$, STDERR$,
               HTTPstatus
-    Protected regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
+    Protected regExpProgress
     
-    program$ = "wget\wget.exe"
-    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --header="+#DQUOTE$+"Accept: text/html,*/*"+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      program$ = "wget\wget.exe"
+    CompilerElse
+      program$ = "wget"
+    CompilerEndIf
+    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" "+#DQUOTE$+"--header='Accept: text/html,*/*'"+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
     ; --proxy-user=user --proxy-password=password  or use environment variable
     ; -U user-agent
     ; -S print HTTP headers
@@ -175,6 +181,7 @@ Module wget
     
     If *this\program
       deb("wget:: start #"+*this+" "+#DQUOTE$+*this\remote$+#DQUOTE$+" > "+#DQUOTE$+*this\local$+#DQUOTE$)
+      regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
       While ProgramRunning(*this\program)
         If *this\cancel
           deb("wget:: #"+*this+" cancel download, kill wget.exe")
@@ -185,12 +192,10 @@ Module wget
         EndIf
         If AvailableProgramOutput(*this\program)
           str$ = ReadProgramString(*this\program)
-  ;         Debug str$
           STDOUT$ + str$ + #CRLF$
         EndIf
         str$ = ReadProgramError(*this\program)
         If str$
-  ;         Debug str$
           STDERR$ + str$ + #CRLF$
           
           If ExamineRegularExpression(regExpProgress, str$)
@@ -205,7 +210,9 @@ Module wget
             EndIf
           EndIf
         EndIf
+        Delay(1)
       Wend
+      FreeRegularExpression(regExpProgress)
       If Not *this\cancel
         *this\exitCode = ProgramExitCode(*this\program)
       EndIf
@@ -260,7 +267,6 @@ Module wget
     UnlockMutex(*this\mutex)
     
     Protected ret = *this\exitCode
-    
     ; attention: OnError and OnSuccess callbacks might be used to free() *this!
     ; callback at the end of the thread!
     ; STILL, if e.g. "waitFinished()" is active and the callback is used to free() the data, waitFinished() will have invalid memory access!
@@ -284,7 +290,6 @@ Module wget
       EndIf
     EndIf
     
-    FreeRegularExpression(regExpProgress)
     ProcedureReturn ret
   EndProcedure
   

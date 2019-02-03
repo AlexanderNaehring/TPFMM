@@ -808,6 +808,8 @@ Module mods
               time = info\time
             Else
               deb("mods:: could not read "+file$+".backup")
+            EndIf
+            If Not time
               time = DirectoryEntryDate(dir, #PB_Date_Modified)
             EndIf
             
@@ -815,7 +817,7 @@ Module mods
             autoDeleteDays = settings::getInteger("backup", "auto_delete_days")
             If autoDeleteDays 
               backupAgeInDays = (misc::time() - time)/86400
-              If backupAgeInDays > autoDeleteDays
+              If time And backupAgeInDays > autoDeleteDays
                 deb("mods:: backup "+file$+" is "+backupAgeInDays+" days old, automatically delete backups after "+autoDeleteDays+" days. Backup will be removed now.")
                 DeleteFile(file$, #PB_FileSystem_Force)
                 DeleteFile(file$+".backup", #PB_FileSystem_Force)
@@ -2259,21 +2261,29 @@ Module mods
   
   Procedure backupsMoveFolder(newFolder$)
     Protected oldFolder$, entry$
-    Protected dir, error, count
+    Protected dir, error
+    Protected isempty.b
     
+    ; move all data to new folder
     newFolder$ = misc::path(newFolder$)
     oldFolder$ = backupsGetFolder()
     
-    misc::CreateDirectoryAll(newFolder$)
+    If FileSize(newFolder$) = -2
+      ; folder does not exist
+      misc::CreateDirectoryAll(newFolder$)
+    EndIf
     
-    ; check if new folder is empty (only use empty folder)
-    count = 0
+    ; check if new folder is empty
+    isempty = #True
     dir = ExamineDirectory(#PB_Any, newFolder$, "")
     If dir
       While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          count + 1
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory And
+           (DirectoryEntryName(dir) = ".." Or DirectoryEntryName(dir) = ".")
+          Continue
         EndIf
+        isempty = #False
+        Break
       Wend
       FinishDirectory(dir)
     Else
@@ -2281,38 +2291,26 @@ Module mods
       error = #True
     EndIf
     
-    If count
-      deb("mods:: target directory not empty")
-      ProcedureReturn #False  
-    EndIf
-    
-    ; move all *.zip and *.backup files from oldFolder$ to newFolder
-    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
-    If dir
-      While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          entry$ = DirectoryEntryName(dir)
-          If LCase(GetExtensionPart(entry$)) = "zip" Or
-             LCase(GetExtensionPart(entry$)) = "backup"
-            If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
-              deb("mods:: failed to move file "+entry$)
-              error = #True
-            EndIf
-          EndIf
-        EndIf
-      Wend
-      FinishDirectory(dir)
+    If isempty
+      ; remove directory so that old directory can be renamed
+      DeleteDirectory(newFolder$, "")
+      If RenameFile(oldFolder$, newFolder$)
+        deb("mods:: backup folder moved")
+      Else
+        deb("mods:: could not move folder")
+        error = #True
+      EndIf
     Else
-      deb("mods:: failed to examine directory "+oldFolder$)
-      ; not a critical error, if old folder does not exist, simple do not move any files
+      deb("mods:: target directory not empty")
+      error = #True
     EndIf
     
     If Not error
       settings::setString("backup", "folder", newFolder$)
       ProcedureReturn #True
+    Else
+      ProcedureReturn #False
     EndIf
-    ProcedureReturn #False
-    
   EndProcedure
   
   Procedure backupsClearFolder()

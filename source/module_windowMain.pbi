@@ -14,6 +14,8 @@ DeclareModule windowMain
   Declare updateStrings()
   Declare getSelectedMods(List *mods())
   Declare repoFindModAndDownload(link$)
+  Declare handleParameter(parameter$)
+  
 EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
@@ -27,6 +29,7 @@ XIncludeFile "module_windowPack.pbi"
 XIncludeFile "module_canvasList.pbi"
 XIncludeFile "module_tfsave.pbi"
 XIncludeFile "animation.pb"
+XIncludeFile "windowProgress.pb"
 
 Module windowMain
   UseModule debugger
@@ -351,6 +354,37 @@ Module windowMain
     EndIf
   EndProcedure
   
+  Procedure handleParameter(parameter$)
+    Select LCase(parameter$)
+      Case "-show"
+        If window And IsWindow(window)
+          ; normal/maximize may behave differently on linux (linux mint 18.1: maximze = normal and normal = on left edge)
+          ; catch this behaviour??
+          Select GetWindowState(window)
+            Case #PB_Window_Minimize
+              SetWindowState(window, #PB_Window_Normal)
+          EndSelect
+        EndIf
+        
+      Default
+        If Left(parameter$, 17) = "tpfmm://download/"
+          parameter$ = Mid(parameter$, 18) ; /source/modID/fileID
+          repoFindModAndDownload(parameter$)
+          
+        ElseIf Left(parameter$, 23) = "tpfmm://repository/add/"
+          parameter$ = Mid(parameter$, 24)
+          windowSettings::show()
+          windowSettings::showTab(windowSettings::#TabRepository)
+          windowSettings::repositoryAddURL(parameter$)
+          
+        ElseIf FileSize(parameter$) > 0
+          ; install mod... (this function is called, before the main window is created ....
+          mods::install(parameter$)
+        EndIf
+        
+    EndSelect
+  EndProcedure
+  
   ;- exit procedure
   
   Procedure closeThread(Event)
@@ -367,8 +401,8 @@ Module windowMain
     *workerAnimation\free()
     *workerAnimation = #Null
     
-    main::setProgressPercent(15)
-    main::setProgressText(_("progress_close"))
+    windowProgress::setProgressPercent(15)
+    windowProgress::setProgressText(_("progress_close"))
     
     settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
     settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
@@ -377,27 +411,27 @@ Module windowMain
     
     settings::setInteger("window", "tab", currentTab)
     
-    main::setProgressPercent(30)
-    main::setProgressText(_("progress_stop_worker"))
+    windowProgress::setProgressPercent(30)
+    windowProgress::setProgressText(_("progress_stop_worker"))
     deb("windowMain:: stop workers")
     mods::stopQueue()
-    main::setProgressPercent(45)
+    windowProgress::setProgressPercent(45)
     wget::freeAll()
     repository::stopQueue()
     
-    main::setProgressPercent(60)
-    main::setProgressText(_("progress_save_list"))
+    windowProgress::setProgressPercent(60)
+    windowProgress::setProgressText(_("progress_save_list"))
     mods::saveList()
     
-    main::setProgressPercent(75)
-    main::setProgressText(_("progress_cleanup"))
+    windowProgress::setProgressPercent(75)
+    windowProgress::setProgressText(_("progress_cleanup"))
     deb("windowMain:: cleanup")
     mods::freeAll()
-    main::setProgressPercent(90)
+    windowProgress::setProgressPercent(90)
     repository::freeAll()
     
-    main::setProgressPercent(99)
-    main::setProgressText(_("progress_goodbye"))
+    windowProgress::setProgressPercent(99)
+    windowProgress::setProgressText(_("progress_goodbye"))
     
     ; free all dialogs
     FreeDialog(modFilter\dialog)
@@ -406,7 +440,7 @@ Module windowMain
     FreeDialog(repoSort\dialog)
     windowSettings::close()
     
-    main::closeProgressWindow()
+    windowProgress::closeProgressWindow()
     
     locale::logStats()
     PostEvent(event) ; inform main thread that closure procedure is finished
@@ -415,7 +449,7 @@ Module windowMain
   Procedure close()
     deb("windowMain:: close window")
     ; the exit procedure will run in a thread and wait for all workers to finish etc...
-    main::showProgressWindow(_("progress_close"), #EventCloseNow)
+    windowProgress::showProgressWindow(_("progress_close"), #EventCloseNow)
     CreateThread(@closeThread(), #EventCloseNow)
     ; todo also set up a timer event to close programm after (e.g.) 1 minute if cleanup procedure fails?
   EndProcedure
@@ -425,8 +459,8 @@ Module windowMain
   Procedure startThread(EventOnFinish)
     Protected i
     
-    main::setProgressText(_("progress_init"))
-    main::setProgressPercent(0)
+    windowProgress::setProgressText(_("progress_init"))
+    windowProgress::setProgressPercent(0)
     
     ; read gameDirectory from preferences
     deb("main:: - game directory: "+settings::getString("", "path"))
@@ -436,7 +470,7 @@ Module windowMain
       settings::setString("", "path", "")
     EndIf
     
-    main::setProgressPercent(10)
+    windowProgress::setProgressPercent(10)
     
     ; proxy (read from preferences)
     main::initProxy()
@@ -480,18 +514,39 @@ Module windowMain
         deb("main:: set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
         ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
         PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
-      Else
-        
-        deb("main:: window location not valid")
-        windowWidth = #PB_Ignore
-        windowHeight = #PB_Ignore
-        
-        deb("main:: center main window on primary desktop")
-        windowX = (DesktopWidth(0)  - windowWidth ) /2
-        windowY = (DesktopHeight(0) - windowHeight) /2
       EndIf
     EndIf
     ;}
+    
+    
+    windowProgress::setProgressPercent(20)
+    
+    ; load mods and repository
+    If settings::getString("", "path")
+      windowProgress::setProgressText(_("progress_load_mods"))
+      mods::load(#False)
+      windowProgress::setProgressPercent(50)
+      
+      
+      windowProgress::setProgressText(_("progress_load_repo"))
+      repository::refreshRepositories(#False)
+      windowProgress::setProgressPercent(80)
+    EndIf
+    
+    windowProgress::setProgressPercent(90)
+    
+    
+    windowProgress::setProgressPercent(99)
+    
+    ; start updater thread
+    CreateThread(@checkUpdate(), #Null)
+    
+    ; open settings dialog if required
+    If settings::getString("", "path") = ""
+      ; no path specified upon program start -> open settings dialog
+      deb("main:: no game directory defined - open settings dialog")
+      PostEvent(#PB_Event_Gadget, window, gadget("btnSettings"))
+    EndIf
     
     ; select tab
     Select settings::getInteger("window", "tab")
@@ -503,51 +558,36 @@ Module windowMain
         navBtnSaves()
     EndSelect
     
-    
-    main::setProgressPercent(20)
-    
-    ; load mods and repository
-    If settings::getString("", "path")
-      main::setProgressText(_("progress_load_mods"))
-      mods::load(#False)
-      main::setProgressPercent(50)
-      
-      
-      main::setProgressText(_("progress_load_repo"))
-      repository::refreshRepositories(#False)
-      main::setProgressPercent(80)
+    ; show main window
+    windowProgress::closeProgressWindow()
+    If locationOK
+      HideWindow(window, #False)
+    Else
+      HideWindow(window, #False, #PB_Window_ScreenCentered)
     EndIf
+    PostEvent(EventOnFinish, window, #Null)
+  EndProcedure
+  
+  Procedure startupFinished()
+    Protected i
+    ; called when startup procedure is finished
     
-    main::setProgressPercent(90)
+    If Not misc::isMainThread()
+      DebuggerError("must be in main thread")
+    EndIf
     
     ; parameter handling
     For i = 0 To CountProgramParameters() - 1
-      main::handleParameter(ProgramParameter(i))
+      handleParameter(ProgramParameter(i))
     Next
-    
-    main::setProgressPercent(99)
-    
-    ; show main window
-    main::closeProgressWindow()
-    HideWindow(windowMain::window, #False)
-    
-    ; start updater thread
-    CreateThread(@checkUpdate(), #Null)
-    
-    If settings::getString("", "path") = ""
-      ; no path specified upon program start -> open settings dialog
-      deb("main:: no game directory defined - open settings dialog")
-      ; post event to show settings
-      windowSettings::show()
-    EndIf
-    
-    
   EndProcedure
   
+  
+  ; entry point: start()
   Procedure start()
     Protected i
     
-    If Not main::isMainThread()
+    If Not misc::isMainThread()
       deb("windowMain:: start() not in main thread!")
       RaiseError(#PB_OnError_Breakpoint)
     EndIf
@@ -558,11 +598,9 @@ Module windowMain
     ; open settings window
     windowSettings::create(window)
     
-    
     ; startup procedure
-    main::showProgressWindow(_("progress_start"), #EventCloseNow)
+    windowProgress::showProgressWindow(_("progress_start"), #EventCloseNow)
     CreateThread(@startThread(), #EventStartupFinished)
-    
   EndProcedure
   
   ; ---
@@ -632,7 +670,7 @@ Module windowMain
     Protected log$, file$, file
     ; write log to tmp file as default Windows notepad will not open the active .log file while it is being used by TPFMM
     log$ = debugger::getLog()
-    file$ = misc::path(GetTemporaryDirectory())+"tpfmm-log.txt"
+    file$ = misc::path(GetTemporaryDirectory()) + "tpfmm-log.txt"
     file = CreateFile(#PB_Any, file$, #PB_File_SharedWrite)
     If file
       WriteString(file, log$)
@@ -1669,9 +1707,10 @@ Module windowMain
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     
-    
     ; buttons
-    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+    If *mod\canDownload()
+      *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+    EndIf
     *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
     
   EndProcedure
@@ -1963,6 +2002,7 @@ Module windowMain
           SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
           
           If ListSize(*tfsave\mods())
+            *saveModList\SetAttribute(canvasList::#AttributePauseDraw, #True)
             ForEach *tfsave\mods()
               *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
               
@@ -1983,6 +2023,7 @@ Module windowMain
                 download = #True
               EndIf
             Next
+            *saveModList\SetAttribute(canvasList::#AttributePauseDraw, #False)
             If download
               DisableGadget(gadget("saveDownload"), #False)
             EndIf
@@ -2017,7 +2058,6 @@ Module windowMain
     deb("windowMain:: download all files from save")
     If *saveModList\GetAllItems(*items())
       ForEach *items()
-        ;TODO: save full info in userdata, also check if file is installed before downloading!
         *tfsaveMod = *items()\GetUserData()
         If *tfsaveMod\repofile And Not *tfsaveMod\localmod
           deb("windowMain:: download missing mod '"+*tfsaveMod\id$+"'")
@@ -2588,7 +2628,7 @@ Module windowMain
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     BindEvent(#EventCloseNow, main::@exit())
     BindEvent(#EventUpdateAvailable, @updateAvailable(), window)
-    
+    BindEvent(#EventStartUpFinished, @startupFinished(), window)
     
     
     ;- custom canvas gadgets

@@ -8,6 +8,7 @@ DeclareModule windowSettings
   Declare updateStrings()
   Declare close()
   Declare showTab(tab)
+  Declare repositoryAddURL(url$)
   
   ; custom events that can be sent to "window"
   Enumeration #PB_Event_FirstCustomValue
@@ -30,6 +31,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_aes.pbi"
+XIncludeFile "windowProgress.pb"
 
 Module windowSettings
   UseModule debugger
@@ -171,9 +173,21 @@ Module windowSettings
   EndProcedure
   
   
+  Procedure ShortcutCopy()
+    Protected i
+    Select GetActiveGadget()
+      Case gadget("repositoryList")
+        i = GetGadgetState(gadget("repositoryList"))
+        If i <> -1
+          SetClipboardText(GetGadgetItemText(gadget("repositoryList"), i, 0))
+        EndIf
+    EndSelect
+  EndProcedure
+  
+  
   Procedure backupFolderMoved()
     DisableWindow(window, #False)
-    main::closeProgressWindow()
+    windowProgress::closeProgressWindow()
     If EventGadget()
       MessageRequester(_("generic_success"), _("settings_backup_move_success"), #PB_MessageRequester_Info)
     Else
@@ -203,8 +217,8 @@ Module windowSettings
       ProcedureReturn #False
     EndIf
     
-    main::showProgressWindow(_("settings_backup_change_folder_wait"))
-    main::setProgressText(_("settings_backup_change_folder_wait"))
+    windowProgress::showProgressWindow(_("settings_backup_change_folder_wait"))
+    windowProgress::setProgressText(_("settings_backup_change_folder_wait"))
     DisableWindow(window, #True)
     
     *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
@@ -286,8 +300,6 @@ Module windowSettings
   
   Procedure repositoryAdd()
     Protected url$
-    Protected repoInfo.repository::RepositoryInformation
-    Protected info$, error$
     
     ; preset url to clipboard text if is an url
     url$ = Trim(GetClipboardText())
@@ -297,6 +309,13 @@ Module windowSettings
     
     ; show requester
     url$ = InputRequester(_("settings_repository_add"), _("settings_repository_input_url"), url$)
+    
+    repositoryAddURL(url$)
+  EndProcedure
+  
+  Procedure repositoryAddURL(url$)
+    Protected repoInfo.repository::RepositoryInformation
+    Protected info$, error$
     
     If url$
       ; add repo
@@ -341,6 +360,7 @@ Module windowSettings
       EndIf
     EndIf
   EndProcedure
+  
   
   Procedure repositoryRemove()
     Protected selected, url$
@@ -479,6 +499,9 @@ Module windowSettings
     
     AddKeyboardShortcut(window, #PB_Shortcut_Control|#PB_Shortcut_S, 2)
     BindEvent(#PB_Event_Menu, @GadgetSaveSettings(), window, 2)
+    
+    AddKeyboardShortcut(window, #PB_Shortcut_Control|#PB_Shortcut_C, 3)
+    BindEvent(#PB_Event_Menu, @ShortcutCopy(), window, 3)
     
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())

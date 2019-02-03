@@ -7,6 +7,7 @@ DeclareModule modInformation
 EndDeclareModule
 
 XIncludeFile "module_modSettings.pbi"
+XIncludeFile "module_images.pbi"
 
 Module modInformation
   UseModule debugger

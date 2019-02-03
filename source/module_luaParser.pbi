@@ -1,4 +1,4 @@
-CompilerIf #PB_Compiler_IsMainFile
+﻿CompilerIf #PB_Compiler_IsMainFile
   XIncludeFile "module_main.pbi"
 CompilerEndIf
 

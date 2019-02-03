@@ -1,5 +1,6 @@
 ﻿DeclareModule main
   EnableExplicit
+  ; main module used for some global definitions and variables and startup and exit procedures
   
   CompilerSelect #PB_Compiler_OS
     CompilerCase #PB_OS_Windows
@@ -27,14 +28,7 @@
   Declare updateDesktopIntegration()
   Declare exit()
   Declare loop()
-  Declare handleParameter(parameter$)
   
-  Declare showProgressWindow(text$, PostEventOnClose=-1)
-  Declare setProgressPercent(percent.b)
-  Declare setProgressText(text$)
-  Declare closeProgressWindow()
-  
-  Declare isMainThread()
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
@@ -44,7 +38,6 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_instance.pbi"
 XIncludeFile "module_windowLicense.pbi"
-XIncludeFile "animation.pb"
 
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
@@ -102,154 +95,9 @@ Module main
     End
   EndProcedure
   
-  ;- Parameter Handling
-  
-  Procedure handleParameter(parameter$)
-    Select LCase(parameter$)
-      Case "-testmode"
-        deb("main:: enable testing mode")
-        _TESTMODE = #True
-        
-      Case "-show"
-        If windowMain::window And IsWindow(windowMain::window)
-          ; normal/maximize may behave differently on linux (linux mint 18.1: maximze = normal and normal = on left edge)
-          ; catch this behaviour??
-          Select GetWindowState(windowMain::window)
-            Case #PB_Window_Minimize
-              SetWindowState(windowMain::window, #PB_Window_Normal)
-          EndSelect
-        EndIf
-        
-      Default
-        If Left(parameter$, 17) = "tpfmm://download/"
-          Deb(parameter$)
-          ; handle link
-          parameter$ = Mid(parameter$, 18) ; /source/modID/fileID
-          windowMain::repoFindModAndDownload(parameter$)
-          
-        ElseIf FileSize(parameter$) > 0
-          ; install mod... (this function is called, before the main window is created ....
-          mods::install(parameter$)
-        EndIf
-        
-    EndSelect
-  EndProcedure
-  
-  ;- Progress Window
-  
-  Structure progress
-    dialog.i
-    window.i
-    gText.i
-    gBar.i
-    onClose.i
-    *ani.animation::animation
-  EndStructure
-  
-  Global progressDialog.progress
-  
-  Procedure setProgressText(text$)
-    If progressDialog\window
-      SetGadgetText(progressDialog\gText, text$)
-    EndIf
-  EndProcedure
-  
-  Procedure setProgressPercent(percent.b)
-    If progressDialog\window
-      SetGadgetState(progressDialog\gBar, percent)
-    EndIf
-  EndProcedure
-  
-  Procedure progressWindowTimer()
-    If EventTimer() = 0
-      progressDialog\ani\drawNextFrame()
-    EndIf
-  EndProcedure
-  
-  Procedure closeProgressWindowEvent()
-    ; cannot close a window from a thread, must be main thread
-    If Not isMainThread()
-      DebuggerError("main:: closeProgressWindowEvent() must always be called from main thread")
-    EndIf
-    
-    If progressDialog\window
-      Debug "close progress window routine starting..."
-      progressDialog\ani\free()
-      CloseWindow(progressDialog\window)
-      FreeDialog(progressDialog\dialog)
-      progressDialog\window = #Null
-      
-      If progressDialog\onClose <> -1
-        PostEvent(progressDialog\onClose)
-      EndIf
-    EndIf
-  EndProcedure
-  
-  Procedure closeProgressWindow()
-    Debug "closeProgressWindow()"
-    If progressDialog\window
-      progressDialog\onClose = -1 ; decativate the "on close event" as close is triggered manually
-      progressDialog\ani\pause()  ; if garbage collector closes window before the animation is stopped/freed, animation update will cause IMA
-      Delay(progressDialog\ani\getInterval()*2) ; wait for 2 intervals to make sure that no draw call is made after pause()
-      
-      If isMainThread()
-        closeProgressWindowEvent()
-      Else
-        RemoveWindowTimer(progressDialog\window, 0)
-        PostEvent(#PB_Event_CloseWindow, progressDialog\window, 0)
-      EndIf
-    EndIf
-  EndProcedure
-  
-  Procedure showProgressWindow(title$, PostEventOnClose=-1)
-    Protected xml, dialog
-    
-    ; only single dialog allowed
-    If progressDialog\window
-      progressDialog\onClose = -1
-      closeProgressWindowEvent()
-    EndIf
-    
-    misc::IncludeAndLoadXML(xml, "dialogs/progress.xml")
-    dialog = CreateDialog(#PB_Any)
-    OpenXMLDialog(dialog, xml, "progress")
-    FreeXML(xml)
-    
-    progressDialog\dialog = dialog
-    progressDialog\window = DialogWindow(dialog)
-    progressDialog\gText  = DialogGadget(dialog, "text")
-    progressDialog\gBar   = DialogGadget(dialog, "percent")
-    progressDialog\onclose = PostEventOnClose
-    
-    SetWindowTitle(progressDialog\window, title$)
-    
-    Debug "load progress window animation"
-    progressDialog\ani = animation::new()
-    progressDialog\ani\loadAni("images/logo/logo.ani")
-    progressDialog\ani\setInterval(1000/60)
-    progressDialog\ani\setCanvas(DialogGadget(dialog, "logo"))
-    
-    AddWindowTimer(progressDialog\window, 0, progressDialog\ani\getInterval())
-    BindEvent(#PB_Event_Timer, @progressWindowTimer(), progressDialog\window)
-    
-    SetWindowColor(progressDialog\window, #White)
-    SetGadgetColor(progressDialog\gText, #PB_Gadget_BackColor, #White)
-    SetGadgetColor(progressDialog\gText, #PB_Gadget_FrontColor, #Black)
-    
-    RefreshDialog(dialog)
-    
-    BindEvent(#PB_Event_CloseWindow, @closeProgressWindowEvent(), progressDialog\window)
-    
-    AddKeyboardShortcut(progressDialog\window, #PB_Shortcut_Escape, #PB_Event_CloseWindow)
-    BindEvent(#PB_Event_Menu, @closeProgressWindowEvent(), progressDialog\window, #PB_Event_CloseWindow)
-    
-    HideWindow(progressDialog\window, #False, #PB_Window_ScreenCentered)
-    ProcedureReturn #True
-  EndProcedure
-  
   ;- Startup procedure
   
-  Procedure startUp()
+  Procedure licenseAccepted()
     settings::setInteger("", "eula", #EULAVersion)
     windowMain::start()
   EndProcedure
@@ -267,7 +115,7 @@ Module main
     CompilerEndIf
     
     ; check if TPFMM instance is already running
-    If Not instance::create(#PORT, @handleParameter())
+    If Not instance::create(#PORT, windowMain::@handleParameter())
       ; could not create instance. most likely, another instance is running
       ; try to send message to other instance
       If instance::sendString("-show")
@@ -281,9 +129,19 @@ Module main
       EndIf
     EndIf
     
-    If #DEBUG
+    ; check for important program parameters
+    ; other parameters are checked after windowMain startup
+    For i = 1 To CountProgramParameters()
+      Select ProgramParameter(i)
+        Case "-testmode"
+          deb("main:: enable testing mode")
+          _TESTMODE = #True
+      EndSelect
+    Next
+    
+    CompilerIf #DEBUG
       debugger::SetLogFile("tpfmm.log")
-    EndIf
+    CompilerEndIf
     debugger::DeleteLogFile()
     
     
@@ -296,16 +154,13 @@ Module main
     ; user must accept end user license agreement
     If settings::getInteger("", "eula") < #EULAVersion
       ; current license not accepted
-      DataSection
-        eula:
-        IncludeBinary "res/EULA.txt"
-        eulaEnd:
-      EndDataSection
+      Protected eula$
+      misc::BinaryAsString("res/EULA.txt", eula$)
       
-      windowLicense::Show("End-User License Agreement (EULA)", PeekS(?eula, ?eulaEnd-?eula-1, #PB_UTF8), @startUp(), @licenseDeclined())
+      windowLicense::Show("End-User License Agreement (EULA)", eula$, @licenseAccepted(), @licenseDeclined())
     Else
       ; license already accepted
-      startUp()
+      licenseAccepted()
     EndIf
     
     ; enter main loop...
@@ -313,6 +168,7 @@ Module main
   EndProcedure
   
   ;- Proxy and Desktop Integration
+  
   Procedure initProxy()
     Protected server$, user$, password$
     
@@ -341,28 +197,10 @@ Module main
     If  settings::getInteger("integration", "register_context_menu")
       ; TODO register context menu
     EndIf
-    
-    ClosePreferences()
-  EndProcedure
-  
-  Global mainThread
-  CompilerSelect #PB_Compiler_OS
-    CompilerCase #PB_OS_Windows
-      mainThread = GetCurrentThreadId_()
-    CompilerCase #PB_OS_Linux
-      mainThread = pthread_self_()
-  CompilerEndSelect
-  
-  Procedure isMainThread()
-    CompilerSelect #PB_Compiler_OS
-      CompilerCase #PB_OS_Windows
-        ProcedureReturn Bool(GetCurrentThreadId_() = mainThread)
-      CompilerCase #PB_OS_Linux
-        ProcedureReturn Bool(pthread_self_() = mainThread)
-    CompilerEndSelect
   EndProcedure
   
   ;- Exit
+
   Procedure exit()
     deb("Goodbye!")
     End

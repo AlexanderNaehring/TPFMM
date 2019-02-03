@@ -1,4 +1,4 @@
-XIncludeFile "module_debugger.pbi"
+﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -123,7 +123,7 @@ Module repository
   
   ;{ Globals
   Global NewMap ModRepositories.modRepository() ; allow multiple repositories -> use map, with repository URL as key
-  Global NewMap *filesByFoldername.mod()        ; pointer to original mods in ModRepositories\mods() with foldername as key
+  Global NewMap *filesByFoldername.file()        ; pointer to original mods in ModRepositories\mods() with foldername as key
   Global mutexMods = CreateMutex(),
          mutexFilesMap = CreateMutex()
   Global _semaphoreDownload = CreateSemaphore(1); max number of parallel downloads
@@ -387,11 +387,22 @@ Module repository
     Next
    
     ; populate pointer map
+    Protected foldername$
+    Protected *mod.mod, *file.file
     LockMutex(mutexFilesMap)
     ForEach *modRepository\mods()
       ForEach *modRepository\mods()\files()
-        If Not FindMapElement(*filesByFoldername(), *modRepository\mods()\files()\foldername$)
-          *filesByFoldername(*modRepository\mods()\files()\foldername$) = *modRepository\mods()\files()
+        foldername$ = *modRepository\mods()\files()\foldername$
+        If foldername$ And foldername$ <> "<unknown>"
+          If Not FindMapElement(*filesByFoldername(), foldername$)
+            *filesByFoldername(foldername$) = *modRepository\mods()\files()
+          Else
+            *file = *filesByFoldername(foldername$)
+            *mod = *file\mod
+            deb("repository:: found duplicate foldername information for <"+*modRepository\mods()\files()\foldername$+">" + ~"\t" + 
+                "linked mod: "+*mod\source$+"/"+*mod\id+"/"+*file\fileid+ ", " + ~"\t" + 
+                "ignored mod: "+*modRepository\mods()\source$+"/"+*modRepository\mods()\id+"/"+*modRepository\mods()\files()\fileid)
+          EndIf
         EndIf
       Next
     Next
@@ -1184,7 +1195,7 @@ Module repository
           If MatchRegularExpression(regExp, line$)
             If ExamineRegularExpression(regExp, line$)
               While NextRegularExpressionMatch(regExp)
-                redirect$ = RegularExpressionGroup(regexp, 2)
+                redirect$ = Trim(RegularExpressionGroup(regexp, 2))
               Wend
             EndIf
           EndIf
@@ -1194,16 +1205,19 @@ Module repository
       EndIf
     EndIf
     
+    If redirect$ = ""
+      mods::install(filename$)
+    EndIf
+    
+    SignalSemaphore(_semaphoreDownload)
+    If events(#EventWorkerStops)
+      PostEvent(events(#EventWorkerStops))
+    EndIf
+    
     If redirect$
       ; will re-download new URL
       deb("repository:: download was HTML with redirection - redirect to "+redirect$)
       downloadURL(redirect$, filename$, *file)
-    Else
-      mods::install(filename$)
-      SignalSemaphore(_semaphoreDownload)
-      If events(#EventWorkerStops)
-        PostEvent(events(#EventWorkerStops))
-      EndIf
     EndIf
     
   EndProcedure
@@ -1213,7 +1227,7 @@ Module repository
     Protected *mod.mod = *file\mod
     Protected filename$, folder$
     
-    If main::isMainThread()
+    If misc::isMainThread()
       CreateThread(@fileDownload(), *file)
       ProcedureReturn
     EndIf

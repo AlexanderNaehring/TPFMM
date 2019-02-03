@@ -1,4 +1,4 @@
-DeclareModule misc
+﻿DeclareModule misc
   EnableExplicit
   
   ImportC ""
@@ -22,7 +22,7 @@ DeclareModule misc
       IncludeBinary file
       _str#MacroExpandedCount#End:
     EndDataSection
-    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start-1, #PB_UTF8)
+    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start, #PB_UTF8|#PB_ByteLength)
   EndMacro
   
   Macro IncludeAndLoadXML(xml, file)
@@ -99,6 +99,7 @@ DeclareModule misc
   Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
   Declare GetWindowBackgroundColor(hwnd=0)
+  Declare isMainThread()
 EndDeclareModule
 
 Module misc
@@ -357,43 +358,29 @@ Module misc
     ; 0   = path okay, executable found and writing possible
     ; 1   = path okay, executable found but cannot write
     ; 2   = path not okay
-    If Dir$
-      If FileSize(Dir$) = -2
-        Dir$ = Path(Dir$)
-        If testmode
-          ; in testmode, do not check if directory is correct
-          ProcedureReturn 0
-        EndIf
-        If FileSize(Dir$ + "res") <> -2
-          ; required diretories not found -> wrong path
-          ProcedureReturn 2
-        EndIf
-        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          If FileSize(Dir$ + "TransportFever.exe") > 1 Or FileSize(Dir$ + "TransportFeverLauncher.exe") > 1 Or FileSize(Dir$ + "TransportFever") > 1
-            ; TrainFever.exe is located in this path!
-            ; seems to be valid
-            
-            ; check if able to write to path
-            If CreateFile(0, Dir$ + "TPFMM.tmp")
-              CloseFile(0)
-              DeleteFile(Dir$ + "TPFMM.tmp")
-              ProcedureReturn 0
-            EndIf
-            ProcedureReturn 1
+    Dir$ = Path(Dir$)
+    If Dir$ And FileSize(Dir$) = -2
+      If testmode Or
+         FileSize(Dir$ + "TransportFever.exe") > 1 Or
+         FileSize(Dir$ + "TransportFeverLauncher.exe") > 1 Or
+         FileSize(Dir$ + "TransportFever") > 1 ; Linux (native or wine)
+        ; TrainFever.exe is located in this path!
+        
+        ; check if able to write to path
+        If CreateFile(0, Dir$ + "TPFMM.tmp")
+          CloseFile(0)
+          DeleteFile(Dir$ + "TPFMM.tmp")
+          
+          ; make sure mods foler is there
+          If FileSize(dir$ + "mods") <> -2
+            CreateDirectory(dir$ + "mods")
           EndIf
-        CompilerElse
-          If FileSize(Dir$ + "TransportFever") > 1
-            If CreateFile(0, Dir$ + "TPFMM.tmp")
-              CloseFile(0)
-              DeleteFile(Dir$ + "TPFMM.tmp")
-              ProcedureReturn 0
-            EndIf
-            ProcedureReturn 1
-          EndIf
-        CompilerEndIf
+          ProcedureReturn 0 ; ok
+        EndIf
+        ProcedureReturn 1 ; no write permission
       EndIf
     EndIf
-    ProcedureReturn 2
+    ProcedureReturn 2 ; wrong folder
   EndProcedure
   
   Procedure examineDirectoryRecusrive(root$, List files$(), path$="")
@@ -886,5 +873,24 @@ Module misc
         EndIf
     CompilerEndSelect
   EndProcedure  
+  
+  Global mainThread
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      mainThread = GetCurrentThreadId_()
+    CompilerCase #PB_OS_Linux
+      mainThread = pthread_self_()
+    CompilerDefault
+      DebuggerError("not implemented")
+  CompilerEndSelect
+  
+  Procedure isMainThread()
+    CompilerSelect #PB_Compiler_OS
+      CompilerCase #PB_OS_Windows
+        ProcedureReturn Bool(GetCurrentThreadId_() = mainThread)
+      CompilerCase #PB_OS_Linux
+        ProcedureReturn Bool(pthread_self_() = mainThread)
+    CompilerEndSelect
+  EndProcedure
   
 EndModule
