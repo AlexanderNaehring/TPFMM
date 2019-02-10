@@ -1,4 +1,4 @@
-DeclareModule threads
+﻿DeclareModule threads
   EnableExplicit
   
   Declare NewThread(*function, *userdata, name$="")
@@ -6,9 +6,9 @@ DeclareModule threads
   Declare StopAll(timeout=-1, kill=#True)
   Declare.s GetTreeString()
   
-  Declare RequestStop(*thread)
-  Declare.b WaitStop(*thread, timeout=-1, kill=#True)
-  Declare.b IsStopRequested(*thread=-1)
+  Declare RequestStop(threadID)
+  Declare.b WaitStop(threadID, timeout=-1, kill=#True)
+  Declare.b IsStopRequested(threadID=-1)
   
   Declare GetCurrentThreadID()
   Declare isMainThread()
@@ -22,7 +22,6 @@ Module threads
     threadID.i    ; return value of OS specific unique thread ID function
     parentID.i    ; OS specific thread ID that spawned this thread
     requestStop.b ; used to request a graceful stop of a thread
-    started.b     ; indicate that the threadStarter started the user function
     valid.b       ; set to false when thread is finished
     paused.b      ; is thread paused?
     *function     ; function to start
@@ -41,6 +40,15 @@ Module threads
   *_root\valid    = #True
   *threadData(Str(*_root\threadID)) = *_root
   
+  ;{ deb()
+  CompilerIf Defined(debugger, #PB_Module)
+    UseModule debugger
+  CompilerElse
+    Macro deb(s)
+      Debug s
+    EndMacro
+  CompilerEndIf
+  ;}
   
   ;- Private
   
@@ -53,93 +61,6 @@ Module threads
     EndIf
     UnlockMutex(mutex)
     ProcedureReturn *data
-  EndProcedure
-  
-  Procedure threadStarter(*thread.threadData)
-    ; this is the new thread
-    *thread\threadID = GetCurrentThreadID()
-    ; mutex is still locked by parent, can access map without locking
-    *threadData(Str(*thread\threadID)) = *thread
-    *thread\valid   = #True
-    *thread\started = #True ; do not rely on valid as it can return to "false" if userfunction returns quickly
-    CallFunctionFast(*thread\function, *thread\userdata)
-    *thread\valid   = #False
-  EndProcedure
-  
-  ;- Public
-  
-  Procedure NewThread(*function, *userdata, name$="")
-    Protected *thread.threadData
-    Protected *parent.threadData
-    ; init thread data
-    *thread = AllocateStructure(threadData)
-    *thread\parentID = GetCurrentThreadID()
-    *thread\function = *function
-    *thread\userdata = *userdata
-    *thread\name$    = name$
-    
-    ; add thread reference to parent
-    *parent = GetThreadByThreadID(*thread\parentID)
-    If Not *parent
-      DebuggerWarning("threads:: could not find *parent thread ID in map")
-      *parent = *_root
-    EndIf
-    
-    LockMutex(mutex) ; lock mutex until thread is valid
-    
-    AddElement(*parent\threads())
-    *parent\threads() = *thread
-    
-    ; start thread
-    *thread\threadPB = CreateThread(@threadStarter(), *thread)
-    While Not *thread\started
-      Delay(1)
-    Wend
-    
-    UnlockMutex(mutex)
-    ProcedureReturn *thread
-  EndProcedure
-  
-  Procedure CountActiveThreads()
-    Protected count
-    LockMutex(mutex)
-    ForEach *threadData()
-      If *threadData()\valid
-        count + 1
-      EndIf
-    Next
-    UnlockMutex(mutex)
-    ProcedureReturn count
-  EndProcedure
-  
-  Procedure StopAll(timeout=-1, kill=#True)
-    Protected NewMap *tmp.threadData()
-    
-    LockMutex(mutex)
-    CopyMap(*threadData(), *tmp())
-    UnlockMutex(mutex)
-    
-    ; request stop on all threads
-    ; do this before WaitStop() in order to catch potentially nested threads 
-    ForEach *tmp()
-      If *tmp() <> *_root
-        If *tmp()\valid
-          If IsThread(*tmp()\threadPB)
-            *tmp()\requestStop = #True
-          Else
-            *tmp()\valid = #False
-          EndIf
-        EndIf
-      EndIf
-    Next
-    ; wait for all threads
-    ForEach *tmp()
-      If *tmp() <> *_root
-        WaitStop(*tmp(), timeout, kill)
-      EndIf
-    Next
-    
-    ProcedureReturn #True
   EndProcedure
   
   Procedure.s TreeRecursive(*thread.threadData, level=0)
@@ -173,7 +94,7 @@ Module threads
     tree$ + "["+*thread\threadID+"]"
     
     If Not *thread\valid
-      tree$ + " (inactive)"
+      tree$ + " (stopped)"
     EndIf
     ForEach *threads()
       tree$ + TreeRecursive(*threads(), level+1)
@@ -181,28 +102,131 @@ Module threads
     ProcedureReturn tree$
   EndProcedure
   
+  Procedure threadStarter(*thread.threadData)
+    Protected threadID
+    ; this is the new thread
+    threadID = GetCurrentThreadID()
+    ; mutex is still locked by parent, can access map without locking
+    *threadData(Str(threadID)) = *thread
+    *thread\valid     = #True
+    *thread\threadID  = threadID ; NewThread() waits for \threadID before continuing and releasing the mutex lock
+    CallFunctionFast(*thread\function, *thread\userdata)
+    *thread\valid     = #False
+  EndProcedure
+  
+  ;- Public
+  
+  Procedure NewThread(*function, *userdata, name$="")
+    Protected *thread.threadData
+    Protected *parent.threadData
+    Protected time
+    ; init thread data
+    *thread = AllocateStructure(threadData)
+    *thread\parentID = GetCurrentThreadID()
+    *thread\function = *function
+    *thread\userdata = *userdata
+    *thread\name$    = name$
+    
+    ; add thread reference to parent
+    *parent = GetThreadByThreadID(*thread\parentID)
+    If Not *parent
+      DebuggerWarning("threads:: could not find *parent "+*thread\parentID+" for new thread "+name$)
+      *parent = *_root
+    EndIf
+    
+    LockMutex(mutex) ; lock mutex until thread is valid
+    
+    AddElement(*parent\threads())
+    *parent\threads() = *thread
+    
+    ; start thread
+    *thread\threadPB = CreateThread(@threadStarter(), *thread)
+    time = ElapsedMilliseconds()
+    While Not *thread\threadID
+      Delay(0)
+      If ElapsedMilliseconds() - time > 5000
+        ; critical error: thread start takes too long
+        DebuggerError("Thread Start Timeout: "+name$)
+        Break
+      EndIf
+    Wend
+    
+    UnlockMutex(mutex)
+    ProcedureReturn *thread\threadID
+  EndProcedure
+  
+  Procedure CountActiveThreads()
+    Protected count
+    LockMutex(mutex)
+    ForEach *threadData()
+      If *threadData()\valid
+        count + 1
+      EndIf
+    Next
+    UnlockMutex(mutex)
+    ProcedureReturn count
+  EndProcedure
+  
+  Procedure StopAll(timeout=-1, kill=#True)
+    Protected NewList threadIDs()
+    
+    LockMutex(mutex)
+    ; request stop on all threads
+    ; do this before WaitStop() in order to catch potentially nested threads 
+    ForEach *threadData()
+      If *threadData() <> *_root
+        If *threadData()\valid
+          *threadData()\requestStop = #True
+          AddElement(threadIDs())
+          threadIDs() = *threadData()\threadID
+        EndIf
+      EndIf
+    Next
+    UnlockMutex(mutex)
+    
+    ; wait for all threads
+    ForEach threadIDs()
+      WaitStop(threadIDs(), timeout, kill)
+    Next
+    
+    ProcedureReturn #True
+  EndProcedure
+  
   Procedure.s GetTreeString()
     ProcedureReturn TreeRecursive(*_root)
   EndProcedure
   
-  Procedure RequestStop(*thread.threadData)
-    *thread\requestStop = #True
+  Procedure RequestStop(threadID)
+    Protected *thread.threadData
+    *thread = GetThreadByThreadID(threadID)
+    If *thread
+      *thread\requestStop = #True
+      ProcedureReturn #True
+    Else
+      ProcedureReturn #False
+    EndIf
   EndProcedure
   
-  Procedure.b WaitStop(*thread.threadData, timeout=-1, kill=#True)
-    Protected time
-    Protected ret
+  Procedure.b WaitStop(threadID, timeout=-1, kill=#True)
+    Protected time, ret
+    Protected *thread.threadData
+    
+    *thread = GetThreadByThreadID(threadID)
+    If Not *thread
+      ProcedureReturn #False 
+    EndIf
+    
     ret = #True
     *thread\requestStop = #True
     time = ElapsedMilliseconds()
     While *thread\valid
       Delay(1)
       If timeout <> -1 And ElapsedMilliseconds() - time > timeout
-        DebuggerWarning("Timeout reached during thread stop for "+*thread\threadID)
+        deb("threads:: Timeout reached during thread stop for "+*thread\threadID+" ("+*thread\name$+")")
         ret = #False
         If kill
           KillThread(*thread\threadPB)
-          DebuggerWarning("Thread "+*thread\threadID+" killed")
+          DebuggerWarning("Thread "+*thread\threadID+" ("+*thread\name$+") killed")
           *thread\valid = #False
         EndIf
         Break
@@ -211,11 +235,12 @@ Module threads
     ProcedureReturn ret
   EndProcedure
   
-  Procedure.b IsStopRequested(*thread.threadData=-1)
-    If *thread = -1
-      *thread = GetThreadByThreadID(GetCurrentThreadID())
+  Procedure.b IsStopRequested(threadID=-1)
+    Protected *thread.threadData
+    If threadID = -1
+      threadID = GetCurrentThreadID()
     EndIf
-    
+    *thread = GetThreadByThreadID(threadID)
     If *thread
       ProcedureReturn *thread\requestStop
     EndIf

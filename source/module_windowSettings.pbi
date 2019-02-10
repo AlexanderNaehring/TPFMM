@@ -223,7 +223,7 @@ Module windowSettings
     
     *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
     PokeS(*folder, folder$)
-    CreateThread(@backupFolderMoveThread(), *folder)
+    threads::NewThread(@backupFolderMoveThread(), *folder, "windowSettings::backupFolderMoveThread")
     
   EndProcedure
   

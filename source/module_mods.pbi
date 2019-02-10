@@ -3,6 +3,7 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_archive.pbi"
+XIncludeFile "threads.pb"
 
 XIncludeFile "module_mods.h.pbi"
 
@@ -177,12 +178,11 @@ Module mods
   Global mutexModAuthors  = CreateMutex()
   Global mutexModTags     = CreateMutex()
   Global semaphoreBackup  = CreateSemaphore(1) ; max number of concurrent backups
-  Global threadQueue
+  Global *threadQueue
   Global NewMap mods.mod()
   Global NewMap backups.backup()
   Global NewList queue.queue()
   Global isLoaded.b
-  Global exit.b
   
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
@@ -379,7 +379,8 @@ Module mods
         PostEvent(events(#EventWorkerStops))
       EndIf
       
-    Until exit
+    Until threads::IsStopRequested()
+    deb("mods::handleQueue() finished")
   EndProcedure
   
   Procedure addToQueue(action, string$="")
@@ -389,34 +390,18 @@ Module mods
     queue()\action  = action
     queue()\string$ = string$
     
-    If Not threadQueue Or Not IsThread(threadQueue)
-      exit = #False
-      threadQueue = CreateThread(@handleQueue(), 0)
+    If Not *threadQueue
+      *threadQueue = threads::NewThread(@handleQueue(), 0, "mods::handleQueue")
     EndIf
     
     UnlockMutex(mutexQueue)
   EndProcedure
   
   Procedure stopQueue(timeout = 5000)
-    
-    
-    ; wait for worker to finish or timeout
-    If threadQueue And IsThread(threadQueue)
-      ; set exit flag for worker
-      exit = #True
-      
-      WaitThread(threadQueue, timeout)
-      
-      If IsThread(threadQueue)
-        deb("mods:: kill worker")
-        KillThread(threadQueue)
-        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
-      EndIf
-      
-      exit = #False
+    If *threadQueue
+      threads::WaitStop(*threadQueue, timeout, #True)
+      *threadQueue = #Null
     EndIf
-    
-    
     ProcedureReturn #True
   EndProcedure
   

@@ -21,7 +21,9 @@
     getFilename.s()
     getLastError.s()
     
+    isFinished()
     waitFinished(timeout.l = 0)
+    abort()
     
     EventOnProgress(event=0)
     EventOnSuccess(event=0)
@@ -50,7 +52,9 @@
   Declare.s getFilename(*wget.wget)
   Declare.s getLastError(*wget.wget)
   
+  Declare isFinished(*wget.wget)
   Declare waitFinished(*wget.wget, timeout.l = 0)
+  Declare abort(*wget.wget)
   
   Declare EventOnProgress(*wget.wget, event=0)
   Declare EventOnSuccess(*wget.wget, event=0)
@@ -86,7 +90,9 @@ Module wget
     Data.i @getFilename()
     Data.i @getLastError()
     
+    Data.i @isFinished()
     Data.i @waitFinished()
+    Data.i @abort()
     
     Data.i @EventOnProgress()
     Data.i @EventOnSuccess()
@@ -300,7 +306,7 @@ Module wget
     *this = AllocateStructure(_wget)
     *this\vt = ?vt
     
-    *this\remote$ = remote$
+    *this\remote$ = URLEncoder(remote$)
     *this\local$  = local$
     *this\timeout = timeout
     *this\async   = async
@@ -395,7 +401,7 @@ Module wget
   EndProcedure
   
   Procedure.s getRemote(*this._wget)
-    ProcedureReturn *this\remote$
+    ProcedureReturn URLDecoder(*this\remote$)
   EndProcedure
   
   Procedure.s getFilename(*this._wget)
@@ -404,6 +410,10 @@ Module wget
   
   Procedure.s getLastError(*this._wget)
     ProcedureReturn *this\lastError$
+  EndProcedure
+  
+  Procedure isFinished(*this._wget)
+    ProcedureReturn Bool(Not IsThread(*this\thread))
   EndProcedure
   
   Procedure waitFinished(*this._wget, timeout.l=0) ; should not be called in a callback function, as the thread itself calls the callback
@@ -426,6 +436,13 @@ Module wget
       EndIf
     Else ; no thread active
       ProcedureReturn #True
+    EndIf
+  EndProcedure
+  
+  Procedure abort(*this._wget)
+    If *this\thread And IsThread(*this\thread)
+      *this\cancel = #True
+      WaitThread(*this\thread)
     EndIf
   EndProcedure
   

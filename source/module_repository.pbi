@@ -28,7 +28,6 @@ Module repository
     Data.i @modGetThumbnailAsync()
     Data.i @modGetTimeChanged()
     Data.i @modGetWebsite()
-    Data.i @modSetThumbnailImage()
     
     vtFile:
     Data.i @fileGetMod()
@@ -85,7 +84,6 @@ Module repository
     
     ; local stuff
     installSource$ ; used when installing after download
-    thumbnailImage.i
   EndStructure
   
   ; repository structures
@@ -136,7 +134,7 @@ Module repository
   
   Global Dim events(EventArraySize)
   
-  Global *queueThread, queueStop.b,
+  Global *queueThread,
          mutexQueue = CreateMutex()
   Global NewList queue.queue()
   
@@ -491,10 +489,7 @@ Module repository
     
     ; download for same image may be triggered multiple times!
     ; make sure, same image is not downloaded in parallel
-     
-    If *thumbnailData\mod\thumbnailImage
-      *thumbnailData\callback(*thumbnailData\mod\thumbnailImage, *thumbnailData\userdata)
-    Else
+    
       url$ = *thumbnailData\mod\thumbnail$
       
       ; check if image on disk
@@ -525,23 +520,8 @@ Module repository
         EndIf
       EndIf
       
-      If FileSize(file$) > 0
-        ; file exists, load image
-        ;TODO: repository may download image, but move image load() to windowMain:: ?
-        image = LoadImage(#PB_Any, file$)
-        If image And IsImage(image)
-          ; cache image
-          *thumbnailData\mod\thumbnailImage = image
-        Else
-          ; local file could not be loaded?
-          DeleteFile(file$)
-          deb("repository:: could not open local thumbnail from "+url$)
-        EndIf
-      EndIf
-      
-      If image
-        *thumbnailData\callback(image, *thumbnailData\userdata)
-      EndIf
+    If FileSize(file$) > 0
+      *thumbnailData\callback(*thumbnailData\mod, file$, *thumbnailData\userdata)
     EndIf
     
     FreeStructure(*thumbnailData)
@@ -582,43 +562,32 @@ Module repository
       ; not hog CPU
       Delay(10)
       
-    Until queueStop
+    Until threads::IsStopRequested()
   EndProcedure
   
-  Procedure addToQueue(callback.callbackQueue, *userdata)
+  Procedure addToQueue(callback.callbackQueue, *userdata, addInFront=#False)
     LockMutex(mutexQueue)
-    LastElement(queue())
-    AddElement(queue())
+    If addInFront
+      FirstElement(queue())
+      InsertElement(queue())
+    Else
+      LastElement(queue())
+      AddElement(queue())
+    EndIf
     queue()\callback = callback
     queue()\userdata = *userdata
     UnlockMutex(mutexQueue)
     
-    If Not *queueThread Or Not IsThread(*queueThread)
-      *queueThread = CreateThread(@QueueThread(), 0)
+    If Not *queueThread
+      *queueThread = threads::NewThread(@QueueThread(), 0, "repository::queueThread")
     EndIf
   EndProcedure
   
   Procedure stopQueue(timeout = 5000)
-    Protected time
-    If *queueThread And IsThread(*queueThread)
-      queueStop = #True
-      time = ElapsedMilliseconds()
-      
-      LockMutex(mutexQueue)
-      ClearList(queue())
-      UnlockMutex(mutexQueue)
-      
-      WaitThread(*queueThread, timeout)
-      
-      If IsThread(*queueThread)
-        deb("repository:: kill worker due to timeout! Program continues unsafe!")
-        KillThread(*queueThread)
-        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
-      EndIf
-      
-      queueStop = #False
+    If *queueThread
+      threads::WaitStop(*queueThread, timeout, #True)
+      *queueThread = #Null
     EndIf
-    *queueThread = #Null
   EndProcedure
   
   ;----------------------------------------------------------------------------
@@ -634,7 +603,7 @@ Module repository
     AddRepository("https://www.transportfevermods.com/repository/mods/workshop.json")
     
     If async
-      addToQueue(@queueRefreshRepositories(), #Null)
+      addToQueue(@queueRefreshRepositories(), #Null, #True)
     Else
       queueRefreshRepositories(0)
     EndIf
@@ -1090,7 +1059,7 @@ Module repository
       *thumbnailData\callback = callback
       *thumbnailData\userdata = *userdata
       
-      addToQueue(@queueThumbnail(), *thumbnailData)
+      addToQueue(@queueThumbnail(), *thumbnailData, #True)
     EndIf
     ProcedureReturn #True
   EndProcedure
@@ -1104,12 +1073,6 @@ Module repository
   Procedure.s modGetWebsite(*mod.mod)
     If *mod
       ProcedureReturn *mod\url$
-    EndIf
-  EndProcedure
-  
-  Procedure modSetThumbnailImage(*mod.mod, image)
-    If *mod
-      *mod\thumbnailImage = image
     EndIf
   EndProcedure
   
@@ -1230,7 +1193,7 @@ Module repository
     Protected filename$, folder$
     
     If threads::isMainThread()
-      CreateThread(@fileDownload(), *file)
+      threads::NewThread(@fileDownload(), *file, "repository::fileDownload")
       ProcedureReturn
     EndIf
     

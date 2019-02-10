@@ -107,8 +107,6 @@ Module windowMain
     #MenuItem_Enter
     #MenuItem_CtrlA
     #MenuItem_CtrlF
-;     #MenuItem_PackNew
-;     #MenuItem_PackOpen
     
     #MenuItem_ShareSelected
     #MenuItem_ShareFiltered
@@ -304,19 +302,12 @@ Module windowMain
     ProcedureReturn #False
   EndProcedure
   
-  Procedure checkUpdate(*null)
-    Protected json, tpfmm
-    Protected tmp$, *wget.wget::wget
+  Procedure updateResponse(*wget.wget::wget)
+    Protected tmp$ = *wget\getFilename()
     Protected local.version, remote.version
+    Protected json, tpfmm
     Static latest.GithubRelease ; keep in memory for GUI to access the data
     
-    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
-    If FileSize(tmp$) > 0
-      DeleteFile(tmp$, #PB_FileSystem_Force)
-    EndIf
-    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #False)
-    *wget\setUserAgent(main::#VERSION$)
-    *wget\download()
     If FileSize(tmp$) > 0
       json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
       DeleteFile(tmp$, #PB_FileSystem_Force)
@@ -342,6 +333,19 @@ Module windowMain
     Else
       deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
     EndIf
+  EndProcedure
+  
+  Procedure checkUpdate()
+    Protected tmp$, *wget.wget::wget
+    
+    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+    If FileSize(tmp$) > 0
+      DeleteFile(tmp$, #PB_FileSystem_Force)
+    EndIf
+    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #True)
+    *wget\setUserAgent(main::#VERSION$)
+    *wget\CallbackOnSuccess(@updateResponse())
+    *wget\download()
   EndProcedure
   
   Procedure updateAvailable()
@@ -451,7 +455,8 @@ Module windowMain
     deb("windowMain:: close window")
     ; the exit procedure will run in a thread and wait for all workers to finish etc...
     windowProgress::showProgressWindow(_("progress_close"), #EventCloseNow)
-    CreateThread(@closeThread(), #EventCloseNow)
+    threads::NewThread(@closeThread(), #EventCloseNow, "windowMain::close")
+    ; EventCloseNow will call main::exit()
     ; todo also set up a timer event to close programm after (e.g.) 1 minute if cleanup procedure fails?
   EndProcedure
   
@@ -536,11 +541,11 @@ Module windowMain
     
     windowProgress::setProgressPercent(90)
     
+    ; check for update (will start download in thread, does not block)
+    checkUpdate()
     
-    windowProgress::setProgressPercent(99)
+    windowProgress::setProgressPercent(95)
     
-    ; start updater thread
-    CreateThread(@checkUpdate(), #Null)
     
     ; open settings dialog if required
     If settings::getString("", "path") = ""
@@ -601,7 +606,7 @@ Module windowMain
     
     ; startup procedure
     windowProgress::showProgressWindow(_("progress_start"), #EventCloseNow)
-    CreateThread(@startThread(), #EventStartupFinished)
+    threads::NewThread(@startThread(), #EventStartupFinished, "windowMain::startThread")
   EndProcedure
   
   ; ---
@@ -1257,7 +1262,6 @@ Module windowMain
     
     *buffer = EventData()
     If *buffer
-;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
       SetGadgetText(gadget("progressModText"), PeekS(*buffer))
       FreeMemory(*buffer)
       ; sometimes, this event is called twice and tries to free memory that is already freed!
@@ -1774,13 +1778,16 @@ Module windowMain
     PostEvent(windowSettings::#EventRefreshRepoList, windowSettings::window, #Null)
   EndProcedure
   
-  Procedure repoCallbackThumbnail(image, *userdata)
-    Debug "repoCallbackThumbnail("+image+", "+*userdata+")"
-    ;TODO: repository may download image, but move image load() to windowMain:: ?
+  Procedure repoCallbackThumbnail(*mod.repository::RepositoryMod, file$, *userdata)
     Protected *item.CanvasList::CanvasListItem
-    If image And *userdata
+    Protected im
+    
+    If file$ And *userdata
       *item = *userdata
-      *item\SetImage(image)
+      im = LoadImage(#PB_Any, file$)
+      If im
+        *item\SetImage(im)
+      EndIf
     EndIf
   EndProcedure
   
@@ -1808,11 +1815,11 @@ Module windowMain
     
     *buffer = EventData()
     If *buffer
-;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
       SetGadgetText(gadget("progressRepoText"), PeekS(*buffer))
       FreeMemory(*buffer)
       ; sometimes, this event is called twice and tries to free memory that is already freed!
       ; only occurs when using EventWindow and EventGadget for data transfer...
+      ; using EventType() for data transfer now
     EndIf
   EndProcedure
   
@@ -2919,7 +2926,7 @@ Module windowMain
     PokeS(*link, link$)
     
     ; start in thread in order to wait for repository to finish
-    CreateThread(@repoFindModAndDownloadThread(), *link)
+    threads::NewThread(@repoFindModAndDownloadThread(), *link, "windowMain::repoFindModAndDownloadThread")
   EndProcedure
   
   Procedure getSelectedMods(List *mods())

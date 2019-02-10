@@ -38,6 +38,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_windowMain.pbi"
 XIncludeFile "module_instance.pbi"
 XIncludeFile "module_windowLicense.pbi"
+XIncludeFile "threads.pb"
 
 XIncludeFile "module_mods.pbi"
 XIncludeFile "module_repository.pbi"
@@ -50,6 +51,7 @@ Module main
   Procedure onError()
     Protected date$ = FormatDate("%yyyy-%mm-%dd_%hh-%ii-%ss", Date())
     Protected file, file$ = "crash/dump-"+date$+".txt"
+    Protected ErrorFile$
     CreateDirectory("crash")
     
     
@@ -67,7 +69,9 @@ Module main
     WriteStringN(file, VERSION_FULL$)
     WriteStringN(file, #DQUOTE$+ErrorMessage()+#DQUOTE$)
     WriteStringN(file, Str(ErrorCode())+"@"+ErrorAddress()+">"+ErrorTargetAddress())
-    WriteStringN(file, ErrorFile()+" line "+ErrorLine())
+    ErrorFile$ = ReplaceString(ErrorFile(), GetPathPart(#PB_Compiler_FilePath), "")
+    WriteStringN(file, ErrorFile$+" line "+ErrorLine())
+    WriteStringN(file, "https://github.com/AlexanderNaehring/TPFMM/tree/master/source/"+ErrorFile$+"#L"+ErrorLine())
     WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" (x"+CountCPUs()+")")
     WriteStringN(file, "Available Physical Memory: "+Str(MemoryStatus(#PB_System_FreePhysical)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalPhysical)/1024/1024)+" MiB")
     If MemoryStatus(#PB_System_TotalVirtual) > 0
@@ -76,6 +80,7 @@ Module main
     If MemoryStatus(#PB_System_TotalSwap) > 0
       WriteStringN(file, "Available Swap:            "+Str(MemoryStatus(#PB_System_FreeSwap)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalSwap)/1024/1024)+" MiB")
     EndIf
+    WriteStringN(file, "threading information:"+#LF$+threads::GetTreeString())
     WriteStringN(file, "################################################################################")
     WriteStringN(file, "")
     
@@ -89,9 +94,10 @@ Module main
     
     WriteStringN(file, "[/code]")
     
-    MessageRequester("ERROR", ErrorMessage()+" (#"+ErrorCode()+") at address "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+""+ErrorFile()+" line "+ErrorLine(), #PB_MessageRequester_Error)
+    MessageRequester("ERROR", ErrorMessage()+" at "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+""+ErrorFile$+" line "+ErrorLine(), #PB_MessageRequester_Error)
     
     misc::openLink(GetCurrentDirectory()+"/"+file$)
+    ;misc::openLink(main::#WEBSITE$)
     End
   EndProcedure
   
@@ -202,6 +208,9 @@ Module main
   ;- Exit
 
   Procedure exit()
+    deb(Str(threads::CountActiveThreads())+" threads active, stop all now")
+    deb(#LF$+threads::GetTreeString())
+    threads::StopAll(500, #True)
     deb("Goodbye!")
     End
   EndProcedure

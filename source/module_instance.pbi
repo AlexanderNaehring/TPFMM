@@ -10,6 +10,7 @@
 EndDeclareModule
 
 XIncludeFile "module_debugger.pbi"
+XIncludeFile "threads.pb"
 
 Module instance
   UseModule debugger
@@ -22,7 +23,6 @@ Module instance
   Global _port
   Global _server
   Global _thread
-  Global _stop
   Global callback.receiveCallback
   
   Procedure listener(server)
@@ -48,7 +48,7 @@ Module instance
       Else
         Delay(100)
       EndIf
-    Until _stop
+    Until threads::IsStopRequested()
     
     CloseNetworkServer(server)
     
@@ -62,14 +62,9 @@ Module instance
       
       _server = CreateNetworkServer(#PB_Any, _port, #PB_Network_TCP|#PB_Network_IPv4, "127.0.0.1")
       If _server
-        _stop = #False
-        _thread = CreateThread(@listener(), _server)
-        
-        If Not _thread
-          CloseNetworkServer(_server)
-          _server = #Null
-        EndIf
+        _thread = threads::NewThread(@listener(), _server, "instance::listener")
       Else
+        CloseNetworkServer(_server)
         Debug "could not create server on port "+_port
       EndIf
       
@@ -83,17 +78,8 @@ Module instance
   Procedure free()
     Protected time
     
-    _stop = #True
-    time = ElapsedMilliseconds()
-    While _thread And IsThread(_thread) And (ElapsedMilliseconds() - time) < 500
-      Delay(10)
-    Wend
-    
-    If _thread And IsThread(_thread)
-      KillThread(_thread)
-    EndIf
+    threads::WaitStop(_thread, 500, #True)
     _thread = #Null
-    _stop   = #False
     
     ProcedureReturn #True
   EndProcedure
