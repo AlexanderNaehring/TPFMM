@@ -72,7 +72,17 @@ DeclareModule CanvasList
   EndInterface
   
   ; declare public functions
-  Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
+  Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1, theme$="")
+  
+EndDeclareModule
+
+XIncludeFile "module_debugger.pbi"
+
+Module CanvasList
+  
+  ;{ Declare
+  
+  ; gadget
   Declare Free(*gadget)
   
   ; gadget functions
@@ -111,14 +121,7 @@ DeclareModule CanvasList
   Declare ItemClearIcons(*item)
   Declare ItemAddButton(*item, *callback, image, imageHover=0, hint$="")
   Declare ItemClearButtons(*item)
-  
-EndDeclareModule
-
-CompilerIf #PB_Compiler_IsIncludeFile
-  XIncludeFile "module_debugger.pbi"
-CompilerEndIf
-
-Module CanvasList
+  ;}
   
   ;{ VT
   DataSection
@@ -345,17 +348,15 @@ Module CanvasList
   EndStructure
   ;}
   
-  ;- debug output
-  
+  ;{ debug output
   CompilerIf Defined(debugger, #PB_Module)
-    ; in bigger project, use custom module (writes debug messages to log file)
     UseModule debugger
   CompilerElse
-    ; if module not available, just print message
     Macro deb(s)
       Debug s
     EndMacro
   CompilerEndIf
+  ;}
   
   ;- Private Functions
   
@@ -532,22 +533,22 @@ Module CanvasList
     EndIf
     
     If MapSize(colors$()) = 0
-      colors$("white")  = "#FFFFFF"
-      colors$("silver") = "#C0C0C0"
-      colors$("gray")   = "#808080"
-      colors$("black")  = "#000000"
-      colors$("red")    = "#FF0000"
-      colors$("maroon") = "#800000"
-      colors$("yellow") = "#FFFF00"
-      colors$("olive")  = "#808000"
-      colors$("lime")   = "#00FF00"
-      colors$("green")  = "#008000"
-      colors$("aqua")   = "#00FFFF"
-      colors$("teal")   = "#008080"
-      colors$("blue")   = "#0000FF"
-      colors$("navy")   = "#000080"
-      colors$("fuchsia") = "#FF00FF"
-      colors$("purple") = "#800080"
+      colors$("white")    = "#FFFFFF"
+      colors$("silver")   = "#C0C0C0"
+      colors$("gray")     = "#808080"
+      colors$("black")    = "#000000"
+      colors$("red")      = "#FF0000"
+      colors$("maroon")   = "#800000"
+      colors$("yellow")   = "#FFFF00"
+      colors$("olive")    = "#808000"
+      colors$("lime")     = "#00FF00"
+      colors$("green")    = "#008000"
+      colors$("aqua")     = "#00FFFF"
+      colors$("teal")     = "#008080"
+      colors$("blue")     = "#0000FF"
+      colors$("navy")     = "#000080"
+      colors$("fuchsia")  = "#FF00FF"
+      colors$("purple")   = "#800080"
     EndIf
     
     c$ = UCase(htmlColor$)
@@ -572,15 +573,15 @@ Module CanvasList
       c$ = tmp$
     EndIf
     
-    ; w/o alpha channel, add 00
+    ; w/o alpha channel, add full alpha
     If Len(c$) = 6
-      c$ + "00"
+      c$ + "FF"
     EndIf
     
     ; if not full notation RRGGBBAA, something went wrong
     If Len(c$) <> 8
       ; RRGGBBAA
-      Debug "could not convert color "+htmlColor$
+      Debug "could not convert color '"+htmlColor$+"'"
       ProcedureReturn 0
     EndIf
     
@@ -1563,10 +1564,25 @@ Module CanvasList
   
   ;- Public Gadget Functions
   
-  Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
+  Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1, theme$="")
     Protected *this.gadget
     *this = AllocateStructure(gadget)
     *this\vt = ?vt
+    
+    ; create canvas or use existing
+    If useExistingCanvas = -1
+      *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
+    Else
+      If IsGadget(useExistingCanvas)
+        *this\gCanvas = useExistingCanvas
+        ResizeGadget(*this\gCanvas, x, y, width, height)
+      EndIf
+    EndIf
+    
+    If Not *this\gCanvas
+      FreeStructure(*this)
+      ProcedureReturn #Null
+    EndIf
     
     ; Mutex creation
     *this\mItems = CreateMutex()
@@ -1576,24 +1592,33 @@ Module CanvasList
     *this\fontHeight = getFontHeightPixel()
     *this\scrollWheelDelta = *this\fontHeight*4
     
-    ; theme
-    DataSection
-      themeStart:
-      IncludeBinary "theme/modList.json"
-      themeEnd:
-    EndDataSection
-    SetTheme(*this, PeekS(?themeStart, ?themeEnd-?themeStart, #PB_UTF8))
-    
-    ; create canvas or use existing
-    If useExistingCanvas = -1
-      *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
-    Else
-      If Not IsGadget(useExistingCanvas)
-        ProcedureReturn #False
-      EndIf
-      *this\gCanvas = useExistingCanvas
-      ResizeGadget(*this\gCanvas, x, y, width, height)
-    EndIf
+    ; set default theme
+    *this\theme\item\Width              = 500
+    *this\theme\item\Margin             = 2
+    *this\theme\item\Padding            = 4
+    ReDim *this\theme\item\Lines(1)
+    *this\theme\item\Lines(0)\Bold      = #True
+    *this\theme\item\Lines(1)\Italic    = #True
+    *this\theme\item\Image\Display      = #True
+    *this\theme\item\Image\MinHeight    = 80
+    *this\theme\item\Image\AspectRatio  = 9/16
+    *this\theme\responsive\Columnize    = #False
+    *this\theme\responsive\ExpandItems  = #True
+    *this\theme\scrollbarWidth          = 12
+    *this\theme\color\ItemText$         = "#2F4763"
+    *this\theme\color\ItemSelected$     = "#007BEE20"
+    *this\theme\color\ItemBorder$       = "#829BAF"
+    *this\theme\color\ItemBackground$   = "#FFFFFF"
+    *this\theme\color\ItemHover$        = "#007BEE10"
+    *this\theme\color\Border$           = "#829BAFFF"
+    *this\theme\color\Background$       = "#2F476340"
+    *this\theme\color\Scrollbar$        = "#2F476340"
+    *this\theme\color\ScrollbarHover$   = "#2F4763C0"
+    *this\theme\color\SelectionBox$     = "#007BEE80"
+    updateItemLineFonts(*this)
+   
+    ; load user theme theme if defined
+    SetTheme(*this, theme$)
     
     *this\scrollbar\pagelength = height
     *this\scrollbar\disabled = #True
@@ -1856,23 +1881,30 @@ Module CanvasList
   EndProcedure
   
   Procedure SetTheme(*this.gadget, theme$)
-    Protected json, theme.theme, i
-    json = ParseJSON(#PB_Any, theme$, #PB_JSON_NoCase)
-    If json
-      For i = 0 To ArraySize(*this\theme\item\Lines())
-        If *this\theme\item\Lines(i)\FontID And IsFont(*this\theme\item\Lines(i)\FontID)
-          FreeFont(*this\theme\item\Lines(i)\FontID)
-          *this\theme\item\Lines(i)\FontID = 0
-        EndIf
-      Next
-      ExtractJSONStructure(JSONValue(json), @theme, theme)
-      CopyStructure(@theme, *this\theme, theme)
-      FreeJSON(json)
-      updateItemLineFonts(*this)
+    Protected json, i
+    If theme$
+      json = ParseJSON(#PB_Any, theme$, #PB_JSON_NoCase)
+      If json
+        ; free fonts (may be overwritten with new definition)
+        For i = 0 To ArraySize(*this\theme\item\Lines())
+          If *this\theme\item\Lines(i)\FontID And IsFont(*this\theme\item\Lines(i)\FontID)
+            FreeFont(*this\theme\item\Lines(i)\FontID)
+            *this\theme\item\Lines(i)\FontID = 0
+          EndIf
+        Next
+        ExtractJSONStructure(JSONValue(json), *this\theme, theme, #PB_JSON_NoClear)
+        FreeJSON(json)
+        
+        ; initialize fonts
+        updateItemLineFonts(*this)
+        ProcedureReturn #True
+      Else
+        Debug JSONErrorMessage()
+        ProcedureReturn #False
+      EndIf
     Else
-      Debug JSONErrorMessage()
+      ProcedureReturn #False
     EndIf
-    
   EndProcedure
   
   Procedure.s GetThemeJSON(*this.gadget, pretty=#False)
