@@ -342,7 +342,7 @@ Module windowMain
     If FileSize(tmp$) > 0
       DeleteFile(tmp$, #PB_FileSystem_Force)
     EndIf
-    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2, #True)
+    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2)
     *wget\setUserAgent(main::#VERSION$)
     *wget\CallbackOnSuccess(@updateResponse())
     *wget\download()

@@ -9,12 +9,10 @@
     
     setUserAgent(useragent$="")
     setTimeout(timeout.l)
-    setAsync(async.b)
     setUserData(*userdata)
     
     getUserAgent.s()
     getTimeout.l()
-    getAsync.b()
     getUserData()
     getProgress.b()
     getRemote.s()
@@ -34,18 +32,24 @@
     CallbackOnError(*function.callbackFunction = #Null)
   EndInterface
   
-  Declare NewDownload(remote$, local$, timeout.l=10, async.b=#True)
+  Declare NewDownload(remote$, local$, timeout.l=10)
+  
+  Declare setProxy(host$, username$="", password$="")
+  Declare freeAll()
+EndDeclareModule
+
+Module wget
+  
+  ;{ Declares
   Declare StartDownload(*wget.wget)
   Declare FreeDownload(*wget.wget)
   
   Declare setUserAgent(*wget.wget, useragent$="")
   Declare setTimeout(*wget.wget, timeout.l)
-  Declare setAsync(*wget.wget, async.b)
   Declare setUserData(*wget.wget, *userdata)
   
   Declare.s getUserAgent(*wget.wget)
   Declare.l getTimeout(*wget.wget)
-  Declare.b getAsync(*wget.wget)
   Declare getUserData(*wget.wget)
   Declare.b getProgress(*wget.wget)
   Declare.s getRemote(*wget.wget)
@@ -63,12 +67,7 @@
   Declare CallbackOnProgress(*wget.wget, *function.callbackFunction = #Null)
   Declare CallbackOnSuccess(*wget.wget, *function.callbackFunction = #Null)
   Declare CallbackOnError(*wget.wget, *function.callbackFunction = #Null)
-  
-  Declare setProxy(host$, username$="", password$="")
-  Declare freeAll()
-EndDeclareModule
-
-Module wget
+  ;}
   
   ;{ VT
   DataSection
@@ -78,12 +77,10 @@ Module wget
     
     Data.i @setUserAgent()
     Data.i @setTimeout()
-    Data.i @setAsync()
     Data.i @setUserData()
     
     Data.i @getUserAgent()
     Data.i @getTimeout()
-    Data.i @getAsync()
     Data.i @getUserData()
     Data.i @getProgress()
     Data.i @getRemote()
@@ -121,7 +118,6 @@ Module wget
     local$
     useragent$
     timeout.l
-    async.b
     
     progress.b
     exitCode.i
@@ -301,7 +297,7 @@ Module wget
   
   ;- Public
   
-  Procedure NewDownload(remote$, local$, timeout.l=10, async.b=#True)
+  Procedure NewDownload(remote$, local$, timeout.l=10)
     Protected *this._wget
     *this = AllocateStructure(_wget)
     *this\vt = ?vt
@@ -309,7 +305,6 @@ Module wget
     *this\remote$ = URLEncoder(remote$)
     *this\local$  = local$
     *this\timeout = timeout
-    *this\async   = async
     *this\mutex   = CreateMutex()
     
     LockMutex(_mutexList)
@@ -323,13 +318,8 @@ Module wget
   Procedure StartDownload(*this._wget)
     If TryLockMutex(*this\mutex)
       *this\cancel = #False
-      If *this\async
-        *this\thread = CreateThread(@downloadThread(), *this)
-        ProcedureReturn Bool(*this\thread)
-      Else
-        *this\thread = #False
-        ProcedureReturn downloadThread(*this)
-      EndIf
+      *this\thread = CreateThread(@downloadThread(), *this)
+      ProcedureReturn Bool(*this\thread)
     Else
       deb("wget:: download already active")
       ProcedureReturn #False
@@ -372,10 +362,6 @@ Module wget
     *this\timeout = timeout
   EndProcedure
   
-  Procedure setAsync(*this._wget, async.b)
-    *this\async = async
-  EndProcedure
-  
   Procedure setUserData(*this._wget, *userdata)
     *this\userdata = *userdata
   EndProcedure
@@ -386,10 +372,6 @@ Module wget
   
   Procedure.l getTimeout(*this._wget)
     ProcedureReturn *this\timeout
-  EndProcedure
-  
-  Procedure.b getAsync(*this._wget)
-    ProcedureReturn *this\async
   EndProcedure
   
   Procedure getUserData(*this._wget)

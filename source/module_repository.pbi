@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_debugger.pbi"
+XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -280,7 +280,7 @@ Module repository
     
     ; start download
     _activeRepoDownloads + 1
-    *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000, #True)
+    *wget = wget::NewDownload(url$, file$+".download", #RepoDownloadTimeout/1000)
     *wget\setUserAgent(main::VERSION_FULL$)
     *wget\CallbackOnError(@updateRepositoryFileError())
     *wget\CallbackOnSuccess(@updateRepositoryFileSuccess())
@@ -502,8 +502,9 @@ Module repository
         If FileSize(tmp$) > 0
           DeleteFile(tmp$, #PB_FileSystem_Force)
         EndIf
-        *wget = wget::NewDownload(url$, tmp$, 2, #False)
+        *wget = wget::NewDownload(url$, tmp$, 2)
         *wget\download()
+        *wget\waitFinished()
         If FileSize(tmp$) > 0
           image = LoadImage(#PB_Any, tmp$)
           DeleteFile(tmp$, #PB_FileSystem_Force)
@@ -740,9 +741,11 @@ Module repository
     ; try to download repository
     file$ = GetTemporaryDirectory()+"tpfmm-repository.tmp"
     DeleteFile(file$, #PB_FileSystem_Force)
-    *wget = wget::NewDownload(url$, file$, #RepoDownloadTimeout/1000, #False)
+    *wget = wget::NewDownload(url$, file$, #RepoDownloadTimeout/1000)
     *wget\setUserAgent(main::VERSION_FULL$)
-    If *wget\download() = 0 ; exit code 0
+    *wget\download()
+    *wget\waitFinished()
+    If  FileSize(file$) > 0
       ; download okay
       json = LoadJSON(#PB_Any, file$)
       If json
@@ -1096,7 +1099,7 @@ Module repository
   
   Procedure downloadURL(url$, filename$, *userdata=#Null)
     Protected *wget.wget::wget
-    *wget = wget::NewDownload(url$, filename$, #RepoDownloadTimeout/1000, #True)
+    *wget = wget::NewDownload(url$, filename$, #RepoDownloadTimeout/1000)
     *wget\setUserAgent(main::VERSION_FULL$)
     *wget\setUserData(*userdata)
     *wget\CallbackOnProgress(@fileDownloadProgress())
