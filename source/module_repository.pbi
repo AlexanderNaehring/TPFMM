@@ -1103,59 +1103,86 @@ Module repository
     EndIf
   EndProcedure
   
-  Declare fileDownloadProgress(*wget.wget::wget)
-  Declare fileDownloadError(*wget.wget::wget)
-  Declare fileDownloadSuccess(*wget.wget::wget)
+  Declare downloadProgress(*wget.wget::wget)
+  Declare downloadError(*wget.wget::wget)
+  Declare downloadSuccess(*wget.wget::wget)
   
-  Procedure downloadURL(url$, filename$, *userdata=#Null)
+  Procedure downloadURL(url$, filename$="", *userdata=#Null)
     Protected *wget.wget::wget
+    Protected folder$
+    
+    If events(#EventWorkerStarts)
+      PostEvent(events(#EventWorkerStarts))
+    EndIf
+    
+    ; download location
+    If filename$ = ""
+      filename$ = url$
+    EndIf
+    filename$ = GetFilePart(filename$)
+    If filename$ = ""
+      filename$ = "tmp.zip"
+    EndIf
+    folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
+    misc::CreateDirectoryAll(folder$)
+    filename$ = folder$ + #PS$ + filename$
+    
     *wget = wget::NewDownload(url$, filename$, #RepoDownloadTimeout/1000)
     *wget\setUserAgent(main::VERSION_FULL$)
     *wget\setUserData(*userdata)
-    *wget\CallbackOnProgress(@fileDownloadProgress())
-    *wget\CallbackOnSuccess(@fileDownloadSuccess())
-    *wget\CallbackOnError(@fileDownloadError())
+    *wget\CallbackOnProgress(@downloadProgress())
+    *wget\CallbackOnSuccess(@downloadSuccess())
+    *wget\CallbackOnError(@downloadError())
     *wget\download()
   EndProcedure
   
-  Procedure fileDownloadProgress(*wget.wget::wget)
+  Procedure downloadProgress(*wget.wget::wget)
     postProgressEvent(*wget\getProgress())
   EndProcedure
   
-  Procedure fileDownloadError(*wget.wget::wget)
+  Procedure downloadError(*wget.wget::wget)
     Protected *file.file, *mod.mod
     Protected url$
+    Protected modname$
     
     deb("repository:: fileDownloadError()")
     
     *file = *wget\getUserData()
-    *mod = *file\mod
+    If *file
+      *mod = *file\mod
+      modname$ = *mod\name$
+    Else
+      modname$ = GetFilePart(*wget\getFilename())
+    EndIf
     url$ = *wget\getRemote()
     *wget\free()
     *wget = #Null
     
     deb("repository:: download error: "+url$)
-    postProgressEvent(-1, _("repository_download_fail", "modname="+*mod\name$))
+    postProgressEvent(-1, _("repository_download_fail", "modname="+modname$))
     
-    SignalSemaphore(_semaphoreDownload)
     If events(#EventWorkerStops)
       PostEvent(events(#EventWorkerStops))
     EndIf
   EndProcedure
   
-  Procedure fileDownloadSuccess(*wget.wget::wget)
+  Procedure downloadSuccess(*wget.wget::wget)
     Protected *file.file, *mod.mod
     Protected filename$
+    Protected modname$
     
     deb("repository:: fileDownloadSuccess()")
     
     *file = *wget\getUserData()
-    *mod = *file\mod
+    If *file
+      *mod = *file\mod
+      modname$ = *mod\name$
+    EndIf
     filename$ = *wget\getFilename()
     *wget\free()
     *wget = #Null
     
-    postProgressEvent(-1, _("repository_download_finish", "modname="+*mod\name$))
+    postProgressEvent(-1, _("repository_download_finish", "modname="+modname$))
     If events(#EventDownloadSuccess)
       PostEvent(events(#EventDownloadSuccess), *file, 0)
     EndIf
@@ -1187,7 +1214,6 @@ Module repository
       mods::install(filename$)
     EndIf
     
-    SignalSemaphore(_semaphoreDownload)
     If events(#EventWorkerStops)
       PostEvent(events(#EventWorkerStops))
     EndIf
@@ -1205,42 +1231,19 @@ Module repository
     Protected *mod.mod = *file\mod
     Protected filename$, folder$
     
-    If threads::isMainThread()
-      threads::NewThread(@fileDownload(), *file, "repository::fileDownload")
-      ProcedureReturn
-    EndIf
-    
-    ; only one download at a time
-    ; simple: just "WaitSemaphore()", TrySemaphore() only for debug
-    CompilerIf #PB_Compiler_Debugger
-      If Not TrySemaphore(_semaphoreDownload)
-        deb("repository:: wait for free download slot...")
-        WaitSemaphore(_semaphoreDownload)
-        deb("repository:: download slot got available, start now")
-      EndIf
-    CompilerElse
-      WaitSemaphore(_semaphoreDownload)
-    CompilerEndIf
-    
-    If events(#EventWorkerStarts)
-      PostEvent(events(#EventWorkerStarts))
-    EndIf
+    ; do not check for main thread, let wget keep track of threads...
+    ; do not check for semaphore: WaitSemaphore(_semaphoreDownload) and SignalSemaphore(_semaphoreDownload)
     
     ; start
     deb("repository:: download file "+*file\url$)
     postProgressEvent(0, _("repository_download_start", "modname="+*mod\name$))
     
-    ; pre-process
+    ; pre-process filename
     filename$ = *file\filename$
     If filename$ = ""
       filename$ = Str(*mod\id)+".zip"
       deb("repository:: no filename specified for file #"+*file\fileid+" in mod "+*mod\name$+", use "+filename$)
     EndIf
-    
-    ; download location
-    folder$ = misc::Path(settings::getString("", "path") + "/TPFMM/download/")
-    misc::CreateDirectoryAll(folder$)
-    filename$ = folder$ + #PS$ + filename$
     
     downloadURL(*file\url$, filename$, *file)
   EndProcedure

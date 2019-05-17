@@ -384,6 +384,10 @@ Module windowMain
           parameter$ = Mid(parameter$, 18) ; /source/modID/fileID
           repoFindModAndDownload(parameter$)
           
+        ElseIf Left(parameter$, 12) = "tpfmm://url/"
+          parameter$ = Mid(parameter$, 13)
+          repository::downloadURL(parameter$)
+          
         ElseIf Left(parameter$, 23) = "tpfmm://repository/add/"
           parameter$ = Mid(parameter$, 24)
           windowSettings::show()
@@ -391,7 +395,7 @@ Module windowMain
           windowSettings::repositoryAddURL(parameter$)
           
         ElseIf FileSize(parameter$) > 0
-          ; install mod... (this function is called, before the main window is created ....
+          ; install mod (this function is called, before the main window is created ...)
           mods::install(parameter$)
         EndIf
         
@@ -1180,19 +1184,19 @@ Module windowMain
       *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
       *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
       If *mod\hasSettings()
-      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
-    Else
-      *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
-    EndIf
-    If repoMod And updateAvailable
-      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), _("hint_mod_update"))
-    Else
-      *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
-    EndIf
-    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
-    *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
-    If *mod\canUninstall()
-      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
+        *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
+      EndIf
+      If repoMod And updateAvailable
+        *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), _("hint_mod_update"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
+      EndIf
+      *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
+      *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
+      If *mod\canUninstall()
+        *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
       Else
         *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
       EndIf
@@ -1711,10 +1715,10 @@ Module windowMain
       file$ = *mod\getThumbnailFile()
       If file$
         If FileSize(file$) > 0
-        image = LoadImage(#PB_Any, file$)
-        If image
-          *mod\setThumbnailImage(image)
-          *item\SetImage(image)
+          image = LoadImage(#PB_Any, file$)
+          If image
+            *mod\setThumbnailImage(image)
+            *item\SetImage(image)
           EndIf
         EndIf
       EndIf

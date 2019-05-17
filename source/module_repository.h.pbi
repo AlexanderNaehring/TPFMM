@@ -121,6 +121,9 @@ DeclareModule repository
   Declare.s fileGetFolderName(*file)
   Declare.s fileGetFilename(*file)
   
+  ; static functions
+  Declare downloadURL(url$, filename$="", *userdata=#Null)
+  
   ; callbacks to GUI
   Declare BindEventCallback(Event, *callback)
   Declare BindEventPost(RepoEvent, WindowEvent, *callback)
