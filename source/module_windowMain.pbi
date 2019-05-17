@@ -12,6 +12,7 @@ DeclareModule windowMain
   Declare start()
   
   Declare updateStrings()
+  Declare refreshListTheme()
   Declare getSelectedMods(List *mods())
   Declare repoFindModAndDownload(link$)
   Declare handleParameter(parameter$)
@@ -165,6 +166,13 @@ Module windowMain
   
   Global modShareHTML$
   misc::BinaryAsString("html/mods.html", modShareHTML$)
+  
+  Global themeMod$, themeModCompact$, themeBackup$, themeSave$
+  misc::BinaryAsString("theme/modList.json", themeMod$)
+  misc::BinaryAsString("theme/modListCompact.json", themeModCompact$)
+  misc::BinaryAsString("theme/backupList.json", themeBackup$)
+  misc::BinaryAsString("theme/saveModList.json", themeSave$)
+  
   
   ;- Timer
   Global TimerMain = 101
@@ -1127,6 +1135,7 @@ Module windowMain
   
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
     Protected.b repoMod, updateAvailable
+    Protected text$
     
     If *mod = #Null
       *mod = *item\GetUserData()
@@ -1143,14 +1152,34 @@ Module windowMain
       EndIf
     EndIf
     
+    ; set text
+    If settings::getInteger("ui", "compact")
+      text$ = *mod\getName()+" "+_("generic_by")+" "+*mod\getAuthorsString()
+    Else
+      text$ = *mod\getName()+#LF$+
+              _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
+              FormatDate(_("main_install_date"), *mod\getInstallDate())
+    EndIf
+    CompilerIf #PB_Compiler_Debugger
+      text$ + " [ID: "+*mod\getID()+"]"
+    CompilerEndIf
+    *item\setText(text$)
+    
     ; set image
-    *item\SetImage(*mod\getPreviewImage())
+    If settings::getInteger("ui", "compact")
+      *item\SetImage(0)
+    Else
+      *item\SetImage(*mod\getPreviewImage())
+    EndIf
     
     ; add buttons (callbacks)
-    *item\ClearButtons()
-    *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
-    *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
-    If *mod\hasSettings()
+    If settings::getInteger("ui", "compact")
+      *item\ClearButtons()
+    Else
+      *item\ClearButtons()
+      *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
+      *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
+      If *mod\hasSettings()
       *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
     Else
       *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
@@ -1164,10 +1193,10 @@ Module windowMain
     *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
     If *mod\canUninstall()
       *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
-    Else
-      *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
+      EndIf
     EndIf
-    
     
     ; icons
     *item\ClearIcons()
@@ -1217,18 +1246,9 @@ Module windowMain
   Procedure modCallbackNewMod(*mod.mods::LocalMod)
     Protected *item.CanvasList::CanvasListItem
     
-    CompilerIf #PB_Compiler_Debugger
-      *item = *modList\AddItem(*mod\getName()+#LF$+
-                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
-                               "ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+
-                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
-    CompilerElse
-      *item = *modList\AddItem(*mod\getName()+#LF$+
-                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
-                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
-    CompilerEndIf
-    
+    *item = *modList\AddItem(*mod\getName(), *mod)
     modItemSetup(*item, *mod)
+    
   EndProcedure
   
   Procedure modCallbackRemoveMod(*mod)
@@ -1669,6 +1689,7 @@ Module windowMain
   Procedure repoItemSetup(*item.CanvasList::CanvasListItem, *mod.Repository::RepositoryMod = #Null)
     Protected file$, image, installed
     Protected NewList *files.repository::RepositoryFile()
+    Protected text$
     
     If *mod = #Null
       *mod = *item\GetUserData()
@@ -1676,20 +1697,31 @@ Module windowMain
         ProcedureReturn #False
       EndIf
     EndIf
+
+    If settings::getInteger("ui","compact")
+      text$ = *mod\getName()+" (v"+*mod\getVersion()+")"+" "+_("generic_by")+" "+*mod\getAuthor()
+    Else
+      text$ = *mod\getName()+" (v"+*mod\getVersion()+")"+#LF$+*mod\getAuthor()+#LF$+FormatDate(_("repository_last_update"),*mod\getTimeChanged())
+    EndIf
+    *item\SetText(text$)
+    
     
     ; load cached thumbnail images (must free images in windowMain:: manually when list is cleared)
-    file$ = *mod\getThumbnailFile()
-    If file$
-      If FileSize(file$) > 0
+    If Not settings::getInteger("ui","compact")
+      file$ = *mod\getThumbnailFile()
+      If file$
+        If FileSize(file$) > 0
         image = LoadImage(#PB_Any, file$)
         If image
           *mod\setThumbnailImage(image)
           *item\SetImage(image)
+          EndIf
         EndIf
       EndIf
     EndIf
     
     ; icons
+    *item\ClearIcons()
     If IsImage(images::images("itemIcon_"+*mod\getSource()))
       Protected repoInfo.repository::RepositoryInformation
       repository::GetRepositoryInformation(*mod\GetRepositoryURL(), @repoInfo)
@@ -1713,10 +1745,12 @@ Module windowMain
     EndIf
     
     ; buttons
-    If *mod\canDownload()
-      *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+    If Not settings::getInteger("ui","compact")
+      If *mod\canDownload()
+        *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+      EndIf
+      *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
     EndIf
-    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
     
   EndProcedure
   
@@ -1730,7 +1764,7 @@ Module windowMain
     *repoList\SetAttribute(canvasList::#AttributePauseDraw, #True)
     ForEach *mods()
       *mod = *mods()
-      *item = *repoList\AddItem(*mod\getName()+" (v"+*mod\getVersion()+")"+#LF$+*mod\getAuthor()+#LF$+FormatDate("Last update on %yyyy/%mm/%dd",*mod\getTimeChanged()), *mod)
+      *item = *repoList\AddItem(*mod\getName(), *mod)
       repoItemSetup(*item, *mod)
     Next
     *repoList\SetAttribute(canvasList::#AttributePauseDraw, #False)
@@ -2179,9 +2213,9 @@ Module windowMain
     ; a new backup file was created at "filename"
     Protected *item.CanvasList::CanvasListItem
     
-    *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+Chr(9)+
+    *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+#TAB$+
                                 _("generic_folder")+": "+*backup\getFoldername()+#LF$+
-                                _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
+                                _("generic_by")+" "+*backup\getAuthors()+#TAB$+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
     *item\AddButton(@backupIconOpenFile(), images::Images("itemBtnFile"), images::images("itemBtnFileHover"), _("hint_backup_open_file"))
@@ -2537,7 +2571,6 @@ Module windowMain
   EndProcedure
   
   ;--------------
-  ; - strings
   
   Procedure updateStrings()
     UseModule locale
@@ -2587,6 +2620,37 @@ Module windowMain
     SetGadgetText(gadget("saveLabelFileSizeUncompressed"),  _("save_filesize_uncompressed")+":")
     
     UnuseModule locale
+  EndProcedure
+  
+  Procedure refreshListTheme()
+    Protected theme$
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If settings::getInteger("ui", "compact")
+      theme$ = themeModCompact$
+    Else
+      theme$ = themeMod$
+    EndIf
+    
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, #True)
+    *repoList\SetAttribute(CanvasList::#AttributePauseDraw, #True)
+    
+    *modList\SetTheme(theme$)
+    *repoList\SetTheme(theme$)
+    
+    *modList\GetAllItems(*items())
+    ForEach *items()
+      modItemSetup(*items())
+    Next
+    
+    *repoList\GetAllItems(*items())
+    ForEach *items()
+      repoItemSetup(*items())
+    Next
+    
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, #False)
+    *repoList\SetAttribute(CanvasList::#AttributePauseDraw, #False)
+    
   EndProcedure
   
   ;----------------------------------------------------------------------------
@@ -2640,26 +2704,27 @@ Module windowMain
     
     
     ;- custom canvas gadgets
-    Protected theme$
     
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
     *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modListItemEvent())
     *modList\BindItemEvent(#PB_EventType_Change,            @modListItemEvent())
+    *modList\SetTheme(themeMod$)
     
     *repoList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("repoList"))
     *repoList\BindItemEvent(CanvasList::#OnItemFirstVisible, @repoEventItemVisible()) ; dynamically load images when items get visible
     *repoList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @repoListItemEvent())
     *repoList\BindItemEvent(#PB_EventType_Change,            @repoListItemEvent())
+    *repoList\SetTheme(themeMod$)
     
     *backupList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("backupList"))
     *backupList\BindItemEvent(#PB_EventType_LeftDoubleClick, @backupListItemEvent())
     *backupList\BindItemEvent(#PB_EventType_Change,          @backupListItemEvent())
-    misc::BinaryAsString("theme/backupList.json", theme$)
-    *backupList\SetTheme(theme$)
+    *backupList\SetTheme(themeBackup$)
     
     *saveModList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("saveModList"))
-    misc::BinaryAsString("theme/saveModList.json", theme$)
-    *saveModList\SetTheme(theme$)
+    *saveModList\SetTheme(themeSave$)
+    
+    refreshListTheme()
     
     ;- worker animation
     *workerAnimation = animation::new()

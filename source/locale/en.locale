@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -185,6 +185,8 @@ backup_auto_delete_6months  = after 6 months
 backup_auto_delete_1year    =  after 1 year
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
+ui_compact      = Use compact mod list view
+ui_compact_tip  = In compact view, only the most important information of each mod is visible at glance and the thumbnail is hidden.
 locale          = Localization (Language)
 cancel          = Cancel
 cancel_tip      = Drop changes and close this dialog

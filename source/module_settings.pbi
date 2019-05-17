@@ -20,6 +20,7 @@ Module settings
   ; define all default values..
   defaultValues$("/locale") = "en"
   defaultValues$("/compareVersion") = "0"
+  defaultValues$("ui/compact") = "0"
   defaultValues$("backup/after_install") = "0"
   defaultValues$("backup/before_update") = "1"
   defaultValues$("backup/before_uninstall") = "0"

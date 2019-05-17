@@ -17,10 +17,15 @@
             </frame>
             <hbox expand='equal'>
               <frame name='miscFrame' text='Miscellaneous'>
-                <checkbox name='miscVersionCheck' text=' '/>
+                <vbox expand='none'>
+                  <checkbox name='miscVersionCheck' text=' '/>
+                  <checkbox name='uiCompact' text=' ' />
+                </vbox>
               </frame>
               <frame name='languageFrame' text='Language'>
-                <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+                <vbox expand='no'>
+                  <combobox name='languageSelection' flags='#PB_ComboBox_Image' />
+                </vbox>
               </frame>
             </hbox>
 

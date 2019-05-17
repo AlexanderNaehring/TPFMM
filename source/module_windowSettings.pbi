@@ -115,6 +115,7 @@ Module windowSettings
   Procedure GadgetSaveSettings()
     Protected Dir$, locale$, oldDir$
     Protected proxyChange.b
+    Protected listThemeChange.b
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     oldDir$ = settings::getString("", "path")
@@ -133,6 +134,10 @@ Module windowSettings
     settings::setString("", "locale", locale$)
     
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+    If settings::getInteger("ui", "compact") <> GetGadgetState(gadget("uiCompact"))
+      listThemeChange = #True
+      settings::setInteger("ui", "compact", GetGadgetState(gadget("uiCompact")))
+    EndIf
     
     settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
@@ -144,12 +149,12 @@ Module windowSettings
        settings::getString("proxy", "user") <> GetGadgetText(gadget("proxyUser")) Or
        settings::getString("proxy", "password") <> aes::encryptString(GetGadgetText(gadget("proxyPassword")))
       proxyChange = #True
+      settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
+      settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
+      settings::setString("proxy", "user", GetGadgetText(gadget("proxyUser")))
+      settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     EndIf
     
-    settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
-    settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
-    settings::setString("proxy", "user", GetGadgetText(gadget("proxyUser")))
-    settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     
     settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
@@ -167,6 +172,9 @@ Module windowSettings
     
     If proxyChange
       repository::refreshRepositories()
+    EndIf
+    If listThemeChange
+      windowMain::refreshListTheme()
     EndIf
     
     GadgetCloseSettings()
@@ -442,6 +450,8 @@ Module windowSettings
     SetGadgetText(gadget("miscFrame"),              _("settings_other"))
     SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
     GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
+    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
+    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
     
     SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
     SetGadgetText(gadget("languageSelection"),      "")
@@ -535,6 +545,7 @@ Module windowSettings
     ; main
     SetGadgetText(gadget("installationPath"), settings::getString("", "path"))
     SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
+    SetGadgetState(gadget("uiCompact"), settings::getInteger("ui", "compact"))
     
     ; backup
     days = settings::getInteger("backup", "auto_delete_days")

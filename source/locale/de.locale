@@ -1,4 +1,4 @@
-﻿; standard file, will be overwritten each time TPFMM starts
+; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -186,7 +186,9 @@ backup_auto_delete_3months  = nach drei Monaten
 backup_auto_delete_6months  = nach sechs Monaten
 backup_auto_delete_1year    =  nach einem Jahr
 versioncheck    = Nutze Versionsvergleich für Update
-versioncheck_tip = When aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
+versioncheck_tip = Wenn aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
+ui_compact      = Kompakte Mod-Listen
+ui_compact_tip  = In der kompakten Ansicht werden nur die wichtigsten Informationen einer Mod angezeigt und das Vorschaubild versteckt.
 locale          = Lokalisierung (Sprache)
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
