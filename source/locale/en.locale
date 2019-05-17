@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = English
 translator  = Xanos
 version     = 1740
@@ -268,13 +268,12 @@ download_finish = Download finished
 download_fail   = Failed to download '{modname}'
 download_429    = Too many requests, please try again later
 downloading     = Downloading '{modname}'
-repository    = Repository
-confirm_add   = Do you want to add this repository?
-maintained_by = maintained by
-description = Description:
-info_url    = More Information:
-terms       = Terms & Conditions:
-mod_count   = Number of mods:
+last_update     = Last update on %yyyy/%mm/%dd
+confirm_add     = Do you want to add this repository?
+repository_info = '{repo}' is maintained by {maintainer}.
+info_url        = More information: {url}
+terms           = Terms & Conditions: {url}
+mod_count       = {count} mods in repository
 error             = Cannot add repository
 error_download    = Download failed. Please make sure that the URL is correct and TPFMM has access to the internet.
 error_json        = The repository does not provide a valid JSON file or is malformed.

@@ -329,14 +329,14 @@ Module windowSettings
       ; add repo
       If repository::CheckRepository(url$, @repoInfo)
         info$ = repoInfo\url$+#CRLF$+
-                _("repository_repository")+" "+#DQUOTE$+repoInfo\name$+#DQUOTE$+" "+_("repository_maintained_by")+" "+repoInfo\maintainer$+#CRLF$+#CRLF$
+                _("repository_repository_info", "repo="+repoInfo\name$+#SEP+"maintainer="+repoInfo\maintainer$)+#CRLF$+#CRLF$
         If repoInfo\info_url$
-          info$ + _("repository_info_url")+" "+repoInfo\info_url$+#CRLF$
+          info$ + _("repository_info_url","url="+repoInfo\info_url$)+#CRLF$
         EndIf
         If repoInfo\terms$
-          info$ + _("repository_terms")+" "+repoInfo\terms$+#CRLF$
+          info$ + _("repository_terms","url="+repoInfo\terms$)+#CRLF$
         EndIf
-        info$ + repoInfo\modCount+" "+_("repository_mod_count")+#CRLF$+
+        info$ + _("repository_mod_count","count="+repoInfo\modCount)+#CRLF$+
                 #CRLF$+
                 _("repository_confirm_add")
         

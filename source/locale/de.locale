@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -270,13 +270,12 @@ download_finish = Herunterladen erfolgreich
 download_fail   = Fehler beim Herunterladen von {modname}
 download_429    = Zu viele Anfragen, bitte später erneut versuchen
 downloading     = Lade '{modname}' herunter
-repository    = Repository
-confirm_add   = Soll dieses Repository hinzugefügt werden?
-maintained_by = verwaltet von
-description = Beschreibung:
-info_url    = Weiterführende Informationen:
-terms       = Nutzungsbedingungen:
-mod_count   = Mods im Repository.
+last_update     = Zuletzt aktualisiert am %dd.%mm.%yyyy
+confirm_add     = Soll dieses Repository hinzgefügt werden?
+repository_info = '{repo}' wird verwaltet von {maintainer}.
+info_url        = Weitere Informationen: {url}
+terms           = Nutzungsbedingungen: {url}
+mod_count       = {count} Mods im Repository
 error             = Kann Repository nicht hinzufügen
 error_download    = Herunterladen fehlgeschlagen. Überprüfe die URL auf Fehler und stelle sicher, dass TPFMM Zugriff zum Internet hat.
 error_json        = Das Repository gibt kein korrektes JSON.
