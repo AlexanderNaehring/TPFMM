@@ -1128,6 +1128,37 @@ Module mods
       
       ForEach possibeFiles$()
         If FileSize(possibeFiles$()) > 0
+          Debug "load image "+possibeFiles$()
+          
+          ;{ PureBasic Image Library TGA bug workaround
+          ; LoadImage() causes IMA if color map information if supplied for true color images
+          If LCase(GetExtensionPart(possibeFiles$())) = "tga"
+            Protected file, cType, iType, i
+            file = OpenFile(#PB_Any, possibeFiles$())
+            If file
+              ReadByte(file) ; image ID length
+              cType = ReadByte(file) ; color map type
+              iType = ReadByte(file) ; image type
+              
+              If cType = 0 And ; no color map
+                 iType = 2     ; uncompressed true color
+                
+                ; overwrite color map specification with 0 bytes.
+                For i = 1 To 5
+                  If ReadByte(file) <> 0
+                    Debug "fix cmap byte "+i
+                    FileSeek(file, -1, #PB_Relative)
+                    WriteByte(file, 0)
+                  EndIf
+                Next
+              EndIf
+              ;+ 10 byte image specification (width, height, etc...)
+              
+              CloseFile(file)
+            EndIf
+          EndIf
+          ;}
+          
           im = LoadImage(#PB_Any, possibeFiles$())
           If IsImage(im)
             Break
