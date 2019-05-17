@@ -1,4 +1,4 @@
-XIncludeFile "module_debugger.pbi"
+﻿XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_settings.pbi"
 XIncludeFile "wget.pb"
@@ -504,7 +504,13 @@ Module repository
         EndIf
         *wget = wget::NewDownload(url$, tmp$, 2)
         *wget\download()
-        *wget\waitFinished()
+        While Not *wget\isFinished()
+          If threads::IsStopRequested()
+            *wget\abort()
+            ProcedureReturn #False
+          EndIf
+          Delay(10)
+        Wend
         If FileSize(tmp$) > 0
           image = LoadImage(#PB_Any, tmp$)
           DeleteFile(tmp$, #PB_FileSystem_Force)
@@ -587,6 +593,10 @@ Module repository
   Procedure stopQueue(timeout = 5000)
     If *queueThread
       threads::WaitStop(*queueThread, timeout, #True)
+      LockMutex(mutexQueue)
+      ClearList(queue())
+      ; might cause memory leak, as allocated memory is intended to be freed in queue function...
+      UnlockMutex(mutexQueue)
       *queueThread = #Null
     EndIf
   EndProcedure
