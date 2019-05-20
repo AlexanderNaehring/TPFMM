@@ -287,6 +287,7 @@ Module windowMain
           *version\major = Val(RegularExpressionGroup(re, 1))
           *version\minor = Val(RegularExpressionGroup(re, 2))
           *version\patch = Val(RegularExpressionGroup(re, 3))
+          Debug "getSemanticVersion("+string$+") >> "+*version\major+"."+*version\minor+"."+*version\patch
           ret = #True
         EndIf
         FreeRegularExpression(re)
@@ -314,9 +315,15 @@ Module windowMain
     Protected tmp$ = *wget\getFilename()
     Protected local.version, remote.version
     Protected json, tpfmm
+    Protected file, json$
     Static latest.GithubRelease ; keep in memory for GUI to access the data
     
     If FileSize(tmp$) > 0
+      file = ReadFile(#PB_Any, tmp$)
+      If file
+        json$ = ReadString(file, #PB_UTF8|#PB_File_IgnoreEOL)
+        CloseFile(file)
+      EndIf
       json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
       DeleteFile(tmp$, #PB_FileSystem_Force)
       If json
@@ -337,6 +344,7 @@ Module windowMain
         FreeJSON(json)
       Else
         deb("windowMain:: updater, json error '"+JSONErrorMessage()+"'")
+        deb("windowMain:: updater: "+json$)
       EndIf
     Else
       deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
@@ -346,7 +354,7 @@ Module windowMain
   Procedure checkUpdate()
     Protected tmp$, *wget.wget::wget
     
-    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+    tmp$ = GetTemporaryDirectory() + "tpfmm.update."+StringFingerprint(Str(ElapsedMilliseconds()), #PB_Cipher_MD5)+".json"
     If FileSize(tmp$) > 0
       DeleteFile(tmp$, #PB_FileSystem_Force)
     EndIf
