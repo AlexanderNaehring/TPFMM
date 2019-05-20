@@ -8,6 +8,7 @@ DeclareModule windowSettings
   Declare updateStrings()
   Declare close()
   Declare showTab(tab)
+  Declare repositoryAddURL(url$)
   
   ; custom events that can be sent to "window"
   Enumeration #PB_Event_FirstCustomValue
@@ -30,6 +31,7 @@ XIncludeFile "module_locale.pbi"
 XIncludeFile "module_registry.pbi"
 XIncludeFile "module_repository.h.pbi"
 XIncludeFile "module_aes.pbi"
+XIncludeFile "windowProgress.pb"
 
 Module windowSettings
   UseModule debugger
@@ -113,6 +115,7 @@ Module windowSettings
   Procedure GadgetSaveSettings()
     Protected Dir$, locale$, oldDir$
     Protected proxyChange.b
+    Protected listThemeChange.b
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     oldDir$ = settings::getString("", "path")
@@ -131,6 +134,10 @@ Module windowSettings
     settings::setString("", "locale", locale$)
     
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
+    If settings::getInteger("ui", "compact") <> GetGadgetState(gadget("uiCompact"))
+      listThemeChange = #True
+      settings::setInteger("ui", "compact", GetGadgetState(gadget("uiCompact")))
+    EndIf
     
     settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
@@ -142,12 +149,12 @@ Module windowSettings
        settings::getString("proxy", "user") <> GetGadgetText(gadget("proxyUser")) Or
        settings::getString("proxy", "password") <> aes::encryptString(GetGadgetText(gadget("proxyPassword")))
       proxyChange = #True
+      settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
+      settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
+      settings::setString("proxy", "user", GetGadgetText(gadget("proxyUser")))
+      settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     EndIf
     
-    settings::setInteger("proxy", "enabled", GetGadgetState(gadget("proxyEnabled")))
-    settings::setString("proxy", "server", GetGadgetText(gadget("proxyServer")))
-    settings::setString("proxy", "user", GetGadgetText(gadget("proxyUser")))
-    settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     
     settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
@@ -166,14 +173,29 @@ Module windowSettings
     If proxyChange
       repository::refreshRepositories()
     EndIf
+    If listThemeChange
+      windowMain::refreshListTheme()
+    EndIf
     
     GadgetCloseSettings()
   EndProcedure
   
   
+  Procedure ShortcutCopy()
+    Protected i
+    Select GetActiveGadget()
+      Case gadget("repositoryList")
+        i = GetGadgetState(gadget("repositoryList"))
+        If i <> -1
+          SetClipboardText(GetGadgetItemText(gadget("repositoryList"), i, 0))
+        EndIf
+    EndSelect
+  EndProcedure
+  
+  
   Procedure backupFolderMoved()
     DisableWindow(window, #False)
-    main::closeProgressWindow()
+    windowProgress::closeProgressWindow()
     If EventGadget()
       MessageRequester(_("generic_success"), _("settings_backup_move_success"), #PB_MessageRequester_Info)
     Else
@@ -203,13 +225,13 @@ Module windowSettings
       ProcedureReturn #False
     EndIf
     
-    main::showProgressWindow(_("settings_backup_change_folder_wait"))
-    main::setProgressText(_("settings_backup_change_folder_wait"))
+    windowProgress::showProgressWindow(_("settings_backup_change_folder_wait"))
+    windowProgress::setProgressText(_("settings_backup_change_folder_wait"))
     DisableWindow(window, #True)
     
     *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
     PokeS(*folder, folder$)
-    CreateThread(@backupFolderMoveThread(), *folder)
+    threads::NewThread(@backupFolderMoveThread(), *folder, "windowSettings::backupFolderMoveThread")
     
   EndProcedure
   
@@ -286,8 +308,6 @@ Module windowSettings
   
   Procedure repositoryAdd()
     Protected url$
-    Protected repoInfo.repository::RepositoryInformation
-    Protected info$, error$
     
     ; preset url to clipboard text if is an url
     url$ = Trim(GetClipboardText())
@@ -298,18 +318,25 @@ Module windowSettings
     ; show requester
     url$ = InputRequester(_("settings_repository_add"), _("settings_repository_input_url"), url$)
     
+    repositoryAddURL(url$)
+  EndProcedure
+  
+  Procedure repositoryAddURL(url$)
+    Protected repoInfo.repository::RepositoryInformation
+    Protected info$, error$
+    
     If url$
       ; add repo
       If repository::CheckRepository(url$, @repoInfo)
         info$ = repoInfo\url$+#CRLF$+
-                _("repository_repository")+" "+#DQUOTE$+repoInfo\name$+#DQUOTE$+" "+_("repository_maintained_by")+" "+repoInfo\maintainer$+#CRLF$+#CRLF$
+                _("repository_repository_info", "repo="+repoInfo\name$+#SEP+"maintainer="+repoInfo\maintainer$)+#CRLF$+#CRLF$
         If repoInfo\info_url$
-          info$ + _("repository_info_url")+" "+repoInfo\info_url$+#CRLF$
+          info$ + _("repository_info_url","url="+repoInfo\info_url$)+#CRLF$
         EndIf
         If repoInfo\terms$
-          info$ + _("repository_terms")+" "+repoInfo\terms$+#CRLF$
+          info$ + _("repository_terms","url="+repoInfo\terms$)+#CRLF$
         EndIf
-        info$ + repoInfo\modCount+" "+_("repository_mod_count")+#CRLF$+
+        info$ + _("repository_mod_count","count="+repoInfo\modCount)+#CRLF$+
                 #CRLF$+
                 _("repository_confirm_add")
         
@@ -341,6 +368,7 @@ Module windowSettings
       EndIf
     EndIf
   EndProcedure
+  
   
   Procedure repositoryRemove()
     Protected selected, url$
@@ -422,6 +450,8 @@ Module windowSettings
     SetGadgetText(gadget("miscFrame"),              _("settings_other"))
     SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
     GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
+    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
+    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
     
     SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
     SetGadgetText(gadget("languageSelection"),      "")
@@ -480,6 +510,9 @@ Module windowSettings
     AddKeyboardShortcut(window, #PB_Shortcut_Control|#PB_Shortcut_S, 2)
     BindEvent(#PB_Event_Menu, @GadgetSaveSettings(), window, 2)
     
+    AddKeyboardShortcut(window, #PB_Shortcut_Control|#PB_Shortcut_C, 3)
+    BindEvent(#PB_Event_Menu, @ShortcutCopy(), window, 3)
+    
     ; bind gadget events
     BindGadgetEvent(gadget("installationAutodetect"), @GadgetButtonAutodetect())
     BindGadgetEvent(gadget("installationBrowse"), @GadgetButtonBrowse())
@@ -512,6 +545,7 @@ Module windowSettings
     ; main
     SetGadgetText(gadget("installationPath"), settings::getString("", "path"))
     SetGadgetState(gadget("miscVersionCheck"), settings::getInteger("", "compareVersion"))
+    SetGadgetState(gadget("uiCompact"), settings::getInteger("ui", "compact"))
     
     ; backup
     days = settings::getInteger("backup", "auto_delete_days")

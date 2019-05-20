@@ -104,6 +104,7 @@ Module images
     
     ; in-item buttons
     IncludeAndLoadImage("itemBtnFolder",    "images/item-btn/folder.png")
+    IncludeAndLoadImage("itemBtnFile",      "images/item-btn/file.png")
     IncludeAndLoadImage("itemBtnInfo",      "images/item-btn/info.png")
     IncludeAndLoadImage("itemBtnSettings",  "images/item-btn/settings.png")
     IncludeAndLoadImage("itemBtnWebsite",   "images/item-btn/website.png")
@@ -133,6 +134,7 @@ Module images
     ResizeImage(Images("headerinfo"), 360, #PB_Ignore, #PB_Image_Raw)
     
     makeIcons("itemBtnFolder")
+    makeIcons("itemBtnFile")
     makeIcons("itemBtnInfo")
     makeIcons("itemBtnInfo")
     makeIcons("itemBtnSettings")

@@ -119,6 +119,7 @@ backup_restore  = Restore Backup
 backup_delete   = Delete Backup
 backup_folder   = Open Backup Folder
 backup_refresh  = Refresh backup list
+backup_open_file = Open backup archive
 
 save_installed      = Mod is installed
 save_not_installed  = Mod is not installed
@@ -161,9 +162,9 @@ autodetect      = Autodetect
 autodetect_tip  = Try to automatically find the install location of Transport Fever
 open            = Open
 open_tip        = Open the specified path
-success         = Path is correct and TPFMM has all required priviledges.
-failed          = TPFMM is not able to write to the game directory. Administrative priviledges may be required.
-not_found       = Transport Fever cannot be found at this path. Administrative priviledges may be required.
+success         = Path is correct and TPFMM has all required privileges.
+failed          = TPFMM is not able to write to the game directory. Administrative privileges may be required.
+not_found       = Transport Fever cannot be found at this path. Administrative privileges may be required.
 other           = Other Settings
 restore         = Restore TPFMM window position upon next start
 restore_tip     = Remember the window location and restore upon next start
@@ -181,9 +182,11 @@ backup_auto_delete_1week    = after 1 week
 backup_auto_delete_1month   = after 1 month
 backup_auto_delete_3months  = after 3 months
 backup_auto_delete_6months  = after 6 months
-backup_auto_delete_1year    =  after 1 year 
+backup_auto_delete_1year    =  after 1 year
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
+ui_compact      = Use compact mod list view
+ui_compact_tip  = In compact view, only the most important information of each mod is visible at glance and the thumbnail is hidden.
 locale          = Localization (Language)
 cancel          = Cancel
 cancel_tip      = Drop changes and close this dialog
@@ -265,25 +268,30 @@ download_finish = Download finished
 download_fail   = Failed to download '{modname}'
 download_429    = Too many requests, please try again later
 downloading     = Downloading '{modname}'
-repository    = Repository
-confirm_add   = Do you want to add this repository?
-maintained_by = maintained by
-description = Description:
-info_url    = More Information:
-terms       = Terms & Conditions:
-mod_count   = Number of mods:
+last_update     = Last update on %yyyy/%mm/%dd
+confirm_add     = Do you want to add this repository?
+repository_info = '{repo}' is maintained by {maintainer}.
+info_url        = More information: {url}
+terms           = Terms & Conditions: {url}
+mod_count       = {count} mods in repository
 error             = Cannot add repository
 error_download    = Download failed. Please make sure that the URL is correct and TPFMM has access to the internet.
-error_json        = The repository does not provide a valid JSON file or is malformed. 
+error_json        = The repository does not provide a valid JSON file or is malformed.
 error_dup_url     = A repository with the same URL is already loaded.
 error_no_source   = The repsitory does not provide any source ID. Please contact the repository maintainer.
 error_dup_source  = The repository source ID matches the ID of another repository that is already loaded.\nThe repository source ID must be unique.\nEither this repository is already loaded or the maintainer must change the source ID.
 error_no_mods     = TPFMM cannot find any mods in this repository. Please contact the repository maintainer.
 error_unknown     = Cannot add the repository due to an unknown error. Please try again or submit a bug report.
 
+[backup]
+delete_mod_title  = Delete Backup of '{name}'?
+delete_mod_body   = Do you want to delete the backup of '{name}'?
+delete_mods_title = Delete {number} backups?
+delete_mods_body  = Do you want to delete {number} backups?
+
 [update]
 available        = New Version of TPFMM available.
-available_text   = {version} is available.\nDo you want to visit the website for downloading the new version now?
+available_text   = {name} is available.\nDo you want to visit the website for downloading the new version now?
 
 [mods]
 filter_all      = Show All Folders

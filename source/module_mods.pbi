@@ -3,6 +3,7 @@ XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
 XIncludeFile "module_archive.pbi"
+XIncludeFile "threads.pb"
 
 XIncludeFile "module_mods.h.pbi"
 
@@ -177,12 +178,11 @@ Module mods
   Global mutexModAuthors  = CreateMutex()
   Global mutexModTags     = CreateMutex()
   Global semaphoreBackup  = CreateSemaphore(1) ; max number of concurrent backups
-  Global threadQueue
+  Global *threadQueue
   Global NewMap mods.mod()
   Global NewMap backups.backup()
   Global NewList queue.queue()
   Global isLoaded.b
-  Global exit.b
   
   Global callbackNewMod.callbackNewMod
   Global callbackRemoveMod.callbackRemoveMod
@@ -220,7 +220,7 @@ Module mods
     gameDirectory$ = settings::getString("", "path")
     Select folder
       Case #FolderGame
-        ProcedureReturn gameDirectory$
+        ProcedureReturn misc::Path(gameDirectory$)
       Case #FolderTPFMM
         ProcedureReturn misc::Path(gameDirectory$ + "/TPFMM/")
       Case #FolderMods
@@ -379,7 +379,8 @@ Module mods
         PostEvent(events(#EventWorkerStops))
       EndIf
       
-    Until exit
+    Until threads::IsStopRequested()
+    deb("mods::handleQueue() finished")
   EndProcedure
   
   Procedure addToQueue(action, string$="")
@@ -389,34 +390,18 @@ Module mods
     queue()\action  = action
     queue()\string$ = string$
     
-    If Not threadQueue Or Not IsThread(threadQueue)
-      exit = #False
-      threadQueue = CreateThread(@handleQueue(), 0)
+    If Not *threadQueue
+      *threadQueue = threads::NewThread(@handleQueue(), 0, "mods::handleQueue")
     EndIf
     
     UnlockMutex(mutexQueue)
   EndProcedure
   
   Procedure stopQueue(timeout = 5000)
-    
-    
-    ; wait for worker to finish or timeout
-    If threadQueue And IsThread(threadQueue)
-      ; set exit flag for worker
-      exit = #True
-      
-      WaitThread(threadQueue, timeout)
-      
-      If IsThread(threadQueue)
-        deb("mods:: kill worker")
-        KillThread(threadQueue)
-        ; WARNING: killing will potentially leave mutexes and other resources locked/allocated
-      EndIf
-      
-      exit = #False
+    If *threadQueue
+      threads::WaitStop(*threadQueue, timeout, #True)
+      *threadQueue = #Null
     EndIf
-    
-    
     ProcedureReturn #True
   EndProcedure
   
@@ -428,11 +413,11 @@ Module mods
     EndIf
     
     If Left(id$, 1) = "*"
-      ProcedureReturn misc::Path(getFolder(#FolderWorkshop) + Mid(id$, 2, Len(id$)-3) + "/")
+      ProcedureReturn getFolder(#FolderWorkshop) + Mid(id$, 2, Len(id$)-3) + #PS$
     ElseIf Left(id$, 1) = "?"
-      ProcedureReturn misc::Path(getFolder(#FolderStagingArea) + Mid(id$, 2) + "/")
+      ProcedureReturn getFolder(#FolderStagingArea) + Mid(id$, 2) + #PS$
     Else
-      ProcedureReturn misc::path(getFolder(#FolderMods) + id$ + "/")
+      ProcedureReturn getFolder(#FolderMods) + id$ + #PS$
     EndIf
   EndProcedure
   
@@ -509,7 +494,7 @@ Module mods
   Procedure.s modGetRoot(path$) ; try to find mod.lua to determine the root location of the mod
     Protected dir
     Protected entry$, result$
-    path$ = misc::path(path$) ; makes sure that string ends on delimiter
+    path$ = misc::path(path$)
     
     dir = ExamineDirectory(#PB_Any, path$, "")
     If dir
@@ -582,11 +567,6 @@ Module mods
         EndIf
       EndIf
     EndWith
-    
-    ; Check for known DLC
-;     If *mod\tpf_id$ = "usa_1" Or *mod\tpf_id$ = "nordic_1"
-;       *mod\aux\type$ = "dlc"
-;     EndIf
     
     ProcedureReturn #True
   EndProcedure
@@ -690,10 +670,12 @@ Module mods
     If root$ = ""
       root$ = backupsGetFolder()
     EndIf
+    root$ = misc::path(root$)
     
     If FindMapElement(backups(), filename$)
       deb("mods:: backupLoadList() backup file "+filename$+" already in map")
       DebuggerError("this should not happen")
+      ; TODO: use md5 fingerprint as key instead of filename
     Else
       AddMapElement(backups(), filename$, #PB_Map_ElementCheck)
     EndIf
@@ -710,7 +692,8 @@ Module mods
     
     With *this\info
       If \filename$ <> filename$
-        deb("mods:: backup scanner found wrong \filename in backup meta data for "+filename$+", corrected.")
+        deb("mods:: file was moved after backup: "+filename$+"")
+        ;TODO fix information?
       EndIf
       \filename$ = filename$
       If Not \size
@@ -731,9 +714,8 @@ Module mods
     Protected *this.backup
     Protected num
     
-    If folder$ <> ""
-      folder$ = misc::path(folder$)
-    EndIf
+    root$ = misc::path(root$)
+    folder$ = misc::path(folder$)
     
     dir = ExamineDirectory(#PB_Any, root$ + folder$, "")
     If dir
@@ -763,7 +745,7 @@ Module mods
       EndIf
       
     Else
-      deb("mods:: failed to examine backup directory "+root$+folder$)
+      deb("mods:: failed to examine backup directory " + root$ + folder$)
     EndIf
   EndProcedure
   
@@ -811,6 +793,8 @@ Module mods
               time = info\time
             Else
               deb("mods:: could not read "+file$+".backup")
+            EndIf
+            If Not time
               time = DirectoryEntryDate(dir, #PB_Date_Modified)
             EndIf
             
@@ -818,7 +802,7 @@ Module mods
             autoDeleteDays = settings::getInteger("backup", "auto_delete_days")
             If autoDeleteDays 
               backupAgeInDays = (misc::time() - time)/86400
-              If backupAgeInDays > autoDeleteDays
+              If time And backupAgeInDays > autoDeleteDays
                 deb("mods:: backup "+file$+" is "+backupAgeInDays+" days old, automatically delete backups after "+autoDeleteDays+" days. Backup will be removed now.")
                 DeleteFile(file$, #PB_FileSystem_Force)
                 DeleteFile(file$+".backup", #PB_FileSystem_Force)
@@ -1144,6 +1128,37 @@ Module mods
       
       ForEach possibeFiles$()
         If FileSize(possibeFiles$()) > 0
+          Debug "load image "+possibeFiles$()
+          
+          ;{ PureBasic Image Library TGA bug workaround
+          ; LoadImage() causes IMA if color map information if supplied for true color images
+          If LCase(GetExtensionPart(possibeFiles$())) = "tga"
+            Protected file, cType, iType, i
+            file = OpenFile(#PB_Any, possibeFiles$())
+            If file
+              ReadByte(file) ; image ID length
+              cType = ReadByte(file) ; color map type
+              iType = ReadByte(file) ; image type
+              
+              If cType = 0 And ; no color map
+                 iType = 2     ; uncompressed true color
+                
+                ; overwrite color map specification with 0 bytes.
+                For i = 1 To 5
+                  If ReadByte(file) <> 0
+                    Debug "fix cmap byte "+i
+                    FileSeek(file, -1, #PB_Relative)
+                    WriteByte(file, 0)
+                  EndIf
+                Next
+              EndIf
+              ;+ 10 byte image specification (width, height, etc...)
+              
+              CloseFile(file)
+            EndIf
+          EndIf
+          ;}
+          
           im = LoadImage(#PB_Any, possibeFiles$())
           If IsImage(im)
             Break
@@ -1334,10 +1349,15 @@ Module mods
     Protected compare, *repo_mod.repository::RepositoryMod
     ; todo modIsUpdateAvailable() not yet threadsafe... cannot access repo mods while repositories are loaded
     
+    If modIsWorkshop(*mod)
+      ProcedureReturn #False
+    EndIf
+    
     *repo_mod = modGetRepoMod(*mod)
     If Not *repo_mod
       ProcedureReturn #False
     EndIf
+    
     
     If settings::getInteger("", "compareVersion") And *repo_mod\getSource() <> "workshop" And *repo_mod\getVersion()
       compare = Bool(*repo_mod\getVersion() And *mod\version$ And ValD(*mod\version$) < ValD(*repo_mod\getVersion()))
@@ -2018,7 +2038,7 @@ Module mods
     EndIf
     
     filename$ + modGetFoldername(*mod)+".zip"
-    tmpFile$ = GetCurrentDirectory()+"/tmp/"+filename$
+    tmpFile$ = misc::path(GetCurrentDirectory() + #PS$ + "tmp") + filename$
     
     ; start backup now: modFolder$ -> zip -> backupFile$
     postProgressEvent(90,  _("progress_backup_mod", "mod="+*mod\name$))
@@ -2043,7 +2063,7 @@ Module mods
     ; get hash of file
     md5$ = FileFingerprint(tmpFile$, #PB_Cipher_MD5)
     
-    ; folder structure: backups/hash/mod_id.zip
+    ; folder structure: <backups>/hash/mod_id.zip
     ; collision if backup with same hash and same mod_id already exists
     filename$ = misc::path(md5$) + filename$ ; filename is the filename relative to the backup folder
     backupFile$ = misc::path(backupFolder$) + filename$
@@ -2249,7 +2269,7 @@ Module mods
     
     backupFolder$ = settings::getString("backup", "folder")
     If backupFolder$ = ""
-      backupFolder$ = "TPFMM/backups/"
+      backupFolder$ = GetCurrentDirectory()+"/backups/"
     EndIf
     
     ProcedureReturn misc::path(backupFolder$)
@@ -2257,21 +2277,29 @@ Module mods
   
   Procedure backupsMoveFolder(newFolder$)
     Protected oldFolder$, entry$
-    Protected dir, error, count
+    Protected dir, error
+    Protected isempty.b
     
+    ; move all data to new folder
     newFolder$ = misc::path(newFolder$)
     oldFolder$ = backupsGetFolder()
     
-    misc::CreateDirectoryAll(newFolder$)
+    If FileSize(newFolder$) = -2
+      ; folder does not exist
+      misc::CreateDirectoryAll(newFolder$)
+    EndIf
     
-    ; check if new folder is empty (only use empty folder)
-    count = 0
+    ; check if new folder is empty
+    isempty = #True
     dir = ExamineDirectory(#PB_Any, newFolder$, "")
     If dir
       While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          count + 1
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory And
+           (DirectoryEntryName(dir) = ".." Or DirectoryEntryName(dir) = ".")
+          Continue
         EndIf
+        isempty = #False
+        Break
       Wend
       FinishDirectory(dir)
     Else
@@ -2279,38 +2307,26 @@ Module mods
       error = #True
     EndIf
     
-    If count
-      deb("mods:: target directory not empty")
-      ProcedureReturn #False  
-    EndIf
-    
-    ; move all *.zip and *.backup files from oldFolder$ to newFolder
-    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
-    If dir
-      While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
-          entry$ = DirectoryEntryName(dir)
-          If LCase(GetExtensionPart(entry$)) = "zip" Or
-             LCase(GetExtensionPart(entry$)) = "backup"
-            If Not RenameFile(oldFolder$ + entry$, newFolder$ + entry$)
-              deb("mods:: failed to move file "+entry$)
-              error = #True
-            EndIf
-          EndIf
-        EndIf
-      Wend
-      FinishDirectory(dir)
+    If isempty
+      ; remove directory so that old directory can be renamed
+      DeleteDirectory(newFolder$, "")
+      If RenameFile(oldFolder$, newFolder$)
+        deb("mods:: backup folder moved")
+      Else
+        deb("mods:: could not move folder")
+        error = #True
+      EndIf
     Else
-      deb("mods:: failed to examine directory "+oldFolder$)
-      ; not a critical error, if old folder does not exist, simple do not move any files
+      deb("mods:: target directory not empty")
+      error = #True
     EndIf
     
     If Not error
       settings::setString("backup", "folder", newFolder$)
       ProcedureReturn #True
+    Else
+      ProcedureReturn #False
     EndIf
-    ProcedureReturn #False
-    
   EndProcedure
   
   Procedure backupsClearFolder()

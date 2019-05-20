@@ -7,12 +7,14 @@ DeclareModule modInformation
 EndDeclareModule
 
 XIncludeFile "module_modSettings.pbi"
+XIncludeFile "module_images.pbi"
+XIncludeFile "threads.pb"
 
 Module modInformation
   UseModule debugger
   UseModule locale
   
-  ; mod info window
+  ;{ Stucts
   Structure modInfoGadget
     id.i
     name$
@@ -49,21 +51,12 @@ Module modInformation
     mod.i
     modFolder$
   EndStructure
-  
+  ;}
   
   ; load default XML
-  
-  DataSection
-    dialogXML:
-    IncludeBinary "dialogs/modInfo.xml"
-    dialogXMLend:
-  EndDataSection
-  
   Global xml
-  xml = CatchXML(#PB_Any, ?dialogXML, ?dialogXMLend - ?dialogXML)
-  If Not xml Or XMLStatus(xml) <> #PB_XML_Success
-    deb("modInfo:: could not read window definition")
-  EndIf
+  misc::IncludeAndLoadXML(xml, "dialogs/modInfo.xml")
+  
   
   Procedure modInfoClose()
     Protected *data.modInfoWindow
@@ -75,8 +68,12 @@ Module modInformation
           ; FreeImage(*data\authors()\image)
           ; reuse image (do not free)
         EndIf
-        If *data\authors()\thread And IsThread(*data\authors()\thread)
-          KillThread(*data\authors()\thread)
+        If *data\authors()\thread
+          ; TODO: killing the author image thread might cause locked mutex and other weird stuff.
+          ; must make an interactive download that can be aborted and everything cleared!
+          ; or download in any case but make sure to not apply image to a deleted gadget (more complex)
+          DebuggerWarning("todo fix authors download thread kill")
+          threads::WaitStop(*data\authors()\thread, 10, #True) ; TODO CHANGE THIS!
         EndIf
       Next
       CloseWindow(*data\window)
@@ -155,7 +152,7 @@ Module modInformation
         image = images(url$)
       Else
         ; get avatar from transportfever.net
-        *buffer = ReceiveHTTPMemory(url$)
+        *buffer = ReceiveHTTPMemory(url$, #Null, main::VERSION_FULL$)
         If *buffer
           image = CatchImage(#PB_Any, *buffer, MemorySize(*buffer))
           FreeMemory(*buffer)
@@ -383,7 +380,7 @@ Module modInformation
 ;           SetGadgetData(*data\authors()\gadgetContainer\id, *data\authors())
           SetGadgetFont(*data\authors()\gadgetAuthor\id, FontID(fontBigger))
           ;BindGadgetEvent(, @modInfoAuthor())
-          *data\authors()\thread = CreateThread(@modInfoAuthorImage(), *data\authors())
+          *data\authors()\thread = threads::NewThread(@modInfoAuthorImage(), *data\authors(), "modInformation::modInfoAuthorImage/"+*data\authors()\name$)
         Next
         
         If *mod\hasSettings()

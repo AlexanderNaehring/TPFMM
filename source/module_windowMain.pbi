@@ -12,8 +12,11 @@ DeclareModule windowMain
   Declare start()
   
   Declare updateStrings()
+  Declare refreshListTheme()
   Declare getSelectedMods(List *mods())
   Declare repoFindModAndDownload(link$)
+  Declare handleParameter(parameter$)
+  
 EndDeclareModule
 
 XIncludeFile "module_locale.pbi"
@@ -27,6 +30,8 @@ XIncludeFile "module_windowPack.pbi"
 XIncludeFile "module_canvasList.pbi"
 XIncludeFile "module_tfsave.pbi"
 XIncludeFile "animation.pb"
+XIncludeFile "windowProgress.pb"
+XIncludeFile "threads.pb"
 
 Module windowMain
   UseModule debugger
@@ -57,10 +62,29 @@ Module windowMain
     source$
   EndStructure
   
-  Structure update
-    build.i
-    version$
+  Structure GithubAssets
     url$
+    id.i
+    name$
+    size.i
+    browser_download_url$
+  EndStructure
+  
+  Structure GithubRelease
+    url$
+    id.i
+    name$
+    html_url$
+    tag_name$
+    published_at$
+    body$
+    List assets.GitHubAssets()
+  EndStructure
+  
+  Structure version
+    major.i
+    minor.i
+    patch.i
   EndStructure
   
   ;}
@@ -84,8 +108,6 @@ Module windowMain
     #MenuItem_Enter
     #MenuItem_CtrlA
     #MenuItem_CtrlF
-;     #MenuItem_PackNew
-;     #MenuItem_PackOpen
     
     #MenuItem_ShareSelected
     #MenuItem_ShareFiltered
@@ -144,6 +166,13 @@ Module windowMain
   
   Global modShareHTML$
   misc::BinaryAsString("html/mods.html", modShareHTML$)
+  
+  Global themeMod$, themeModCompact$, themeBackup$, themeSave$
+  misc::BinaryAsString("theme/modList.json", themeMod$)
+  misc::BinaryAsString("theme/modListCompact.json", themeModCompact$)
+  misc::BinaryAsString("theme/backupList.json", themeBackup$)
+  misc::BinaryAsString("theme/saveModList.json", themeSave$)
+  
   
   ;- Timer
   Global TimerMain = 101
@@ -249,21 +278,58 @@ Module windowMain
     EndIf
   EndProcedure
   
-  Procedure checkUpdate(*null)
-    Protected *buffer, json, tpfmm
-    Static update.update
+  Procedure getSemanticVersion(string$, *version.version)
+    Protected re, ret
+    If *version
+      re = CreateRegularExpression(#PB_Any, "(\d+)\.(\d+).(\d+)")
+      If re And ExamineRegularExpression(re, string$)
+        If NextRegularExpressionMatch(re)
+          *version\major = Val(RegularExpressionGroup(re, 1))
+          *version\minor = Val(RegularExpressionGroup(re, 2))
+          *version\patch = Val(RegularExpressionGroup(re, 3))
+          ret = #True
+        EndIf
+        FreeRegularExpression(re)
+      EndIf
+    EndIf
+    ProcedureReturn ret
+  EndProcedure
+  
+  Procedure semanticVersionIsGreater(*current.version, *new.version)
+    If *new\major > *current\major
+      ProcedureReturn #True
+    ElseIf *new\major = *current\major
+      If *new\minor > *current\minor
+        ProcedureReturn #True
+      ElseIf *new\minor = *current\minor
+        If *new\patch > *current\patch
+          ProcedureReturn #True
+        EndIf
+      EndIf
+    EndIf
+    ProcedureReturn #False
+  EndProcedure
+  
+  Procedure updateResponse(*wget.wget::wget)
+    Protected tmp$ = *wget\getFilename()
+    Protected local.version, remote.version
+    Protected json, tpfmm
+    Static latest.GithubRelease ; keep in memory for GUI to access the data
     
-    *buffer = ReceiveHTTPMemory(main::#UPDATER$, 0, main::VERSION_FULL$)
-    If *buffer
-      json = CatchJSON(#PB_Any, *buffer, MemorySize(*buffer), #PB_JSON_NoCase)
+    If FileSize(tmp$) > 0
+      json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
+      DeleteFile(tmp$, #PB_FileSystem_Force)
       If json
-        tpfmm = GetJSONMember(JSONValue(json), "tpfmm")
-        If tpfmm
-          ExtractJSONStructure(tpfmm, @update, update)
-          If update\build > #PB_Editor_CompileCount ; update available
-            PostEvent(#EventUpdateAvailable, window, @update)
+        ExtractJSONStructure(JSONValue(json), @latest, GithubRelease)
+        If ListSize(latest\assets()) > 0 ; binaries available
+          If getSemanticVersion(main::#VERSION$, @local) And getSemanticVersion(latest\tag_name$, @remote)
+            If semanticVersionIsGreater(local, remote)
+              PostEvent(#EventUpdateAvailable, window, @latest)
+            Else
+              deb("windowMain:: updater, no update available")
+            EndIf
           Else
-            deb("windowMain:: updater, no update available")
+            deb("windowMain:: updater, could not read semantic version")
           EndIf
         Else
           deb("windowMain:: updater, could not find json member 'tpfmm'")
@@ -272,20 +338,68 @@ Module windowMain
       Else
         deb("windowMain:: updater, json error '"+JSONErrorMessage()+"'")
       EndIf
-      FreeMemory(*buffer)
     Else
       deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
     EndIf
   EndProcedure
   
+  Procedure checkUpdate()
+    Protected tmp$, *wget.wget::wget
+    
+    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+    If FileSize(tmp$) > 0
+      DeleteFile(tmp$, #PB_FileSystem_Force)
+    EndIf
+    *wget = wget::NewDownload(main::#UPDATER$, tmp$, 2)
+    *wget\setUserAgent(main::#VERSION$)
+    *wget\CallbackOnSuccess(@updateResponse())
+    *wget\download()
+  EndProcedure
+  
   Procedure updateAvailable()
-    Protected *update.update
-    *update = EventGadget()
-    If *update
-      If MessageRequester(_("update_available"), _("update_available_text", "version="+*update\version$), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
-        misc::openLink(*update\url$)
+    Protected *latest.GithubRelease
+    *latest = EventGadget()
+    
+    If *latest
+      If MessageRequester(_("update_available"), _("update_available_text", "name="+*latest\name$+#SEP+"tag="+*latest\tag_name$+#SEP+"body="+*latest\body$), #PB_MessageRequester_Info|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        misc::openLink(*latest\html_url$)
       EndIf
     EndIf
+  EndProcedure
+  
+  Procedure handleParameter(parameter$)
+    Select LCase(parameter$)
+      Case "-show"
+        If window And IsWindow(window)
+          ; normal/maximize may behave differently on linux (linux mint 18.1: maximze = normal and normal = on left edge)
+          ; catch this behaviour??
+          Select GetWindowState(window)
+            Case #PB_Window_Minimize
+              SetWindowState(window, #PB_Window_Normal)
+          EndSelect
+        EndIf
+        
+      Default
+        If Left(parameter$, 17) = "tpfmm://download/"
+          parameter$ = Mid(parameter$, 18) ; /source/modID/fileID
+          repoFindModAndDownload(parameter$)
+          
+        ElseIf Left(parameter$, 12) = "tpfmm://url/"
+          parameter$ = Mid(parameter$, 13)
+          repository::downloadURL(parameter$)
+          
+        ElseIf Left(parameter$, 23) = "tpfmm://repository/add/"
+          parameter$ = Mid(parameter$, 24)
+          windowSettings::show()
+          windowSettings::showTab(windowSettings::#TabRepository)
+          windowSettings::repositoryAddURL(parameter$)
+          
+        ElseIf FileSize(parameter$) > 0
+          ; install mod (this function is called, before the main window is created ...)
+          mods::install(parameter$)
+        EndIf
+        
+    EndSelect
   EndProcedure
   
   ;- exit procedure
@@ -304,8 +418,8 @@ Module windowMain
     *workerAnimation\free()
     *workerAnimation = #Null
     
-    main::setProgressPercent(15)
-    main::setProgressText(_("progress_close"))
+    windowProgress::setProgressPercent(15)
+    windowProgress::setProgressText(_("progress_close"))
     
     settings::setInteger("window", "x", WindowX(windowMain::window, #PB_Window_FrameCoordinate))
     settings::setInteger("window", "y", WindowY(windowMain::window, #PB_Window_FrameCoordinate))
@@ -314,27 +428,27 @@ Module windowMain
     
     settings::setInteger("window", "tab", currentTab)
     
-    main::setProgressPercent(30)
-    main::setProgressText(_("progress_stop_worker"))
+    windowProgress::setProgressPercent(30)
+    windowProgress::setProgressText(_("progress_stop_worker"))
     deb("windowMain:: stop workers")
     mods::stopQueue()
-    main::setProgressPercent(45)
+    windowProgress::setProgressPercent(45)
     wget::freeAll()
     repository::stopQueue()
     
-    main::setProgressPercent(60)
-    main::setProgressText(_("progress_save_list"))
+    windowProgress::setProgressPercent(60)
+    windowProgress::setProgressText(_("progress_save_list"))
     mods::saveList()
     
-    main::setProgressPercent(75)
-    main::setProgressText(_("progress_cleanup"))
+    windowProgress::setProgressPercent(75)
+    windowProgress::setProgressText(_("progress_cleanup"))
     deb("windowMain:: cleanup")
     mods::freeAll()
-    main::setProgressPercent(90)
+    windowProgress::setProgressPercent(90)
     repository::freeAll()
     
-    main::setProgressPercent(99)
-    main::setProgressText(_("progress_goodbye"))
+    windowProgress::setProgressPercent(99)
+    windowProgress::setProgressText(_("progress_goodbye"))
     
     ; free all dialogs
     FreeDialog(modFilter\dialog)
@@ -343,7 +457,7 @@ Module windowMain
     FreeDialog(repoSort\dialog)
     windowSettings::close()
     
-    main::closeProgressWindow()
+    windowProgress::closeProgressWindow()
     
     locale::logStats()
     PostEvent(event) ; inform main thread that closure procedure is finished
@@ -352,8 +466,9 @@ Module windowMain
   Procedure close()
     deb("windowMain:: close window")
     ; the exit procedure will run in a thread and wait for all workers to finish etc...
-    main::showProgressWindow(_("progress_close"), #EventCloseNow)
-    CreateThread(@closeThread(), #EventCloseNow)
+    windowProgress::showProgressWindow(_("progress_close"), #EventCloseNow)
+    threads::NewThread(@closeThread(), #EventCloseNow, "windowMain::close")
+    ; EventCloseNow will call main::exit()
     ; todo also set up a timer event to close programm after (e.g.) 1 minute if cleanup procedure fails?
   EndProcedure
   
@@ -362,8 +477,8 @@ Module windowMain
   Procedure startThread(EventOnFinish)
     Protected i
     
-    main::setProgressText(_("progress_init"))
-    main::setProgressPercent(0)
+    windowProgress::setProgressText(_("progress_init"))
+    windowProgress::setProgressPercent(0)
     
     ; read gameDirectory from preferences
     deb("main:: - game directory: "+settings::getString("", "path"))
@@ -373,7 +488,7 @@ Module windowMain
       settings::setString("", "path", "")
     EndIf
     
-    main::setProgressPercent(10)
+    windowProgress::setProgressPercent(10)
     
     ; proxy (read from preferences)
     main::initProxy()
@@ -417,18 +532,39 @@ Module windowMain
         deb("main:: set window location: ("+windowX+", "+windowY+", "+windowWidth+", "+windowHeight+")")
         ResizeWindow(windowMain::window, windowX, windowY, windowWidth, windowHeight)
         PostEvent(#PB_Event_SizeWindow, windowMain::window, 0)
-      Else
-        
-        deb("main:: window location not valid")
-        windowWidth = #PB_Ignore
-        windowHeight = #PB_Ignore
-        
-        deb("main:: center main window on primary desktop")
-        windowX = (DesktopWidth(0)  - windowWidth ) /2
-        windowY = (DesktopHeight(0) - windowHeight) /2
       EndIf
     EndIf
     ;}
+    
+    
+    windowProgress::setProgressPercent(20)
+    
+    ; load mods and repository
+    If settings::getString("", "path")
+      windowProgress::setProgressText(_("progress_load_mods"))
+      mods::load(#False)
+      windowProgress::setProgressPercent(50)
+      
+      
+      windowProgress::setProgressText(_("progress_load_repo"))
+      repository::refreshRepositories(#False)
+      windowProgress::setProgressPercent(80)
+    EndIf
+    
+    windowProgress::setProgressPercent(90)
+    
+    ; check for update (will start download in thread, does not block)
+    checkUpdate()
+    
+    windowProgress::setProgressPercent(95)
+    
+    
+    ; open settings dialog if required
+    If settings::getString("", "path") = ""
+      ; no path specified upon program start -> open settings dialog
+      deb("main:: no game directory defined - open settings dialog")
+      PostEvent(#PB_Event_Gadget, window, gadget("btnSettings"))
+    EndIf
     
     ; select tab
     Select settings::getInteger("window", "tab")
@@ -440,51 +576,36 @@ Module windowMain
         navBtnSaves()
     EndSelect
     
-    
-    main::setProgressPercent(20)
-    
-    ; load mods and repository
-    If settings::getString("", "path")
-      main::setProgressText(_("progress_load_mods"))
-      mods::load(#False)
-      main::setProgressPercent(50)
-      
-      
-      main::setProgressText(_("progress_load_repo"))
-      repository::refreshRepositories(#False)
-      main::setProgressPercent(80)
+    ; show main window
+    windowProgress::closeProgressWindow()
+    If locationOK
+      HideWindow(window, #False)
+    Else
+      HideWindow(window, #False, #PB_Window_ScreenCentered)
     EndIf
+    PostEvent(EventOnFinish, window, #Null)
+  EndProcedure
+  
+  Procedure startupFinished()
+    Protected i
+    ; called when startup procedure is finished
     
-    main::setProgressPercent(90)
+    If Not threads::isMainThread()
+      DebuggerError("must be in main thread")
+    EndIf
     
     ; parameter handling
     For i = 0 To CountProgramParameters() - 1
-      main::handleParameter(ProgramParameter(i))
+      handleParameter(ProgramParameter(i))
     Next
-    
-    main::setProgressPercent(99)
-    
-    ; show main window
-    main::closeProgressWindow()
-    HideWindow(windowMain::window, #False)
-    
-    ; start updater thread
-    CreateThread(@checkUpdate(), #Null)
-    
-    If settings::getString("", "path") = ""
-      ; no path specified upon program start -> open settings dialog
-      deb("main:: no game directory defined - open settings dialog")
-      ; post event to show settings
-      windowSettings::show()
-    EndIf
-    
-    
   EndProcedure
   
+  
+  ; entry point: start()
   Procedure start()
     Protected i
     
-    If Not main::isMainThread()
+    If Not threads::isMainThread()
       deb("windowMain:: start() not in main thread!")
       RaiseError(#PB_OnError_Breakpoint)
     EndIf
@@ -495,11 +616,9 @@ Module windowMain
     ; open settings window
     windowSettings::create(window)
     
-    
     ; startup procedure
-    main::showProgressWindow(_("progress_start"), #EventCloseNow)
-    CreateThread(@startThread(), #EventStartupFinished)
-    
+    windowProgress::showProgressWindow(_("progress_start"), #EventCloseNow)
+    threads::NewThread(@startThread(), #EventStartupFinished, "windowMain::startThread")
   EndProcedure
   
   ; ---
@@ -569,7 +688,7 @@ Module windowMain
     Protected log$, file$, file
     ; write log to tmp file as default Windows notepad will not open the active .log file while it is being used by TPFMM
     log$ = debugger::getLog()
-    file$ = misc::path(GetTemporaryDirectory())+"tpfmm-log.txt"
+    file$ = misc::path(GetTemporaryDirectory()) + "tpfmm-log.txt"
     file = CreateFile(#PB_Any, file$, #PB_File_SharedWrite)
     If file
       WriteString(file, log$)
@@ -1020,6 +1139,7 @@ Module windowMain
   
   Procedure modItemSetup(*item.CanvasList::CanvasListItem, *mod.mods::LocalMod = #Null)
     Protected.b repoMod, updateAvailable
+    Protected text$
     
     If *mod = #Null
       *mod = *item\GetUserData()
@@ -1036,31 +1156,51 @@ Module windowMain
       EndIf
     EndIf
     
+    ; set text
+    If settings::getInteger("ui", "compact")
+      text$ = *mod\getName()+" "+_("generic_by")+" "+*mod\getAuthorsString()
+    Else
+      text$ = *mod\getName()+#LF$+
+              _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
+              FormatDate(_("main_install_date"), *mod\getInstallDate())
+    EndIf
+    CompilerIf #PB_Compiler_Debugger
+      text$ + " [ID: "+*mod\getID()+"]"
+    CompilerEndIf
+    *item\setText(text$)
+    
     ; set image
-    *item\SetImage(*mod\getPreviewImage())
+    If settings::getInteger("ui", "compact")
+      *item\SetImage(0)
+    Else
+      *item\SetImage(*mod\getPreviewImage())
+    EndIf
     
     ; add buttons (callbacks)
-    *item\ClearButtons()
-    *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
-    *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
-    If *mod\hasSettings()
-      *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
+    If settings::getInteger("ui", "compact")
+      *item\ClearButtons()
     Else
-      *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
+      *item\ClearButtons()
+      *item\AddButton(@modIconInfo(), images::Images("itemBtnInfo"), images::images("itemBtnInfoHover"), _("hint_mod_information"))
+      *item\AddButton(@modIconFolder(), images::Images("itemBtnFolder"), images::images("itemBtnFolderHover"), _("hint_mod_open_folder"))
+      If *mod\hasSettings()
+        *item\AddButton(@modIconSettings(), images::Images("itemBtnSettings"), images::images("itemBtnSettingsHover"), _("hint_mod_settings"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnSettingsDisabled"))
+      EndIf
+      If repoMod And updateAvailable
+        *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), _("hint_mod_update"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
+      EndIf
+      *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
+      *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
+      If *mod\canUninstall()
+        *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
+      Else
+        *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
+      EndIf
     EndIf
-    If repoMod And updateAvailable
-      *item\AddButton(@modIconUpdate(), images::Images("itemBtnUpdate"), images::images("itemBtnUpdateHover"), _("hint_mod_update"))
-    Else
-      *item\AddButton(#Null, images::images("itemBtnUpdateDisabled"))
-    EndIf
-    *item\AddButton(@modIconWebsite(),  images::Images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_mod_website"))
-    *item\AddButton(@modIconBackup(),   images::Images("itemBtnBackup"),  images::images("itemBtnBackupHover"), _("hint_mod_backup"))
-    If *mod\canUninstall()
-      *item\AddButton(@modIconUninstall(), images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_mod_uninstall"))
-    Else
-      *item\AddButton(#Null, images::images("itemBtnDeleteDisabled"))
-    EndIf
-    
     
     ; icons
     *item\ClearIcons()
@@ -1110,18 +1250,9 @@ Module windowMain
   Procedure modCallbackNewMod(*mod.mods::LocalMod)
     Protected *item.CanvasList::CanvasListItem
     
-    CompilerIf #PB_Compiler_Debugger
-      *item = *modList\AddItem(*mod\getName()+#LF$+
-                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
-                               "ID: "+*mod\getID()+", Folder: "+*mod\getFoldername()+", "+
-                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
-    CompilerElse
-      *item = *modList\AddItem(*mod\getName()+#LF$+
-                               _("generic_by")+" "+*mod\getAuthorsString()+#LF$+
-                               FormatDate(_("main_install_date"), *mod\getInstallDate()), *mod)
-    CompilerEndIf
-    
+    *item = *modList\AddItem(*mod\getName(), *mod)
     modItemSetup(*item, *mod)
+    
   EndProcedure
   
   Procedure modCallbackRemoveMod(*mod)
@@ -1155,7 +1286,6 @@ Module windowMain
     
     *buffer = EventData()
     If *buffer
-;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
       SetGadgetText(gadget("progressModText"), PeekS(*buffer))
       FreeMemory(*buffer)
       ; sometimes, this event is called twice and tries to free memory that is already freed!
@@ -1563,6 +1693,7 @@ Module windowMain
   Procedure repoItemSetup(*item.CanvasList::CanvasListItem, *mod.Repository::RepositoryMod = #Null)
     Protected file$, image, installed
     Protected NewList *files.repository::RepositoryFile()
+    Protected text$
     
     If *mod = #Null
       *mod = *item\GetUserData()
@@ -1570,20 +1701,31 @@ Module windowMain
         ProcedureReturn #False
       EndIf
     EndIf
+
+    If settings::getInteger("ui","compact")
+      text$ = *mod\getName()+" (v"+*mod\getVersion()+")"+" "+_("generic_by")+" "+*mod\getAuthor()
+    Else
+      text$ = *mod\getName()+" (v"+*mod\getVersion()+")"+#LF$+*mod\getAuthor()+#LF$+FormatDate(_("repository_last_update"),*mod\getTimeChanged())
+    EndIf
+    *item\SetText(text$)
+    
     
     ; load cached thumbnail images (must free images in windowMain:: manually when list is cleared)
-    file$ = *mod\getThumbnailFile()
-    If file$
-      If FileSize(file$) > 0
-        image = LoadImage(#PB_Any, file$)
-        If image
-          *mod\setThumbnailImage(image)
-          *item\SetImage(image)
+    If Not settings::getInteger("ui","compact")
+      file$ = *mod\getThumbnailFile()
+      If file$
+        If FileSize(file$) > 0
+          image = LoadImage(#PB_Any, file$)
+          If image
+            *mod\setThumbnailImage(image)
+            *item\SetImage(image)
+          EndIf
         EndIf
       EndIf
     EndIf
     
     ; icons
+    *item\ClearIcons()
     If IsImage(images::images("itemIcon_"+*mod\getSource()))
       Protected repoInfo.repository::RepositoryInformation
       repository::GetRepositoryInformation(*mod\GetRepositoryURL(), @repoInfo)
@@ -1606,10 +1748,13 @@ Module windowMain
       *item\AddIcon(images::images("itemIcon_blank"))
     EndIf
     
-    
     ; buttons
-    *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
-    *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
+    If Not settings::getInteger("ui","compact")
+      If *mod\canDownload()
+        *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
+      EndIf
+      *item\AddButton(@repoItemWebsite(), images::images("itemBtnWebsite"), images::images("itemBtnWebsiteHover"), _("hint_repo_website"))
+    EndIf
     
   EndProcedure
   
@@ -1623,7 +1768,7 @@ Module windowMain
     *repoList\SetAttribute(canvasList::#AttributePauseDraw, #True)
     ForEach *mods()
       *mod = *mods()
-      *item = *repoList\AddItem(*mod\getName()+" (v"+*mod\getVersion()+")"+#LF$+*mod\getAuthor()+#LF$+FormatDate("Last update on %yyyy/%mm/%dd",*mod\getTimeChanged()), *mod)
+      *item = *repoList\AddItem(*mod\getName(), *mod)
       repoItemSetup(*item, *mod)
     Next
     *repoList\SetAttribute(canvasList::#AttributePauseDraw, #False)
@@ -1671,13 +1816,16 @@ Module windowMain
     PostEvent(windowSettings::#EventRefreshRepoList, windowSettings::window, #Null)
   EndProcedure
   
-  Procedure repoCallbackThumbnail(image, *userdata)
-    Debug "repoCallbackThumbnail("+image+", "+*userdata+")"
-    ;TODO: repository may download image, but move image load() to windowMain:: ?
+  Procedure repoCallbackThumbnail(*mod.repository::RepositoryMod, file$, *userdata)
     Protected *item.CanvasList::CanvasListItem
-    If image And *userdata
+    Protected im
+    
+    If file$ And *userdata
       *item = *userdata
-      *item\SetImage(image)
+      im = LoadImage(#PB_Any, file$)
+      If im
+        *item\SetImage(im)
+      EndIf
     EndIf
   EndProcedure
   
@@ -1705,11 +1853,11 @@ Module windowMain
     
     *buffer = EventData()
     If *buffer
-;       Debug "########## peek from "+*buffer+" "+PeekS(*buffer)
       SetGadgetText(gadget("progressRepoText"), PeekS(*buffer))
       FreeMemory(*buffer)
       ; sometimes, this event is called twice and tries to free memory that is already freed!
       ; only occurs when using EventWindow and EventGadget for data transfer...
+      ; using EventType() for data transfer now
     EndIf
   EndProcedure
   
@@ -1900,6 +2048,7 @@ Module windowMain
           SetGadgetText(gadget("saveFileSizeUncompressed"), misc::printSize(*tfsave\fileSizeUncompressed))
           
           If ListSize(*tfsave\mods())
+            *saveModList\SetAttribute(canvasList::#AttributePauseDraw, #True)
             ForEach *tfsave\mods()
               *item = *saveModList\AddItem(*tfsave\mods()\name$+#LF$+"ID: "+*tfsave\mods()\id$, *tfsave\mods())
               
@@ -1920,6 +2069,7 @@ Module windowMain
                 download = #True
               EndIf
             Next
+            *saveModList\SetAttribute(canvasList::#AttributePauseDraw, #False)
             If download
               DisableGadget(gadget("saveDownload"), #False)
             EndIf
@@ -1954,7 +2104,6 @@ Module windowMain
     deb("windowMain:: download all files from save")
     If *saveModList\GetAllItems(*items())
       ForEach *items()
-        ;TODO: save full info in userdata, also check if file is installed before downloading!
         *tfsaveMod = *items()\GetUserData()
         If *tfsaveMod\repofile And Not *tfsaveMod\localmod
           deb("windowMain:: download missing mod '"+*tfsaveMod\id$+"'")
@@ -1991,25 +2140,46 @@ Module windowMain
   Procedure backupDelete()
     Protected NewList *items.CanvasList::CanvasListItem()
     Protected *backup.mods::BackupMod
+    
     If *backupList\GetAllSelectedItems(*items())
-      ForEach *items()
+      ; get backups
+      If ListSize(*items()) = 1
         *backup = *items()\GetUserData()
-        If *backup
-          ; not in thread, wait for deletion, should be fast
+        If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
+                            _("backup_delete_mod_body", "name="+*backup\getName()),
+                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           *backup\delete()
         EndIf
-      Next
+      Else ; multiple backups selected
+        If MessageRequester(_("backup_delete_mods_title", "number="+ListSize(*items())), 
+                            _("backup_delete_mods_body", "number="+ListSize(*items())),
+                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+          ForEach *items()
+            *backup = *items()\GetUserData()
+            *backup\delete()
+          Next
+        EndIf
+      EndIf
     EndIf
   EndProcedure
   
   Procedure backupFolder()
-    misc::openLink(mods::backupsGetFolder())
+    Protected folder$ = mods::backupsGetFolder()
+    misc::CreateDirectoryAll(folder$)
+    misc::openLink(folder$)
   EndProcedure
   
   Procedure backupRefreshList()
     mods::backupsScan()
   EndProcedure
   
+  Procedure backupIconOpenFile(*item.CanvasList::CanvasListItem)
+    Protected *backup.mods::BackupMod
+    *backup = *item\GetUserData()
+    If *backup
+      misc::openLink(mods::backupsGetFolder()+*backup\getFilename())
+    EndIf
+  EndProcedure
   
   Procedure backupIconRestore(*item.CanvasList::CanvasListItem)
     Protected *backup.mods::BackupMod
@@ -2023,7 +2193,11 @@ Module windowMain
     Protected *backup.mods::BackupMod
     *backup = *item\GetUserData()
     If *backup
-      *backup\delete()
+      If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
+                          _("backup_delete_mod_body", "name="+*backup\getName()),
+                          #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        *backup\delete()
+      EndIf
     EndIf
   EndProcedure
   
@@ -2043,11 +2217,12 @@ Module windowMain
     ; a new backup file was created at "filename"
     Protected *item.CanvasList::CanvasListItem
     
-    *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+Chr(9)+
+    *item = *backupList\AddItem(*backup\getName()+" v"+*backup\getVersion()+#TAB$+
                                 _("generic_folder")+": "+*backup\getFoldername()+#LF$+
-                                _("generic_by")+" "+*backup\getAuthors()+Chr(9)+
+                                _("generic_by")+" "+*backup\getAuthors()+#TAB$+
                                 FormatDate(_("main_backup_date"), *backup\getDate()), *backup)
     
+    *item\AddButton(@backupIconOpenFile(), images::Images("itemBtnFile"), images::images("itemBtnFileHover"), _("hint_backup_open_file"))
     *item\AddButton(@backupIconRestore(), images::Images("itemBtnRestore"), images::images("itemBtnRestoreHover"), _("hint_backup_restore"))
     *item\AddButton(@backupIconDelete(),  images::Images("itemBtnDelete"), images::images("itemBtnDeleteHover"), _("hint_backup_delete"))
     
@@ -2057,7 +2232,6 @@ Module windowMain
   
   Procedure backupCallbackRemoveBackup(*backup.mods::BackupMod)
     Protected NewList *items.CanvasList::CanvasListItem()
-    
     If *backupList\GetAllItems(*items())
       ForEach *items()
         If *backup = *items()\GetUserData()
@@ -2401,7 +2575,6 @@ Module windowMain
   EndProcedure
   
   ;--------------
-  ; - strings
   
   Procedure updateStrings()
     UseModule locale
@@ -2453,6 +2626,36 @@ Module windowMain
     UnuseModule locale
   EndProcedure
   
+  Procedure refreshListTheme()
+    Protected theme$
+    Protected NewList *items.CanvasList::CanvasListItem()
+    
+    If settings::getInteger("ui", "compact")
+      theme$ = themeModCompact$
+    Else
+      theme$ = themeMod$
+    EndIf
+    
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, #True)
+    *repoList\SetAttribute(CanvasList::#AttributePauseDraw, #True)
+    
+    *modList\SetTheme(theme$)
+    *repoList\SetTheme(theme$)
+    
+    *modList\GetAllItems(*items())
+    ForEach *items()
+      modItemSetup(*items())
+    Next
+    
+    *repoList\GetAllItems(*items())
+    ForEach *items()
+      repoItemSetup(*items())
+    Next
+    
+    *modList\SetAttribute(CanvasList::#AttributePauseDraw, #False)
+    *repoList\SetAttribute(CanvasList::#AttributePauseDraw, #False)
+    
+  EndProcedure
   
   ;----------------------------------------------------------------------------
   ;---------------------------------- PUBLIC ----------------------------------
@@ -2501,30 +2704,31 @@ Module windowMain
     BindEvent(#PB_Event_WindowDrop, @HandleDroppedFiles(), window)
     BindEvent(#EventCloseNow, main::@exit())
     BindEvent(#EventUpdateAvailable, @updateAvailable(), window)
-    
+    BindEvent(#EventStartUpFinished, @startupFinished(), window)
     
     
     ;- custom canvas gadgets
-    Protected theme$
     
     *modList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("modList"))
     *modList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @modListItemEvent())
     *modList\BindItemEvent(#PB_EventType_Change,            @modListItemEvent())
+    *modList\SetTheme(themeMod$)
     
     *repoList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("repoList"))
     *repoList\BindItemEvent(CanvasList::#OnItemFirstVisible, @repoEventItemVisible()) ; dynamically load images when items get visible
     *repoList\BindItemEvent(#PB_EventType_LeftDoubleClick,   @repoListItemEvent())
     *repoList\BindItemEvent(#PB_EventType_Change,            @repoListItemEvent())
+    *repoList\SetTheme(themeMod$)
     
     *backupList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("backupList"))
     *backupList\BindItemEvent(#PB_EventType_LeftDoubleClick, @backupListItemEvent())
     *backupList\BindItemEvent(#PB_EventType_Change,          @backupListItemEvent())
-    misc::BinaryAsString("theme/backupList.json", theme$)
-    *backupList\SetTheme(theme$)
+    *backupList\SetTheme(themeBackup$)
     
     *saveModList = CanvasList::NewCanvasListGadget(#PB_Ignore, #PB_Ignore, #PB_Ignore, #PB_Ignore, gadget("saveModList"))
-    misc::BinaryAsString("theme/saveModList.json", theme$)
-    *saveModList\SetTheme(theme$)
+    *saveModList\SetTheme(themeSave$)
+    
+    refreshListTheme()
     
     ;- worker animation
     *workerAnimation = animation::new()
@@ -2791,7 +2995,7 @@ Module windowMain
     PokeS(*link, link$)
     
     ; start in thread in order to wait for repository to finish
-    CreateThread(@repoFindModAndDownloadThread(), *link)
+    threads::NewThread(@repoFindModAndDownloadThread(), *link, "windowMain::repoFindModAndDownloadThread")
   EndProcedure
   
   Procedure getSelectedMods(List *mods())

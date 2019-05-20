@@ -32,6 +32,8 @@ DeclareModule CanvasList
   
   ;- Interfaces
   Interface CanvasListItem
+    SetText(text$)
+    GetText.s()
     SetImage(image)
     GetImage()
     SetUserData(*data)
@@ -72,7 +74,19 @@ DeclareModule CanvasList
   EndInterface
   
   ; declare public functions
-  Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
+  Declare NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1, theme$="")
+  
+EndDeclareModule
+
+XIncludeFile "module_debugger.pbi"
+
+Module CanvasList
+  
+  #ShowDrawTime = #False
+  
+  ;{ Declare
+  
+  ; gadget
   Declare Free(*gadget)
   
   ; gadget functions
@@ -99,6 +113,8 @@ DeclareModule CanvasList
   Declare SetEmptyScreen(*gadget, textOnEmpty$, textOnFilter$) ; set some welcome information that is shown when no item is visible
   
   ; item functions
+  Declare ItemSetText(*item, text$)
+  Declare.s ItemGetText(*item)
   Declare ItemSetImage(*item, image)
   Declare ItemGetImage(*item)
   Declare ItemSetUserData(*item, *userdata)
@@ -111,14 +127,7 @@ DeclareModule CanvasList
   Declare ItemClearIcons(*item)
   Declare ItemAddButton(*item, *callback, image, imageHover=0, hint$="")
   Declare ItemClearButtons(*item)
-  
-EndDeclareModule
-
-CompilerIf #PB_Compiler_IsIncludeFile
-  XIncludeFile "module_debugger.pbi"
-CompilerEndIf
-
-Module CanvasList
+  ;}
   
   ;{ VT
   DataSection
@@ -147,6 +156,8 @@ Module CanvasList
     Data.i @SetEmptyScreen()
     
     vtItem:
+    Data.i @ItemSetText()
+    Data.i @ItemGetText()
     Data.i @ItemSetImage()
     Data.i @ItemGetImage()
     Data.i @ItemSetUserData()
@@ -209,15 +220,17 @@ Module CanvasList
     REM.d     ; scaling factor relative to default font size of OS GUI
     
     ; internal information, not supplied by json:
-    FontID.i
-    yOffset.i
-    Array tabX.w(10)
+    _FontID.i
+    _yOffset.i
+    Array _tabX.w(10)
   EndStructure
   
   Structure themeItemImage
     Display.b
-    MinHeight.w
+    MinHeight.u
     AspectRatio.d
+    _w.u
+    _h.u
   EndStructure
   
   Structure themeItem
@@ -324,7 +337,6 @@ Module CanvasList
     hover.b
     ; parameters
     scrollWheelDelta.i
-    fontHeight.i
     ; items
     List items.item()
     List itemEvents.itemEvent()
@@ -343,21 +355,93 @@ Module CanvasList
     textOnFilter$
     tooltip$
   EndStructure
+  
+  ; helper
+  Structure imageCache
+    usecounter.i
+    cachedIm.i
+  EndStructure
   ;}
   
-  ;- debug output
+  ;{ Globals
+  Global _mutexImageCache = CreateMutex()
+  Global NewMap imageCache.imageCache()
+  ;}
   
+  ;{ debug output
   CompilerIf Defined(debugger, #PB_Module)
-    ; in bigger project, use custom module (writes debug messages to log file)
     UseModule debugger
   CompilerElse
-    ; if module not available, just print message
     Macro deb(s)
       Debug s
     EndMacro
   CompilerEndIf
+  ;}
   
   ;- Private Functions
+  
+  Procedure imageCacheAdd(originalIm, w, h)
+    Protected key$
+    key$ = Str(originalIm)+"/"+Str(w)+"/"+Str(h)
+    
+    If Not originalIm
+      ProcedureReturn #False 
+    EndIf
+    
+    LockMutex(_mutexImageCache)
+    If FindMapElement(imageCache(), key$)
+      imageCache(key$)\usecounter + 1
+    Else
+      AddMapElement(imageCache(), key$)
+      imageCache(key$)\cachedIm = CopyImage(originalIm, #PB_Any)
+      ResizeImage(imageCache(key$)\cachedIm, w, h)
+      imageCache(key$)\usecounter + 1
+    EndIf
+    ;Debug "imageCacheAdd, cache size: "+MapSize(imageCache())
+    UnlockMutex(_mutexImageCache)
+  EndProcedure
+  
+  Procedure imageCacheGet(originalIm, w, h)
+    Protected key$, im
+    key$ = Str(originalIm)+"/"+Str(w)+"/"+Str(h)
+    
+    If Not originalIm
+      ProcedureReturn #False 
+    EndIf
+    
+    LockMutex(_mutexImageCache)
+    If FindMapElement(imageCache(), key$)
+      im = imageCache()\cachedIm
+    Else
+      im = originalIm
+    EndIf
+    UnlockMutex(_mutexImageCache)
+    
+    ProcedureReturn im
+  EndProcedure
+  
+  Procedure imageCacheRemove(originalIm, w, h)
+    Protected key$
+    ;TODO test if is working as expectd, also check all possible ways that images are removed from gadget without clearing cache...
+    
+    If Not originalIm
+      ProcedureReturn #False 
+    EndIf
+    
+    key$ = Str(originalIm)+"/"+Str(w)+"/"+Str(h)
+    
+    LockMutex(_mutexImageCache)
+    If FindMapElement(imageCache(), key$)
+      imageCache(key$)\usecounter - 1
+      If imageCache(key$)\usecounter < 1
+        FreeImage(imageCache(key$)\cachedIm)
+        DeleteMapElement(imageCache(), key$)
+        ;Debug "free unused image from cache: "+key$
+      EndIf
+    EndIf
+    ;Debug "imageCacheRemove, cache size: "+MapSize(imageCache())
+    UnlockMutex(_mutexImageCache)
+  EndProcedure
   
   Procedure GetWindowBackgroundColor(hwnd)
     ; found on https://www.purebasic.fr/english/viewtopic.php?f=12&t=66974
@@ -429,7 +513,7 @@ Module CanvasList
     CompilerEndSelect
   EndProcedure
    
-  Procedure getDefaultFontSize()
+  Procedure getDefaultFontSize() ; in pt
     CompilerSelect #PB_Compiler_OS 
       CompilerCase #PB_OS_Windows 
         Protected sysFont.LOGFONT
@@ -450,11 +534,18 @@ Module CanvasList
   
   Procedure getFontHeightPixel(fontID=0)
     Protected im, height
+    Static NewMap heights()
     
     If Not fontID
       fontID = GetGadgetFont(#PB_Default)
     EndIf
     
+    ; return cached value
+    If FindMapElement(heights(), Str(fontID))
+      ProcedureReturn heights(Str(fontID))
+    EndIf
+    
+    ; determine height
     im = CreateImage(#PB_Any, 1, 1)
     If im
       If StartDrawing(ImageOutput(im))
@@ -464,6 +555,10 @@ Module CanvasList
       EndIf
       FreeImage(im)
     EndIf
+    
+    ; save to cache
+    heights(Str(fontID)) = height
+    
     ProcedureReturn height
   EndProcedure
   
@@ -532,22 +627,22 @@ Module CanvasList
     EndIf
     
     If MapSize(colors$()) = 0
-      colors$("white")  = "#FFFFFF"
-      colors$("silver") = "#C0C0C0"
-      colors$("gray")   = "#808080"
-      colors$("black")  = "#000000"
-      colors$("red")    = "#FF0000"
-      colors$("maroon") = "#800000"
-      colors$("yellow") = "#FFFF00"
-      colors$("olive")  = "#808000"
-      colors$("lime")   = "#00FF00"
-      colors$("green")  = "#008000"
-      colors$("aqua")   = "#00FFFF"
-      colors$("teal")   = "#008080"
-      colors$("blue")   = "#0000FF"
-      colors$("navy")   = "#000080"
-      colors$("fuchsia") = "#FF00FF"
-      colors$("purple") = "#800080"
+      colors$("white")    = "#FFFFFF"
+      colors$("silver")   = "#C0C0C0"
+      colors$("gray")     = "#808080"
+      colors$("black")    = "#000000"
+      colors$("red")      = "#FF0000"
+      colors$("maroon")   = "#800000"
+      colors$("yellow")   = "#FFFF00"
+      colors$("olive")    = "#808000"
+      colors$("lime")     = "#00FF00"
+      colors$("green")    = "#008000"
+      colors$("aqua")     = "#00FFFF"
+      colors$("teal")     = "#008080"
+      colors$("blue")     = "#0000FF"
+      colors$("navy")     = "#000080"
+      colors$("fuchsia")  = "#FF00FF"
+      colors$("purple")   = "#800080"
     EndIf
     
     c$ = UCase(htmlColor$)
@@ -572,15 +667,15 @@ Module CanvasList
       c$ = tmp$
     EndIf
     
-    ; w/o alpha channel, add 00
+    ; w/o alpha channel, add full alpha
     If Len(c$) = 6
-      c$ + "00"
+      c$ + "FF"
     EndIf
     
     ; if not full notation RRGGBBAA, something went wrong
     If Len(c$) <> 8
       ; RRGGBBAA
-      Debug "could not convert color "+htmlColor$
+      Debug "could not convert color '"+htmlColor$+"'"
       ProcedureReturn 0
     EndIf
     
@@ -685,7 +780,7 @@ Module CanvasList
     Protected k
     Protected padding = *this\theme\item\Padding
     Protected iconBtnSize = 24
-    Protected iconSize = *this\theme\item\Lines(0)\REM * *this\fontHeight
+    Protected iconSize = *this\theme\item\Lines(0)\REM * getFontHeightPixel(*this\theme\item\Lines(0)\_FontID)
     Protected nl, nr
     Protected iconOffsetL, iconOffsetR
     
@@ -715,8 +810,15 @@ Module CanvasList
           nr + 1
         EndIf
         *item\icons()\box\y       = padding
-        *item\icons()\box\width   = iconSize
-        *item\icons()\box\height  = iconSize
+        ; calculate new sizes and update image cache if necessary
+        If *item\icons()\box\width <> iconSize Or
+           *item\icons()\box\height <> iconSize
+          ; size change, mark old cached image as unused
+          imageCacheRemove(*item\icons()\image, *item\icons()\box\width, *item\icons()\box\height)
+          *item\icons()\box\width   = iconSize
+          *item\icons()\box\height  = iconSize
+          imageCacheAdd(*item\icons()\image, iconSize, iconSize)
+        EndIf
       Next
     Next
     
@@ -828,6 +930,8 @@ Module CanvasList
   Procedure updateItemLineFonts(*this.gadget) ; required after setting the font information for theme\item\Lines()
     ; load fonts and calculate item height
     Protected i, style
+    Protected iH, iW
+    
     *this\theme\item\Height = *this\theme\item\Padding ; top padding
     For i = 0 To ArraySize(*this\theme\item\Lines())
       If *this\theme\item\Lines(i)\font$ = ""
@@ -845,27 +949,46 @@ Module CanvasList
       If *this\theme\item\Lines(i)\italic : style | #PB_Font_Italic : EndIf
       
 ;       Debug "load font "+*this\theme\item\Lines(i)\font$+", "+Str(*this\theme\item\Lines(i)\rem * getDefaultFontSize())+" pt"
-      *this\theme\item\Lines(i)\fontID = LoadFont(#PB_Any, *this\theme\item\Lines(i)\font$, *this\theme\item\Lines(i)\rem * getDefaultFontSize(), style)
+      *this\theme\item\Lines(i)\_fontID = LoadFont(#PB_Any, *this\theme\item\Lines(i)\font$, *this\theme\item\Lines(i)\rem * getDefaultFontSize(), style)
       
       ; set offset for current line and increase totalItemHeight
-      *this\theme\item\Lines(i)\yOffset = *this\theme\item\Height
-      *this\theme\item\Height + getFontHeightPixel(FontID(*this\theme\item\Lines(i)\fontID)) + *this\theme\item\Padding
+      *this\theme\item\Lines(i)\_yOffset = *this\theme\item\Height
+      *this\theme\item\Height + getFontHeightPixel(FontID(*this\theme\item\Lines(i)\_fontID)) + *this\theme\item\Padding
     Next
     
-    ; check if image required larger item height
+    ; check if image requires larger item height
     If *this\theme\item\Image\Display
       If *this\theme\item\Image\MinHeight + 2 * *this\theme\item\Padding > *this\theme\item\Height
         *this\theme\item\Height = *this\theme\item\Image\MinHeight + 2 * *this\theme\item\Padding
       EndIf
     EndIf
     
+    ; new item height calculated, check if image size changed
+    ; new image width/height:
+    iH = *this\theme\item\Height - 2 * *this\theme\Item\Padding
+    iW = iH / *this\theme\item\Image\AspectRatio
+    If *this\theme\item\Image\_w <> iW Or 
+       *this\theme\item\Image\_h <> iH
+      LockMutex(*this\mItems)
+      ; remove current cache (using old w/h)
+      ForEach *this\items()
+        imageCacheRemove(*this\items()\image, *this\theme\item\Image\_w, *this\theme\item\Image\_h)
+      Next
+      ; update w/h for new image display
+      *this\theme\item\Image\_w = iW
+      *this\theme\item\Image\_h = iH
+      ForEach *this\items()
+        imageCacheAdd(*this\items()\image, iW, iH)
+      Next
+      UnlockMutex(*this\mItems)
+    EndIf
   EndProcedure
   
   Procedure setTooltip(*this.gadget, tooltip$)
     If tooltip$ <> *this\tooltip$
       *this\tooltip$ = tooltip$
       GadgetToolTip(*this\gCanvas, tooltip$)
-      Debug "set canvasList tooltip: "+tooltip$
+      ;Debug "set canvasList tooltip: "+tooltip$
     EndIf
   EndProcedure
   
@@ -876,6 +999,11 @@ Module CanvasList
     Protected x, y, w, h
     Protected redraw.b
     Protected visibleItems, text$
+    
+    CompilerIf #PB_Compiler_Debugger  And #ShowDrawTime
+      Protected __time
+      __time = ElapsedMilliseconds()
+    CompilerEndIf
     
     margin = *this\theme\Item\Margin
     padding = *this\theme\Item\Padding
@@ -898,28 +1026,33 @@ Module CanvasList
           If \hidden
             Continue
           EndIf
+          
           visibleItems + 1
           
+          If Not \isOnCanvas
+            Continue
+          EndIf
+          
           ; only draw if visible
-          If \isOnCanvas
+          If #True
             ; background
             DrawingMode(#PB_2DDrawing_Default)
             Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBackground$))
             
-            
             ; image
-            Protected iH, iW, iOffset
+            Protected iOffset
             If *this\theme\item\Image\Display
-              iH = *this\theme\item\Height - 2 * padding 
-              iW = iH / *this\theme\item\Image\AspectRatio
-              iOffset = iW+padding
+              x = \canvasBox\x + padding
+              y = \canvasBox\y + padding
+              w = *this\theme\item\Image\_w
+              h = *this\theme\item\Image\_h
+              iOffset = w + padding
               If \image And IsImage(\image)
                 DrawingMode(#PB_2DDrawing_AlphaBlend)
-                DrawImage(ImageID(\image), \canvasBox\x + padding, \canvasBox\y + padding, iW, iH)
+                DrawImage(ImageID(imageCacheGet(\image, w, h)), x, y)
               EndIf
             EndIf
             \iOffset = iOffset
-            
             
             ; icons
             If ListSize(\icons()) > 0
@@ -930,18 +1063,17 @@ Module CanvasList
                 y = \canvasBox\y + \icons()\box\y
                 w = \icons()\box\width
                 h = \icons()\box\height
-                DrawImage(ImageID(\icons()\image), x, y, w, h)
+                DrawImage(ImageID(imageCacheGet(\icons()\image, w, h)), x, y)
               Next
             EndIf
-            
             
             ; text
             DrawingMode(#PB_2DDrawing_Transparent)
             For i = 0 To ArraySize(*this\theme\item\Lines())
               line$ = StringField(\text$, i+1, #LF$)
-              DrawingFont(FontID(*this\theme\item\Lines(i)\fontID))
+              DrawingFont(FontID(*this\theme\item\Lines(i)\_fontID))
               x = \canvasBox\x + padding + iOffset
-              y = \canvasBox\y + *this\theme\item\Lines(i)\yOffset
+              y = \canvasBox\y + *this\theme\item\Lines(i)\_yOffset
               w = \canvasBox\width - 2*padding - iOffset
               If i = 0 ; icon offset only in first line
                 x + \iconOffsetL
@@ -956,13 +1088,13 @@ Module CanvasList
                   str$ = StringField(line$, k, Chr(9))
                   
                   If k > 1 ; check if tab align is active and if saved tab location is further right tha current tab location
-                    If *this\theme\item\TabAlign$ = "line" And x < *this\theme\item\lines(i)\tabX(k-1)
+                    If *this\theme\item\TabAlign$ = "line" And x < *this\theme\item\lines(i)\_tabX(k-1)
                       ; TODO if tabAlign causes other text to move out of visible area, move back?
-                      w - (*this\theme\item\lines(i)\tabX(k-1) - x)
-                      x = *this\theme\item\lines(i)\tabX(k-1)
-                    ElseIf *this\theme\item\TabAlign$ = "list" And x < *this\theme\item\lines(0)\tabX(k-1)
-                      w - (*this\theme\item\lines(0)\tabX(k-1) - x)
-                      x = *this\theme\item\lines(0)\tabX(k-1)
+                      w - (*this\theme\item\lines(i)\_tabX(k-1) - x)
+                      x = *this\theme\item\lines(i)\_tabX(k-1)
+                    ElseIf *this\theme\item\TabAlign$ = "list" And x < *this\theme\item\lines(0)\_tabX(k-1)
+                      w - (*this\theme\item\lines(0)\_tabX(k-1) - x)
+                      x = *this\theme\item\lines(0)\_tabX(k-1)
                     EndIf
                   EndIf
                   
@@ -974,17 +1106,16 @@ Module CanvasList
                   w - (nextX - x)
                   x = nextX
                   
-                  If *this\theme\item\TabAlign$ = "line" And *this\theme\item\lines(i)\tabX(k) < x
-                    *this\theme\item\lines(i)\tabX(k) = x
+                  If *this\theme\item\TabAlign$ = "line" And *this\theme\item\lines(i)\_tabX(k) < x
+                    *this\theme\item\lines(i)\_tabX(k) = x
                     redraw = #True
-                  ElseIf *this\theme\item\TabAlign$ = "list" And *this\theme\item\lines(0)\tabX(k) < x
-                    *this\theme\item\lines(0)\tabX(k) = x
+                  ElseIf *this\theme\item\TabAlign$ = "list" And *this\theme\item\lines(0)\_tabX(k) < x
+                    *this\theme\item\lines(0)\_tabX(k) = x
                     redraw = #True
                   EndIf
                 Next
               EndIf
             Next
-            
             
             ; selected?
             If \selected
@@ -1022,10 +1153,10 @@ Module CanvasList
             ; border
             DrawingMode(#PB_2DDrawing_Outlined)
             Box(\canvasBox\x, \canvasBox\y, \canvasBox\width, \canvasBox\height, ColorFromHTML(*this\theme\color\ItemBorder$))
+            
           EndIf
         EndWith
       Next
-      
       
       ; show text if no items is visible
       If ListSize(*this\items()) = 0
@@ -1125,6 +1256,10 @@ Module CanvasList
       StopDrawing()
       UnlockMutex(*this\mItems)
       
+      CompilerIf #PB_Compiler_Debugger And #ShowDrawTime
+        __time = ElapsedMilliseconds() - __time
+        Debug "drawtime: "+__time+" ms"
+      CompilerEndIf
       
       If Redraw
         draw(*this)
@@ -1143,11 +1278,13 @@ Module CanvasList
     Protected *item.item
     Protected p.point
     Protected MyEvent
+    Protected _draw.b
     *this = GetGadgetData(EventGadget())
     p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
     p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
     
     Select EventType()
+        ;{ #PB_EventType_Resize
       Case #PB_EventType_Resize
         LockMutex(*this\mItems)
         ForEach *this\items()
@@ -1157,16 +1294,22 @@ Module CanvasList
         updateScrollbar(*this)
         updateItemPosition(*this)
         draw(*this)
+        ;}
         
+        ;{ #PB_EventType_MouseWheel
       Case #PB_EventType_MouseWheel
         *this\scrollbar\position - (*this\scrollWheelDelta * GetGadgetAttribute(*this\gCanvas, #PB_Canvas_WheelDelta))
         updateItemPosition(*this)
         draw(*this)
+        ;}
         
+        ;{ #PB_EventType_MouseEnter
       Case #PB_EventType_MouseEnter
         ; SetActiveGadget(*this\gCanvas)
         *this\hover = #True
+        ;}
         
+        ;{ #PB_EventType_MouseLeave
       Case #PB_EventType_MouseLeave
         *this\hover = #False
         GadgetToolTip(*this\gCanvas, "")
@@ -1176,14 +1319,19 @@ Module CanvasList
         Next
         UnlockMutex(*this\mItems)
         draw(*this)
+        ;}
         
-        
+        ;{#PB_EventType_LeftClick
       Case #PB_EventType_LeftClick
         ; left click is same as down & up...
+        ;}
         
+        ;{ #PB_EventType_LeftDoubleClick
       Case #PB_EventType_LeftDoubleClick
         *this\selectbox\active = 0
+        ;}
         
+        ;{ #PB_EventType_LeftButtonDown
       Case #PB_EventType_LeftButtonDown
         ; either drag the scrollbar or draw a selection box for items
         If *this\scrollbar\hover
@@ -1197,8 +1345,9 @@ Module CanvasList
           *this\selectbox\box\x = p\x
           *this\selectbox\box\y = p\y + *this\scrollbar\position
         EndIf
+        ;}
         
-        
+        ;{ #PB_EventType_LeftButtonUp
       Case #PB_EventType_LeftButtonUp
         If *this\scrollbar\dragActive
           ; end of scrolbar movement
@@ -1291,8 +1440,9 @@ Module CanvasList
         
         *this\selectbox\active = 0
         draw(*this)
+        ;}
         
-        
+        ;{ #PB_EventType_MouseMove
       Case #PB_EventType_MouseMove
         Protected tooltip$
         tooltip$ = ""
@@ -1345,32 +1495,40 @@ Module CanvasList
           draw(*this)
           
         Else ; no drawbox active (simple hover)
-          ; mouse position
-          p\x = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseX)
-          p\y = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_MouseY)
+          ; this is the most common case, as it is triggered always when mouse moves over gadget
+          ; try to speed up by only drawing when state change occurs
+          _draw = #False
           
           ; check scrollbar hover
-          If PointInBox(@p, *this\scrollbar\box)
+          If p\x > *this\scrollbar\box\x And ; scrollbar always on the right
+             PointInBox(@p, *this\scrollbar\box)
+            _draw = Bool(_draw Or Not *this\scrollbar\hover) ; track state change for redraw
             *this\scrollbar\hover = #True
           Else
+            _draw = Bool(_draw Or *this\scrollbar\hover)
             *this\scrollbar\hover = #False
           EndIf
           
           ; check item hover
-          ; idea: as mouse can only hover on one item, use a SINGLE hover variable that stores what the moouse currently hovers over.
           LockMutex(*this\mItems)
-          ForEach *this\items()
-            *this\items()\hover = #False
-          Next
           If Not *this\scrollbar\hover
             ; only hover items if not hover on scrollbar
+            
             ForEach *this\items()
               *item = *this\items()
-              If *item\hidden ; cannot hover on hidden items
-                *item\hover = #False
+              
+              ; not hovering over invisible items and note hovering over item if scrollbar is active
+              If *item\hidden Or Not *item\isOnCanvas Or *this\scrollbar\hover
+                If *item\hover
+                  _draw = #True
+                  *item\hover = #False
+                EndIf
                 Continue
               EndIf
+              
+              ; check if item hover
               If PointInBox(@p, *item\canvasBox)
+                _draw = Bool(_draw Or Not *item\hover)
                 *item\hover = #True
                 ; tooltip$ = StringField(*item\text$, 1, #LF$)
                 Protected btnHover
@@ -1382,15 +1540,17 @@ Module CanvasList
                   box\width = *item\buttons()\box\width
                   box\height = *item\buttons()\box\height
                   If PointInBox(@p, @box)
+                    _draw = Bool(_draw Or Not *item\buttons()\hover)
                     *item\buttons()\hover = #True
                     tooltip$ = *item\buttons()\hint$
                     btnHover = #True
                   Else
+                    _draw = Bool(_draw Or *item\buttons()\hover)
                     *item\buttons()\hover = #False
                   EndIf
                 Next
                 If Not btnHover
-                  ; test if hover over item
+                  ; test if hover over icons (for tooltip)
                   ForEach *item\icons()
                     box\x = *item\canvasBox\x + *item\icons()\box\x
                     box\y = *item\canvasBox\y + *item\icons()\box\y
@@ -1402,17 +1562,23 @@ Module CanvasList
                     EndIf
                   Next
                 EndIf
-                Break ; can only hover on one item!
+              Else
+                _draw = Bool(_draw Or *item\hover)
+                *item\hover = #False
               EndIf
             Next
           EndIf
           UnlockMutex(*this\mItems)
           
-          draw(*this)
+          If _draw ;only draw if state change occured
+            draw(*this)
+          EndIf
         EndIf
         
         setTooltip(*this, tooltip$)
+        ;}
         
+        ;{ #PB_EventType_KeyUp
       Case #PB_EventType_KeyUp
         Select GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Key)
           Case #PB_Shortcut_A
@@ -1431,8 +1597,9 @@ Module CanvasList
               draw(*this)
             EndIf
         EndSelect
+        ;}
         
-        
+        ;{ #PB_EventType_KeyDown
       Case #PB_EventType_KeyDown
         Protected key = GetGadgetAttribute(*this\gCanvas, #PB_Canvas_Key)
         Protected redraw.b
@@ -1532,6 +1699,8 @@ Module CanvasList
           
           
         EndIf
+        ;}
+        
     EndSelect
     
     
@@ -1563,37 +1732,60 @@ Module CanvasList
   
   ;- Public Gadget Functions
   
-  Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1)
+  Procedure NewCanvasListGadget(x, y, width, height, useExistingCanvas = -1, theme$="")
     Protected *this.gadget
     *this = AllocateStructure(gadget)
     *this\vt = ?vt
+    
+    ; create canvas or use existing
+    If useExistingCanvas = -1
+      *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
+    Else
+      If IsGadget(useExistingCanvas)
+        *this\gCanvas = useExistingCanvas
+        ResizeGadget(*this\gCanvas, x, y, width, height)
+      EndIf
+    EndIf
+    
+    If Not *this\gCanvas
+      FreeStructure(*this)
+      ProcedureReturn #Null
+    EndIf
     
     ; Mutex creation
     *this\mItems = CreateMutex()
     *this\mItemAddRemove = CreateMutex()
     
     ; set parameters
-    *this\fontHeight = getFontHeightPixel()
-    *this\scrollWheelDelta = *this\fontHeight*4
+    *this\scrollWheelDelta = getFontHeightPixel()*4
     
-    ; theme
-    DataSection
-      themeStart:
-      IncludeBinary "theme/modList.json"
-      themeEnd:
-    EndDataSection
-    SetTheme(*this, PeekS(?themeStart, ?themeEnd-?themeStart, #PB_UTF8))
-    
-    ; create canvas or use existing
-    If useExistingCanvas = -1
-      *this\gCanvas = CanvasGadget(#PB_Any, x, y, width, height, #PB_Canvas_Keyboard) ; keyboard focus requried for mouse wheel on windows
-    Else
-      If Not IsGadget(useExistingCanvas)
-        ProcedureReturn #False
-      EndIf
-      *this\gCanvas = useExistingCanvas
-      ResizeGadget(*this\gCanvas, x, y, width, height)
-    EndIf
+    ; set default theme
+    *this\theme\item\Width              = 500
+    *this\theme\item\Margin             = 2
+    *this\theme\item\Padding            = 4
+    ReDim *this\theme\item\Lines(1)
+    *this\theme\item\Lines(0)\Bold      = #True
+    *this\theme\item\Lines(1)\Italic    = #True
+    *this\theme\item\Image\Display      = #True
+    *this\theme\item\Image\MinHeight    = 80
+    *this\theme\item\Image\AspectRatio  = 9/16
+    *this\theme\responsive\Columnize    = #False
+    *this\theme\responsive\ExpandItems  = #True
+    *this\theme\scrollbarWidth          = 12
+    *this\theme\color\ItemText$         = "#2F4763"
+    *this\theme\color\ItemSelected$     = "#007BEE20"
+    *this\theme\color\ItemBorder$       = "#829BAF"
+    *this\theme\color\ItemBackground$   = "#FFFFFF"
+    *this\theme\color\ItemHover$        = "#007BEE10"
+    *this\theme\color\Border$           = "#829BAFFF"
+    *this\theme\color\Background$       = "#2F476340"
+    *this\theme\color\Scrollbar$        = "#2F476340"
+    *this\theme\color\ScrollbarHover$   = "#2F4763C0"
+    *this\theme\color\SelectionBox$     = "#007BEE80"
+    updateItemLineFonts(*this)
+   
+    ; load user theme theme if defined
+    SetTheme(*this, theme$)
     
     *this\scrollbar\pagelength = height
     *this\scrollbar\disabled = #True
@@ -1619,18 +1811,9 @@ Module CanvasList
   EndProcedure
   
   Procedure Free(*this.gadget)
-    LockMutex(*this\mItemAddRemove)
-    LockMutex(*this\mItems)
-    ForEach *this\items()
-      ; free items!
-      ; TODO free all item related memory?
-    Next
-    ClearList(*this\items())
-    UnlockMutex(*this\mItems)
+    ClearItems(*this)
     FreeMutex(*this\mItems)
-    UnlockMutex(*this\mItemAddRemove)
     FreeMutex(*this\mItemAddRemove)
-    
     FreeGadget(*this\gCanvas)
     FreeStructure(*this)
   EndProcedure
@@ -1688,7 +1871,11 @@ Module CanvasList
     ProcedureReturn *item
   EndProcedure
   
-  Procedure RemoveItem(*this.gadget, *item)
+  Procedure RemoveItem(*this.gadget, *item.item)
+    ItemClearIcons(*item)
+    ItemClearButtons(*item)
+    imageCacheRemove(*item\image, *this\theme\item\Image\_w, *this\theme\item\Image\_h)
+    
     LockMutex(*this\mItems)
     ChangeCurrentElement(*this\items(), *item) ; no error check, may cause IMA
     DeleteElement(*this\items(), 1)
@@ -1696,8 +1883,8 @@ Module CanvasList
     
     Protected i, k ; each item removal potentially resets "tabAlign"
     For i = 0 To ArraySize(*this\theme\item\Lines())
-      For k = 0 To ArraySize(*this\theme\item\Lines(i)\tabX())
-        *this\theme\item\Lines(i)\tabX(k) = 0
+      For k = 0 To ArraySize(*this\theme\item\Lines(i)\_tabX())
+        *this\theme\item\Lines(i)\_tabX(k) = 0
       Next
     Next
     
@@ -1707,14 +1894,19 @@ Module CanvasList
   EndProcedure
   
   Procedure ClearItems(*this.gadget)
+    ForEach *this\items()
+      ItemClearButtons(*this\items())
+      ItemClearIcons(*this\items())
+      imageCacheRemove(*this\items()\image, *this\theme\item\Image\_w, *this\theme\item\Image\_h)
+    Next
     LockMutex(*this\mItems)
     ClearList(*this\items())
     UnlockMutex(*this\mItems)
     
     Protected i, k ; reset "tabAlign"
     For i = 0 To ArraySize(*this\theme\item\Lines())
-      For k = 0 To ArraySize(*this\theme\item\Lines(i)\tabX())
-        *this\theme\item\Lines(i)\tabX(k) = 0
+      For k = 0 To ArraySize(*this\theme\item\Lines(i)\_tabX())
+        *this\theme\item\Lines(i)\_tabX(k) = 0
       Next
     Next
     
@@ -1856,23 +2048,31 @@ Module CanvasList
   EndProcedure
   
   Procedure SetTheme(*this.gadget, theme$)
-    Protected json, theme.theme, i
-    json = ParseJSON(#PB_Any, theme$, #PB_JSON_NoCase)
-    If json
-      For i = 0 To ArraySize(*this\theme\item\Lines())
-        If *this\theme\item\Lines(i)\FontID And IsFont(*this\theme\item\Lines(i)\FontID)
-          FreeFont(*this\theme\item\Lines(i)\FontID)
-          *this\theme\item\Lines(i)\FontID = 0
-        EndIf
-      Next
-      ExtractJSONStructure(JSONValue(json), @theme, theme)
-      CopyStructure(@theme, *this\theme, theme)
-      FreeJSON(json)
-      updateItemLineFonts(*this)
+    Protected json, i
+    If theme$
+      json = ParseJSON(#PB_Any, theme$, #PB_JSON_NoCase)
+      If json
+        ; free fonts (may be overwritten with new definition)
+        For i = 0 To ArraySize(*this\theme\item\Lines())
+          If *this\theme\item\Lines(i)\_fontID And IsFont(*this\theme\item\Lines(i)\_fontID)
+            FreeFont(*this\theme\item\Lines(i)\_fontID)
+            *this\theme\item\Lines(i)\_fontID = 0
+          EndIf
+        Next
+        ExtractJSONStructure(JSONValue(json), *this\theme, theme, #PB_JSON_NoClear)
+        FreeJSON(json)
+        
+        ; initialize fonts
+        updateItemLineFonts(*this)
+        redraw(*this)
+        ProcedureReturn #True
+      Else
+        Debug JSONErrorMessage()
+        ProcedureReturn #False
+      EndIf
     Else
-      Debug JSONErrorMessage()
+      ProcedureReturn #False
     EndIf
-    
   EndProcedure
   
   Procedure.s GetThemeJSON(*this.gadget, pretty=#False)
@@ -1966,7 +2166,22 @@ Module CanvasList
   
   ;- Public Item Functions
   
+  Procedure ItemSetText(*this.item, text$)
+    *this\text$ = text$
+    draw(*this\parent)
+  EndProcedure
+  
+  Procedure.s ItemGetText(*this.item)
+    ProcedureReturn *this\text$
+  EndProcedure
+  
   Procedure ItemSetImage(*this.item, image)
+    Protected *gadget.gadget
+    
+    *gadget = *this\parent
+    imageCacheRemove(*this\image, *gadget\theme\item\Image\_w, *gadget\theme\item\Image\_h)
+    imageCacheAdd(image, *gadget\theme\item\Image\_w, *gadget\theme\item\Image\_h)
+    
     *this\image = image
     *this\refreshContentPosition = #True
     draw(*this\parent)
@@ -2023,7 +2238,7 @@ Module CanvasList
       *icon\hint$ = hint$
       *this\refreshContentPosition = #True
       UnlockMutex(*gadget\mItems)
-      updateItemPosition(*this\parent)
+      updateItemPosition(*this\parent) ; will add icon to image cache
       draw(*this\parent)
     Else
       deb("CanvasList:: image not valid")
@@ -2035,6 +2250,10 @@ Module CanvasList
     Protected *icon.itemIcon
     *gadget.gadget = *this\parent
     LockMutex(*gadget\mItems)
+    ForEach *this\icons()
+      ; mark cached images as not used anymore, if no reference exists, image can be freed
+      imageCacheRemove(*this\icons()\image, *this\icons()\box\width, *this\icons()\box\height)
+    Next
     ClearList(*this\icons())
     *this\refreshContentPosition = #True
     UnlockMutex(*gadget\mItems)

@@ -104,7 +104,7 @@ mod_has_settings      = Mod-Einstellungen werden unterstützt
 mod_update_available  = Aktualisierung verfügbar
 mod_up2date           = Modifikation ist auf dem aktuellen Stand
 mod_deprecated  = Mod-Format ist veraltet und der Mod wird eventuell von Transport Fever nicht korrekt erkannt.
-mod_lua_error   = Feler beim einlesen der mod.lua Datei
+mod_lua_error   = Fehler beim Einlesen der mod.lua Datei
 
 repo_filter     = Mods filtern / suchen
 repo_sort       = Mods sortieren
@@ -120,6 +120,7 @@ backup_restore  = Sicherung wiederherstellen
 backup_delete   = Sicherung entfernen
 backup_folder   = Ordner mit Sicherheitskopien öffnen
 backup_refresh  = Liste von Sicherungen aktualisieren
+backup_open_file = Sicherheitskopie öffnen
 
 save_installed      = Mod ist installiert
 save_not_installed  = Mod ist nicht installiert
@@ -185,7 +186,9 @@ backup_auto_delete_3months  = nach drei Monaten
 backup_auto_delete_6months  = nach sechs Monaten
 backup_auto_delete_1year    =  nach einem Jahr
 versioncheck    = Nutze Versionsvergleich für Update
-versioncheck_tip = When aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
+versioncheck_tip = Wenn aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
+ui_compact      = Kompakte Mod-Listen
+ui_compact_tip  = In der kompakten Ansicht werden nur die wichtigsten Informationen einer Mod angezeigt und das Vorschaubild versteckt.
 locale          = Lokalisierung (Sprache)
 cancel          = Abbrechen
 cancel_tip      = Änderungen werden nicht übernommen
@@ -267,13 +270,12 @@ download_finish = Herunterladen erfolgreich
 download_fail   = Fehler beim Herunterladen von {modname}
 download_429    = Zu viele Anfragen, bitte später erneut versuchen
 downloading     = Lade '{modname}' herunter
-repository    = Repository
-confirm_add   = Soll dieses Repository hinzugefügt werden?
-maintained_by = verwaltet von
-description = Beschreibung:
-info_url    = Weiterführende Informationen:
-terms       = Nutzungsbedingungen:
-mod_count   = Mods im Repository.
+last_update     = Zuletzt aktualisiert am %dd.%mm.%yyyy
+confirm_add     = Soll dieses Repository hinzgefügt werden?
+repository_info = '{repo}' wird verwaltet von {maintainer}.
+info_url        = Weitere Informationen: {url}
+terms           = Nutzungsbedingungen: {url}
+mod_count       = {count} Mods im Repository
 error             = Kann Repository nicht hinzufügen
 error_download    = Herunterladen fehlgeschlagen. Überprüfe die URL auf Fehler und stelle sicher, dass TPFMM Zugriff zum Internet hat.
 error_json        = Das Repository gibt kein korrektes JSON.
@@ -283,9 +285,15 @@ error_dup_source  = Die Repository ID ist identisch mit einem bereits geladenen 
 error_no_mods     = TPFMM kann keine Mods in dem Repository finden. Bitte kontaktiere den Verwalter.
 error_unknown     = Das Repository konnte wegen einem unbekannten Fehler nicht hinzugefügt werden. Bitte versuche es erneut oder sende einen Fehlerbericht.
 
+[backup]
+delete_mod_title  = Sicherheitskopie von '{name}' löschen?
+delete_mod_body   = Soll die Sicherheitskopie von '{name}' wirklich gelöscht werden?
+delete_mods_title = {number} Sicherheitskopien löschen?
+delete_mods_body  = Sollen die {number} markierten Sicherheitskopien gelöscht werden?
+
 [update]
 available        = Neue Version von TPFMM verfügbar.
-available_text   = {version} ist verfügbar.\nSoll die Website zum herunterladen der neuen Version jetzt geöffnet werden?
+available_text   = {name} ist verfügbar.\nSoll die Website zum herunterladen der neuen Version jetzt geöffnet werden?
 
 [mods]
 filter_all      = Zeige Alle Ordner

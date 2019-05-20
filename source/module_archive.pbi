@@ -150,15 +150,15 @@ Module archive
     EndIf
     
     ; 7z will put files in subdir with respect to current working dir!
-    directory$  = misc::path(directory$) ; single / at the end
-    root$       = GetPathPart(Left(directory$, Len(directory$)-1))
-    directory$  = GetFilePart(Left(directory$, Len(directory$)-1))
+    directory$  = misc::path(directory$, #False) ; no trailing PS
+    root$       = GetPathPart(directory$)
+    directory$  = GetFilePart(directory$)
     
     ; define program
     CompilerSelect #PB_Compiler_OS
       CompilerCase #PB_OS_Windows
         program$ = "7z/7z.exe"
-        parameter$ = "a "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+misc::path(directory$)+"*"+#DQUOTE$
+        parameter$ = "a "+#DQUOTE$+archive$+#DQUOTE$+" "+#DQUOTE$+directory$+#PS$+"*"+#DQUOTE$
         
       CompilerCase #PB_OS_Linux
         program$ = "zip"

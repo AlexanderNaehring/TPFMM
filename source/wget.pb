@@ -9,19 +9,19 @@
     
     setUserAgent(useragent$="")
     setTimeout(timeout.l)
-    setAsync(async.b)
     setUserData(*userdata)
     
     getUserAgent.s()
     getTimeout.l()
-    getAsync.b()
     getUserData()
     getProgress.b()
     getRemote.s()
     getFilename.s()
     getLastError.s()
     
+    isFinished()
     waitFinished(timeout.l = 0)
+    abort()
     
     EventOnProgress(event=0)
     EventOnSuccess(event=0)
@@ -32,25 +32,33 @@
     CallbackOnError(*function.callbackFunction = #Null)
   EndInterface
   
-  Declare NewDownload(remote$, local$, timeout.l=10, async.b=#True)
+  Declare NewDownload(remote$, local$, timeout.l=10)
+  
+  Declare setProxy(host$, username$="", password$="")
+  Declare freeAll()
+EndDeclareModule
+
+Module wget
+  
+  ;{ Declares
   Declare StartDownload(*wget.wget)
   Declare FreeDownload(*wget.wget)
   
   Declare setUserAgent(*wget.wget, useragent$="")
   Declare setTimeout(*wget.wget, timeout.l)
-  Declare setAsync(*wget.wget, async.b)
   Declare setUserData(*wget.wget, *userdata)
   
   Declare.s getUserAgent(*wget.wget)
   Declare.l getTimeout(*wget.wget)
-  Declare.b getAsync(*wget.wget)
   Declare getUserData(*wget.wget)
   Declare.b getProgress(*wget.wget)
   Declare.s getRemote(*wget.wget)
   Declare.s getFilename(*wget.wget)
   Declare.s getLastError(*wget.wget)
   
+  Declare isFinished(*wget.wget)
   Declare waitFinished(*wget.wget, timeout.l = 0)
+  Declare abort(*wget.wget)
   
   Declare EventOnProgress(*wget.wget, event=0)
   Declare EventOnSuccess(*wget.wget, event=0)
@@ -59,12 +67,7 @@
   Declare CallbackOnProgress(*wget.wget, *function.callbackFunction = #Null)
   Declare CallbackOnSuccess(*wget.wget, *function.callbackFunction = #Null)
   Declare CallbackOnError(*wget.wget, *function.callbackFunction = #Null)
-  
-  Declare setProxy(host$, username$="", password$="")
-  Declare freeAll()
-EndDeclareModule
-
-Module wget
+  ;}
   
   ;{ VT
   DataSection
@@ -74,19 +77,19 @@ Module wget
     
     Data.i @setUserAgent()
     Data.i @setTimeout()
-    Data.i @setAsync()
     Data.i @setUserData()
     
     Data.i @getUserAgent()
     Data.i @getTimeout()
-    Data.i @getAsync()
     Data.i @getUserData()
     Data.i @getProgress()
     Data.i @getRemote()
     Data.i @getFilename()
     Data.i @getLastError()
     
+    Data.i @isFinished()
     Data.i @waitFinished()
+    Data.i @abort()
     
     Data.i @EventOnProgress()
     Data.i @EventOnSuccess()
@@ -115,7 +118,6 @@ Module wget
     local$
     useragent$
     timeout.l
-    async.b
     
     progress.b
     exitCode.i
@@ -136,7 +138,9 @@ Module wget
   Global NewList *objects._wget()
   ;}
   
-  misc::useBinary("wget\wget.exe", #False)
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+    misc::useBinary("wget\wget.exe", #False)
+  CompilerEndIf
   
   CompilerIf Defined(debugger, #PB_Module)
     ; in bigger project, use custom module (writes debug messages to log file)
@@ -154,10 +158,14 @@ Module wget
     Protected program$, parameter$,
               str$, STDOUT$, STDERR$,
               HTTPstatus
-    Protected regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
+    Protected regExpProgress
     
-    program$ = "wget\wget.exe"
-    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+      program$ = "wget\wget.exe"
+    CompilerElse
+      program$ = "wget"
+    CompilerEndIf
+    parameter$ = "--server-response --timeout="+Str(*this\timeout)+" --tries=1 --https-only -U "+#DQUOTE$+*this\useragent$+#DQUOTE$+" "+#DQUOTE$+"--header='Accept: text/html,*/*'"+#DQUOTE$+" --progress=dot:Default -O "+#DQUOTE$+*this\local$+#DQUOTE$+" "+#DQUOTE$+*this\remote$+#DQUOTE$
     ; --proxy-user=user --proxy-password=password  or use environment variable
     ; -U user-agent
     ; -S print HTTP headers
@@ -174,7 +182,8 @@ Module wget
     *this\program = RunProgram(program$, parameter$, GetCurrentDirectory(), #PB_Program_Open|#PB_Program_Read|#PB_Program_Error|#PB_Program_Hide)
     
     If *this\program
-      deb("wget:: #"+*this+" downloading...")
+      deb("wget:: start #"+*this+" "+#DQUOTE$+*this\remote$+#DQUOTE$+" > "+#DQUOTE$+*this\local$+#DQUOTE$)
+      regExpProgress = CreateRegularExpression(#PB_Any, "([0-9]+)%")
       While ProgramRunning(*this\program)
         If *this\cancel
           deb("wget:: #"+*this+" cancel download, kill wget.exe")
@@ -185,12 +194,10 @@ Module wget
         EndIf
         If AvailableProgramOutput(*this\program)
           str$ = ReadProgramString(*this\program)
-  ;         Debug str$
           STDOUT$ + str$ + #CRLF$
         EndIf
         str$ = ReadProgramError(*this\program)
         If str$
-  ;         Debug str$
           STDERR$ + str$ + #CRLF$
           
           If ExamineRegularExpression(regExpProgress, str$)
@@ -205,7 +212,9 @@ Module wget
             EndIf
           EndIf
         EndIf
+        Delay(1)
       Wend
+      FreeRegularExpression(regExpProgress)
       If Not *this\cancel
         *this\exitCode = ProgramExitCode(*this\program)
       EndIf
@@ -213,7 +222,7 @@ Module wget
       *this\program = #Null
       
       If *this\exitCode = 0
-        Deb("wget:: #"+*this+" download ok")
+        Deb("wget:: #"+*this+": download ok")
       Else
         Select *this\exitCode
           Case 0 ; no error, cannot be reached
@@ -239,7 +248,7 @@ Module wget
             *this\lastError$ = "unknown error"
         EndSelect
         
-        deb("wget:: "+*this\lastError$)
+        deb("wget:: #"+*this+": "+*this\lastError$)
         
         If STDOUT$
           deb("wget:: #"+*this+" STDOUT output:"+#CRLF$+STDOUT$+#CRLF$)
@@ -251,7 +260,7 @@ Module wget
       
     Else ; could not start program
       *this\lastError$ = "could not start wget"
-      deb("wget:: #"+*this+" "+*this\lastError$)
+      deb("wget:: #"+*this+": "+*this\lastError$)
       *this\exitCode = -1
     EndIf
     
@@ -260,7 +269,6 @@ Module wget
     UnlockMutex(*this\mutex)
     
     Protected ret = *this\exitCode
-    
     ; attention: OnError and OnSuccess callbacks might be used to free() *this!
     ; callback at the end of the thread!
     ; STILL, if e.g. "waitFinished()" is active and the callback is used to free() the data, waitFinished() will have invalid memory access!
@@ -284,21 +292,19 @@ Module wget
       EndIf
     EndIf
     
-    FreeRegularExpression(regExpProgress)
     ProcedureReturn ret
   EndProcedure
   
   ;- Public
   
-  Procedure NewDownload(remote$, local$, timeout.l=10, async.b=#True)
+  Procedure NewDownload(remote$, local$, timeout.l=10)
     Protected *this._wget
     *this = AllocateStructure(_wget)
     *this\vt = ?vt
     
-    *this\remote$ = remote$
+    *this\remote$ = URLEncoder(remote$)
     *this\local$  = local$
     *this\timeout = timeout
-    *this\async   = async
     *this\mutex   = CreateMutex()
     
     LockMutex(_mutexList)
@@ -312,13 +318,8 @@ Module wget
   Procedure StartDownload(*this._wget)
     If TryLockMutex(*this\mutex)
       *this\cancel = #False
-      If *this\async
-        *this\thread = CreateThread(@downloadThread(), *this)
-        ProcedureReturn Bool(*this\thread)
-      Else
-        *this\thread = #False
-        ProcedureReturn downloadThread(*this)
-      EndIf
+      *this\thread = CreateThread(@downloadThread(), *this)
+      ProcedureReturn Bool(*this\thread)
     Else
       deb("wget:: download already active")
       ProcedureReturn #False
@@ -361,10 +362,6 @@ Module wget
     *this\timeout = timeout
   EndProcedure
   
-  Procedure setAsync(*this._wget, async.b)
-    *this\async = async
-  EndProcedure
-  
   Procedure setUserData(*this._wget, *userdata)
     *this\userdata = *userdata
   EndProcedure
@@ -377,10 +374,6 @@ Module wget
     ProcedureReturn *this\timeout
   EndProcedure
   
-  Procedure.b getAsync(*this._wget)
-    ProcedureReturn *this\async
-  EndProcedure
-  
   Procedure getUserData(*this._wget)
     ProcedureReturn *this\userdata
   EndProcedure
@@ -390,7 +383,7 @@ Module wget
   EndProcedure
   
   Procedure.s getRemote(*this._wget)
-    ProcedureReturn *this\remote$
+    ProcedureReturn URLDecoder(*this\remote$)
   EndProcedure
   
   Procedure.s getFilename(*this._wget)
@@ -399,6 +392,10 @@ Module wget
   
   Procedure.s getLastError(*this._wget)
     ProcedureReturn *this\lastError$
+  EndProcedure
+  
+  Procedure isFinished(*this._wget)
+    ProcedureReturn Bool(Not IsThread(*this\thread))
   EndProcedure
   
   Procedure waitFinished(*this._wget, timeout.l=0) ; should not be called in a callback function, as the thread itself calls the callback
@@ -421,6 +418,13 @@ Module wget
       EndIf
     Else ; no thread active
       ProcedureReturn #True
+    EndIf
+  EndProcedure
+  
+  Procedure abort(*this._wget)
+    If *this\thread And IsThread(*this\thread)
+      *this\cancel = #True
+      WaitThread(*this\thread)
     EndIf
   EndProcedure
   

@@ -22,7 +22,7 @@
       IncludeBinary file
       _str#MacroExpandedCount#End:
     EndDataSection
-    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start-1, #PB_UTF8)
+    var = PeekS(?_str#MacroExpandedCount#Start, ?_str#MacroExpandedCount#End - ?_str#MacroExpandedCount#Start, #PB_UTF8|#PB_ByteLength)
   EndMacro
   
   Macro IncludeAndLoadXML(xml, file)
@@ -72,10 +72,10 @@
     misc::extractBinary(file, ?_bin#MacroExpandedCount#Start, ?_bin#MacroExpandedCount#End - ?_bin#MacroExpandedCount#Start, overwrite)
   EndMacro
   
-  Declare.s path(path$, delimiter$ = "")
+  Declare.s path(path$, trailingPS=#True, ps$=#PS$)
   Declare.s getDirectoryName(path$)
   Declare VersionCheck(current$, required$)
-  Declare CreateDirectoryAll(dir$, delimiter$ = "")
+  Declare CreateDirectoryAll(dir$)
   Declare extractBinary(filename$, *adress, len.i, overwrite = #True)
   Declare ResizeCenterImage(im, width, height, mode = #PB_Image_Smooth)
   Declare HexStrToMem(hex$, *memlen = 0)
@@ -103,43 +103,54 @@ EndDeclareModule
 
 Module misc
  
-  Procedure.s path(path$, delimiter$ = "")
-    path$ + "/"                             ; add a / delimiter to the end
-    path$ = ReplaceString(path$, "\", "/")  ; replace all \ with /
-    While FindString(path$, "//")           ; strip multiple /
-      path$ = ReplaceString(path$, "//", "/")
+  CompilerIf Defined(debugger, #PB_Module)
+    UseModule debugger
+  CompilerElse
+    Macro deb(s)
+      Debug s
+    EndMacro
+  CompilerEndIf
+  
+  Procedure.s path(path$, trailingPS=#True, ps$=#PS$)
+    
+    ; fix all wrong ps in path$
+    If ps$ = "/"
+      ReplaceString(path$, "\", ps$, #PB_String_InPlace) 
+    ElseIf ps$ = "\"
+      ReplaceString(path$, "/", ps$, #PB_String_InPlace)
+    Else
+      Debug "unknown path delimiter"
+    EndIf
+    
+    ; strip multiples
+    While FindString(path$, ps$+ps$)
+      path$ = ReplaceString(path$, ps$+ps$, ps$)
     Wend
-    If delimiter$ = ""
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        delimiter$ = "\"
-      CompilerElse
-        delimiter$ = "/"
-      CompilerEndIf
+    
+    If trailingPS
+      If Right(path$, 1) <> ps$
+        path$ + ps$
+      EndIf
+    Else
+      If Right(path$, 1) = ps$
+        path$ = Left(path$, Len(path$)-1)
+      EndIf
     EndIf
-    If delimiter$ <> "/"
-      path$ = ReplaceString(path$, "/", delimiter$)
-    EndIf
+    
     ProcedureReturn path$  
   EndProcedure
   
-  Procedure CreateDirectoryAll(dir$, delimiter$ = "")
+  Procedure CreateDirectoryAll(dir$)
     Protected result, dir_sub$, dir_total$, count
-    If delimiter$ = ""
-      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-        delimiter$ = "\"
-      CompilerElse
-        delimiter$ = "/"
-      CompilerEndIf
-    EndIf
     
-    dir$ = Path(dir$, delimiter$)
+    dir$ = Path(dir$)
     
     If FileSize(dir$) = -2
       ProcedureReturn #True
     EndIf
     
     count = 1
-    dir_sub$ = StringField(dir$, count, delimiter$) + delimiter$
+    dir_sub$ = StringField(dir$, count, #PS$)
     dir_total$ = dir_sub$
     
     While dir_sub$ <> ""
@@ -147,22 +158,15 @@ Module misc
         CreateDirectory(dir_total$)
       EndIf
       count + 1
-      dir_sub$ = StringField(dir$, count, delimiter$)
-      dir_total$ + dir_sub$ + delimiter$
+      dir_sub$ = StringField(dir$, count, #PS$)
+      dir_total$ + #PS$ + dir_sub$
     Wend
     
-    
-    If FileSize(dir$) = -2
-      ProcedureReturn #True
-    EndIf
-    ProcedureReturn #False
+    ProcedureReturn Bool(FileSize(dir$) = -2)
   EndProcedure
   
   Procedure.s getDirectoryName(path$)
-    path$ = path(path$)
-    path$ = Left(path$, Len(path$)-1)
-    path$ = GetFilePart(path$)
-    ProcedureReturn path$
+    ProcedureReturn GetFilePart(path(path$, #False))
   EndProcedure
   
   Procedure VersionCheck(current$, required$)
@@ -353,43 +357,29 @@ Module misc
     ; 0   = path okay, executable found and writing possible
     ; 1   = path okay, executable found but cannot write
     ; 2   = path not okay
-    If Dir$
-      If FileSize(Dir$) = -2
-        Dir$ = Path(Dir$)
-        If testmode
-          ; in testmode, do not check if directory is correct
-          ProcedureReturn 0
-        EndIf
-        If FileSize(Dir$ + "res") <> -2
-          ; required diretories not found -> wrong path
-          ProcedureReturn 2
-        EndIf
-        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
-          If FileSize(Dir$ + "TransportFever.exe") > 1 Or FileSize(Dir$ + "TransportFeverLauncher.exe") > 1 Or FileSize(Dir$ + "TransportFever") > 1
-            ; TrainFever.exe is located in this path!
-            ; seems to be valid
-            
-            ; check if able to write to path
-            If CreateFile(0, Dir$ + "TPFMM.tmp")
-              CloseFile(0)
-              DeleteFile(Dir$ + "TPFMM.tmp")
-              ProcedureReturn 0
-            EndIf
-            ProcedureReturn 1
+    Dir$ = Path(Dir$)
+    If Dir$ And FileSize(Dir$) = -2
+      If testmode Or
+         FileSize(Dir$ + "TransportFever.exe") > 1 Or
+         FileSize(Dir$ + "TransportFeverLauncher.exe") > 1 Or
+         FileSize(Dir$ + "TransportFever") > 1 ; Linux (native or wine)
+        ; TrainFever.exe is located in this path!
+        
+        ; check if able to write to path
+        If CreateFile(0, Dir$ + "TPFMM.tmp")
+          CloseFile(0)
+          DeleteFile(Dir$ + "TPFMM.tmp")
+          
+          ; make sure mods foler is there
+          If FileSize(dir$ + "mods") <> -2
+            CreateDirectory(dir$ + "mods")
           EndIf
-        CompilerElse
-          If FileSize(Dir$ + "TransportFever") > 1
-            If CreateFile(0, Dir$ + "TPFMM.tmp")
-              CloseFile(0)
-              DeleteFile(Dir$ + "TPFMM.tmp")
-              ProcedureReturn 0
-            EndIf
-            ProcedureReturn 1
-          EndIf
-        CompilerEndIf
+          ProcedureReturn 0 ; ok
+        EndIf
+        ProcedureReturn 1 ; no write permission
       EndIf
     EndIf
-    ProcedureReturn 2
+    ProcedureReturn 2 ; wrong folder
   EndProcedure
   
   Procedure examineDirectoryRecusrive(root$, List files$(), path$="")
@@ -443,7 +433,7 @@ Module misc
     Protected name$
     
     path$ = path(path$)
-    dir = ExamineDirectory(#PB_Any, path(path$), "")
+    dir = ExamineDirectory(#PB_Any, path$, "")
     If dir
       While NextDirectoryEntry(dir)
         If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
@@ -459,9 +449,9 @@ Module misc
       FinishDirectory(dir)
       ProcedureReturn size
     Else
-      Debug "could not examine"
+      deb("misc:: could not examine "+path$)
+      ProcedureReturn #False
     EndIf
-    ProcedureReturn #False
   EndProcedure
   
   Procedure compareIsGreater(*element1, *element2, options, offset, type)

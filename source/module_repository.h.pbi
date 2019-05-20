@@ -107,10 +107,10 @@ DeclareModule repository
   Declare.s modGetLink(*mod)
   Declare.s modGetThumbnailUrl(*mod)
   Declare.s modGetThumbnailFile(*mod)
-  Declare modGetThumbnailAsync(*mod, *callback, *userdata=#Null) ; will call callback when image is available
+  Prototype CallbackThumbnail(*mod, file$, *userdata) ; is called when thumbnail file is available
+  Declare modGetThumbnailAsync(*mod, *callback.CallbackThumbnail, *userdata=#Null) ; will call callback when image is available
   Declare modGetTimeChanged(*mod)
   Declare.s modGetWebsite(*mod)
-  Declare modSetThumbnailImage(*mod, image)
   
   ; work on file object
   Declare fileGetMod(*file)
@@ -121,6 +121,9 @@ DeclareModule repository
   Declare.s fileGetFolderName(*file)
   Declare.s fileGetFilename(*file)
   
+  ; static functions
+  Declare downloadURL(url$, filename$="", *userdata=#Null)
+  
   ; callbacks to GUI
   Declare BindEventCallback(Event, *callback)
   Declare BindEventPost(RepoEvent, WindowEvent, *callback)
@@ -130,6 +133,5 @@ DeclareModule repository
   Prototype CallbackClearList()
   Prototype CallbackRefreshFinished()
   
-  Prototype CallbackThumbnail(image, *userdata)
   
 EndDeclareModule

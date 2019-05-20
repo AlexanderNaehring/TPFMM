@@ -6,6 +6,7 @@
     #ErrorVersionUnknown
     #ErrorNotSaveFile
     #ErrorModNumberError
+    #ErrorMemoryError
   EndEnumeration
   
   Structure mod
@@ -99,11 +100,20 @@ Module tfsave
               For i = 0 To numMods-1
                 AddElement(*info\mods())
                 len = ReadLong(file)
-                pos = Loc(file)
-                *buffer = AllocateMemory(len)
-                ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
-                *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
-                FreeMemory(*buffer)
+                If len
+                  *buffer = AllocateMemory(len)
+                  If *buffer
+                    ReadData(file, *buffer, len) ; do not directly read string, as readString might not read exactly "len" bytes
+                    *info\mods()\name$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
+                    FreeMemory(*buffer)
+                  Else
+                    FileSeek(file, len, #PB_Relative)
+                    *info\error = #ErrorMemoryError
+                    deb("tfsave:: could not allocate memory ("+len+") for mod "+i)
+                  EndIf
+                Else
+                  Debug "zero-string for name in mod "+i
+                EndIf
                 *info\mods()\unknown1 = ReadLong(file) ; (?)
               Next
             EndIf
@@ -122,10 +132,21 @@ Module tfsave
               For i = 0 To ListSize(*info\mods())-1
                 SelectElement(*info\mods(), i)
                 len = ReadLong(file)
-                *buffer = AllocateMemory(len)
-                ReadData(file, *buffer, len)
-                *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
-                FreeMemory(*buffer)
+                If len
+                  *buffer = AllocateMemory(len)
+                  If *buffer
+                    ReadData(file, *buffer, len)
+                    *info\mods()\id$ = PeekS(*buffer, Len, #PB_UTF8|#PB_ByteLength)
+                    FreeMemory(*buffer)
+                  Else
+                    FileSeek(file, len, #PB_Relative)
+                    *info\error = #ErrorMemoryError
+                    deb("tfsave:: could not allocate memory ("+len+") for mod "+i)
+                  EndIf
+                Else
+                  Debug "zero-string for id in mod "+i
+                EndIf
+                
                 version = ReadLong(file)
                 If version <> -1
                   *info\mods()\id$ + "_"+Str(version) ; version
