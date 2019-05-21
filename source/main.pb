@@ -10,19 +10,16 @@ CompilerSelect #PB_Compiler_OS
     
   CompilerCase #PB_OS_Windows
     dir$ = GetUserDirectory(#PB_Directory_ProgramData) + "TPFMM"
-    If FileSize(GetHomeDirectory()+".tpfmm") = -2
-      Debug "migrate data"
-      ; old directory exists, migrate data
-      If FileSize(dir$) = -2
-        DeleteDirectory(dir$, "", #PB_FileSystem_Force|#PB_FileSystem_Recursive)
-      EndIf
-      If RenameFile(GetHomeDirectory()+".tpfmm", dir$)
-        Debug "data migration complete"
-      Else
-        Debug "could not migrate TPFMM settings"
+    If FileSize(dir$) <> -2 ; "new" directory does not exist
+      If FileSize(GetHomeDirectory()+".tpfmm") = -2 ; "old" directory does exist
+        Debug "migrate data: "+GetHomeDirectory()+".tpfmm >> "+dir$
+        If RenameFile(GetHomeDirectory()+".tpfmm", dir$)
+          Debug "data migration complete"
+        Else
+          Debug "could not migrate data"
+        EndIf
       EndIf
     EndIf
-    
     CreateDirectory(dir$)
     SetCurrentDirectory(dir$)
     
