@@ -116,11 +116,13 @@ Module windowSettings
     Protected Dir$, locale$, oldDir$
     Protected proxyChange.b
     Protected listThemeChange.b
+    
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     oldDir$ = settings::getString("", "path")
     settings::setString("", "path", dir$)
     
+    ; language
     locale$ = StringField(StringField(GetGadgetText(gadget("languageSelection")), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
       locale$ = "en"
@@ -133,17 +135,20 @@ Module windowSettings
     EndIf
     settings::setString("", "locale", locale$)
     
+    ; version check and compact UI
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     If settings::getInteger("ui", "compact") <> GetGadgetState(gadget("uiCompact"))
       listThemeChange = #True
       settings::setInteger("ui", "compact", GetGadgetState(gadget("uiCompact")))
     EndIf
     
+    ; backup
     settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
     settings::setInteger("backup", "before_update", GetGadgetState(gadget("backupBeforeUpdate")))
     settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("backupBeforeUninstall")))
     
+    ; proxy
     If settings::getInteger("proxy", "enabled") <> GetGadgetState(gadget("proxyEnabled")) Or
        settings::getString("proxy", "server") <> GetGadgetText(gadget("proxyServer")) Or
        settings::getString("proxy", "user") <> GetGadgetText(gadget("proxyUser")) Or
@@ -155,12 +160,14 @@ Module windowSettings
       settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     EndIf
     
-    
+    ; desktop integration
     settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
+    ; repository
     settings::setInteger("repository", "use_cache", GetGadgetState(gadget("repositoryUseCache")))
     
+    ; apply settings
     main::initProxy()
     main::updateDesktopIntegration()
     
@@ -374,7 +381,7 @@ Module windowSettings
                 #CRLF$+
                 _("repository_confirm_add")
         
-        If MessageRequester(_("repository_confirm_add"), info$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        If MessageRequester(_("repository_confirm_add"), info$, #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
           repository::AddRepository(url$)
           updateRepositoryList()
           repository::refreshRepositories() ; will trigger an event when update finished which updates the repo list again
@@ -461,7 +468,16 @@ Module windowSettings
     SetGadgetText(gadget("installationBrowse"),     _("settings_browse"))
     GadgetToolTip(gadget("installationBrowse"),     _("settings_browse_tip"))
     SetGadgetText(gadget("installationTextStatus"), "")
-               
+    
+    SetGadgetText(gadget("miscFrame"),              _("settings_other"))
+    SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
+    GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
+    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
+    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
+    
+    SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
+    SetGadgetText(gadget("languageSelection"),      "")
+    
     ; backup
     SetGadgetText(gadget("backupFolderFrame"),      _("settings_backup_folder_frame"))
     SetGadgetText(gadget("backupFolderBrowse"),     _("settings_browse"))
@@ -488,21 +504,14 @@ Module windowSettings
     SetGadgetText(gadget("backupBeforeUpdate"),     _("settings_backup_before_update"))
     SetGadgetText(gadget("backupBeforeUninstall"),  _("settings_backup_before_uninstall"))
     
-    SetGadgetText(gadget("miscFrame"),              _("settings_other"))
-    SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
-    GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
-    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
-    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
-    
-    SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
-    SetGadgetText(gadget("languageSelection"),      "")
-    
+    ; proxy
     SetGadgetText(gadget("proxyEnabled"),           _("settings_proxy_enabled"))
     SetGadgetText(gadget("proxyFrame"),             _("settings_proxy_frame"))
     SetGadgetText(gadget("proxyServerLabel"),       _("settings_proxy_server"))
     SetGadgetText(gadget("proxyUserLabel"),         _("settings_proxy_user"))
     SetGadgetText(gadget("proxyPasswordLabel"),     _("settings_proxy_password"))
     
+    ; desktop integration
     SetGadgetText(gadget("integrateText"),                _("settings_integrate_text"))
     SetGadgetText(gadget("integrateRegisterProtocol"),    _("settings_integrate_register_protocol"))
     SetGadgetText(gadget("integrateRegisterContextMenu"), _("settings_integrate_register_context"))

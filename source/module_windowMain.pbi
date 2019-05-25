@@ -856,9 +856,9 @@ Module windowMain
     
     If count > 0
       If count = 1
-        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
+        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo|32)
       Else
-        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
+        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo|32)
       EndIf
       
       If result = #PB_MessageRequester_Yes
@@ -1138,7 +1138,7 @@ Module windowMain
   
   Procedure modIconUninstall(*item.CanvasList::CanvasListItem)
     Protected *mod.mods::LocalMod = *item\GetUserData()
-    If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
+    If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
       mods::uninstall(*mod\getID())
     EndIf
   EndProcedure
@@ -1370,7 +1370,7 @@ Module windowMain
     settings::setString("export", "last", file$)
     
     If FileSize(file$) > 0
-      If Not MessageRequester(_("management_export_list"), _("management_overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+      If Not MessageRequester(_("management_export_list"), _("management_overwrite_file"), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
         ProcedureReturn #False
       EndIf
     EndIf
@@ -2155,13 +2155,13 @@ Module windowMain
         *backup = *items()\GetUserData()
         If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
                             _("backup_delete_mod_body", "name="+*backup\getName()),
-                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                            32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           *backup\delete()
         EndIf
       Else ; multiple backups selected
         If MessageRequester(_("backup_delete_mods_title", "number="+ListSize(*items())), 
                             _("backup_delete_mods_body", "number="+ListSize(*items())),
-                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                            32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           ForEach *items()
             *backup = *items()\GetUserData()
             *backup\delete()
@@ -2203,7 +2203,7 @@ Module windowMain
     If *backup
       If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
                           _("backup_delete_mod_body", "name="+*backup\getName()),
-                          #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                          32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
         *backup\delete()
       EndIf
     EndIf
