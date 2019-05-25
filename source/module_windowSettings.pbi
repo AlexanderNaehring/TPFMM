@@ -308,13 +308,23 @@ Module windowSettings
   Procedure updateRepositoryList()
     Protected NewList repos$()
     Protected repoInfo.repository::RepositoryInformation
+    Protected age$
     
     ClearGadgetItems(gadget("repositoryList"))
     repository::ReadSourcesFromFile(repos$())
     
     ForEach repos$()
       If repository::GetRepositoryInformation(repos$(), @repoInfo)
-        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount)
+        If repoInfo\age < 60
+          age$ = _("settings_repository_age_seconds", "s="+Str(repoInfo\age))
+        ElseIf repoInfo\age < 60*60
+          age$ = _("settings_repository_age_minutes", "m="+Str(repoInfo\age/60))
+        ElseIf repoInfo\age < 60*60*24
+          age$ = _("settings_repository_age_hours", "h="+Str(repoInfo\age/60/60))
+        Else
+          age$ = _("settings_repository_age_days", "d="+Str(repoInfo\age/60/60/24))
+        EndIf
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount+#LF$+age$)
       Else
         ; this repo is not loaded at the moment
         AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+_("settings_repository_not_loaded"))
@@ -411,9 +421,10 @@ Module windowSettings
     repository::refreshRepositories()
   EndProcedure
   
-  Procedure repositoryClearThumb()
+  Procedure repositoryCacheClear()
     repository::clearThumbCache()
-    MessageRequester(_("generic_success"), _("settings_repository_thumb_cleared"), #PB_MessageRequester_Info)
+    repository::clearRepoCache()
+    MessageRequester(_("generic_success"), _("settings_repository_cache_cleared"), #PB_MessageRequester_Info)
   EndProcedure
   
   Procedure showWindow()
@@ -496,16 +507,18 @@ Module windowSettings
     SetGadgetText(gadget("integrateRegisterProtocol"),    _("settings_integrate_register_protocol"))
     SetGadgetText(gadget("integrateRegisterContextMenu"), _("settings_integrate_register_context"))
     
+    ; repository
     RemoveGadgetColumn(gadget("repositoryList"), #PB_All)
-    AddGadgetColumn(gadget("repositoryList"), 0, _("settings_repository_url"), 100)
+    AddGadgetColumn(gadget("repositoryList"), 0, _("settings_repository_url"), 0)
     AddGadgetColumn(gadget("repositoryList"), 1, _("settings_repository_name"), 120)
     AddGadgetColumn(gadget("repositoryList"), 2, _("settings_repository_maintainer"), 70)
     AddGadgetColumn(gadget("repositoryList"), 3, _("settings_repository_source"), 60)
     AddGadgetColumn(gadget("repositoryList"), 4, _("settings_repository_mods"), 50)
+    AddGadgetColumn(gadget("repositoryList"), 5, _("settings_repository_age"), 80)
     SetGadgetText(gadget("repositoryAdd"),          _("settings_repository_add"))
     SetGadgetText(gadget("repositoryRemove"),       _("settings_repository_remove"))
     SetGadgetText(gadget("repositoryRefresh"),      _("settings_repository_refresh"))
-    SetGadgetText(gadget("repositoryClearThumb"),   _("settings_repository_clear_thumb"))
+    SetGadgetText(gadget("repositoryCacheClear"),   _("settings_repository_cache_clear"))
     SetGadgetText(gadget("repositoryUseCache"),     _("settings_repository_usecache"))
     GadgetToolTip(gadget("repositoryUseCache"),     _("settings_repository_usecache_tip"))
     
@@ -559,7 +572,7 @@ Module windowSettings
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
     BindGadgetEvent(gadget("repositoryRemove"), @repositoryRemove())
     BindGadgetEvent(gadget("repositoryRefresh"), @repositoryRefresh())
-    BindGadgetEvent(gadget("repositoryClearThumb"), @repositoryClearThumb())
+    BindGadgetEvent(gadget("repositoryCacheClear"), @repositoryCacheClear())
     ; receive "unhide" event
     BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
     

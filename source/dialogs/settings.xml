@@ -95,7 +95,7 @@
               <empty />
               <checkbox name='repositoryUseCache' text='Use cache' />
               <button name='repositoryRefresh' text='Refresh repositories' />
-              <button name='repositoryClearThumb' text='Clear Thumb Cache' />
+              <button name='repositoryCacheClear' text='Clear Cache' />
             </vbox>
           </hbox>
         </tab>

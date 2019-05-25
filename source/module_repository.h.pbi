@@ -37,6 +37,7 @@ DeclareModule repository
     info_url$
     terms$
     modCount.i
+    age.i
     error.b
   EndStructure
   
@@ -77,6 +78,7 @@ DeclareModule repository
   Declare refreshRepositories(async=#True)
   Declare freeAll()
   Declare clearThumbCache()
+  Declare clearRepoCache()
   Declare.b isloaded()
   Declare stopQueue(timeout = 5000)
   

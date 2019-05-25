@@ -218,15 +218,20 @@ repository_name         = Name
 repository_maintainer   = Verwalter
 repository_mods         = Mods
 repository_source       = Quell-ID
+repository_mods         = Alter
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
 repository_input_url    = Bitte gebe die URL für das Repository ein
 repository_refresh      = Repositories aktualisieren
-repository_clear_thumb  = Vorschaubilder löschen
-repository_thumb_cleared  = Zwischenspeicher für Vorschaubilder erfolgreich gelöscht.
+repository_cache_clear    = Repository Cache leeren
+repository_cache_cleared  = Zwischenspeicher erfolgreich gelöscht
 repository_usecache     = Nutze lokalen Cache
 repository_usecache_tip = Zeige die letzte lokale Version der Online-Datenbank, wenn keine Internetverbindung besteht.
 repository_not_loaded   = Nicht geladen
+repository_age_seconds  = {s} Sekunden
+repository_age_minutes  = {m} Minuten
+repository_age_hours    = {h} Stunden
+repository_age_days     = {d} Tage
 
 [management]
 install       = Füge '{name}' zu Transport Fever hinzu
