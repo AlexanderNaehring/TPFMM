@@ -706,7 +706,7 @@ Module mods
       EndIf
       If \date$ And Not \time
         \time = misc::ISO8601toEpoch(\date$)
-      ElseIf \time And Not \date$
+      ElseIf \time And \date$ = ""
         \date$ = misc::EpochToISO8601(\time)
       EndIf
     EndWith

@@ -130,6 +130,7 @@ Module windowSettings
     If locale$ <> settings::getString("", "locale")
       locale::setLocale(locale$)
       windowMain::updateStrings()
+      listThemeChange = #True
       ; no need to update strings in this window, as they will be updated on next window show()
       ; TODO update all strings, e.g. in filter/sort dialogs
     EndIf
@@ -615,7 +616,7 @@ Module windowSettings
       settings::setInteger("backup", "auto_delete_days", 0)
       SetGadgetState(gadget("backupAutoDeleteTime"), 0)
     EndIf
-      
+    
     SetGadgetState(gadget("backupAfterInstall"),    settings::getInteger("backup", "after_install"))
     SetGadgetState(gadget("backupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
     SetGadgetState(gadget("backupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))

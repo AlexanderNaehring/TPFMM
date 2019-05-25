@@ -1758,6 +1758,7 @@ Module windowMain
     
     ; buttons
     If Not settings::getInteger("ui","compact")
+      *item\ClearButtons()
       If *mod\canDownload()
         *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
       EndIf

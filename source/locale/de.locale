@@ -1,4 +1,4 @@
-; standard file, will be overwritten each time TPFMM starts
+﻿; standard file, will be overwritten each time TPFMM starts
 locale      = Deutsch
 translator  = Xanos
 
@@ -162,7 +162,7 @@ browse          = Durchsuchen
 browse_tip      = Suche manuell nach dem Installationspfad von Transport Fever
 autodetect      = Auto Pfad
 autodetect_tip  = TPFMM versucht den Pfad zur Transport Fever Installtion automatisch zu erkennen.
-open            = Öffne
+open            = Öffnen
 open_tip        = Öffne den ausgewählten Pfad
 success         = Pfad ist korrekt und TPFMM hat alle benötigten Rechte.
 failed          = TPFMM hat keine Schreibrechte für den Spielordner. Eventuell werden Administratorrechte benötigt.
