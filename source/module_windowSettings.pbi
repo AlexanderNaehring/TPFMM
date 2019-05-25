@@ -170,6 +170,22 @@ Module windowSettings
       mods::load()
     EndIf
     
+    Protected newBackupFolder$ = misc::path(GetGadgetText(gadget("backupFolder")))
+    If misc::path(mods::backupsGetFolder()) <> newBackupFolder$
+      ; backup folder changed
+      If mods::backupsCount()
+        If MessageRequester(_("settings_backup_folder_change"), _("settings_backup_folder_change_text", "number="+Str(mods::backupsCount())+#SEP+"old_folder="+mods::backupsGetFolder()+#SEP+"new_folder="+newBackupFolder$), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
+          ; move files
+          mods::backupsMoveFolder(newBackupFolder$) ; TODO start in thread?
+        Else
+          ; just change folder location
+          mods::backupsSetFolder(newBackupFolder$)
+        EndIf
+      Else ; no backups in old folder, just set new folder
+        mods::backupsSetFolder(newBackupFolder$)
+      EndIf
+    EndIf
+    
     If proxyChange
       repository::refreshRepositories()
     EndIf
@@ -193,6 +209,7 @@ Module windowSettings
   EndProcedure
   
   
+  ; Backups
   Procedure backupFolderMoved()
     DisableWindow(window, #False)
     windowProgress::closeProgressWindow()
@@ -204,38 +221,45 @@ Module windowSettings
     SetGadgetText(gadget("backupFolder"), mods::backupsGetFolder())
   EndProcedure
   
-  Procedure backupFolderMoveThread(*folder)
+  Procedure backupFolderMoveThread(*dummy)
     Protected folder$
-    folder$ = PeekS(*folder)
-    FreeMemory(*folder)
+    Protected success
+    folder$ = GetGadgetText(gadget("backupFolder"))
     
-    If mods::backupsMoveFolder(folder$)
-      PostEvent(#EventBackupFolderMoved, window, #True)
-    Else
-      PostEvent(#EventBackupFolderMoved, window, #False)
-    EndIf
+    success = mods::backupsMoveFolder(folder$)
+    PostEvent(#EventBackupFolderMoved, window, success)
   EndProcedure
   
   Procedure backupFolderMove()
-    Protected folder$
-    Protected *folder
-    
-    folder$ = PathRequester(_("settings_backup_change_folder"), mods::backupsGetFolder())
-    If folder$ = ""
-      ProcedureReturn #False
-    EndIf
-    
-    windowProgress::showProgressWindow(_("settings_backup_change_folder_wait"))
-    windowProgress::setProgressText(_("settings_backup_change_folder_wait"))
+    windowProgress::showProgressWindow(_("backup_folder_move_wait"))
+    windowProgress::setProgressText(_("backup_folder_move_wait"))
     DisableWindow(window, #True)
     
-    *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
-    PokeS(*folder, folder$)
-    threads::NewThread(@backupFolderMoveThread(), *folder, "windowSettings::backupFolderMoveThread")
-    
+    threads::NewThread(@backupFolderMoveThread(), 0, "windowSettings::backupFolderMoveThread")
+  EndProcedure
+  
+  Procedure backupFolderChange()
+    Protected valid
+    valid = Bool(FileSize(GetGadgetText(gadget("backupFolder"))) = -2)
+    DisableGadget(gadget("backupFolderOpen"), Bool(Not valid))
+  EndProcedure
+  
+  Procedure backupFolderBrowse()
+    Protected folder$
+    folder$ = GetGadgetText(gadget("backupFolder"))
+    folder$ = PathRequester(_("settings_backup_folder_change"), folder$)
+    If folder$
+      SetGadgetText(gadget("backupFolder"), folder$)
+      backupFolderChange()
+    EndIf
+  EndProcedure
+  
+  Procedure backupFolderOpen()
+    misc::openLink(GetGadgetText(gadget("backupFolder")))
   EndProcedure
   
   
+  ;Generic
   Procedure updateGadgets()
     ; check gadgets etc
     Protected ret
@@ -417,6 +441,7 @@ Module windowSettings
     SetGadgetText(gadget("cancel"),                 _("settings_cancel"))
     GadgetToolTip(gadget("cancel"),                 _("settings_cancel_tip"))
     
+    ; general
     SetGadgetText(gadget("installationFrame"),      _("settings_path"))
     SetGadgetText(gadget("installationTextSelect"), _("settings_text"))
     SetGadgetText(gadget("installationAutodetect"), _("settings_autodetect"))
@@ -426,6 +451,12 @@ Module windowSettings
     GadgetToolTip(gadget("installationBrowse"),     _("settings_browse_tip"))
     SetGadgetText(gadget("installationTextStatus"), "")
                
+    ; backup
+    SetGadgetText(gadget("backupFolderFrame"),      _("settings_backup_folder_frame"))
+    SetGadgetText(gadget("backupFolderBrowse"),     _("settings_browse"))
+    SetGadgetText(gadget("backupFolderOpen"),       _("settings_open"))
+    
+    SetGadgetText(gadget("backupAutoDeleteFrame"),  _("settings_backup_autodelete_frame"))
     SetGadgetText(gadget("backupAutoDeleteLabel"),  _("settings_backup_auto_delete"))
     ClearGadgetItems(gadget("backupAutoDeleteTime"))
     AddGadgetItem(    gadget("backupAutoDeleteTime"), 0, _("settings_backup_auto_delete_never"))
@@ -441,11 +472,10 @@ Module windowSettings
     AddGadgetItem(    gadget("backupAutoDeleteTime"), 5, _("settings_backup_auto_delete_1year"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 5, 365)
     
-    SetGadgetText(gadget("backupAutoCreateLabel"),  _("settings_backup_auto_create_label"))
+    SetGadgetText(gadget("backupAutoCreateFrame"),  _("settings_backup_autocreate"))
     SetGadgetText(gadget("backupAfterInstall"),     _("settings_backup_after_install"))
     SetGadgetText(gadget("backupBeforeUpdate"),     _("settings_backup_before_update"))
     SetGadgetText(gadget("backupBeforeUninstall"),  _("settings_backup_before_uninstall"))
-    SetGadgetText(gadget("backupFolderChange"),     _("settings_backup_change_folder"))
     
     SetGadgetText(gadget("miscFrame"),              _("settings_other"))
     SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
@@ -521,7 +551,9 @@ Module windowSettings
     BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
     BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
-    BindGadgetEvent(gadget("backupFolderChange"), @backupFolderMove())
+    BindGadgetEvent(gadget("backupFolder"), @backupFolderChange(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("backupFolderBrowse"), @backupFolderBrowse())
+    BindGadgetEvent(gadget("backupFolderOpen"), @backupFolderOpen())
 ;     BindGadgetEvent(gadget("languageSelection"), @languageSelection(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryList"), @repositoryListEvent(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
@@ -562,11 +594,11 @@ Module windowSettings
       SetGadgetState(gadget("backupAutoDeleteTime"), 0)
     EndIf
       
-    
     SetGadgetState(gadget("backupAfterInstall"),    settings::getInteger("backup", "after_install"))
     SetGadgetState(gadget("backupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
     SetGadgetState(gadget("backupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
     SetGadgetText(gadget("backupFolder"),           mods::backupsGetFolder())
+    backupFolderChange()
     
     ; proxy
     SetGadgetState(gadget("proxyEnabled"), settings::getInteger("proxy", "enabled"))

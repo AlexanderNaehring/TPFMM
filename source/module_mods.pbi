@@ -153,9 +153,11 @@ Module mods
     name$
     version$
     author$
-    time.i
+    date$
     size.q
     checksum$
+    
+    time.i ; deprecated
   EndStructure
   
   Structure backup
@@ -702,6 +704,11 @@ Module mods
       If \tpf_id$ = ""
         \tpf_id$ = StringField(GetFilePart(filename$, #PB_FileSystem_NoExtension), 1, ".")
       EndIf
+      If \date$ And Not \time
+        \time = misc::ISO8601toEpoch(\date$)
+      ElseIf \time And Not \date$
+        \date$ = misc::EpochToISO8601(\time)
+      EndIf
     EndWith
       
     If callbackNewBackup : callbackNewBackup(*this) : EndIf
@@ -739,13 +746,13 @@ Module mods
         EndSelect
       Wend
       FinishDirectory(dir)
-      If Not num
-        deb("mods:: delete empty backup folder " + root$ + folder$)
+      If folder$ And folder$ <> #PS$ And Not num ; not in root and no files in folder -> delete folder
+        deb("mods::backupsScanRecursive() delete empty backup folder " + root$ + folder$)
         DeleteDirectory(root$ + folder$, "")
       EndIf
       
     Else
-      deb("mods:: failed to examine backup directory " + root$ + folder$)
+      deb("mods::backupsScanRecursive() failed to examine backup directory " + root$ + folder$)
     EndIf
   EndProcedure
   
@@ -784,7 +791,6 @@ Module mods
             
             ;TODO delete empty folders
             
-            
             ; read backup file
             json = LoadJSON(#PB_Any, file$+".backup")
             If json
@@ -813,7 +819,7 @@ Module mods
       Wend
       FinishDirectory(dir)
     Else
-      deb("mods:: failed to examine backup directory "+folder$)
+      deb("mods::backupsClearFolderRecursive() failed to examine backup directory "+folder$)
     EndIf
     
   EndProcedure
@@ -2002,12 +2008,13 @@ Module mods
     deb("mods::doBackup("+id$+")")
     Protected backupFolder$, modFolder$, filename$, tmpFile$, md5$, backupFile$
     Protected *mod.mod, *this.backup, *old.backup
-    Protected time
+    Protected time, date$
     
     WaitSemaphore(semaphoreBackup)
     
     ; use UTC time
     time = misc::time()
+    date$ = misc::EpochToISO8601(time)
     
     backupFolder$ = backupsGetFolder()
     misc::CreateDirectoryAll(backupFolder$)
@@ -2065,12 +2072,13 @@ Module mods
     
     ; folder structure: <backups>/hash/mod_id.zip
     ; collision if backup with same hash and same mod_id already exists
-    filename$ = misc::path(md5$) + filename$ ; filename is the filename relative to the backup folder
+    filename$ = #PS$ + misc::path(md5$) + filename$ ; filename is the filename relative to the backup folder
     backupFile$ = misc::path(backupFolder$) + filename$
     deb("mods:: target backup file "+filename$)
     If FileSize(backupFile$) > 0
-      deb("mods:: backup file "+backupFile$+" already exists, delete old backup")
+      deb("mods:: backup "+md5$+" already exists, delete old backup")
       *old = FindMapElement(backups(), filename$)
+      Debug *old
       If callbackRemoveBackup : callbackRemoveBackup(*old) : EndIf
       If events(#EventRemoveBackup) : PostEvent(events(#EventRemoveBackup), *old, #Null) : EndIf
       DeleteMapElement(backups(), filename$)
@@ -2101,6 +2109,7 @@ Module mods
       backupInfo\version$   = *mod\version$
       backupInfo\author$    = modGetAuthorsString(*mod)
       backupInfo\time       = time
+      backupInfo\date$      = date$
       backupInfo\size       = FileSize(backupFile$)
       backupInfo\checksum$  = md5$
       InsertJSONStructure(JSONValue(json), backupInfo, backupInfo)
@@ -2264,69 +2273,72 @@ Module mods
     Protected backupFolder$
     
     If settings::getString("","path") = ""
+      ; no game directory
       ProcedureReturn ""
     EndIf
     
     backupFolder$ = settings::getString("backup", "folder")
     If backupFolder$ = ""
       backupFolder$ = GetCurrentDirectory()+"/backups/"
+      settings::setString("backup", "folder", backupFolder$)
     EndIf
     
-    ProcedureReturn misc::path(backupFolder$)
+    If FileSize(backupFolder$) <> -2
+      misc::CreateDirectoryAll(backupFolder$)
+    EndIf
+    
+    ProcedureReturn backupFolder$
+  EndProcedure
+  
+  Procedure backupsSetFolder(newFolder$) ; set new folder location without moving current backup files
+    deb("mods::backupsSetFolder("+newFolder$+")")
+    settings::setString("backup", "folder", newFolder$)
+    If FileSize(newFolder$) <> -2
+      misc::CreateDirectoryAll(newFolder$)
+    EndIf
+    
+    backupsScan()
+    ProcedureReturn #True
   EndProcedure
   
   Procedure backupsMoveFolder(newFolder$)
     Protected oldFolder$, entry$
-    Protected dir, error
-    Protected isempty.b
+    Protected dir, numFailed
+    
+    deb("mods::backupsMoveFolder("+newFolder$+")")
     
     ; move all data to new folder
     newFolder$ = misc::path(newFolder$)
     oldFolder$ = backupsGetFolder()
     
+    deb("mods::backupsMoveFolder() "+oldFolder$+" >> "+newFolder$)
+    
     If FileSize(newFolder$) = -2
-      ; folder does not exist
       misc::CreateDirectoryAll(newFolder$)
     EndIf
     
-    ; check if new folder is empty
-    isempty = #True
-    dir = ExamineDirectory(#PB_Any, newFolder$, "")
+    dir = ExamineDirectory(#PB_Any, oldFolder$, "")
     If dir
       While NextDirectoryEntry(dir)
-        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory And
-           (DirectoryEntryName(dir) = ".." Or DirectoryEntryName(dir) = ".")
+        If DirectoryEntryName(dir) = "." Or DirectoryEntryName(dir) = ".."
           Continue
         EndIf
-        isempty = #False
-        Break
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_Directory
+          If Not RenameFile(oldFolder$+#PS$+DirectoryEntryName(dir), newFolder$+#PS$+DirectoryEntryName(dir))
+            numFailed + 1
+            deb("mods::backupsMoveFolder() failed to move backup content: "+DirectoryEntryName(dir))
+          EndIf
+        EndIf
       Wend
       FinishDirectory(dir)
     Else
-      deb("mods:: failed to examine directory "+newFolder$)
-      error = #True
-    EndIf
-    
-    If isempty
-      ; remove directory so that old directory can be renamed
-      DeleteDirectory(newFolder$, "")
-      If RenameFile(oldFolder$, newFolder$)
-        deb("mods:: backup folder moved")
-      Else
-        deb("mods:: could not move folder")
-        error = #True
-      EndIf
-    Else
-      deb("mods:: target directory not empty")
-      error = #True
-    EndIf
-    
-    If Not error
-      settings::setString("backup", "folder", newFolder$)
-      ProcedureReturn #True
-    Else
+      deb("mods::backupsMoveFolder() could not examine folder "+oldFolder$)
       ProcedureReturn #False
     EndIf
+    
+    backupsSetFolder(newFolder$)
+    backupsScan()
+    ProcedureReturn #True
   EndProcedure
   
   Procedure backupsClearFolder()
@@ -2336,6 +2348,7 @@ Module mods
   EndProcedure
   
   Procedure backupsScan()
+    deb("mods::backupsScan()")
     WaitSemaphore(semaphoreBackup)
     If callbackClearBackups : callbackClearBackups() : EndIf
     If events(#EventClearBackups) : PostEvent(events(#EventClearBackups), #Null, #Null) : EndIf
@@ -2343,8 +2356,12 @@ Module mods
     
     backupsScanRecursive(backupsGetFolder())
     
-    deb("mods:: found "+MapSize(backups())+" backups")
+    deb("mods::backupsScan() found "+MapSize(backups())+" backups")
     SignalSemaphore(semaphoreBackup)
+  EndProcedure
+  
+  Procedure backupsCount()
+    ProcedureReturn MapSize(backups())
   EndProcedure
   
   
