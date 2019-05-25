@@ -22,6 +22,42 @@ Module windowProgress
     *ani.animation::animation
   EndStructure
   
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+    DataSection
+      CLSID_TaskBarList:
+      Data.l $56FDF344
+      Data.w $FD6D, $11D0
+      Data.b $95, $8A, $00, $60, $97, $C9, $A0, $90
+      
+      IID_ITaskBarList3:
+      Data.l $ea1afb91
+      Data.w $9e28,$4b86
+      Data.b $90,$E9,$9e,$9f,$8a,$5e,$ef,$af
+    EndDataSection
+    Interface ITaskbarList3 Extends ITaskbarList2
+      SetProgressValue.i(hWnd.i,ullCompleted.q,ullTotal.q)
+      SetProgressState.i(hWnd.i,tbpFlags.l)
+      RegisterTab.i(hWndTab.i,hWndMDI.i)
+      UnregisterTab.i(hWndTab.i)
+      SetTabOrder.i(hWndTab.i,hWndInsertBefore.i)
+      SetTabActive.i(hWndTab.i,hWndMDI.i,tbatFlags.l)
+      ThumbBarAddButtons.i(hWnd.i,cButtons.l,*pButton)
+      ThumbBarUpdateButtons.i(hWnd.i,cButtons.l,*pButton)
+      ThumbBarSetImageList.i(hWnd.i,himl.i)
+      SetOverlayIcon.i(hWnd.i,hIcon.i,pszDescription$)
+      SetThumbnailTooltip.i(hWnd.i,pszTip$)
+      SetThumbnailClip.i(hWnd.i,*prcClip)
+    EndInterface
+    Global TaskbarProgress.ITaskbarList3
+    CoInitialize_(#Null)
+    CoCreateInstance_(?CLSID_TaskBarList, #Null, 1, ?IID_ITaskBarList3, @TaskbarProgress)
+    If TaskbarProgress
+      TaskbarProgress\HrInit()
+    EndIf
+  CompilerElse
+    Global TaskbarProgress = #Null
+  CompilerEndIf
+  
   Global progressDialog.progress
   
   ;#####
@@ -52,6 +88,9 @@ Module windowProgress
     
     If progressDialog\window
       Debug "close progress window routine starting..."
+      If TaskbarProgress
+        TaskbarProgress\SetProgressState(WindowID(progressDialog\window), #tbpf_noprogress)
+      EndIf
       progressDialog\ani\free()
       progressDialog\ani = #Null
       FreeDialog(progressDialog\dialog)
@@ -125,6 +164,11 @@ Module windowProgress
     BindEvent(#PB_Event_Menu, @closeProgressWindowEvent(), progressDialog\window, #PB_Event_CloseWindow)
     
     HideWindow(progressDialog\window, #False, #PB_Window_ScreenCentered)
+    If TaskbarProgress
+      TaskbarProgress\SetProgressValue(WindowID(progressDialog\window), 100, 100)
+      TaskbarProgress\SetProgressState(WindowID(progressDialog\window), #tbpf_indeterminate)
+    EndIf
+    
     ProcedureReturn #True
   EndProcedure
   
