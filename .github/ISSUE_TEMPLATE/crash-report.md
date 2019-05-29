@@ -1,18 +1,17 @@
 ---
 name: Crash Report
 about: The program crashed, froze or experienced another critical error?
+title: ''
+labels: crash
+assignees: ''
 
 ---
 
+**How to reproduce this crash**
+*Please explain what you did before the crash, e.g.*
+1. Downloaded mod 'XXX'
+2. Clicked on '....'
+3. ...
+
 **Please add the drash dump or log file**
-If TPFMM crashed with an error message and created a log file, please attach this log file here.
-The file can be found in `<user home>/.tpfmm/crash`.
-
-If another critical error occured, please describe what happened and add the log file from `<user home>/.tpfmm/tpfmm.log` _before_ restarting TPFMM.
-
-**To reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+*Please copy the crash file content below. The crash file should open automatically when TPFMM crashes and can alternatively found in the TPFMM settings folder.*
