@@ -170,19 +170,28 @@ restore         = Restore TPFMM window position upon next start
 restore_tip     = Remember the window location and restore upon next start
 update          = Automatically check for new TPFMM updates
 update_tip      = TPFMM will automatically check for new versions. If not checked, please make sure you always use the newest version by visiting www.transportfevermods.com.
-backup_auto_create_label = Automatically create a mod backup
-backup_after_install    = after installation
-backup_before_update    = before updating
-backup_before_uninstall = before deleting
-backup_change_folder    = Change backup folder loaction
-backup_change_folder_wait = Moving folder...
-backup_auto_delete          = Automatically delete backups
+
+backup_folder_frame       = Backup folder
+backup_folder_change      = The backup folder location has changed.
+backup_folder_change_text = Do you want to move {number} backups from "{old_folder}" to the new location at "{new_folder}"?\nIf not, current backups stay in place and will no longer be managed by TPFMM.
+backup_folder_move_wait   = Moving {number} backups ...
+backup_move_success       = Backup folder successfully moved.
+backup_move_error         = Failed to move backup folder.\nFor move information please check the log file.
+
+backup_autodelete_frame     = Automatic deletion
+backup_auto_delete          = Delete backups
 backup_auto_delete_never    = never
 backup_auto_delete_1week    = after 1 week
 backup_auto_delete_1month   = after 1 month
 backup_auto_delete_3months  = after 3 months
 backup_auto_delete_6months  = after 6 months
-backup_auto_delete_1year    =  after 1 year
+backup_auto_delete_1year    = after 1 year
+
+backup_autocreate         = Automatically create a backup
+backup_after_install      = after installation
+backup_before_update      = before updating
+backup_before_uninstall   = before deleting
+
 versioncheck    = Use versioncheck for update
 versioncheck_tip = When active, locale version is compared with online version to determine update. Otherwise, the installation date is used.
 ui_compact      = Use compact mod list view
@@ -207,15 +216,20 @@ repository_name         = Name
 repository_maintainer   = Maintainer
 repository_mods         = Mods
 repository_source       = Source ID
+repository_age          = Age
 repository_add          = Add new repository
 repository_remove       = Remove selected repository
 repository_input_url    = Please input the URL to the repository
 repository_refresh      = Refresh Repositories
-repository_clear_thumb  = Delete thumbnail cache
-repository_thumb_cleared  = Thumbnail cache successfully cleared.
+repository_cache_clear    = Clear repository cache
+repository_cache_cleared  = Repository cache successfully cleared.
 repository_usecache     = Use local cache
 repository_usecache_tip = Show the last local version of the online database if internet connection cannot be established.
 repository_not_loaded   = Not loaded
+repository_age_seconds  = {s} seconds
+repository_age_minutes  = {m} minutes
+repository_age_hours    = {h} hours
+repository_age_days     = {d} days
 
 [management]
 install       = Add '{name}' to Transport Fever

@@ -162,7 +162,7 @@ browse          = Durchsuchen
 browse_tip      = Suche manuell nach dem Installationspfad von Transport Fever
 autodetect      = Auto Pfad
 autodetect_tip  = TPFMM versucht den Pfad zur Transport Fever Installtion automatisch zu erkennen.
-open            = Öffne
+open            = Öffnen
 open_tip        = Öffne den ausgewählten Pfad
 success         = Pfad ist korrekt und TPFMM hat alle benötigten Rechte.
 failed          = TPFMM hat keine Schreibrechte für den Spielordner. Eventuell werden Administratorrechte benötigt.
@@ -172,19 +172,28 @@ restore         = Merke Fensterposition
 restore_tip     = TPFMM merkt sich die Position des Fensters beim schließen und stellt diese Position bei einem erneuten Start wieder her.
 update          = Prüfe automatisch auf neue Versionen des TPFMM
 update_tip      = TPFMM wird automatisiert nach neuen Versionen suchen. Falls diese Option nicht aktiviert ist, sollte www.transportfevermods.com eigenständig auf neue Versionen überprüft werden.
-backup_auto_create_label = Erstelle automatische Sicherung von Mods
-backup_after_install    = nach der Installation
-backup_before_update    = vor einem Update
-backup_before_uninstall = vorm Löschen
-backup_change_folder    = Ordner für Sicherheitskopien ändern
-backup_change_folder_wait = Ordner wird verschoben ...
-backup_auto_delete          = Automatisches Löschen von Sicherungen
+
+backup_folder_frame       = Ordner für Sicherheitskopien
+backup_folder_change      = Der Ordner für Sicherheitskopien wurde geändert
+backup_folder_change_text = Sollen {number} Sicherungen von "{old_folder}" zum neuen Ort in "{new_folder}" verschoben werden?\nFalls nicht, verbleiben die vorhandenen Sicherungskopien am alten Ort und werden nicht weiter von TPFMM verwaltet.
+backup_folder_move_wait   = {number} Sicherheitskopien werden verschoben ...
+backup_move_success       = Die Sicherheitskopien wurde erfolgreich verschoben.
+backup_move_error         = Verschieben der Sicherheitskopien fehlgeschlagen.\nWeitere Informationen stehen in der Log-Datei.
+
+backup_autodelete_frame     = Automatisches Löschen
+backup_auto_delete          = Löschen von Sicherungen
 backup_auto_delete_never    = niemals
 backup_auto_delete_1week    = nach einer Woche
 backup_auto_delete_1month   = nach einem Monat
 backup_auto_delete_3months  = nach drei Monaten
 backup_auto_delete_6months  = nach sechs Monaten
 backup_auto_delete_1year    =  nach einem Jahr
+
+backup_autocreate         = Automatische Sicherung
+backup_after_install      = nach der Installation
+backup_before_update      = vor einem Update
+backup_before_uninstall   = vorm Löschen
+
 versioncheck    = Nutze Versionsvergleich für Update
 versioncheck_tip = Wenn aktiviert, wird lokale Version mit Version in der Datenbank verglichen um Updates zu ermitteln. Ansonsten wird das Installationsdatum benuzt.
 ui_compact      = Kompakte Mod-Listen
@@ -209,15 +218,20 @@ repository_name         = Name
 repository_maintainer   = Verwalter
 repository_mods         = Mods
 repository_source       = Quell-ID
+repository_mods         = Alter
 repository_add          = Füge Repository hinzu
 repository_remove       = Entferne markiertes Repository
 repository_input_url    = Bitte gebe die URL für das Repository ein
 repository_refresh      = Repositories aktualisieren
-repository_clear_thumb  = Vorschaubilder löschen
-repository_thumb_cleared  = Zwischenspeicher für Vorschaubilder erfolgreich gelöscht.
+repository_cache_clear    = Repository Cache leeren
+repository_cache_cleared  = Zwischenspeicher erfolgreich gelöscht
 repository_usecache     = Nutze lokalen Cache
 repository_usecache_tip = Zeige die letzte lokale Version der Online-Datenbank, wenn keine Internetverbindung besteht.
 repository_not_loaded   = Nicht geladen
+repository_age_seconds  = {s} Sekunden
+repository_age_minutes  = {m} Minuten
+repository_age_hours    = {h} Stunden
+repository_age_days     = {d} Tage
 
 [management]
 install       = Füge '{name}' zu Transport Fever hinzu

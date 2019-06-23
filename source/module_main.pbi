@@ -60,17 +60,17 @@ Module main
     ; Error and System Information
     WriteStringN(file, "Please provide the following information at")
     WriteStringN(file, main::#WEBSITE$)
+    WriteStringN(file, "or the Github.com issue website that opens now")
     WriteStringN(file, "Copy the whole file content in the text box, or attach the .txt file directly.")
     WriteStringN(file, "")
-    WriteStringN(file, "[code]")
-    
+    WriteStringN(file, "```[code]")
     WriteStringN(file, "################################################################################")
-    WriteStringN(file, "ERROR @ "+date$)
+    WriteStringN(file, date$)
     WriteStringN(file, VERSION_FULL$)
     WriteStringN(file, #DQUOTE$+ErrorMessage()+#DQUOTE$)
-    WriteStringN(file, Str(ErrorCode())+"@"+ErrorAddress()+">"+ErrorTargetAddress())
+    WriteStringN(file, "Error Adress: "+Str(ErrorCode())+"@"+ErrorAddress()+">"+ErrorTargetAddress())
+    
     ErrorFile$ = ReplaceString(ErrorFile(), GetPathPart(#PB_Compiler_FilePath), "")
-    WriteStringN(file, ErrorFile$+" line "+ErrorLine())
     WriteStringN(file, "https://github.com/AlexanderNaehring/TPFMM/tree/master/source/"+ErrorFile$+"#L"+ErrorLine())
     WriteStringN(file, "OS: "+misc::getOSVersion()+" on "+CPUName()+" (x"+CountCPUs()+")")
     WriteStringN(file, "Available Physical Memory: "+Str(MemoryStatus(#PB_System_FreePhysical)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalPhysical)/1024/1024)+" MiB")
@@ -80,7 +80,7 @@ Module main
     If MemoryStatus(#PB_System_TotalSwap) > 0
       WriteStringN(file, "Available Swap:            "+Str(MemoryStatus(#PB_System_FreeSwap)/1024/1024)+" MiB / "+Str(MemoryStatus(#PB_System_TotalSwap)/1024/1024)+" MiB")
     EndIf
-    WriteStringN(file, "threading information:"+#LF$+threads::GetTreeString())
+    WriteStringN(file, threads::GetTreeString())
     WriteStringN(file, "################################################################################")
     WriteStringN(file, "")
     
@@ -90,13 +90,13 @@ Module main
     WriteStringN(file, debugger::getLog())
     
     ; close file
+    WriteStringN(file, "```[/code]")
     CloseFile(file)
     
-    WriteStringN(file, "[/code]")
-    
-    MessageRequester("ERROR", ErrorMessage()+" at "+ErrorAddress()+">"+ErrorTargetAddress()+#CRLF$+""+ErrorFile$+" line "+ErrorLine(), #PB_MessageRequester_Error)
+    MessageRequester("ERROR", ErrorMessage(), #PB_MessageRequester_Error)
     
     misc::openLink(GetCurrentDirectory()+"/"+file$)
+    misc::openLink("https://github.com/AlexanderNaehring/TPFMM/issues/new?template=crash-report.md")
     ;misc::openLink(main::#WEBSITE$)
     End
   EndProcedure

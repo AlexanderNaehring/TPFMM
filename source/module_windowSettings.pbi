@@ -116,11 +116,13 @@ Module windowSettings
     Protected Dir$, locale$, oldDir$
     Protected proxyChange.b
     Protected listThemeChange.b
+    
     dir$ = GetGadgetText(gadget("installationPath"))
     dir$ = misc::Path(dir$)
     oldDir$ = settings::getString("", "path")
     settings::setString("", "path", dir$)
     
+    ; language
     locale$ = StringField(StringField(GetGadgetText(gadget("languageSelection")), 1, ">"), 2, "<") ; extract string between < and >
     If locale$ = ""
       locale$ = "en"
@@ -128,22 +130,26 @@ Module windowSettings
     If locale$ <> settings::getString("", "locale")
       locale::setLocale(locale$)
       windowMain::updateStrings()
+      listThemeChange = #True
       ; no need to update strings in this window, as they will be updated on next window show()
       ; TODO update all strings, e.g. in filter/sort dialogs
     EndIf
     settings::setString("", "locale", locale$)
     
+    ; version check and compact UI
     settings::setInteger("", "compareVersion", GetGadgetState(gadget("miscVersionCheck")))
     If settings::getInteger("ui", "compact") <> GetGadgetState(gadget("uiCompact"))
       listThemeChange = #True
       settings::setInteger("ui", "compact", GetGadgetState(gadget("uiCompact")))
     EndIf
     
+    ; backup
     settings::setInteger("backup", "auto_delete_days", GetGadgetItemData(gadget("backupAutoDeleteTime"), GetGadgetState(gadget("backupAutoDeleteTime"))))
     settings::setInteger("backup", "after_install", GetGadgetState(gadget("backupAfterInstall")))
     settings::setInteger("backup", "before_update", GetGadgetState(gadget("backupBeforeUpdate")))
     settings::setInteger("backup", "before_uninstall", GetGadgetState(gadget("backupBeforeUninstall")))
     
+    ; proxy
     If settings::getInteger("proxy", "enabled") <> GetGadgetState(gadget("proxyEnabled")) Or
        settings::getString("proxy", "server") <> GetGadgetText(gadget("proxyServer")) Or
        settings::getString("proxy", "user") <> GetGadgetText(gadget("proxyUser")) Or
@@ -155,12 +161,14 @@ Module windowSettings
       settings::setString("proxy", "password", aes::encryptString(GetGadgetText(gadget("proxyPassword"))))
     EndIf
     
-    
+    ; desktop integration
     settings::setInteger("integration", "register_protocol", GetGadgetState(gadget("integrateRegisterProtocol")))
     settings::setInteger("integration", "register_context_menu", GetGadgetState(gadget("integrateRegisterContextMenu")))
     
+    ; repository
     settings::setInteger("repository", "use_cache", GetGadgetState(gadget("repositoryUseCache")))
     
+    ; apply settings
     main::initProxy()
     main::updateDesktopIntegration()
     
@@ -168,6 +176,22 @@ Module windowSettings
       ; gameDir changed
       mods::freeAll()
       mods::load()
+    EndIf
+    
+    Protected newBackupFolder$ = misc::path(GetGadgetText(gadget("backupFolder")))
+    If misc::path(mods::backupsGetFolder()) <> newBackupFolder$
+      ; backup folder changed
+      If mods::backupsCount()
+        If MessageRequester(_("settings_backup_folder_change"), _("settings_backup_folder_change_text", "number="+Str(mods::backupsCount())+#SEP+"old_folder="+mods::backupsGetFolder()+#SEP+"new_folder="+newBackupFolder$), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
+          ; move files
+          mods::backupsMoveFolder(newBackupFolder$) ; TODO start in thread?
+        Else
+          ; just change folder location
+          mods::backupsSetFolder(newBackupFolder$)
+        EndIf
+      Else ; no backups in old folder, just set new folder
+        mods::backupsSetFolder(newBackupFolder$)
+      EndIf
     EndIf
     
     If proxyChange
@@ -193,6 +217,7 @@ Module windowSettings
   EndProcedure
   
   
+  ; Backups
   Procedure backupFolderMoved()
     DisableWindow(window, #False)
     windowProgress::closeProgressWindow()
@@ -204,38 +229,51 @@ Module windowSettings
     SetGadgetText(gadget("backupFolder"), mods::backupsGetFolder())
   EndProcedure
   
-  Procedure backupFolderMoveThread(*folder)
+  Procedure backupFolderMoveThread(*dummy)
     Protected folder$
-    folder$ = PeekS(*folder)
-    FreeMemory(*folder)
+    Protected success
+    folder$ = GetGadgetText(gadget("backupFolder"))
     
-    If mods::backupsMoveFolder(folder$)
-      PostEvent(#EventBackupFolderMoved, window, #True)
-    Else
-      PostEvent(#EventBackupFolderMoved, window, #False)
-    EndIf
+    success = mods::backupsMoveFolder(folder$)
+    PostEvent(#EventBackupFolderMoved, window, success)
   EndProcedure
   
   Procedure backupFolderMove()
-    Protected folder$
-    Protected *folder
-    
-    folder$ = PathRequester(_("settings_backup_change_folder"), mods::backupsGetFolder())
-    If folder$ = ""
-      ProcedureReturn #False
-    EndIf
-    
-    windowProgress::showProgressWindow(_("settings_backup_change_folder_wait"))
-    windowProgress::setProgressText(_("settings_backup_change_folder_wait"))
+    windowProgress::showProgressWindow(_("backup_folder_move_wait"))
+    windowProgress::setProgressText(_("backup_folder_move_wait"))
     DisableWindow(window, #True)
     
-    *folder = AllocateMemory(StringByteLength(folder$) + SizeOf(character))
-    PokeS(*folder, folder$)
-    threads::NewThread(@backupFolderMoveThread(), *folder, "windowSettings::backupFolderMoveThread")
-    
+    threads::NewThread(@backupFolderMoveThread(), 0, "windowSettings::backupFolderMoveThread")
+  EndProcedure
+  
+  Procedure backupFolderChange()
+    Protected folder$, valid
+    folder$ = GetGadgetText(gadget("backupFolder"))
+    If folder$ = "" Or folder$ = "/" Or folder$ = "\"
+      folder$ = mods::backupsGetDefaultFolder()
+      SetGadgetText(gadget("backupFolder"), folder$)
+    EndIf
+    valid = Bool(FileSize(folder$) = -2)
+    DisableGadget(gadget("backupFolderOpen"), Bool(Not valid))
+    ProcedureReturn valid
+  EndProcedure
+  
+  Procedure backupFolderBrowse()
+    Protected folder$
+    folder$ = GetGadgetText(gadget("backupFolder"))
+    folder$ = PathRequester(_("settings_backup_folder_change"), folder$)
+    If folder$
+      SetGadgetText(gadget("backupFolder"), folder$)
+      backupFolderChange()
+    EndIf
+  EndProcedure
+  
+  Procedure backupFolderOpen()
+    misc::openLink(GetGadgetText(gadget("backupFolder")))
   EndProcedure
   
   
+  ;Generic
   Procedure updateGadgets()
     ; check gadgets etc
     Protected ret
@@ -284,13 +322,23 @@ Module windowSettings
   Procedure updateRepositoryList()
     Protected NewList repos$()
     Protected repoInfo.repository::RepositoryInformation
+    Protected age$
     
     ClearGadgetItems(gadget("repositoryList"))
     repository::ReadSourcesFromFile(repos$())
     
     ForEach repos$()
       If repository::GetRepositoryInformation(repos$(), @repoInfo)
-        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount)
+        If repoInfo\age < 60
+          age$ = _("settings_repository_age_seconds", "s="+Str(repoInfo\age))
+        ElseIf repoInfo\age < 60*60
+          age$ = _("settings_repository_age_minutes", "m="+Str(repoInfo\age/60))
+        ElseIf repoInfo\age < 60*60*24
+          age$ = _("settings_repository_age_hours", "h="+Str(repoInfo\age/60/60))
+        Else
+          age$ = _("settings_repository_age_days", "d="+Str(repoInfo\age/60/60/24))
+        EndIf
+        AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+repoInfo\name$+#LF$+repoInfo\maintainer$+#LF$+repoInfo\source$+#LF$+repoInfo\modCount+#LF$+age$)
       Else
         ; this repo is not loaded at the moment
         AddGadgetItem(gadget("repositoryList"), -1, repos$()+#LF$+_("settings_repository_not_loaded"))
@@ -340,7 +388,7 @@ Module windowSettings
                 #CRLF$+
                 _("repository_confirm_add")
         
-        If MessageRequester(_("repository_confirm_add"), info$, #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+        If MessageRequester(_("repository_confirm_add"), info$, #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
           repository::AddRepository(url$)
           updateRepositoryList()
           repository::refreshRepositories() ; will trigger an event when update finished which updates the repo list again
@@ -387,9 +435,10 @@ Module windowSettings
     repository::refreshRepositories()
   EndProcedure
   
-  Procedure repositoryClearThumb()
+  Procedure repositoryCacheClear()
     repository::clearThumbCache()
-    MessageRequester(_("generic_success"), _("settings_repository_thumb_cleared"), #PB_MessageRequester_Info)
+    repository::clearRepoCache()
+    MessageRequester(_("generic_success"), _("settings_repository_cache_cleared"), #PB_MessageRequester_Info)
   EndProcedure
   
   Procedure showWindow()
@@ -417,6 +466,7 @@ Module windowSettings
     SetGadgetText(gadget("cancel"),                 _("settings_cancel"))
     GadgetToolTip(gadget("cancel"),                 _("settings_cancel_tip"))
     
+    ; general
     SetGadgetText(gadget("installationFrame"),      _("settings_path"))
     SetGadgetText(gadget("installationTextSelect"), _("settings_text"))
     SetGadgetText(gadget("installationAutodetect"), _("settings_autodetect"))
@@ -425,7 +475,22 @@ Module windowSettings
     SetGadgetText(gadget("installationBrowse"),     _("settings_browse"))
     GadgetToolTip(gadget("installationBrowse"),     _("settings_browse_tip"))
     SetGadgetText(gadget("installationTextStatus"), "")
-               
+    
+    SetGadgetText(gadget("miscFrame"),              _("settings_other"))
+    SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
+    GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
+    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
+    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
+    
+    SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
+    SetGadgetText(gadget("languageSelection"),      "")
+    
+    ; backup
+    SetGadgetText(gadget("backupFolderFrame"),      _("settings_backup_folder_frame"))
+    SetGadgetText(gadget("backupFolderBrowse"),     _("settings_browse"))
+    SetGadgetText(gadget("backupFolderOpen"),       _("settings_open"))
+    
+    SetGadgetText(gadget("backupAutoDeleteFrame"),  _("settings_backup_autodelete_frame"))
     SetGadgetText(gadget("backupAutoDeleteLabel"),  _("settings_backup_auto_delete"))
     ClearGadgetItems(gadget("backupAutoDeleteTime"))
     AddGadgetItem(    gadget("backupAutoDeleteTime"), 0, _("settings_backup_auto_delete_never"))
@@ -441,41 +506,35 @@ Module windowSettings
     AddGadgetItem(    gadget("backupAutoDeleteTime"), 5, _("settings_backup_auto_delete_1year"))
     SetGadgetItemData(gadget("backupAutoDeleteTime"), 5, 365)
     
-    SetGadgetText(gadget("backupAutoCreateLabel"),  _("settings_backup_auto_create_label"))
+    SetGadgetText(gadget("backupAutoCreateFrame"),  _("settings_backup_autocreate"))
     SetGadgetText(gadget("backupAfterInstall"),     _("settings_backup_after_install"))
     SetGadgetText(gadget("backupBeforeUpdate"),     _("settings_backup_before_update"))
     SetGadgetText(gadget("backupBeforeUninstall"),  _("settings_backup_before_uninstall"))
-    SetGadgetText(gadget("backupFolderChange"),     _("settings_backup_change_folder"))
     
-    SetGadgetText(gadget("miscFrame"),              _("settings_other"))
-    SetGadgetText(gadget("miscVersionCheck"),       _("settings_versioncheck"))
-    GadgetToolTip(gadget("miscVersionCheck"),       _("settings_versioncheck_tip"))
-    SetGadgetText(gadget("uiCompact"),              _("settings_ui_compact"))
-    GadgetToolTip(gadget("uicompact"),              _("settings_ui_compact"))
-    
-    SetGadgetText(gadget("languageFrame"),          _("settings_locale"))
-    SetGadgetText(gadget("languageSelection"),      "")
-    
+    ; proxy
     SetGadgetText(gadget("proxyEnabled"),           _("settings_proxy_enabled"))
     SetGadgetText(gadget("proxyFrame"),             _("settings_proxy_frame"))
     SetGadgetText(gadget("proxyServerLabel"),       _("settings_proxy_server"))
     SetGadgetText(gadget("proxyUserLabel"),         _("settings_proxy_user"))
     SetGadgetText(gadget("proxyPasswordLabel"),     _("settings_proxy_password"))
     
+    ; desktop integration
     SetGadgetText(gadget("integrateText"),                _("settings_integrate_text"))
     SetGadgetText(gadget("integrateRegisterProtocol"),    _("settings_integrate_register_protocol"))
     SetGadgetText(gadget("integrateRegisterContextMenu"), _("settings_integrate_register_context"))
     
+    ; repository
     RemoveGadgetColumn(gadget("repositoryList"), #PB_All)
-    AddGadgetColumn(gadget("repositoryList"), 0, _("settings_repository_url"), 100)
+    AddGadgetColumn(gadget("repositoryList"), 0, _("settings_repository_url"), 0)
     AddGadgetColumn(gadget("repositoryList"), 1, _("settings_repository_name"), 120)
     AddGadgetColumn(gadget("repositoryList"), 2, _("settings_repository_maintainer"), 70)
     AddGadgetColumn(gadget("repositoryList"), 3, _("settings_repository_source"), 60)
     AddGadgetColumn(gadget("repositoryList"), 4, _("settings_repository_mods"), 50)
+    AddGadgetColumn(gadget("repositoryList"), 5, _("settings_repository_age"), 80)
     SetGadgetText(gadget("repositoryAdd"),          _("settings_repository_add"))
     SetGadgetText(gadget("repositoryRemove"),       _("settings_repository_remove"))
     SetGadgetText(gadget("repositoryRefresh"),      _("settings_repository_refresh"))
-    SetGadgetText(gadget("repositoryClearThumb"),   _("settings_repository_clear_thumb"))
+    SetGadgetText(gadget("repositoryCacheClear"),   _("settings_repository_cache_clear"))
     SetGadgetText(gadget("repositoryUseCache"),     _("settings_repository_usecache"))
     GadgetToolTip(gadget("repositoryUseCache"),     _("settings_repository_usecache_tip"))
     
@@ -521,13 +580,15 @@ Module windowSettings
     BindGadgetEvent(gadget("cancel"), @GadgetCloseSettings())
     BindGadgetEvent(gadget("installationPath"), @updateGadgets(), #PB_EventType_Change)
     BindGadgetEvent(gadget("proxyEnabled"), @updateGadgets())
-    BindGadgetEvent(gadget("backupFolderChange"), @backupFolderMove())
+    BindGadgetEvent(gadget("backupFolder"), @backupFolderChange(), #PB_EventType_Change)
+    BindGadgetEvent(gadget("backupFolderBrowse"), @backupFolderBrowse())
+    BindGadgetEvent(gadget("backupFolderOpen"), @backupFolderOpen())
 ;     BindGadgetEvent(gadget("languageSelection"), @languageSelection(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryList"), @repositoryListEvent(), #PB_EventType_Change)
     BindGadgetEvent(gadget("repositoryAdd"), @repositoryAdd())
     BindGadgetEvent(gadget("repositoryRemove"), @repositoryRemove())
     BindGadgetEvent(gadget("repositoryRefresh"), @repositoryRefresh())
-    BindGadgetEvent(gadget("repositoryClearThumb"), @repositoryClearThumb())
+    BindGadgetEvent(gadget("repositoryCacheClear"), @repositoryCacheClear())
     ; receive "unhide" event
     BindEvent(#PB_Event_RestoreWindow, @showWindow(), window)
     
@@ -561,12 +622,12 @@ Module windowSettings
       settings::setInteger("backup", "auto_delete_days", 0)
       SetGadgetState(gadget("backupAutoDeleteTime"), 0)
     EndIf
-      
     
     SetGadgetState(gadget("backupAfterInstall"),    settings::getInteger("backup", "after_install"))
     SetGadgetState(gadget("backupBeforeUpdate"),    settings::getInteger("backup", "before_update"))
     SetGadgetState(gadget("backupBeforeUninstall"), settings::getInteger("backup", "before_uninstall"))
     SetGadgetText(gadget("backupFolder"),           mods::backupsGetFolder())
+    backupFolderChange()
     
     ; proxy
     SetGadgetState(gadget("proxyEnabled"), settings::getInteger("proxy", "enabled"))

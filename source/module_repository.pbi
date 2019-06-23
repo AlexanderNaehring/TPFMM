@@ -274,8 +274,14 @@ Module repository
     
     file$ = getRepoFileName(url$)
     
-    If Not settings::getInteger("repository", "use_cache")
-      DeleteFile(file$, #PB_FileSystem_Force)
+    If FileSize(file$) > 0
+      If Date() - GetFileDate(file$, #PB_Date_Modified) < 60*60
+        ; file is up2date, do not trigger download
+        ProcedureReturn #True
+      ElseIf Not settings::getInteger("repository", "use_cache")
+        ; file is old and cache disabled -> delete file
+        DeleteFile(file$, #PB_FileSystem_Force)
+      EndIf
     EndIf
     
     ; start download
@@ -512,6 +518,7 @@ Module repository
           Delay(10)
         Wend
         If FileSize(tmp$) > 0
+          ; TODO possibly check for faulty image here...
           image = LoadImage(#PB_Any, tmp$)
           DeleteFile(tmp$, #PB_FileSystem_Force)
           If image
@@ -656,6 +663,22 @@ Module repository
     ProcedureReturn #True
   EndProcedure
   
+  Procedure clearRepoCache()
+    Protected dir
+    deb("repository::clearRepoCache()")
+    dir = ExamineDirectory(#PB_Any, #RepoDirectory$, "*.json")
+    If dir
+      While NextDirectoryEntry(dir)
+        If DirectoryEntryType(dir) = #PB_DirectoryEntry_File
+          DeleteFile(#RepoDirectory$+"/"+DirectoryEntryName(dir), #PB_FileSystem_Force)
+        EndIf
+      Wend
+      FinishDirectory(dir)
+    Else
+      deb("repository::clearRepoCache() could not examine "+#RepoDirectory$)
+    EndIf
+  EndProcedure
+  
   Procedure.b isLoaded()
     ProcedureReturn _loaded
   EndProcedure
@@ -665,7 +688,7 @@ Module repository
   Procedure AddRepository(url$)
     Protected inlist.b
     Protected NewList sources$()
-    Debug "add repository "+url$
+    deb("repository::AddRepository("+url$+")")
     
     url$ = Trim(url$)
     ReadSourcesFromFile(sources$())
@@ -679,7 +702,7 @@ Module repository
     Next
     
     If inlist
-      Debug "repo already in list"
+    deb("repository::AddRepository() url already in list")
     Else
       LastElement(sources$())
       AddElement(sources$())
@@ -702,7 +725,7 @@ Module repository
   Procedure RemoveRepository(url$)
     Protected deleted.b
     Protected NewList sources$()
-    deb("repository:: remove source "+url$)
+    deb("repository::RemoveRepository("+url$+")")
     
     ReadSourcesFromFile(sources$())
     
@@ -723,8 +746,10 @@ Module repository
   
   Procedure GetRepositoryInformation(url$, *repoInfo.RepositoryInformation)
     Protected ret = #False
+    Protected file$
     LockMutex(mutexMods)
     If FindMapElement(ModRepositories(), url$)
+      file$ = getRepoFileName(url$)
       *repoInfo\error         = #ErrorNoError
       *repoInfo\url$          = MapKey(ModRepositories())
       *repoInfo\source$       = ModRepositories()\repo_info\source$
@@ -734,6 +759,7 @@ Module repository
       *repoInfo\terms$        = ModRepositories()\repo_info\terms$
       *repoInfo\info_url$     = ModRepositories()\repo_info\info_url$
       *repoInfo\modCount      = ListSize(ModRepositories()\mods())
+      *repoInfo\age           = Date() - GetFileDate(file$, #PB_Date_Modified)
       ret = #True
     EndIf
     UnlockMutex(mutexMods)

@@ -163,10 +163,13 @@
   Declare update(folderID$)     ; request update from repository and install
   
   ; backup static functions
+  Declare.s backupsGetDefaultFolder()
   Declare.s backupsGetFolder()
+  Declare backupsSetFolder(newFolder$)
   Declare backupsMoveFolder(newFolder$)
   Declare backupsClearFolder()
   Declare backupsScan()
+  Declare backupsCount()
   
   ; backup methods
   Declare.s backupGetFilename(*backup.BackupMod)

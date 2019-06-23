@@ -287,6 +287,7 @@ Module windowMain
           *version\major = Val(RegularExpressionGroup(re, 1))
           *version\minor = Val(RegularExpressionGroup(re, 2))
           *version\patch = Val(RegularExpressionGroup(re, 3))
+          Debug "getSemanticVersion("+string$+") >> "+*version\major+"."+*version\minor+"."+*version\patch
           ret = #True
         EndIf
         FreeRegularExpression(re)
@@ -314,9 +315,15 @@ Module windowMain
     Protected tmp$ = *wget\getFilename()
     Protected local.version, remote.version
     Protected json, tpfmm
+    Protected file, json$
     Static latest.GithubRelease ; keep in memory for GUI to access the data
     
     If FileSize(tmp$) > 0
+      file = ReadFile(#PB_Any, tmp$)
+      If file
+        json$ = ReadString(file, #PB_UTF8|#PB_File_IgnoreEOL)
+        CloseFile(file)
+      EndIf
       json = LoadJSON(#PB_Any, tmp$, #PB_JSON_NoCase)
       DeleteFile(tmp$, #PB_FileSystem_Force)
       If json
@@ -337,6 +344,7 @@ Module windowMain
         FreeJSON(json)
       Else
         deb("windowMain:: updater, json error '"+JSONErrorMessage()+"'")
+        deb("windowMain:: updater: "+json$)
       EndIf
     Else
       deb("windowMain:: updater, version information download failed '"+main::#UPDATER$+"'")
@@ -346,7 +354,7 @@ Module windowMain
   Procedure checkUpdate()
     Protected tmp$, *wget.wget::wget
     
-    tmp$ = GetTemporaryDirectory() + StringFingerprint(Str(Date()), #PB_Cipher_MD5)
+    tmp$ = GetTemporaryDirectory() + "tpfmm.update."+StringFingerprint(Str(ElapsedMilliseconds()), #PB_Cipher_MD5)+".json"
     If FileSize(tmp$) > 0
       DeleteFile(tmp$, #PB_FileSystem_Force)
     EndIf
@@ -397,6 +405,7 @@ Module windowMain
         ElseIf FileSize(parameter$) > 0
           ; install mod (this function is called, before the main window is created ...)
           mods::install(parameter$)
+          
         EndIf
         
     EndSelect
@@ -848,9 +857,9 @@ Module windowMain
     
     If count > 0
       If count = 1
-        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
+        result = MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+name$), #PB_MessageRequester_YesNo|32)
       Else
-        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning)
+        result = MessageRequester(_("main_uninstall_pl"), _("management_uninstall2", "count="+count), #PB_MessageRequester_YesNo|32)
       EndIf
       
       If result = #PB_MessageRequester_Yes
@@ -1130,7 +1139,7 @@ Module windowMain
   
   Procedure modIconUninstall(*item.CanvasList::CanvasListItem)
     Protected *mod.mods::LocalMod = *item\GetUserData()
-    If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|#PB_MessageRequester_Warning) = #PB_MessageRequester_Yes
+    If MessageRequester(_("main_uninstall"), _("management_uninstall1", "name="+*mod\getName()), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
       mods::uninstall(*mod\getID())
     EndIf
   EndProcedure
@@ -1362,7 +1371,7 @@ Module windowMain
     settings::setString("export", "last", file$)
     
     If FileSize(file$) > 0
-      If Not MessageRequester(_("management_export_list"), _("management_overwrite_file"), #PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+      If Not MessageRequester(_("management_export_list"), _("management_overwrite_file"), #PB_MessageRequester_YesNo|32) = #PB_MessageRequester_Yes
         ProcedureReturn #False
       EndIf
     EndIf
@@ -1715,6 +1724,8 @@ Module windowMain
       file$ = *mod\getThumbnailFile()
       If file$
         If FileSize(file$) > 0
+          ; TODO possibly look for faulty image here...
+          ; deb("windowMain::repoItemSetup() load image "+file$)
           image = LoadImage(#PB_Any, file$)
           If image
             *mod\setThumbnailImage(image)
@@ -1749,6 +1760,7 @@ Module windowMain
     EndIf
     
     ; buttons
+    *item\ClearButtons()
     If Not settings::getInteger("ui","compact")
       If *mod\canDownload()
         *item\AddButton(@repoItemDownload(), images::images("itemBtnDownload"), images::images("itemBtnDownloadHover"), _("hint_repo_download"))
@@ -1822,6 +1834,8 @@ Module windowMain
     
     If file$ And *userdata
       *item = *userdata
+      ; TODO possibly look for faulty image here...
+      ; deb("windowMain::repoCallbackThumbnail() load image "+file$)
       im = LoadImage(#PB_Any, file$)
       If im
         *item\SetImage(im)
@@ -2147,13 +2161,13 @@ Module windowMain
         *backup = *items()\GetUserData()
         If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
                             _("backup_delete_mod_body", "name="+*backup\getName()),
-                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                            32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           *backup\delete()
         EndIf
       Else ; multiple backups selected
         If MessageRequester(_("backup_delete_mods_title", "number="+ListSize(*items())), 
                             _("backup_delete_mods_body", "number="+ListSize(*items())),
-                            #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                            32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
           ForEach *items()
             *backup = *items()\GetUserData()
             *backup\delete()
@@ -2195,7 +2209,7 @@ Module windowMain
     If *backup
       If MessageRequester(_("backup_delete_mod_title", "name="+*backup\getName()), 
                           _("backup_delete_mod_body", "name="+*backup\getName()),
-                          #PB_MessageRequester_Warning|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
+                          32|#PB_MessageRequester_YesNo) = #PB_MessageRequester_Yes
         *backup\delete()
       EndIf
     EndIf

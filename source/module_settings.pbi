@@ -30,6 +30,7 @@ Module settings
   defaultValues$("proxy/password") = ""
   defaultValues$("integration/register_protocol") = "1"
   defaultValues$("integration/register_context_menu") = "1"
+  defaultValues$("repository/use_cache") = "1"
   defaultValues$("window/x") = "-1"
   defaultValues$("window/y") = "-1"
   defaultValues$("window/width") = "-1"

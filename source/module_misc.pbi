@@ -99,6 +99,8 @@
   Declare getScrollbarWidth(gadget)
   Declare getDefaultRowHeight(type=#PB_GadgetType_ListView)
   Declare GetWindowBackgroundColor(hwnd=0)
+  Declare.s EpochToISO8601(time=-1)
+  Declare ISO8601toEpoch(datetime$)
 EndDeclareModule
 
 Module misc
@@ -872,5 +874,16 @@ Module misc
         EndIf
     CompilerEndSelect
   EndProcedure  
+  
+  Procedure.s EpochToISO8601(time=-1)
+    If time=-1
+      time = misc::time()
+    EndIf
+    ProcedureReturn FormatDate("%yyyy-%mm-%ddT%hh:%ii:%ssZ", time)
+  EndProcedure
+  
+  Procedure ISO8601toEpoch(datetime$)
+    ProcedureReturn ParseDate("%yyyy-%mm-%ddT%hh:%ii:%ssZ", datetime$)
+  EndProcedure
   
 EndModule

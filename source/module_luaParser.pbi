@@ -794,6 +794,13 @@ Module luaParser
     string$ = "package.path = '"+tmp$+"/res/config/?.lua;"+tmp$+"/res/scripts/?.lua;"+misc::path(modfolder$, #False, "/")+"/res/scripts/?.lua';"
     luaL_dostring(L, string$)
     
+    ; set TPFMM version so that lua scripts can identify TPFMM environment.
+    string$ = "TPFMM = '"+main::#VERSION$+"';"
+    luaL_dostring(L, string$)
+    
+;     lua_getglobal(L, "TPFMM")
+;     Debug lua_tostring(L, -1)
+    
     ; make translation function known to lua global
     lua_pushcfunction(L, @lua_translate())
     lua_setglobal(L, "_")
@@ -806,11 +813,8 @@ Module luaParser
     string$ = "function addFileFilter() end; function addModifier() end;"
     luaL_dostring(L, string$)
     
-    
     ; initialize variable storage for this lua state
     AddMapElement(lua(), Str(L))
-    
-    
     
     ProcedureReturn L
   EndProcedure
