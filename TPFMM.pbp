@@ -17,7 +17,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\main.pb">
-      <config load="1" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="1" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_aes.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -50,7 +50,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_main.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_maps.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
@@ -59,7 +59,7 @@
       <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_modInformation.pbi">
-      <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
+      <config load="0" scan="1" panel="1" warn="0" lastopen="0" panelstate="+-"/>
     </file>
     <file name="source\module_mods.h.pbi">
       <config load="0" scan="1" panel="1" warn="0" lastopen="1" panelstate="+-"/>
@@ -120,8 +120,8 @@
       <purifier enable="0" granularity="0,0,0,0"/>
       <icon enable="1">source\images\TPFMM.ico</icon>
       <debugger custom="1" type="ide"/>
-      <compilecount enable="1" value="5648"/>
-      <buildcount enable="1" value="65"/>
+      <compilecount enable="1" value="5810"/>
+      <buildcount enable="1" value="68"/>
       <execonstant enable="1"/>
       <versioninfo enable="1">
         <field0 value="1,1,%BUILDCOUNT,%COMPILECOUNT"/>

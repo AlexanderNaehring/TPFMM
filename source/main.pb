@@ -19,8 +19,9 @@ CompilerSelect #PB_Compiler_OS
           Debug "could not migrate data"
         EndIf
       EndIf
+      CreateDirectory(dir$)
     EndIf
-    CreateDirectory(dir$)
+    SetFileAttributes(dir$, #PB_FileSystem_Normal)
     SetCurrentDirectory(dir$)
     
   CompilerDefault
