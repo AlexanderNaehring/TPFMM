@@ -247,9 +247,15 @@ Module windowSettings
   EndProcedure
   
   Procedure backupFolderChange()
-    Protected valid
-    valid = Bool(FileSize(GetGadgetText(gadget("backupFolder"))) = -2)
+    Protected folder$, valid
+    folder$ = GetGadgetText(gadget("backupFolder"))
+    If folder$ = "" Or folder$ = "/" Or folder$ = "\"
+      folder$ = mods::backupsGetDefaultFolder()
+      SetGadgetText(gadget("backupFolder"), folder$)
+    EndIf
+    valid = Bool(FileSize(folder$) = -2)
     DisableGadget(gadget("backupFolderOpen"), Bool(Not valid))
+    ProcedureReturn valid
   EndProcedure
   
   Procedure backupFolderBrowse()

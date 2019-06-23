@@ -2269,6 +2269,10 @@ Module mods
   ;- backup stuff
   ;static
   
+  Procedure.s backupsGetDefaultFolder()
+    ProcedureReturn GetCurrentDirectory() + "backups" + #PS$
+  EndProcedure
+  
   Procedure.s backupsGetFolder()
     Protected backupFolder$
     
