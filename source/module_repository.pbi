@@ -518,6 +518,7 @@ Module repository
           Delay(10)
         Wend
         If FileSize(tmp$) > 0
+          ; TODO possibly check for faulty image here...
           image = LoadImage(#PB_Any, tmp$)
           DeleteFile(tmp$, #PB_FileSystem_Force)
           If image

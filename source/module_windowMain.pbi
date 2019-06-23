@@ -405,6 +405,7 @@ Module windowMain
         ElseIf FileSize(parameter$) > 0
           ; install mod (this function is called, before the main window is created ...)
           mods::install(parameter$)
+          
         EndIf
         
     EndSelect
@@ -1723,6 +1724,8 @@ Module windowMain
       file$ = *mod\getThumbnailFile()
       If file$
         If FileSize(file$) > 0
+          ; TODO possibly look for faulty image here...
+          ; deb("windowMain::repoItemSetup() load image "+file$)
           image = LoadImage(#PB_Any, file$)
           If image
             *mod\setThumbnailImage(image)
@@ -1831,6 +1834,8 @@ Module windowMain
     
     If file$ And *userdata
       *item = *userdata
+      ; TODO possibly look for faulty image here...
+      ; deb("windowMain::repoCallbackThumbnail() load image "+file$)
       im = LoadImage(#PB_Any, file$)
       If im
         *item\SetImage(im)
