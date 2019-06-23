@@ -1,4 +1,4 @@
-﻿XIncludeFile "module_misc.pbi"
+XIncludeFile "module_misc.pbi"
 XIncludeFile "module_debugger.pbi"
 XIncludeFile "module_locale.pbi"
 XIncludeFile "module_luaParser.pbi"
@@ -2272,19 +2272,22 @@ Module mods
   Procedure.s backupsGetFolder()
     Protected backupFolder$
     
-    If settings::getString("","path") = ""
-      ; no game directory
-      ProcedureReturn ""
-    EndIf
-    
     backupFolder$ = settings::getString("backup", "folder")
-    If backupFolder$ = ""
-      backupFolder$ = GetCurrentDirectory()+"/backups/"
+    
+    If backupFolder$ = "" Or backupFolder$ = #PS$
+      backupFolder$ = GetCurrentDirectory() + "backups" + #PS$
+      If FileSize(backupFolder$) <> -2
+        misc::CreateDirectoryAll(backupFolder$)
+      EndIf
       settings::setString("backup", "folder", backupFolder$)
     EndIf
     
+    ; this should not happen, but in case it does, raise debugger breakpoint...
+    If backupFolder$ = "" Or backupFolder$ = #PS$
+      RaiseError(#PB_OnError_Breakpoint)
+    EndIf
     If FileSize(backupFolder$) <> -2
-      misc::CreateDirectoryAll(backupFolder$)
+      RaiseError(#PB_OnError_Breakpoint)
     EndIf
     
     ProcedureReturn backupFolder$
