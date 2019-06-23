@@ -88,9 +88,9 @@ Module windowProgress
     
     If progressDialog\window
       Debug "close progress window routine starting..."
-      If TaskbarProgress
+      CompilerIf #PB_Compiler_OS = #PB_OS_Windows
         TaskbarProgress\SetProgressState(WindowID(progressDialog\window), #tbpf_noprogress)
-      EndIf
+      CompilerEndIf
       progressDialog\ani\free()
       progressDialog\ani = #Null
       FreeDialog(progressDialog\dialog)
@@ -164,10 +164,10 @@ Module windowProgress
     BindEvent(#PB_Event_Menu, @closeProgressWindowEvent(), progressDialog\window, #PB_Event_CloseWindow)
     
     HideWindow(progressDialog\window, #False, #PB_Window_ScreenCentered)
-    If TaskbarProgress
-      TaskbarProgress\SetProgressValue(WindowID(progressDialog\window), 100, 100)
+    CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+;       TaskbarProgress\SetProgressValue(WindowID(progressDialog\window), 100, 100)
       TaskbarProgress\SetProgressState(WindowID(progressDialog\window), #tbpf_indeterminate)
-    EndIf
+    CompilerEndIf
     
     ProcedureReturn #True
   EndProcedure
